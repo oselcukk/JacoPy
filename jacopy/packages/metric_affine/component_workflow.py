@@ -116,20 +116,22 @@ class ComponentInput:
 
         ``γ^c_{ab} := ⟨e^c, [e_a, e_b]⟩`` (``anholonomy.py``,
         PDF item 9b) is ANTISYMMETRIC in its two lower indices because
-        the bracket is: both orders are stored (``γ^c_{ba} = −value``,
-        as :meth:`set_pi` does), so either order may be given — the
-        canonical atom :func:`anholonomy_coefficient` looks up the
-        ``a < b`` key, which a non-canonical call used to leave unset
-        (``total=True`` then read it as ``0``; audit 0b00e1b M7-2).
-        ``first == second`` forces ``value == 0``; a value that
-        contradicts an entry already stored for either order raises
-        :class:`ValueError`."""
+        the bracket is, so both orders are written together
+        (``γ^c_{ba} := −value``, as :meth:`set_pi` does) and either order
+        may be given. The canonical atom :func:`anholonomy_coefficient`
+        looks up the ``a < b`` key, which a non-canonical call used to
+        leave unset (``total=True`` then read it as ``0``; audit 0b00e1b
+        M7-2). Like the other setters a later call OVERWRITES — both
+        orders at once, so the pair stays antisymmetric.
+        ``first == second`` forces ``value == 0`` (:class:`ValueError`
+        otherwise)."""
+        from jacopy.algorithms.simplify import simplify
         from jacopy.core.expr import Neg
 
         c, a, b = str(upper), str(first), str(second)
         v = self._value(value)
         if a == b:
-            if not self._same(v, Integer(0)):
+            if v != Integer(0) and simplify(v) != Integer(0):
                 raise ValueError(
                     f"γ^{c}_{{{a}{b}}} is antisymmetric in its lower "
                     f"indices, so it must be 0 (got {v!r})"
@@ -142,26 +144,8 @@ class ComponentInput:
             neg = v.arg
         else:
             neg = Neg(v)
-        for key, val in (((c, a, b), v), ((c, b, a), neg)):
-            old = self._anholonomy.get(key)
-            if old is not None and not self._same(old, val):
-                raise ValueError(
-                    f"γ^{key[0]}_{{{key[1]}{key[2]}}} already set to "
-                    f"{old!r}; the new value implies {val!r} "
-                    "(γ is antisymmetric in its lower indices)"
-                )
         self._anholonomy[(c, a, b)] = v
         self._anholonomy[(c, b, a)] = neg
-
-    @staticmethod
-    def _same(x: Expr, y: Expr) -> bool:
-        """Structural, then simplified, equality of two values."""
-        if x == y:
-            return True
-        from jacopy.algorithms.simplify import simplify
-        from jacopy.core.expr import Neg, Sum
-
-        return simplify(Sum(x, Neg(y))) == Integer(0)
 
     def set_metric(self, a, b, value) -> None:
         """``g_{ab} := value`` (symmetric: both orders stored)."""

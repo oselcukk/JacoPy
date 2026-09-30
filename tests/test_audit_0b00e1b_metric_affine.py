@@ -313,15 +313,31 @@ def test_consistent_explicit_partner_is_accepted():
     assert data.anholonomy_value(("2", "0", "2")) == _Int(-7)
 
 
-def test_contradictory_partner_and_diagonal_raise():
+def test_overwrite_updates_both_orders_and_diagonal_raises():
+    # Chief's decision: overwrite like set_gamma/set_pi/set_metric, but
+    # always both orders together (value and −value).
     fr = frame("b")
     data = ComponentInput(fr, dim=3, total=True)
     data.set_anholonomy(2, 2, 0, 7)
-    with pytest.raises(ValueError):
-        data.set_anholonomy(2, 0, 2, 7)  # would mean γ^2_{20} = −7
+    data.set_anholonomy(2, 0, 2, 5)  # redefine via the other order
+    assert data.anholonomy_value(("2", "0", "2")) == _Int(5)
+    assert data.anholonomy_value(("2", "2", "0")) == _Int(-5)
+    assert _eq(data.evaluate(anholonomy_coefficient(fr, 2, 2, 0)), _Int(-5))
     with pytest.raises(ValueError):
         data.set_anholonomy(1, 0, 0, 3)  # γ^1_{00} must vanish
     data.set_anholonomy(1, 0, 0, 0)  # the zero is fine
+
+
+def test_commuting_symbolic_partner_is_accepted():
+    # h·k and k·h are the same scalar: the partner write must not fail.
+    reg = PropertyRegistry()
+    h, k = functions("h k", registry=reg)
+    fr = frame()
+    data = ComponentInput(fr, dim=2, total=True)
+    data.set_anholonomy("0", "1", "0", Product(h, k))
+    data.set_anholonomy("0", "0", "1", Neg(Product(k, h)))
+    g10 = data.evaluate(anholonomy_coefficient(fr, "0", "1", "0"), registry=reg)
+    assert _eq(g10, Product(h, k))
 
 
 # ===================================================================== #
