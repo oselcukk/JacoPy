@@ -628,3 +628,35 @@ def test_review2_product_path_never_uses_operator_degree_for_vectors():
     assert show_equal(lhs, lin, registry=reg).steps
     for node in (Act(D, Product(X, Y)), Act(D, Product(u, X, Y))):
         assert product_rule(node, reg) == node
+
+
+def test_review2_commutator_of_derivations():
+    # (4) [X,Y] = XY − YX of two vector fields is a derivation of degree
+    # |X|+|Y| = 0: [X,Y](f·g) = [X,Y](f)·g + f·[X,Y](g), [X,Y](2) = 0,
+    # hence [X,Y](2g) = 2[X,Y](g). A commutator whose degree is not
+    # determinable stays linear — no exception from an engine match.
+    from jacopy.algebra.commutator import Commutator
+    from jacopy.algebra.derivation import degree_of
+    from jacopy.central.calculus import ActExpansionDefinition
+    from jacopy.central.objects import functions
+    from jacopy.core.expr import Integer, Product, Symbol
+    from jacopy.core.registry import PropertyRegistry
+    from jacopy.core.symbolic_degree import Degree
+
+    reg = PropertyRegistry()
+    f, g = functions("f g", registry=reg)
+    X, Y = vector_fields("X Y")
+    C = Commutator(X, Y)
+    assert degree_of(C, reg) == Degree.const(0)
+    assert show_equal(
+        Act(C, Product(f, g)),
+        Sum(Product(Act(C, f), g), Product(f, Act(C, g))),
+        registry=reg,
+    ).steps
+    assert show_equal(
+        Act(C, Product(Integer(2), g)), Product(Integer(2), Act(C, g)),
+        registry=reg,
+    ).steps
+    A, B = Symbol("A"), Symbol("B")
+    node = Act(Commutator(A, B), Product(f, g))
+    ActExpansionDefinition(reg).matches(node)  # must not raise

@@ -133,6 +133,8 @@ def degree_of(
       the same ``Product`` node).
     * :class:`Neg`, same as its argument; negation is a scalar sign.
     * :class:`Act`, ``|D(x)| = |D| + |x|``.
+    * :class:`~jacopy.algebra.commutator.Commutator`,
+      ``|[A, B]| = |A| + |B|``.
     * :class:`jacopy.brackets.base.BracketApply`,
       ``|[a, b]| = |a| + |b| + bracket.degree``. Resolved via a late
       import so the algebra layer does not depend on the brackets
@@ -222,6 +224,12 @@ def degree_of(
         return degree_of(expr.op, registry) + degree_of(
             expr.arg, registry
         )
+    # Graded commutator [A, B] = AB − (−1)^{|A||B|} BA: both terms have
+    # degree |A| + |B| (audit 0b00e1b code review: the commutator of two
+    # derivations is a derivation, and its Leibniz split needs this).
+    from jacopy.algebra.commutator import Commutator  # noqa: WPS433
+    if isinstance(expr, Commutator):
+        return degree_of(expr.a, registry) + degree_of(expr.b, registry)
     # Brackets are a higher layer; resolve via late import to avoid
     # an algebra → brackets cycle.
     from jacopy.brackets.base import BracketApply  # noqa: WPS433

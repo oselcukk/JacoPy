@@ -119,13 +119,13 @@ def _expand_act(
         # later passes that would otherwise stall waiting for an engine
         # rewrite that never fires on this surviving shape.
         return Integer(0)
-    if isinstance(arg, (Integer, Rational)) and isinstance(op, Derivation):
+    if isinstance(arg, (Integer, Rational)) and _is_certified_derivation(op):
         # Derivations annihilate numeric constants: D(1) = D(1·1) =
         # 2·D(1) forces D(1) = 0, and linearity gives D(c) = 0. This is
         # what makes ℝ-homogeneity [c·X, Y] = c·[X, Y] close — the
         # Leibniz split of Y(c·g) leaves a Y(c)·g term that must die.
         return Integer(0)
-    if getattr(arg, "is_constant", False) and isinstance(op, Derivation):
+    if getattr(arg, "is_constant", False) and _is_certified_derivation(op):
         # The is_constant protocol: atoms marking themselves constant
         # (e.g. the Kronecker delta) are likewise annihilated. This is
         # what closes frame identities like de^c(e_a, e_b) = -γ^c_ab,
@@ -242,6 +242,14 @@ def _product_mode(op: Expr, arg: Expr, registry) -> str:
     if callable(hook):
         return "leibniz" if hook(arg, registry) else "blocked"
     if _is_certified_derivation(op):
+        if not isinstance(op, Derivation):
+            # a certified composite (commutator of derivations) splits
+            # only when its degree is determinable — otherwise stay
+            # linear instead of raising from inside an engine match
+            try:
+                degree_of(op, registry)
+            except ValueError:
+                return "linear"
         return "leibniz"
     return "linear"
 
