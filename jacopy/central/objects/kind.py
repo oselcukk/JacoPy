@@ -146,7 +146,7 @@ def _merge(kinds) -> Kind:
 def kind_of(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispatch table
     """The :class:`Kind` of ``expr`` (see the module docstring)."""
     from jacopy.algebra.derivation import Act, Derivation
-    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.core.expr import Power
 
     if not isinstance(expr, Expr):
         raise TypeError("kind_of expects an Expr")
@@ -155,8 +155,6 @@ def kind_of(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispatch tab
     if isinstance(expr, (Integer, Rational)):
         return ZERO if expr == Integer(0) else FUNCTION
     if isinstance(expr, Symbol):
-        if is_scalar_function(expr, registry):
-            return FUNCTION
         return _registry_graded(expr, registry)
 
     # --- bilinear combinations --------------------------------------
@@ -177,6 +175,27 @@ def kind_of(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispatch tab
             return FUNCTION
         if len(rest) == 1:
             return rest[0]
+        if all(
+            k.kind == "form" and not is_unknown(k.degree) for k in rest
+        ):
+            # a Product of FORMS is the library's accepted transient
+            # spelling of their wedge (HeadFormProductLiftDefinition):
+            # degrees add, like the Wedge node
+            total = Degree.const(0)
+            for k in rest:
+                total = total + k.degree
+            return Kind("form", total, bundle=_common_bundle(rest))
+        return UNKNOWN
+    if isinstance(expr, Power):
+        # f^n: a C∞ function only for a function base and a
+        # NON-NEGATIVE integer exponent (f⁻¹, f^½ are not smooth in
+        # general; 0⁻¹ is undefined)
+        if (
+            isinstance(expr.exp, Integer)
+            and expr.exp.value >= 0
+            and kind_of(expr.base, registry).kind in ("function", "zero")
+        ):
+            return FUNCTION
         return UNKNOWN
 
     # --- the central objects ----------------------------------------
@@ -189,8 +208,12 @@ def kind_of(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispatch tab
     if isinstance(expr, VectorField):
         return Kind("vector", bundle=expr.bundle)
     if isinstance(expr, Form):
+        if expr.degree == Degree.const(0):
+            return FUNCTION  # a 0-form is a function
         return Kind("form", expr.degree, bundle=expr.bundle)
     if isinstance(expr, PVector):
+        if expr.degree == Degree.const(0):
+            return FUNCTION  # a 0-vector is a function
         return Kind("multivector", expr.degree, bundle=expr.bundle)
     if isinstance(expr, Tensor):
         return Kind("tensor", signature=expr.signature, bundle=expr.bundle)
@@ -261,6 +284,10 @@ def kind_of(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispatch tab
     if isinstance(expr, BracketApply):
         return _kind_of_bracket(expr, registry)
     if isinstance(expr, Commutator):
+        # the commutator of two vector fields is their Lie bracket
+        a, b = kind_of(expr.a, registry), kind_of(expr.b, registry)
+        if a.kind == "vector" and b.kind == "vector":
+            return Kind("vector", bundle=_common_bundle([a, b]))
         return UNKNOWN
 
     # --- derivation atoms: vector-valued ones carry a wedge lift ----
@@ -282,13 +309,17 @@ def kind_of(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispatch tab
 
 
 def _registry_graded(expr, registry) -> Kind:
-    """A symbol declared ``Graded(k)`` in the registry is an abstract
-    graded element: a function for ``k = 0`` (already caught by the
-    scalar test), otherwise graded like a ``k``-form — the convention
-    the degree-carrying atoms follow (0 = function, k = k-form)."""
+    """A symbol declared ``Scalar`` in the registry is a function; one
+    declared ``Graded(k)`` is an abstract graded element: a function
+    for ``k = 0``, otherwise graded like a ``k``-form — the convention
+    the degree-carrying atoms follow (0 = function, k = k-form).
+    Undeclared (or no registry): unknown, never guessed."""
     if registry is None:
         return UNKNOWN
-    from jacopy.core.properties import Graded
+    from jacopy.core.properties import Graded, Scalar
+
+    if registry.has(expr, Scalar):
+        return FUNCTION
 
     graded = registry.get(expr, Graded)
     if graded is None:
@@ -322,6 +353,19 @@ def _kind_of_wedge(parts) -> Kind:
     return UNKNOWN
 
 
+def _declared_function_valued(bracket, a, b, registry) -> bool:
+    """``bracket.function_valued`` — a bool, or a callable
+    ``(a, b, registry) -> bool``; anything else, or a raising
+    callable, is NOT a declaration (default-reject)."""
+    decl = getattr(bracket, "function_valued", False)
+    if callable(decl):
+        try:
+            decl = decl(a, b, registry)
+        except Exception:  # noqa: BLE001 - a broken declaration certifies nothing
+            return False
+    return decl is True
+
+
 def _kind_of_bracket(expr, registry) -> Kind:
     """A bracket application: the bracket's own ``apply_degree`` hook
     when it has one (the Schouten–Nijenhuis bracket grades in the
@@ -330,6 +374,15 @@ def _kind_of_bracket(expr, registry) -> Kind:
     Koszul bracket), two vectors under a degree-0 bracket a vector;
     anything else is unknown."""
     a, b = kind_of(expr.a, registry), kind_of(expr.b, registry)
+    if (
+        a.kind in ("function", "zero")
+        and b.kind in ("function", "zero")
+        and _declared_function_valued(expr.bracket, expr.a, expr.b, registry)
+    ):
+        # a bracket DECLARED function-valued (Poisson-type {f, g}) on
+        # functions; its degree alone cannot tell a function from a
+        # vector field
+        return FUNCTION
     hook = getattr(expr.bracket, "apply_degree", None)
     if hook is not None:
         try:
@@ -415,6 +468,12 @@ def _kind_of_act(expr, registry) -> Kind:
             return Kind("form", inner.degree + 1, bundle=inner.bundle)
         return UNKNOWN
     if isinstance(op, Interior):
+        # ι_X lowers a q-form to a (q−1)-form only for a CERTIFIED
+        # vector X (p = 1); ι of a bivector / function / composition /
+        # undeclared symbol is not typed here (ι_Λ dh would be the
+        # VECTOR Λ♯dh in the other contraction convention) — unknown.
+        if kind_of(op.vector, registry).kind != "vector":
+            return UNKNOWN
         if inner.kind == "function":
             return ZERO
         if inner.kind == "form" and not is_unknown(inner.degree):
@@ -438,12 +497,22 @@ def _kind_of_act(expr, registry) -> Kind:
     if isinstance(op, Sharp):
         return Kind("vector") if inner.kind == "form" and inner.degree == Degree.const(1) else UNKNOWN
     if isinstance(op, EndoVF):
+        if inner.kind == "function":
+            return FUNCTION  # the vector field m(X) acting on a function
         return Kind("vector", bundle=inner.bundle) if inner.kind == "vector" else UNKNOWN
     if isinstance(op, Derivation):
         lift = getattr(op, "wedge_degree", None)
         if isinstance(lift, Degree) and lift == Degree.const(1):
             # a vector field acting on a function is a function
             return FUNCTION if inner.kind == "function" else UNKNOWN
+        if (
+            not isinstance(lift, Degree)
+            and op.degree == Degree.const(0)
+            and inner.kind == "function"
+        ):
+            # a degree-0 derivation of C∞(M) maps functions to
+            # functions (X(f), ∇_X f, [X,Y](f), L_X f)
+            return FUNCTION
     return UNKNOWN
 
 

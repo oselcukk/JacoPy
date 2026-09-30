@@ -502,3 +502,106 @@ def test_k1_1_followup_type_certified_coefficients_fold():
     for bad in (Act(Sharp(lam), dh), EndoForm("m", X)):
         e = Sum(Product(bad, Pairing(beta, U)), Product(f2, Pairing(beta, V)))
         assert collect_pairings(e, reg) == e
+
+
+# --------------------------------------------------------------------- #
+# Second code review: ONE type source (kind_of); is_scalar_function is   #
+# a thin wrapper                                                         #
+# --------------------------------------------------------------------- #
+
+
+def test_review2_interior_needs_a_certified_vector():
+    # (1) ι_P α is a (q−p)-form for a p-vector P and a q-form α; the
+    # Interior node is the p = 1 contraction. ι_Λ(dh) with Λ a BIVECTOR
+    # is not a function (in the other contraction convention it is the
+    # VECTOR Λ♯dh), so it must not act by multiplication:
+    # X_h(f·g) = X_h(f)g + fX_h(g) ≠ X_h·f·g. Likewise ι_W α (W
+    # undeclared), ι_f α, ι_{X∘Y} α are untyped. ι_X α, ι_{X+Y} α stay
+    # functions.
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.central.objects import functions
+    from jacopy.central.objects.interior import Interior
+    from jacopy.core.expr import Product, Symbol
+
+    reg, a, b, lam, dh, Sharp = _hamiltonian_setup()
+    (f,) = functions("f", registry=reg)
+    X, Y = vector_fields("X Y")
+    (alpha,) = forms("alpha", degree=1)
+    V = Act(Interior(lam), dh)
+    assert not is_scalar_function(V, reg)
+    with pytest.raises(ProofFailure):
+        show_equal(Act(V, Product(a, b)), Product(V, a, b), registry=reg)
+    for bad in (Symbol("W"), f, Product(X, Y), lam):
+        assert not is_scalar_function(Act(Interior(bad), alpha), reg), bad
+    for good in (X, Sum(X, Y)):
+        assert is_scalar_function(Act(Interior(good), alpha), reg), good
+
+
+def test_review2_power_needs_nonnegative_integer_exponent():
+    # (2) f⁻¹ and f^½ are not C∞ in general; 0⁻¹ is undefined.
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.central.objects import functions
+    from jacopy.core.expr import Integer, Power, Rational
+    from jacopy.core.registry import PropertyRegistry
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    (X,) = vector_fields("X")
+    assert is_scalar_function(Power(f, Integer(2)), reg)
+    assert is_scalar_function(Power(f, Integer(0)), reg)
+    for bad in (
+        Power(f, Integer(-1)),
+        Power(f, Rational(1, 2)),
+        Power(Integer(0), Integer(-1)),
+        Power(X, Integer(2)),
+    ):
+        assert not is_scalar_function(bad, reg), bad
+
+
+def test_review2_function_valued_declaration_is_guarded():
+    # (5) a raising declaration certifies nothing (and does not raise).
+    from jacopy.brackets.base import GradedBracket
+    from jacopy.central.calculus.scalars import is_scalar_function
+
+    reg, a, b, *_ = _hamiltonian_setup()
+
+    class Broken(GradedBracket):
+        def function_valued(self, a, b, registry):
+            raise RuntimeError("boom")
+
+        def expand(self, a, b, registry=None):
+            raise NotImplementedError
+
+    class Callable_(GradedBracket):
+        def function_valued(self, a, b, registry):
+            return True
+
+        def expand(self, a, b, registry=None):
+            raise NotImplementedError
+
+    assert not is_scalar_function(Broken("x")(a, b), reg)
+    assert is_scalar_function(Callable_("y")(a, b), reg)
+
+
+def test_review2_form_product_degree_and_endoform():
+    # (6) α·β (forms) is the library's transient spelling of α∧β: an
+    # exterior 2-form, so m̃(α·β) has degree 2 and
+    # d(m̃(α·β)·α) = d m̃(α·β)·α + (−1)^2 m̃(α·β)·dα.
+    from jacopy.central.objects.endomorphism import EndoForm
+    from jacopy.central.objects.kind import Kind, kind_of
+    from jacopy.central.tangent.exterior import exterior_d
+    from jacopy.core.expr import Integer, Power, Product
+
+    alpha, beta = forms("alpha beta", degree=1)
+    g = Form("g", degree=0)
+    k = kind_of(Product(alpha, beta))
+    assert (k.kind, k.degree) == ("form", Kind("form", 2).degree)
+    m = EndoForm("m", Product(alpha, beta))
+    from jacopy.core.symbolic_degree import Degree
+
+    assert m.degree == Degree.const(2)
+    assert EndoForm("m", Power(g, Integer(2))).degree == Degree.const(0)
+    d = exterior_d()
+    assert product_rule(Act(d, Product(m, alpha))) == Sum(
+        Product(Act(d, m), alpha), Product(m, Act(d, alpha))
+    )
