@@ -219,12 +219,25 @@ def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
     :func:`_wedge_factor_degree`. ``|D|`` is the operator's own degree
     (``degree_of(op)``): for the operators that act on a wedge algebra
     that IS their shift in the exterior grading (``d``, ``d̃``: +1;
-    ``ι``, ``ι̃_ω``: −1; ``ℒ``: 0)."""
+    ``ι``, ``ι̃_ω``: −1; ``ℒ``: 0).
+
+    A factor whose exterior degree is not determinable (a mixed sum
+    ``X + u``, a composition ``X∘Y``, an unknown operator) has no
+    well-defined sign: the node is left INERT — never graded by the
+    operator degree (default-reject)."""
     from jacopy.core.wedge import Wedge as _Wedge
 
     factors = tuple(wedge.children)
     deg_op = degree_of(op, registry)
     deg_op_is_zero = deg_op == Degree.const(0)
+    degrees: List[Degree] = []
+    if not deg_op_is_zero:
+        try:
+            degrees = [
+                _wedge_factor_degree(f, registry) for f in factors[:-1]
+            ]
+        except ValueError:
+            return Act(op, wedge)
     running = Degree.const(0)
     terms: List[Expr] = []
     for i, fac in enumerate(factors):
@@ -249,12 +262,13 @@ def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
             term = Neg(term)
         terms.append(term)
         if not deg_op_is_zero and i + 1 < len(factors):
-            running = running + _wedge_factor_degree(fac, registry)
+            running = running + degrees[i]
     return Sum.make(*terms)
 
 
 def _wedge_factor_degree(fac: Expr, registry) -> Degree:
-    """Exterior degree of a Wedge factor, for the wedge Leibniz sign.
+    """Exterior degree of ``fac`` (a wedge factor, or the one
+    non-scalar factor of a scalar product), for Leibniz signs.
 
     Resolution (first determinable answer wins):
 
@@ -263,41 +277,117 @@ def _wedge_factor_degree(fac: Expr, registry) -> Degree:
        :func:`degree_of` uses for a ``Wedge`` node, so the running
        sign and ``|a₁∧…∧a_{i−1}|`` agree;
     2. the exterior degree of :func:`~jacopy.algebra.grading.exterior_degree`
-       (``kind_of``: forms, multivectors, ``f·X``, ``♯α``, …);
-    3. structural recursion with the same laws for shapes ``kind_of``
-       leaves unknown: ``Neg``/homogeneous ``Sum`` keep the degree,
-       ``Product``/``Wedge`` add, and ``D(a)`` for a derivation ``D``
-       is ``|D| + |a|_ext`` (so ``d̃X`` is a bivector, 2 — the
-       operator-degree reading gave 1);
-    4. otherwise :func:`_factor_degree` (numbers, registry grades),
-       which raises on a truly undetermined factor.
+       (``kind_of``: functions, forms, multivectors, ``f·X``, ``♯α``, …);
+    3. structural recursion for shapes ``kind_of`` leaves unknown:
+       ``Neg`` and a HOMOGENEOUS ``Sum`` keep the degree, ``Wedge``
+       adds, a scalar product ``f·a`` is ``|a|``, and ``D(a)`` for a
+       derivation ``D`` without a wedge lift (``d̃``, ``ι̃_ω``) is
+       ``|D| + |a|`` (so ``d̃X`` is a bivector, 2).
+
+    Anything else — a mixed sum (``X + u``), a composition of two
+    geometric factors (``X∘Y``), an operator — raises
+    :class:`ValueError`. There is deliberately NO fallback to the
+    operator degree (``degree_of``): that grading is the wrong one
+    here (code-review follow-up of audit 0b00e1b P0-1).
     """
     lift = getattr(fac, "wedge_degree", None)
     if isinstance(lift, Degree):
         return lift
     from jacopy.algebra.grading import exterior_degree  # noqa: WPS433 - layering: kind_of lives in central
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.core.wedge import Wedge as _Wedge
 
     ext = exterior_degree(fac, registry)
     if isinstance(ext, Degree):
         return ext
     if isinstance(fac, Neg):
         return _wedge_factor_degree(fac.arg, registry)
-    if isinstance(fac, Act) and isinstance(fac.op, Derivation):
+    if (
+        isinstance(fac, Act)
+        and isinstance(fac.op, Derivation)
+        and not isinstance(getattr(fac.op, "wedge_degree", None), Degree)
+    ):
         return degree_of(fac.op, registry) + _wedge_factor_degree(
             fac.arg, registry
         )
-    from jacopy.core.wedge import Wedge as _Wedge
-
-    if isinstance(fac, (Product, _Wedge)) and fac.children:
+    if isinstance(fac, _Wedge) and fac.children:
         total = Degree.const(0)
         for c in fac.children:
             total = total + _wedge_factor_degree(c, registry)
         return total
+    if isinstance(fac, Product) and fac.children:
+        geometric = [
+            c for c in fac.children if not is_scalar_function(c, registry)
+        ]
+        if not geometric:
+            return Degree.const(0)
+        if len(geometric) == 1:
+            return _wedge_factor_degree(geometric[0], registry)
     if isinstance(fac, Sum) and fac.children:
         degs = [_wedge_factor_degree(c, registry) for c in fac.children]
         if all(d == degs[0] for d in degs[1:]):
             return degs[0]
-    return _factor_degree(fac, registry)
+    raise ValueError(
+        f"exterior degree of {fac!r} is not determinable (mixed sum, "
+        "composition or operator)"
+    )
+
+
+def _is_geometric(c: Expr, registry) -> bool:
+    """Not a scalar: neither a certified scalar function nor of
+    ``kind_of`` kind function/zero (``ι_U(f)`` is zero, not an
+    element to wedge with)."""
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
+
+    if is_scalar_function(c, registry):
+        return False
+    return kind_of(c, registry).kind not in ("function", "zero")
+
+
+def _is_multivector_like(c: Expr, registry) -> bool:
+    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
+
+    if isinstance(getattr(c, "wedge_degree", None), Degree):
+        return True
+    return kind_of(c, registry).kind in ("vector", "multivector")
+
+
+def _exterior_scalar_product_degrees(
+    factors: Tuple[Expr, ...], registry
+) -> Optional[List[Degree]]:
+    """Exterior degrees of a SCALAR PRODUCT ``s₁⋯s_k·a`` (certified
+    scalar functions and at most one geometric factor ``a`` with a
+    determinable exterior degree), else ``None``.
+
+    Such a Product is the C∞-module product, i.e. the wedge with
+    functions (``u·X = X·u = X∧u``), so its Leibniz sign must come from
+    the same exterior grading as the Wedge path: scalars count 0, the
+    element its exterior degree. Anything else (two geometric factors =
+    a composition, abstract operators) is graded by the operator
+    degree as before."""
+    out: List[Degree] = []
+    geometric = 0
+    for c in factors:
+        if not _is_geometric(c, registry):
+            out.append(Degree.const(0))
+            continue
+        geometric += 1
+        if geometric > 1:
+            return None
+        try:
+            out.append(_wedge_factor_degree(c, registry))
+        except ValueError:
+            return None
+    return out
+
+
+def _mixed_exterior_factor(factors: Tuple[Expr, ...], registry) -> bool:
+    """A factor that is KNOWN to have no single exterior degree (a
+    ``kind_of`` mismatch, e.g. ``X + u``): no Leibniz sign exists."""
+    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
+
+    return any(kind_of(c, registry).kind == "mismatch" for c in factors)
 
 
 def _expand_leibniz(
@@ -310,6 +400,15 @@ def _expand_leibniz(
     factors (degree 0) contribute nothing to the running sign, so
     symbolic-degree factors only cause trouble when they actually
     precede a splitting point.
+
+    Degree source (one source with the Wedge path): a scalar product
+    ``s·a`` of a geometric element is graded EXTERIORLY
+    (:func:`_exterior_scalar_product_degrees`) — ``d̃(X·u) =
+    d̃X·u − X∧d̃u``, the same as ``d̃(X∧u)``; a term in which two
+    geometric factors meet is rebuilt as their wedge. Other Products
+    (compositions, products of abstract graded elements) keep the
+    operator grading of :func:`degree_of`. A factor known to be of
+    mixed degree leaves the node inert.
     """
     factors: Tuple[Expr, ...] = prod.children
     if not factors:
@@ -323,6 +422,14 @@ def _expand_leibniz(
     # for ordinary (ungraded) derivations and spares the caller from
     # declaring a grading for operand factors that don't have one.
     deg_op_is_zero = deg_op == Degree.const(0)
+
+    exterior: Optional[List[Degree]] = None
+    if not deg_op_is_zero:
+        exterior = _exterior_scalar_product_degrees(factors, registry)
+        if exterior is None and _mixed_exterior_factor(
+            factors[:-1], registry
+        ):
+            return Act(op, prod)
 
     running = Degree.const(0)  # |a_1| + ... + |a_{i-1}|
     terms: List[Expr] = []
@@ -344,15 +451,50 @@ def _expand_leibniz(
         # distribute in the same pass instead of stranding
         # ``D(2)``/``D(a+b)`` nodes into the simplify pipeline.
         new_factors[i] = _expand_act(op, fac, registry)
-        # (running-degree bookkeeping uses _factor_degree below)
-        term: Expr = Product(*new_factors) if len(new_factors) > 1 else new_factors[0]
+        if exterior is not None:
+            term = _exterior_term(new_factors, registry)
+        else:
+            term = (
+                Product(*new_factors)
+                if len(new_factors) > 1
+                else new_factors[0]
+            )
         if parity == 1:
             term = Neg(term)
         terms.append(term)
         if not deg_op_is_zero and i + 1 < len(factors):
-            running = running + _factor_degree(fac, registry)
+            running = running + (
+                exterior[i]
+                if exterior is not None
+                else _factor_degree(fac, registry)
+            )
 
     return Sum.make(*terms)
+
+
+def _exterior_term(new_factors: List[Expr], registry) -> Expr:
+    """Rebuild one Leibniz term of an exterior scalar product: when
+    ``D`` turned a scalar into a geometric element next to the
+    existing one (``X·d̃u``), the product of the two is their WEDGE
+    (``X∧d̃u``, order kept), scalars in front — when one of them is a
+    vector/multivector (a Product would read as a composition there);
+    otherwise the plain Product."""
+    from jacopy.core.wedge import Wedge as _Wedge
+
+    if len(new_factors) == 1:
+        return new_factors[0]
+    scalars = [c for c in new_factors if not _is_geometric(c, registry)]
+    geometric = [c for c in new_factors if _is_geometric(c, registry)]
+    if len(geometric) <= 1 or not any(
+        _is_multivector_like(c, registry) for c in geometric
+    ):
+        # a Product of FORMS is the library's accepted transient
+        # spelling of their wedge (HeadFormProductLiftDefinition) —
+        # keep it; only a Product involving a vector/multivector would
+        # read as an operator composition.
+        return Product(*new_factors)
+    w = _Wedge(*geometric)
+    return Product(*scalars, w) if scalars else w
 
 
 def _factor_degree(fac: Expr, registry) -> Degree:

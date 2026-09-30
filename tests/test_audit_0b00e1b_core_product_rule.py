@@ -125,6 +125,63 @@ def test_p0_1_forms_signs_unchanged():
     )
 
 
+def _dtilde_u():
+    from jacopy.central.objects import functions
+    from jacopy.core.registry import PropertyRegistry
+
+    reg = PropertyRegistry()
+    (u,) = functions("u", registry=reg)
+    D, _ = _tilde()
+    return D, u, reg
+
+
+def test_p0_1_followup_mixed_sum_factor_not_expanded():
+    # (a) X + u has no single exterior degree (1 vs 0): the sign
+    # (−1)^{|d̃|·|X+u|} does not exist, so the node stays inert. The old
+    # fallback read the operator degree (|X+u| = 0) and gave "+" for the
+    # second term, which is wrong on the X-part: d̃(X∧Y) has "−".
+    D, u, reg = _dtilde_u()
+    X, Y = vector_fields("X Y")
+    node = Act(D, Wedge(Sum(X, u), Y))
+    assert product_rule(node, reg) == node
+
+
+def test_p0_1_followup_scalar_product_graded_exteriorly():
+    # (b) X·u = u·X = X∧u (C∞-module product). Graded Leibniz in the
+    # exterior grading (|X| = 1, |u| = 0, |d̃| = 1):
+    #   d̃(X·u) = d̃X·u + (−1)^{1·1} X∧d̃u = d̃X·u − X∧d̃u
+    #   d̃(u·X) = d̃u∧X + (−1)^{1·0} u·d̃X
+    #   d̃(X∧u) = d̃X∧u − X∧d̃u.
+    # (the old Product path used |X| = 0: d̃X·u + X·d̃u).
+    from jacopy.core.expr import Product
+
+    D, u, reg = _dtilde_u()
+    (X,) = vector_fields("X")
+    dX, du = Act(D, X), Act(D, u)
+    assert product_rule(Act(D, Product(X, u)), reg) == Sum(
+        Product(dX, u), Neg(Wedge(X, du))
+    )
+    assert product_rule(Act(D, Product(u, X)), reg) == Sum(
+        Wedge(du, X), Product(u, dX)
+    )
+    # all three spellings agree
+    spellings = (Product(X, u), Product(u, X), Wedge(X, u))
+    for a in spellings:
+        for b in spellings:
+            assert show_equal(Act(D, a), Act(D, b), registry=reg).steps
+
+
+def test_p0_1_followup_composition_factor_not_expanded():
+    # (d) X·Y inside a wedge is a composition X∘Y, not a bivector —
+    # no exterior degree is invented for it: the node stays inert.
+    from jacopy.core.expr import Product
+
+    D, _, reg = _dtilde_u()
+    X, Y, Z = vector_fields("X Y Z")
+    node = Act(D, Wedge(Product(X, Y), Z))
+    assert product_rule(node, reg) == node
+
+
 # --------------------------------------------------------------------- #
 # P0-2 — a degree-0 NON-derivation operator is not a multiplier          #
 # --------------------------------------------------------------------- #
