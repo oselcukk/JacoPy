@@ -4,6 +4,8 @@ Acceptance tests for
 
 * P0-1 (K1-2 ≡ M1X-1): the wedge Leibniz sign reads the EXTERIOR degree
   of the wedge factors, not their operator degree;
+* P0-2 (M1-3): only a certified scalar function in operator position
+  acts by multiplication (a degree-0 operator like Λ♯(dh) does not);
 
 each test builds the target identity itself and checks both the correct
 and the wrong-sign statement.
@@ -118,4 +120,88 @@ def test_p0_1_forms_signs_unchanged():
     )
     assert product_rule(Act(d, Wedge(beta, alpha))) == Sum(
         Wedge(Act(d, beta), alpha), Wedge(beta, Act(d, alpha))
+    )
+
+
+# --------------------------------------------------------------------- #
+# P0-2 — a degree-0 NON-derivation operator is not a multiplier          #
+# --------------------------------------------------------------------- #
+#
+# X_h = Λ♯(dh) is a vector field, i.e. a derivation of C∞(M):
+#     X_h(a·b) = X_h(a)·b + a·X_h(b).
+# Counterexample to the closed "X_h(a·b) = a·X_h(b)": on ℝ², Λ = ∂x∧∂y,
+# h = y gives X_h = ±∂x and X_h(x·x) = ±2x ≠ ±x = x·X_h(x). Built with
+# the public Sharp, Λ♯(dh) has degree −1 + 1 = 0 and is NOT a
+# Derivation instance; product_rule used "degree 0" as the certificate
+# for "scalar coefficient" and rewrote X_h(a·b) as the product
+# X_h·(a·b). Only a certified C∞ scalar may act by multiplication; the
+# raw node stays linear-only, and the Leibniz rule is available through
+# the Derivation SharpVF.
+
+
+def _hamiltonian_setup():
+    import jacopy.central.objects.multivector as mv
+    from jacopy.central.objects import functions
+    from jacopy.central.objects.musical import Sharp
+    from jacopy.central.tangent import d
+    from jacopy.core.registry import PropertyRegistry
+
+    reg = PropertyRegistry()
+    a, b, h = functions("a b h", registry=reg)
+    lam = mv.bivector("Λ")
+    return reg, a, b, lam, d(h), Sharp
+
+
+def test_p0_2_raw_sharp_is_not_a_multiplier():
+    from jacopy.core.expr import Product
+
+    reg, a, b, lam, dh, Sharp = _hamiltonian_setup()
+    V = Act(Sharp(lam), dh)
+    for lhs, rhs in (
+        (Act(V, Product(a, b)), Product(a, Act(V, b))),  # V(ab) = a·V(b)
+        (Act(V, Product(a, b)), Product(b, Act(V, a))),  # V(ab) = b·V(a)
+        (Act(V, a), Product(a, V)),                      # V(a) = a·V
+    ):
+        with pytest.raises(ProofFailure):
+            show_equal(lhs, rhs, registry=reg)
+    # linear-only: sums still distribute (any operator is additive)
+    assert product_rule(Act(V, Sum(a, b)), reg) == Sum(Act(V, a), Act(V, b))
+    # and it is no longer turned into a product
+    assert product_rule(Act(V, Product(a, b)), reg) == Act(V, Product(a, b))
+
+
+def test_p0_2_sharpvf_leibniz_closes():
+    from jacopy.core.expr import Product
+    from jacopy.packages.poisson.core import SharpVF
+
+    reg, a, b, lam, dh, _ = _hamiltonian_setup()
+    V = SharpVF(lam, dh)
+    leibniz = Sum(Product(Act(V, a), b), Product(a, Act(V, b)))
+    assert show_equal(Act(V, Product(a, b)), leibniz, registry=reg).steps
+    with pytest.raises(ProofFailure):
+        show_equal(Act(V, Product(a, b)), Product(a, Act(V, b)), registry=reg)
+
+
+def test_p0_2_certified_scalar_still_multiplies():
+    # Control: (f·X)(g) = f·X(g) — a certified scalar in operator
+    # position (module structure of vector fields) is a multiplier.
+    from jacopy.central.objects import functions
+    from jacopy.central.tangent.lie_bracket import (
+        ScalarActAsMultiplicationDefinition,
+    )
+    from jacopy.core.expr import Product
+    from jacopy.core.registry import PropertyRegistry
+
+    reg = PropertyRegistry()
+    f, g = functions("f g", registry=reg)
+    (X,) = vector_fields("X")
+    assert show_equal(
+        Act(Product(f, X), g), Product(f, Act(X, g)), registry=reg
+    ).steps
+    rule = ScalarActAsMultiplicationDefinition(reg)
+    assert rule.matches(Act(f, g))
+    hreg, a, b, lam, dh, Sharp = _hamiltonian_setup()
+    # same registry that makes degree_of(Λ♯(dh)) = 0 determinable
+    assert not ScalarActAsMultiplicationDefinition(hreg).matches(
+        Act(Act(Sharp(lam), dh), a)
     )

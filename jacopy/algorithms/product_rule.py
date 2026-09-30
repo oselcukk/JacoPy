@@ -120,15 +120,34 @@ def _expand_act(
             result = _expand_act(d, result, registry)
         return result
     if not isinstance(op, Derivation):
-        # A degree-0 non-derivation "operator" is a scalar coefficient
-        # (compositions like f·X put scalars in operator position): it
+        # A CERTIFIED scalar function in operator position is a
+        # coefficient (compositions like f·X put scalars there): it
         # acts by multiplication, NEVER by Leibniz — splitting s(ab)
         # into s(a)b + a·s(b) double-counts to 2s·ab.
+        #
+        # "Degree 0" alone is NOT that certificate (audit 0b00e1b P0-2,
+        # M1-3): Λ♯(dh) built with the public Sharp has degree −1+1 = 0
+        # but is a VECTOR FIELD, and multiplying turned the false
+        # X_h(a·b) = a·X_h(b) into a closed proof. An uncertified
+        # degree-0 non-derivation stays linear-only (sums and signs
+        # distribute; no multiplication, no Leibniz) — the Leibniz rule
+        # needs a Derivation (e.g. the Poisson package's SharpVF).
+        from jacopy.central.calculus.scalars import is_scalar_function
+
+        if is_scalar_function(op, registry):
+            return Product(op, arg)
         try:
-            if degree_of(op, registry) == Degree.const(0):
-                return Product(op, arg)
+            deg0 = degree_of(op, registry) == Degree.const(0)
         except ValueError:
-            pass
+            deg0 = False
+        if deg0:
+            if isinstance(arg, Sum):
+                return Sum.make(
+                    *(_expand_act(op, c, registry) for c in arg.children)
+                )
+            if isinstance(arg, Neg):
+                return Neg(_expand_act(op, arg.arg, registry))
+            return Act(op, arg)
     if isinstance(arg, Sum):
         return Sum.make(
             *(_expand_act(op, c, registry) for c in arg.children)
