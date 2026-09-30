@@ -53,6 +53,10 @@ class TildeInterior(Derivation):
 
     __slots__ = ("_form",)
 
+    #: ``ι̃_α V`` fills a slot of the multivector V: alternating iff V
+    #: is (:func:`~jacopy.core.multi_eval.admits_alternation`).
+    alternating_values = "inherit"
+
     def __init__(self, omega: Expr, *, name: Optional[str] = None) -> None:
         if not isinstance(omega, Expr):
             raise TypeError("TildeInterior requires an Expr 1-form")

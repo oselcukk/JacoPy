@@ -68,7 +68,7 @@ class ExteriorDerivative(Derivation):
     __slots__ = ("_calculus_name", "_skew")
 
     def __init__(
-        self, calculus_name: str, *, name: str = "d", skew: bool = True
+        self, calculus_name: str, *, name: str = "d", skew: bool = False
     ) -> None:
         super().__init__(name, degree=1)
         self._calculus_name = calculus_name
@@ -86,8 +86,14 @@ class ExteriorDerivative(Derivation):
         formula is only an ordered multilinear map (M2-1)."""
         return "inherit" if self._skew else False
 
+    @property
+    def skew(self) -> bool:
+        return self._skew
+
     def _key(self) -> Any:
-        return (self._name, self._degree, self._calculus_name)
+        # skew is part of the identity: two d's with different
+        # alternation semantics must not compare/hash equal.
+        return (self._name, self._degree, self._calculus_name, self._skew)
 
 
 class LieDerivative(Derivation):
@@ -434,13 +440,16 @@ class IntrinsicDDefinition(Definition):
             return Act(self._calc.anchor(expr.X), omega)
         omega = expr.head.arg
         args = expr.args
-        # Inner flag: normally inherited from the node being unrolled.
-        # For a NON-skew calculus the outer node is forced plain
-        # multilinear by the operator itself (M2-1), which says nothing
-        # about the argument: d's argument is a form, so its own
-        # evaluations keep ITS alternation.
+        # Inner flag: INHERITED from the node being unrolled. The one
+        # exception is decided by the node's OWN operator: the d of a
+        # non-skew calculus forces its node plain multilinear
+        # (``alternating_values is False``), so that flag says nothing
+        # about ω; ω is then evaluated alternating only if it is itself
+        # CERTIFIED (a Form yes, a Tensor no — ``admits_alternation``
+        # rejects by default).
+        forced = getattr(expr.head.op, "alternating_values", None) is False
         inner_alt = expr.alternating or (
-            not self._calc.skew and admits_alternation(omega)
+            forced and admits_alternation(omega)
         )
         terms = []
         for i, Xi in enumerate(args):

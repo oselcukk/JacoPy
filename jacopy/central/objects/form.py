@@ -57,6 +57,10 @@ class Form(Atom):
 
     __slots__ = ("_name", "_degree", "_bundle")
 
+    #: Certified alternating (:func:`~jacopy.core.multi_eval.
+    #: admits_alternation`): a p-form is alternating by definition.
+    alternating_values = True
+
     def __init__(
         self,
         name: str,

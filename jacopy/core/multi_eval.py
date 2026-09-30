@@ -52,6 +52,7 @@ A separate helper :func:`validate_arity` exposes the check on demand.
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any, Optional, Tuple
 
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum, Zero
@@ -212,28 +213,78 @@ class MultiEval(Expr):
 def admits_alternation(head: Expr) -> bool:
     """May ``head`` be evaluated as an ALTERNATING multilinear map?
 
-    Operator protocol (duck-typed, no calculus import): an ``Act``-like
-    head whose operator sets ``alternating_values = False`` produces
-    values that are NOT alternating (the exterior derivative of a
-    bracket calculus whose bracket is not declared skew-symmetric: the
-    Palais/Koszul formula gives ``dα(u,u) = −α([u,u])`` there); an
-    operator with ``alternating_values = "inherit"`` (interior product,
-    Lie derivative, a skew calculus' ``d``) is alternating exactly when
-    its argument is. Sums, negations and products are checked factor
-    by factor; any other node (forms, wedges, scalars) admits
-    alternation. Audit 0B00E1B-FULL M2-1."""
-    if isinstance(head, (Sum, Neg, Product)):
+    DEFAULT REJECT (audit 0B00E1B-FULL M2-1 + code review): only an
+    explicitly certified head is alternating —
+
+    * an atom declaring ``alternating_values = True`` (forms,
+      multivectors, vector fields as 1-vectors), or any atom whose
+      ``degree`` is the constant 0 or 1 (a single slot: 1-forms such
+      as coframes/connection forms), or a plain ``Symbol``/number
+      (a scalar coefficient);
+    * scalars: ``Pairing``/``MultiEval`` values, ``Integer``/
+      ``Rational``, and a degree-0 derivation acting on a scalar;
+    * ``Act(op, arg)`` whose operator declares ``alternating_values``
+      ``True`` or ``"inherit"`` with a certified ``arg`` (interior
+      products, Lie derivatives, the ``d`` of a SKEW calculus); the
+      ``d`` of a non-skew calculus declares ``False``
+      (``dα(u,u) = −α([u,u])``);
+    * ``Sum``/``Neg``/``Product``/``Wedge`` when EVERY child is.
+
+    Anything else — tensors, operators that do not take part in the
+    protocol, unknown nodes — is evaluated plain-multilinearly."""
+    try:
+        return _admits_cached(head)
+    except TypeError:  # unhashable exotic node: decide uncached
+        return _admits(head)
+
+
+def _is_scalar(h: Expr) -> bool:
+    from jacopy.core.expr import Rational, Symbol
+    from jacopy.core.pairing import Pairing
+
+    if isinstance(h, (Integer, Rational, Pairing, MultiEval)):
+        return True
+    if type(h) is Symbol:
+        return True
+    op = getattr(h, "op", None)
+    arg = getattr(h, "arg", None)
+    if op is not None and isinstance(arg, Expr):
+        from jacopy.core.symbolic_degree import Degree
+
+        return getattr(op, "degree", None) == Degree.const(0) and _is_scalar(
+            arg
+        )
+    return False
+
+
+def _admits(head: Expr) -> bool:
+    from jacopy.core.wedge import Wedge
+
+    if _is_scalar(head):
+        return True
+    if isinstance(head, (Sum, Neg, Product, Wedge)):
         return all(admits_alternation(c) for c in head.children)
     op = getattr(head, "op", None)
     arg = getattr(head, "arg", None)
-    if op is None or not isinstance(arg, Expr):
-        return True
-    flag = getattr(op, "alternating_values", True)
-    if flag is False:
-        return False
-    if flag == "inherit":
-        return admits_alternation(arg)
-    return True
+    if op is not None and isinstance(arg, Expr):
+        flag = getattr(op, "alternating_values", False)
+        if flag == "inherit":
+            return admits_alternation(arg)
+        return flag is True
+    if head.is_atom:
+        if getattr(type(head), "alternating_values", False) is True:
+            return True
+        from jacopy.core.symbolic_degree import Degree
+
+        deg = getattr(head, "degree", None)
+        return isinstance(deg, Degree) and deg in (
+            Degree.const(0),
+            Degree.const(1),
+        )
+    return False
+
+
+_admits_cached = lru_cache(maxsize=8192)(_admits)
 
 
 def multi_eval(

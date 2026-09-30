@@ -59,7 +59,7 @@ from typing import List, Optional, Tuple
 
 from jacopy.algebra.derivation import Act
 from jacopy.core.expr import Expr, Integer, Neg, Sum
-from jacopy.core.multi_eval import MultiEval, admits_alternation
+from jacopy.core.multi_eval import MultiEval
 from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
@@ -98,17 +98,13 @@ def algebroid_calculus(alg: Algebroid) -> BracketCalculus:
 
 
 def evaluate(head: Expr, *args: Expr) -> Expr:
-    """``head(args…)`` on sections with the CORRECT symmetry flag:
-    alternating iff the head admits it (``d_E`` of a non-antisymmetric
-    algebroid does not — M2-1)."""
+    """``head(args…)`` on sections. The alternation flag is decided by
+    the :class:`MultiEval` constructor (``admits_alternation``): ``d_E``
+    of a non-antisymmetric algebroid is evaluated plain-multilinearly
+    (M2-1)."""
     if len(args) == 1:
         return Pairing(head, args[0])
-    return MultiEval(
-        head,
-        *args,
-        alternating=admits_alternation(head),
-        slot_kind="vector",
-    )
+    return MultiEval(head, *args, slot_kind="vector")
 
 
 def d_E(alg: Algebroid, omega: Expr) -> Act:

@@ -309,3 +309,101 @@ class TestDSquaredDefectScope:
         doc = df.__doc__
         assert "All DECLARATION-FREE" not in doc
         assert "NEEDS ``antisymmetric``" in doc
+
+
+# --------------------------------------------------------------------- #
+# Code-review follow-ups: default-reject alternation (M2-1)             #
+# Each case CLOSED / zeroed on c1121c8.                                  #
+# --------------------------------------------------------------------- #
+
+
+class TestAlternationDefaultReject:
+    def test_wedge_with_non_alternating_factor(self):
+        # leibniz: (d_E m)(u,u) = −m([u,u]) ≠ 0, so d_E m ∧ n is not an
+        # alternating 3-form and (dm∧n)(u,u,v) must not collapse to 0;
+        # the claim (dm∧n − m∧dn)(u,u,v) = 0 must not close.
+        from jacopy.core.wedge import Wedge
+
+        reg = PropertyRegistry()
+        C = algebroid("Lw", Bundle("Lw"), declare=("leibniz",))
+        u, v = C.sections("u v")
+        m, n = forms("m n", degree=1, bundle=C.bundle)
+        node = MultiEval(Wedge(d_E(C, m), n), u, u, v)
+        assert not node.alternating
+        assert simplify(node, reg) != Integer(0)
+        lhs = Sum(node, Neg(MultiEval(Wedge(m, d_E(C, n)), u, u, v)))
+        with pytest.raises(ProofFailure):
+            _prove(lhs, Integer(0), reg, algebroid_engine(C, registry=reg))
+
+    def test_multivector_interior_of_non_skew_d(self):
+        # courant: ι_P(d_E μ3)(a,a) = (d_E μ3)(P, a, a) — d_E μ3 is not
+        # alternating, so the repeated slot does not force 0.
+        from jacopy.central.objects import p_vectors
+        from jacopy.central.objects.multivector_interior import (
+            MultivectorInterior,
+        )
+
+        reg = PropertyRegistry()
+        C = algebroid("Cm", Bundle("Cm"), declare=("courant",))
+        (a,) = C.sections("a")
+        (mu3,) = forms("μ3", degree=3, bundle=C.bundle)
+        (P,) = p_vectors("P", degree=2, bundle=C.bundle)
+        node = MultiEval(
+            Act(MultivectorInterior(P, registry=reg), d_E(C, mu3)), a, a
+        )
+        assert not node.alternating
+        assert simplify(node, reg) != Integer(0)
+
+    def test_tilde_interior_of_non_skew_d(self):
+        # a non-skew calculus (e.g. the p ≥ 2 Nambu–Koszul bracket):
+        # ι̃_β(dR)(γ,γ) must not collapse to 0.
+        from jacopy.central.objects import p_vectors
+        from jacopy.central.objects.tilde_interior import TildeInterior
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+
+        reg = PropertyRegistry()
+        calc = BracketCalculus(
+            "nsk", anchor=lambda s: s, bracket=lie_bracket
+        )
+        (R,) = p_vectors("R", degree=3)
+        be, ga = forms("β γ", degree=1)
+        node = MultiEval(
+            Act(TildeInterior(be), Act(calc.d, R)), ga, ga,
+            slot_kind="covector",
+        )
+        assert not node.alternating
+        assert simplify(node, reg) != Integer(0)
+
+    def test_tensor_inner_evaluation_never_upgraded(self):
+        # (dT)(X,X,W) for a (0,2)-tensor T (Palais, any bracket) contains
+        # +ρ(W)(T(X,X)); T is not alternating, so T(X,X) must stay.
+        from jacopy.central.objects import tensors
+        from jacopy.central.calculus.bracket_calculus import (
+            IntrinsicDDefinition,
+        )
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+
+        reg = PropertyRegistry()
+        calc = BracketCalculus(
+            "nsk2", anchor=lambda s: s, bracket=lie_bracket
+        )
+        (T,) = tensors("T", upper=0, lower=2)
+        X, W = vector_fields("X W")
+        node = MultiEval(Act(calc.d, T), X, X, W, alternating=False)
+        out = IntrinsicDDefinition(calc, reg).rewrite(node)
+        target = Act(W, MultiEval(T, X, X, alternating=False))
+        assert target in out.children
+        assert not admits_alternation(T)
+
+    def test_d_identity_carries_skewness(self):
+        from jacopy.central.calculus.bracket_calculus import (
+            ExteriorDerivative,
+        )
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+
+        mk = lambda sk: BracketCalculus(  # noqa: E731
+            "K", anchor=lambda s: s, bracket=lie_bracket, skew=sk
+        ).d
+        assert mk(True) != mk(False)
+        assert hash(mk(True)) != hash(mk(False))
+        assert ExteriorDerivative("K").alternating_values is False

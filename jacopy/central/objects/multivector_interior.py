@@ -60,6 +60,10 @@ class MultivectorInterior(Derivation):
 
     __slots__ = ("_multivector", "_registry")
 
+    #: ``ι_P ω`` fills ω's leading slots: alternating iff ω is
+    #: (:func:`~jacopy.core.multi_eval.admits_alternation`).
+    alternating_values = "inherit"
+
     def __init__(
         self,
         P: Expr,
