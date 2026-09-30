@@ -407,3 +407,68 @@ class TestAlternationDefaultReject:
         assert mk(True) != mk(False)
         assert hash(mk(True)) != hash(mk(False))
         assert ExteriorDerivative("K").alternating_values is False
+
+
+# --------------------------------------------------------------------- #
+# Code-review follow-ups: section-valued L arguments (M2-2)             #
+# Each case CLOSED on c1121c8.                                           #
+# --------------------------------------------------------------------- #
+
+
+def _rl(A, u, f, s):
+    """The right-Leibniz shape ρ(u)(f)·s + f·[u, s]."""
+    return Sum(Product(Act(A.anchor(u), f), s), Product(f, A.bracket(u, s)))
+
+
+class TestSectionValuedLieArguments:
+    def _bare(self, decl=()):
+        reg = PropertyRegistry()
+        (f,) = functions("f", registry=reg)
+        A = algebroid("Asv", Bundle("Asv"), declare=decl)
+        u, v, w = A.sections("u v w")
+        return reg, f, A, u, v, w, algebroid_engine(A, registry=reg)
+
+    def test_bare_does_not_close(self):
+        # Bare bracket: L_u(X) = [u, X] with [u, fX] opaque, so none of
+        # the right-Leibniz consequences below may close.
+        reg, f, A, u, v, w, eng = self._bare()
+        L = lie_E(A, u)
+        cases = [
+            (Act(L, Product(f, Sum(u, v))), _rl(A, u, f, Sum(u, v))),
+            (
+                Act(L, Sum(Product(f, v), w)),
+                Sum(_rl(A, u, f, v), A.bracket(u, w)),
+            ),
+            (Act(L, Neg(Product(f, v))), Neg(_rl(A, u, f, v))),
+        ]
+        for lhs, rhs in cases:
+            with pytest.raises(ProofFailure):
+                _prove(lhs, rhs, reg, eng)
+
+    def test_declared_right_leibniz_closes(self):
+        reg, f, A, u, v, w, eng = self._bare(("almost-leibniz",))
+        L = lie_E(A, u)
+        assert _prove(
+            Act(L, Sum(Product(f, v), w)),
+            Sum(_rl(A, u, f, v), A.bracket(u, w)),
+            reg,
+            eng,
+        ).steps
+        assert _prove(
+            Act(L, Neg(Product(f, v))), Neg(_rl(A, u, f, v)), reg, eng
+        ).steps
+
+    def test_splits_over_product_protocol(self):
+        # The product-rule hook: refused on f·v without right Leibniz,
+        # allowed on f·α (a form: holds for any bracket) and on TM.
+        from jacopy.central.tangent.exterior import CARTAN_TM
+
+        reg, f, A, u, v, w, eng = self._bare()
+        (al,) = forms("α", degree=1, bundle=A.bundle)
+        L = lie_E(A, u)
+        assert L.splits_over_product(Product(f, v), reg) is False
+        assert L.splits_over_product(Product(f, al), reg) is True
+        X, Y = vector_fields("X Y")
+        assert CARTAN_TM.lie(X).splits_over_product(Product(f, Y), reg)
+        # the protocol survives the slot rewrite
+        assert L.with_slots(v).splits_over_product(Product(f, v), reg) is False

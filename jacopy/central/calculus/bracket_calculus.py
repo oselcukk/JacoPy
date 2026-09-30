@@ -30,9 +30,12 @@ under right Leibniz. Both are therefore explicit calculus flags
 * ``skew=False`` → ``d`` carries ``alternating_values = False``: its
   evaluations are plain multilinear (``MultiEval(…, alternating=False)``;
   a requested ``alternating=True`` is normalized away at construction);
-* ``right_leibniz=False`` → ``L_X`` on a section expression ``f·Y``
-  is the bracket ``[X, f·Y]`` (the definition), never the product rule;
-  any Leibniz split must come from the bracket's own (declared) rules.
+* ``right_leibniz=False`` → ``L_X`` on a section-valued expression
+  (``f·Y``, sums and negations of such) is the bracket ``[X, ·]`` (the
+  definition), never the product rule; any Leibniz split must come from
+  the bracket's own (declared) rules. ``LieDerivative.
+  splits_over_product`` states the same to the generic product-rule
+  pass (default reject).
 
 The machinery is *generic in the pair* ``(ρ, [·,·])``
 (:class:`BracketCalculus`): the TM case takes the identity anchor and
@@ -113,7 +116,7 @@ class LieDerivative(Derivation):
     proved from this definition, never a definition itself.
     """
 
-    __slots__ = ("_calculus_name", "_vector", "_op_name")
+    __slots__ = ("_calculus_name", "_vector", "_op_name", "_calculus")
 
     #: ``L_X`` preserves alternation: for an alternating ω,
     #: ``(L_Xω)(Y,Y) = ρ(X)ω(Y,Y) − ω([X,Y],Y) − ω(Y,[X,Y]) = 0`` for
@@ -127,6 +130,7 @@ class LieDerivative(Derivation):
         *,
         op_name: str = "L",
         name: Optional[str] = None,
+        calculus: Optional["BracketCalculus"] = None,
     ) -> None:
         if not isinstance(X, Expr):
             raise TypeError("LieDerivative requires an Expr direction")
@@ -137,6 +141,9 @@ class LieDerivative(Derivation):
         self._calculus_name = calculus_name
         self._vector = X
         self._op_name = op_name
+        # the owning calculus (NOT identity: carried for the product
+        # protocol below)
+        self._calculus = calculus
 
     @property
     def calculus_name(self) -> str:
@@ -145,6 +152,36 @@ class LieDerivative(Derivation):
     @property
     def vector(self) -> Expr:
         return self._vector
+
+    def splits_over_product(self, arg: Expr, registry=None) -> bool:
+        """Product-rule protocol (audit 0B00E1B-FULL M2-2): may the
+        generic graded-Leibniz pass split ``L_X(a_1 ⋯ a_n)``?
+
+        DEFAULT REJECT. Yes when the calculus' bracket is right-Leibniz
+        by construction. Otherwise only when every factor is a scalar
+        function or a determinable calculus-FORM (degree ≥ 1): on
+        functions ``L_X = ρ(X)`` is a vector field, and on forms the
+        evaluation formula makes ``L_X(fω) = ρ(X)(f)ω + f L_Xω`` hold
+        for any bracket. A section factor — ``L_X(fY) = [X, fY]`` — IS
+        right Leibniz, so it is refused."""
+        calc = self._calculus
+        if calc is None:
+            return False
+        if calc.right_leibniz:
+            return True
+        from jacopy.central.calculus.scalars import is_scalar_function
+
+        factors = arg.children if isinstance(arg, Product) else (arg,)
+        for c in factors:
+            if is_scalar_function(c, registry):
+                continue
+            try:
+                if calc.form_degree(c, registry).as_int() >= 1:
+                    continue
+            except ValueError:
+                pass
+            return False
+        return True
 
     # Slot protocol (Phase 6.E): the direction is a rewritable slot,
     # and it is ADDITIVE — L_{X+Y} = L_X + L_Y (ℝ-linearity of the
@@ -156,7 +193,10 @@ class LieDerivative(Derivation):
 
     def with_slots(self, X: Expr) -> "LieDerivative":
         return LieDerivative(
-            self._calculus_name, X, op_name=self._op_name
+            self._calculus_name,
+            X,
+            op_name=self._op_name,
+            calculus=self._calculus,
         )
 
     @property
@@ -283,10 +323,18 @@ class BracketCalculus:
         """Does the bracket satisfy right Leibniz by construction?"""
         return self._right_leibniz
 
-    def is_section_expression(self, expr: Expr, registry=None) -> bool:
-        """``f_1 ⋯ f_k · Y`` — scalar functions times ONE section."""
+    def is_section_valued(self, expr: Expr, registry=None) -> bool:
+        """Is ``expr`` a section-valued expression: a section, a
+        ``C^∞``-multiple ``f_1⋯f_k·Y`` of one, or a sum/negation of
+        such (M2-2)?"""
         if self.is_section(expr):
             return True
+        if isinstance(expr, Neg):
+            return self.is_section_valued(expr.arg, registry)
+        if isinstance(expr, Sum):
+            return bool(expr.children) and all(
+                self.is_section_valued(c, registry) for c in expr.children
+            )
         if not isinstance(expr, Product):
             return False
         from jacopy.central.calculus.scalars import is_scalar_function
@@ -295,7 +343,7 @@ class BracketCalculus:
             c for c in expr.children
             if not is_scalar_function(c, registry)
         ]
-        return len(rest) == 1 and self.is_section(rest[0])
+        return len(rest) == 1 and self.is_section_valued(rest[0], registry)
 
     @property
     def d(self) -> ExteriorDerivative:
@@ -312,7 +360,9 @@ class BracketCalculus:
 
     def lie(self, X: Expr) -> LieDerivative:
         """``L_X`` — the derived Lie derivative in the direction ``X``."""
-        return LieDerivative(self._name, X, op_name=self._lie_name)
+        return LieDerivative(
+            self._name, X, op_name=self._lie_name, calculus=self
+        )
 
     def __repr__(self) -> str:
         return f"BracketCalculus({self._name!r})"
@@ -546,10 +596,7 @@ class IntrinsicLDefinition(Definition):
             # bracket [X, f·Y] by definition — the generic product rule
             # (L_X a Derivation) would silently assume right Leibniz.
             return not self._calc.right_leibniz and (
-                isinstance(expr.arg, Product)
-                and self._calc.is_section_expression(
-                    expr.arg, self._registry
-                )
+                self._calc.is_section_valued(expr.arg, self._registry)
             )
         if isinstance(expr, Pairing):
             if not self._is_this_L(expr.alpha):
