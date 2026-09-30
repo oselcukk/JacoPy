@@ -212,3 +212,113 @@ def test_anchor_direction_is_linear(ctx):
     (g,) = functions("g", registry=ctx["reg"])
     lhs = _sum(ctx, Act(E.anchor(LocalityOperator(E.name, es, u, v)), g))
     assert ctx["rule"].matches(lhs)
+
+
+# ===================================================================== #
+# M7-2 — ComponentInput.set_anholonomy must store BOTH lower orders
+# ===================================================================== #
+#
+# Definition (jacopy/central/tangent/anholonomy.py, PDF item 9b):
+#     γ^c_{ab} := ⟨e^c, [e_a, e_b]⟩,
+# antisymmetric in (a, b) because the Lie bracket is; the canonical atom
+# anholonomy_coefficient(fr, c, a, b) returns −γ^c_{ba} for a > b. So
+# γ^c_{ba} = v forces γ^c_{ab} = −v, and γ^c_{aa} = 0.
+#
+# Concrete witness on ℝ³: e_0 = ∂x, e_1 = ∂y, e_2 = e^{-7x}∂z.
+#     [e_2, e_0] = e^{-7x}∂z∂x − ∂x(e^{-7x}∂z) = 7e^{-7x}∂z = 7·e_2,
+# hence γ^2_{20} = 7 and γ^2_{02} = −7. (Before the fix, entering the
+# non-canonical γ^2_{20} = 7 with total=True evaluated to 0.)
+
+from jacopy.algorithms.simplify import simplify  # noqa: E402
+from jacopy.central.objects import frame  # noqa: E402
+from jacopy.central.tangent.anholonomy import (  # noqa: E402
+    anholonomy_coefficient,
+)
+from jacopy.core.expr import Integer as _Int, Neg  # noqa: E402
+from jacopy.packages.metric_affine.component_workflow import (  # noqa: E402
+    ComponentInput,
+)
+
+
+def _eq(x, y):
+    return simplify(Sum(x, Neg(y))) == _Int(0)
+
+
+def test_concrete_frame_witness_gamma_2_20_is_7():
+    x, y, z = sp.symbols("x y z")
+    coords = (x, y, z)
+    frame_vf = [
+        (1, 0, 0),
+        (0, 1, 0),
+        (0, 0, sp.exp(-7 * x)),
+    ]
+
+    def bracket(X, Y):
+        return tuple(
+            sp.simplify(
+                sum(X[i] * sp.diff(Y[k], coords[i]) for i in range(3))
+                - sum(Y[i] * sp.diff(X[k], coords[i]) for i in range(3))
+            )
+            for k in range(3)
+        )
+
+    br = bracket(frame_vf[2], frame_vf[0])
+    assert br == tuple(sp.simplify(7 * c) for c in frame_vf[2])
+
+
+@pytest.mark.parametrize("total", [False, True])
+def test_non_canonical_order_is_not_swallowed(total):
+    fr = frame("b")
+    data = ComponentInput(fr, dim=3, total=total)
+    data.set_anholonomy(2, 2, 0, 7)  # γ^2_{20} = 7 (non-canonical order)
+    assert _eq(data.evaluate(anholonomy_coefficient(fr, 2, 2, 0)), _Int(7))
+    assert _eq(
+        data.evaluate(anholonomy_coefficient(fr, 2, 0, 2)), _Int(-7)
+    )
+
+
+def test_lane_acceptance_symbolic_value():
+    reg = PropertyRegistry()
+    (h,) = functions("h", registry=reg)
+    fr = frame()
+    data = ComponentInput(fr, dim=2, total=True)
+    data.set_anholonomy("0", "1", "0", h)  # γ^0_{10} = h
+    g01 = data.evaluate(anholonomy_coefficient(fr, "0", "0", "1"), registry=reg)
+    g10 = data.evaluate(anholonomy_coefficient(fr, "0", "1", "0"), registry=reg)
+    assert _eq(g01, Neg(h))
+    assert _eq(g10, h)
+
+
+def test_canonical_and_non_canonical_entry_agree():
+    reg = PropertyRegistry()
+    (h,) = functions("h", registry=reg)
+    fr = frame()
+    a = ComponentInput(fr, dim=2, total=True)
+    a.set_anholonomy("0", "0", "1", Neg(h))
+    b = ComponentInput(fr, dim=2, total=True)
+    b.set_anholonomy("0", "1", "0", h)
+    for lo in (("0", "1"), ("1", "0")):
+        atom = anholonomy_coefficient(fr, "0", *lo)
+        assert _eq(
+            a.evaluate(atom, registry=reg), b.evaluate(atom, registry=reg)
+        )
+
+
+def test_consistent_explicit_partner_is_accepted():
+    fr = frame("b")
+    data = ComponentInput(fr, dim=3, total=True)
+    data.set_anholonomy(2, 2, 0, 7)
+    data.set_anholonomy(2, 0, 2, -7)  # the same fact, other order
+    assert data.anholonomy_value(("2", "2", "0")) == _Int(7)
+    assert data.anholonomy_value(("2", "0", "2")) == _Int(-7)
+
+
+def test_contradictory_partner_and_diagonal_raise():
+    fr = frame("b")
+    data = ComponentInput(fr, dim=3, total=True)
+    data.set_anholonomy(2, 2, 0, 7)
+    with pytest.raises(ValueError):
+        data.set_anholonomy(2, 0, 2, 7)  # would mean γ^2_{20} = −7
+    with pytest.raises(ValueError):
+        data.set_anholonomy(1, 0, 0, 3)  # γ^1_{00} must vanish
+    data.set_anholonomy(1, 0, 0, 0)  # the zero is fine
