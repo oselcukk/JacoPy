@@ -415,3 +415,86 @@ def test_split_refuses_s_dependent_f(ctx):
     )
     assert ctx["rule"]._split(lhs) is None
     assert not ctx["rule"].matches(lhs)
+
+
+# ===================================================================== #
+# M7-1 follow-up 2 (code-review): per-(node, slot) linearity certificates
+# ===================================================================== #
+#
+# Every case below FIRED on 6b3fba0 (items 1-4, wrongly) or was REFUSED
+# there (item 5, wrongly). For a function h:
+#  1) ⟨ι_u(d_E μ), hX⟩: d_E μ(u, hX) ∋ −μ([u, hX]); ⟨L^E_u μ, hX⟩ =
+#     ρ(u)(μ(hX)) − μ([u,hX]) — neither is h·(…) without a declared
+#     right-Leibniz/skew bracket, so the pairing's other slot must be a
+#     certified tensor.
+#  2) compose is stored as Product: ∇_u∇_{hX}w = h∇_u∇_X w +
+#     ρ(u)(h)∇_X w and ρ(u)ρ(hX)c = hρ(u)ρ(X)c + ρ(u)(h)ρ(X)c; only the
+#     LEFTMOST factor is C^∞-linear (∇_{hX}∇_u w = h∇_X∇_u w).
+#  3) a bare operator factor Product(∇_{hX}, w) is not a pointwise value.
+#  4) ρ(hX) on a 1-form μ is a Lie derivative: L_{hX}μ = hL_Xμ + μ(X)dh.
+#  5) g(hX, v) = h·g(X, v) (g a (0,2)-tensor) and ι_{hX}μ = h·ι_Xμ for a
+#     declared form μ — genuinely linear, must fire.
+
+from jacopy.algebra.derivation import compose  # noqa: E402
+from jacopy.central.algebroid import lie_E  # noqa: E402
+from jacopy.central.algebroid.context import EMetric  # noqa: E402
+from jacopy.central.objects.connection import CovariantOp  # noqa: E402
+from jacopy.central.objects.interior import Interior  # noqa: E402
+
+
+@pytest.fixture
+def cr(ctx):
+    E = ctx["E"]
+    X = MetricSharp(E.name, ctx["es"])  # g⁻¹e^s, linear in e^s
+    mu = Form("μ", degree=1, bundle=E.bundle)
+
+    def nab(Y):
+        return CovariantOp("∇", Y, bundle=E.bundle)
+
+    return dict(ctx, X=X, mu=mu, nab=nab, rho=E.anchor)
+
+
+def _fires(ctx, body):
+    return ctx["rule"].matches(_sum(ctx, body))
+
+
+def test_item1_pairing_with_non_tensorial_form_does_not_fire(cr):
+    E, u, X, mu = cr["E"], cr["u"], cr["X"], cr["mu"]
+    body = Pairing(Act(Interior(u), d_E(E, mu)), X)
+    # the FALSE target the old rule produced: ⟨ι_u d_E μ, g⁻¹Df⟩
+    assert cr["rule"].rewrite(_sum(cr, body)) == Pairing(
+        Act(Interior(u), d_E(E, mu)), MetricSharp(E.name, E.D(cr["f"]))
+    )
+    assert not _fires(cr, body)
+    assert not _fires(cr, Pairing(Act(lie_E(E, u), mu), X))
+
+
+def test_item2_composition_only_leftmost_factor(cr):
+    nab, rho, u, w, c, X = (
+        cr["nab"], cr["rho"], cr["u"], cr["w"], cr["c"], cr["X"]
+    )
+    assert not _fires(cr, Act(compose(nab(u), nab(X)), w))
+    assert not _fires(cr, Act(compose(rho(u), rho(X)), c))
+    assert _fires(cr, Act(compose(nab(X), nab(u)), w))
+
+
+def test_item3_bare_operator_factor_does_not_fire(cr):
+    assert not _fires(cr, Product(cr["nab"](cr["X"]), cr["w"]))
+
+
+def test_item4_anchor_on_a_form_does_not_fire(cr):
+    assert not _fires(cr, Act(cr["rho"](cr["X"]), cr["mu"]))
+    assert _fires(cr, Act(cr["rho"](cr["X"]), cr["c"]))  # on a scalar
+
+
+def test_item5_metric_and_interior_slots_fire(cr):
+    E, X, v, mu, f = cr["E"], cr["X"], cr["v"], cr["mu"], cr["f"]
+    gDf = MetricSharp(E.name, E.D(f))
+    lhs = _sum(cr, EMetric(E.name, X, v))
+    assert cr["rule"].matches(lhs)
+    assert cr["rule"].rewrite(lhs) == EMetric(E.name, gDf, v)
+    lhs = _sum(cr, Act(Interior(X), mu))
+    assert cr["rule"].matches(lhs)
+    assert cr["rule"].rewrite(lhs) == Act(Interior(gDf), mu)
+    # ι_X of a NON-tensorial form stays refused
+    assert not _fires(cr, Act(Interior(X), d_E(E, mu)))
