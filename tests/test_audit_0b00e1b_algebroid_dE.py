@@ -472,3 +472,21 @@ class TestSectionValuedLieArguments:
         assert CARTAN_TM.lie(X).splits_over_product(Product(f, Y), reg)
         # the protocol survives the slot rewrite
         assert L.with_slots(v).splits_over_product(Product(f, v), reg) is False
+
+
+# --------------------------------------------------------------------- #
+# Code-review follow-up: general d²μ under declarations (M2-3)          #
+# --------------------------------------------------------------------- #
+
+
+class TestGeneralDSquaredUnderDeclarations:
+    @pytest.mark.parametrize(
+        "decl", [("leibniz",), ("courant",), ("almost-courant",), ("lie",)]
+    )
+    def test_closes(self, decl):
+        # The identity uses no axiom; a declared J → 0 used to fire on
+        # one side only (ProofFailure on c1121c8 for leibniz/courant).
+        reg, E, u, v, w, mu = _defect_setup(decl)
+        assert df.prove_defect_d_squared_on_one_forms_general(
+            E, mu, u, v, w, registry=reg
+        ).steps

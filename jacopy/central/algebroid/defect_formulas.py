@@ -34,8 +34,11 @@ and the calculus conditions (A.8):
 almost-Lie algebroid (skew bracket + right Leibniz), where ``d_E`` is a
 genuine exterior derivative. Read as identities of the ORDERED Palais
 evaluation formulas (``d_E`` evaluated plain-multilinearly when the
-bracket is not declared skew, M2-1), seven of the eight hold for ANY
-ℝ-bilinear bracket and close on a bare algebroid. The exception is
+bracket is not declared skew, M2-1), seven of the eight are
+mathematically valid for every ℝ-bilinear bracket; the engine CLOSES
+them on a bare algebroid (tested) — under extra declarations a
+declared rule (e.g. ``J → 0``) may rewrite one side before the other is
+recognized, so closure there is not claimed. The exception is
 (A.5)-2, ``d_E² μ``: in general the bracket terms are
 
     μ([[u,v],w] − [[u,w],v] + [[v,w],u])
@@ -258,7 +261,13 @@ def prove_defect_d_squared_on_one_forms_general(
     The first-order ``ρ(·)μ([·,·])`` terms cancel pairwise; the
     second-order anchor terms give the predators; the bracket terms are
     ``μ([[u,v],w] − [[u,w],v] + [[v,w],u])``, which is the Jacobiator
-    plus the symmetric-part correction (M2-3)."""
+    plus the symmetric-part correction (M2-3).
+
+    The identity uses NO axiom, so by default it is proved with the
+    engine of the declaration-free copy of ``alg`` (same name, anchor
+    and bundle, hence the same ``d_E``/bracket nodes): declared rules
+    such as ``J → 0`` would otherwise fire on one side only. It then
+    holds in every declared context."""
     node = Sum(
         MultiEval(
             d_E(alg, d_E(alg, mu)),
@@ -274,6 +283,13 @@ def prove_defect_d_squared_on_one_forms_general(
         Neg(Pairing(mu, _S(alg, u, alg.bracket(v, w)))),
         Pairing(mu, _S(alg, v, alg.bracket(u, w))),
     )
+    if engine is None:
+        from jacopy.central.algebroid.context import algebroid
+
+        bare = algebroid(
+            alg.name, alg.bundle, anchor_name=alg.anchor_name, declare=()
+        )
+        engine = _engine(bare, registry)
     return _prove(alg, node, registry, engine, max_steps)
 
 
