@@ -490,3 +490,56 @@ class TestGeneralDSquaredUnderDeclarations:
         assert df.prove_defect_d_squared_on_one_forms_general(
             E, mu, u, v, w, registry=reg
         ).steps
+
+
+# --------------------------------------------------------------------- #
+# M7-1 root: indexed-sum linearity must preserve factor order           #
+# --------------------------------------------------------------------- #
+
+
+class TestIndexedSumLinearityOrder:
+    def _setup(self):
+        from jacopy.core.indexed_sum import IndexedSum
+        from jacopy.central.objects.frame import Frame, FrameIndex
+
+        reg = PropertyRegistry()
+        g, f0, h = functions("g f0 h", registry=reg)
+        E = algebroid("Eix", Bundle("Eix"), declare=("lie",))
+        v, w = E.sections("v w")
+        fr = Frame("e", bundle=E.bundle)
+        s = FrameIndex("s")
+        c_s = Pairing(fr.dual().field("s"), v)
+        return reg, g, f0, h, E, v, w, fr, s, c_s, IndexedSum
+
+    def test_middle_operator_not_pulled(self):
+        # Operator composition: (Σ_s ⟨e^s,v⟩·ρ(w)·ρ(e_s)(f0))(g)
+        #   = Σ_s ⟨e^s,v⟩ · ρ(w)(ρ(e_s)(f0)·g);
+        # pulling ρ(w) out gives ρ(w)(Σ_s ⟨e^s,v⟩ρ(e_s)(f0)·g), which
+        # has the extra Σ_s ρ(w)(⟨e^s,v⟩)·ρ(e_s)(f0)·g. PROVED on the
+        # previous rule; must not close.
+        from jacopy.packages.metric_affine.torsion_curvature import _engine
+
+        reg, g, f0, h, E, v, w, fr, s, c_s, IS = self._setup()
+        B = Act(E.anchor(fr.field("s")), f0)
+        lhs = Act(IS(s, fr, Product(c_s, E.anchor(w), B)), g)
+        pulled = Act(Product(E.anchor(w), IS(s, fr, Product(c_s, B))), g)
+        with pytest.raises(ProofFailure):
+            _prove(lhs, pulled, reg, _engine(reg))
+
+    def test_prefix_suffix_order_and_scalar_middle(self):
+        from jacopy.central.calculus.indexed_rules import (
+            IndexedSumLinearityDefinition as R,
+        )
+
+        reg, g, f0, h, E, v, w, fr, s, c_s, IS = self._setup()
+        rule = R(reg)
+        # free prefix ρ(w) stays left, free suffix h stays right
+        x = IS(s, fr, Product(E.anchor(w), c_s, h))
+        assert rule.rewrite(x) == Product(E.anchor(w), IS(s, fr, c_s), h)
+        # a scalar middle factor may pass scalar factors only
+        B = Act(E.anchor(fr.field("s")), g)
+        y = IS(s, fr, Product(c_s, f0, B))
+        assert rule.rewrite(y) == Product(f0, IS(s, fr, Product(c_s, B)))
+        # an operator middle factor: nothing to pull
+        z = IS(s, fr, Product(c_s, E.anchor(w), B))
+        assert not rule.matches(z)
