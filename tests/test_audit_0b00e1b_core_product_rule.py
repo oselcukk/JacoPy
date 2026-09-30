@@ -6,6 +6,8 @@ Acceptance tests for
   of the wedge factors, not their operator degree;
 * P0-2 (M1-3): only a certified scalar function in operator position
   acts by multiplication (a degree-0 operator like Λ♯(dh) does not);
+* K1-1 ≡ M1X-5: collect_pairings folds only certified scalar
+  coefficients into the pairing slot;
 
 each test builds the target identity itself and checks both the correct
 and the wrong-sign statement.
@@ -204,4 +206,85 @@ def test_p0_2_certified_scalar_still_multiplies():
     # same registry that makes degree_of(Λ♯(dh)) = 0 determinable
     assert not ScalarActAsMultiplicationDefinition(hreg).matches(
         Act(Act(Sharp(lam), dh), a)
+    )
+
+
+# --------------------------------------------------------------------- #
+# K1-1 ≡ M1X-5 — collect_pairings folds only SCALAR coefficients         #
+# --------------------------------------------------------------------- #
+#
+# ⟨α,·⟩ is C∞(M)-linear: Σ sᵢ⟨α,Vᵢ⟩ = ⟨α, Σ sᵢVᵢ⟩ for FUNCTIONS sᵢ.
+# A vector field A is not such a coefficient: ⟨α,U⟩·A is the vector
+# field (⟨α,U⟩)A, whereas ⟨α, A∘U⟩ has a second-order operator in the
+# vector slot. Hand check on ℝ: α = dx, U = ∂x, V = 2∂x, A = ∂x,
+# B = 3∂x: ⟨α,U⟩A + ⟨α,V⟩B = ∂x + 6∂x = 7∂x (a vector), but the old
+# output's slot A∘U + B∘V = 7∂x² kills x and sends x² to 14 — not a
+# derivation, so ⟨dx, 7∂x²⟩ is not a pairing at all.
+
+
+def _pairing_setup():
+    from jacopy.core.registry import PropertyRegistry
+
+    reg = PropertyRegistry()
+    (alpha,) = forms("alpha", degree=1)
+    U, V, A, B = vector_fields("U V A B")
+    return reg, alpha, U, V, A, B
+
+
+def test_k1_1_vector_coefficients_are_not_folded():
+    from jacopy.algebra.derivation import Derivation
+    from jacopy.algorithms.factor_terms import collect_pairings
+    from jacopy.algorithms.simplify import simplify
+    from jacopy.central.objects.kind import kind_of
+    from jacopy.core.expr import Product
+    from jacopy.core.pairing import Pairing
+
+    reg, alpha, U, V, A, B = _pairing_setup()
+    # vector field coefficient on the right (M1X-5) and left
+    for expr in (
+        Sum(Product(Pairing(alpha, U), A), Product(Pairing(alpha, V), B)),
+        Sum(Product(Pairing(alpha, U), A), Product(Pairing(alpha, V), A)),
+    ):
+        out = simplify(expr, reg)
+        assert out == expr
+        assert kind_of(out, reg).kind == "vector"
+        assert collect_pairings(expr, reg) == expr
+        assert collect_pairings(expr) == expr
+    # abstract derivations on the left (K1-1 ledger acceptance)
+    D, E = Derivation("D", degree=0), Derivation("E", degree=0)
+    X, Y = U, V
+    expr = Sum(Product(D, Pairing(alpha, X)), Product(E, Pairing(alpha, Y)))
+    assert simplify(expr, reg) == expr
+
+
+def test_k1_1_scalar_coefficients_still_fold():
+    from jacopy.algorithms.factor_terms import collect_pairings
+    from jacopy.algorithms.simplify import simplify
+    from jacopy.central.objects import functions
+    from jacopy.core.expr import Integer, Product, Symbol
+    from jacopy.core.pairing import Pairing
+    from jacopy.core.properties import Scalar
+
+    reg, alpha, U, V, _, _ = _pairing_setup()
+    f, g = functions("f g", registry=reg)
+    s, t = Symbol("s"), Symbol("t")
+    reg.declare(s, Scalar())
+    reg.declare(t, Scalar())
+    # left and right scalar coefficients: f⟨α,U⟩ + ⟨α,V⟩g = ⟨α, fU + gV⟩
+    expr = Sum(Product(f, Pairing(alpha, U)), Product(Pairing(alpha, V), g))
+    assert collect_pairings(expr, reg) == Pairing(
+        alpha, Sum(Product(f, U), Product(g, V))
+    )
+    # registry-declared Scalar symbols through the full simplify pipeline
+    expr2 = Sum(Product(s, Pairing(alpha, U)), Product(t, Pairing(alpha, V)))
+    folded = simplify(expr2, reg)
+    assert isinstance(folded, Pairing) and folded.alpha == alpha
+    assert simplify(
+        Sum(folded, Neg(Pairing(alpha, Sum(Product(s, U), Product(t, V))))), reg
+    ) == Integer(0)
+    # without a registry a declared symbol is NOT certified; numerals are
+    assert collect_pairings(expr) == expr
+    num = Sum(Product(Integer(2), Pairing(alpha, U)), Product(Integer(3), Pairing(alpha, V)))
+    assert collect_pairings(num) == Pairing(
+        alpha, Sum(Product(Integer(2), U), Product(Integer(3), V))
     )
