@@ -37,8 +37,10 @@ from __future__ import annotations
 from typing import Optional
 
 from jacopy.algebra.derivation import Act
-from jacopy.core.expr import Expr, Neg, Product, Sum
+from jacopy.core.expr import Expr, Neg, Product, Sum, Symbol
 from jacopy.core.indexed_sum import IndexedSum
+from jacopy.core.multi_eval import MultiEval
+from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import Definition
@@ -56,7 +58,9 @@ from jacopy.central.algebroid.context import (
     Algebroid,
     AnchoredVF,
     LocalityOperator,
+    MetricSharp,
 )
+from jacopy.central.algebroid.operators import MappedSection
 from jacopy.central.algebroid.locality import LocalityProjector
 from jacopy.packages.metric_affine.torsion_curvature import (
     curvature,
@@ -64,10 +68,111 @@ from jacopy.packages.metric_affine.torsion_curvature import (
 )
 
 
+#: Sentinel of :func:`_hole_degree`: the hole sits in a position where
+#: the expression is NOT ``C^∞``-linear in it (or in one we cannot
+#: certify as such).
+_NONLINEAR = -1
+
+#: A fresh atom used only to detect whether the hole occurs.
+_HOLE_PROBE = Symbol("⟪coframe-recombination hole probe⟫")
+
+#: Operator-like atoms that are ``C^∞``-linear in EVERY rewritable slot
+#: BY DEFINITION: ``L`` is ``C^∞``-trilinear [MC Def 3.5]; a
+#: :class:`MappedSection` is the image under a ``C^∞``-linear bundle
+#: map (the locality projector ``𝒫`` included); ``g⁻¹`` is a bundle
+#: isomorphism; the anchor ``ρ`` is a bundle map. ``∇_X`` is
+#: ``C^∞``-linear in its direction ``X`` (its only slot).
+_LINEAR_SLOT_ATOMS = (
+    LocalityOperator,
+    MappedSection,
+    MetricSharp,
+    AnchoredVF,
+    CovariantOp,
+)
+
+#: Structural nodes ``C^∞``-multilinear in every child: products of
+#: functions/sections, the pairing ``⟨α, X⟩`` and the multilinear
+#: evaluation ``ω(X_1, …, X_p)``.
+_MULTILINEAR_NODES = (Product, Pairing, MultiEval)
+
+
+def _hole_degree(expr: Expr, hole: Expr) -> int:
+    """Certified degree of ``expr`` in the atom ``hole``.
+
+    Returns ``0`` when ``hole`` does not occur, ``1`` when ``expr`` is
+    CERTIFIED homogeneous ``C^∞``-linear in ``hole`` (every occurrence
+    sits in a ``C^∞``-linear slot and every monomial carries exactly
+    one), and :data:`_NONLINEAR` otherwise. The recursion is:
+
+    * ``hole`` itself → 1; a subtree without ``hole`` → 0;
+    * ``Neg`` → degree of its argument;
+    * ``Sum`` → the common degree of its summands (a mix of 0 and 1 is
+      AFFINE, not linear: ``Σ_s c_s·(A + B(e^s)) ≠ A + B(Df)``);
+    * a multilinear node (``Product``, ``⟨·,·⟩``, ``ω(·,…)``) and a
+      linear-slot atom (``L``, ``Φ``, ``g⁻¹``, ``ρ``, ``∇_·``) → the
+      SUM of the child degrees, which must be ≤ 1 (two occurrences are
+      quadratic);
+    * ``Act(op, arg)`` → ``deg(op)`` provided ``deg(arg) == 0``
+      (``(f·X)(a) = f·X(a)`` and ``∇_{fX} = f∇_X`` make ``Act``
+      linear in the operator; it is only ℝ-linear, NOT ``C^∞``-linear,
+      in its argument — Leibniz: ``X(f·a) = f·X(a) + X(f)·a``);
+    * every other node carrying ``hole`` (``Power``, a nested binder,
+      an unknown operator, …) → :data:`_NONLINEAR` (conservative).
+    """
+    if expr == hole:
+        return 1
+    if expr.substitute_atom(hole, _HOLE_PROBE) == expr:
+        # ``substitute_atom`` (not a children walk) so that atoms
+        # hiding the hole behind a class-specific override count too.
+        return 0
+    if isinstance(expr, Neg):
+        return _hole_degree(expr.arg, hole)
+    if isinstance(expr, Sum):
+        degs = {_hole_degree(c, hole) for c in expr.children}
+        return degs.pop() if len(degs) == 1 else _NONLINEAR
+    if isinstance(expr, Act):
+        if _hole_degree(expr.arg, hole) != 0:
+            return _NONLINEAR
+        return _hole_degree(expr.op, hole)
+    if isinstance(expr, _MULTILINEAR_NODES):
+        kids = expr.children
+    elif isinstance(expr, _LINEAR_SLOT_ATOMS) and expr.is_atom:
+        kids = tuple(expr.rewritable_slots)
+    else:
+        return _NONLINEAR
+    total = 0
+    for c in kids:
+        d = _hole_degree(c, hole)
+        if d == _NONLINEAR:
+            return _NONLINEAR
+        total += d
+    return total if total <= 1 else _NONLINEAR
+
+
 class CoframeRecombinationDefinition(Definition):
     """``Σ_s ρ(e_s)(f)·E(e^s) → E(Df)`` — coframe completeness in the
     collection direction (the sole direction; the decomposition
-    inverse would ping-pong)."""
+    inverse would ping-pong).
+
+    **Soundness condition (exact).** Write the summand as
+    ``ρ(e_s)(f)·E[e^s]`` where ``E[ξ]`` is the remaining factors with
+    the coframe atom replaced by a hole ``ξ``. Then
+
+        Σ_s ρ(e_s)(f)·E[e^s] = E[Σ_s ρ(e_s)(f)·e^s] = E[Df]
+
+    holds iff (i) the bound index ``s`` occurs in the summand ONLY
+    through ``ρ(e_s)`` and the atoms ``e^s`` (so ``E`` and ``f`` are
+    the same for every ``s``) and (ii) ``ξ ↦ E[ξ]`` is
+    ``C^∞``-LINEAR (additive and ``E[g·ξ] = g·E[ξ]`` for functions
+    ``g``); the middle step is exactly this linearity with the
+    coefficients ``g = ρ(e_s)(f)``, the last is coframe completeness
+    ``Df = Σ_s ⟨Df, e_s⟩ e^s``. ℝ-linearity is not enough (a
+    derivative of ``e^s`` produces the Leibniz term), and neither is
+    "every ``e^s`` consumed": ``E[ξ] = ⟨ξ,u⟩⟨ξ,v⟩`` is quadratic.
+    (ii) is certified syntactically by :func:`_hole_degree` == 1;
+    anything it cannot certify is left alone (the rule simply does
+    not fire).
+    """
 
     anchor = IndexedSum
 
@@ -120,6 +225,9 @@ class CoframeRecombinationDefinition(Definition):
             rest = factors[:k] + factors[k + 1 :]
             if not rest:
                 continue
+            if contains_index(c.arg, dummy):
+                # f must be the same function for every s.
+                continue
             coframe_atom = self._frame.dual().field(dummy)
             if not any(
                 contains_index(r, dummy) for r in rest
@@ -138,11 +246,19 @@ class CoframeRecombinationDefinition(Definition):
             r.substitute_atom(coframe_atom, self._alg.D(f))
             for r in rest
         ]
-        # Sound only if the substitution consumed EVERY occurrence of
-        # the bound index.
-        return not any(
-            contains_index(r, dummy) for r in substituted
-        )
+        # (i) Sound only if the substitution consumed EVERY occurrence
+        # of the bound index ...
+        if any(contains_index(r, dummy) for r in substituted):
+            return False
+        # (ii) ... AND the remaining factors are C^∞-linear in e^s
+        # (degree exactly 1 across the whole product).
+        total = 0
+        for r in rest:
+            d = _hole_degree(r, coframe_atom)
+            if d == _NONLINEAR:
+                return False
+            total += d
+        return total == 1
 
     def rewrite(self, expr: Expr) -> Expr:
         sign, f, rest, coframe_atom = self._split(expr)
