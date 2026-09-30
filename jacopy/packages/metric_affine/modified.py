@@ -68,6 +68,8 @@ from jacopy.central.algebroid.context import (
 )
 from jacopy.central.algebroid.operators import MappedSection
 from jacopy.central.algebroid.locality import LocalityProjector
+from jacopy.packages.metric_affine.frame_components import ConnectionForm
+from jacopy.packages.metric_affine.metric import MetricValue, NonMetricity
 from jacopy.packages.metric_affine.torsion_curvature import (
     curvature,
     torsion,
@@ -82,22 +84,44 @@ _NONLINEAR = -1
 #: ``substitute_atom`` reaches private state.
 _HOLE_PROBE = Symbol("⟪coframe-recombination hole probe⟫")
 
-#: Derivation subclasses that denote SECTIONS (values), not operators:
-#: a section of ``E``, ``L(α,u,v)`` [MC Def 3.5], ``Φ(u)`` for a bundle
-#: map ``Φ`` (the projector ``𝒫`` included) and ``g⁻¹(ω)``.
+# ---- the kind tables (the ONLY place classes are listed) ------------ #
+
+#: Derivation subclasses that denote SECTIONS (values) when they stand
+#: LAST in a product: a section of ``E``, ``L(α,u,v)`` [MC Def 3.5],
+#: ``Φ(u)`` for a bundle map ``Φ`` (the projector ``𝒫`` included) and
+#: ``g⁻¹(ω)``. Followed by another factor, any Derivation (these
+#: included) is an operator acting on what follows.
 _SECTION_VALUES = (VectorField, LocalityOperator, MappedSection, MetricSharp)
 
-#: Declared tensor ATOMS — sections of a tensor bundle by definition,
-#: hence ``C^∞``-multilinear when evaluated (coframe/frame included).
-_TENSOR_ATOMS = (Form, Tensor, VectorField, CoboundaryForm)
+#: Declared tensor ATOMS without slots — sections of a tensor bundle by
+#: definition: forms/tensors (coframe included), sections, ``Df``
+#: (``⟨Df, hX⟩ = ρ(hX)f = h⟨Df, X⟩``) and the connection 1-form
+#: ``ω^a_b(X) := ⟨e^a, ∇_X e_b⟩`` (``∇_{hX} = h∇_X``).
+_TENSOR_ATOMS = (Form, Tensor, VectorField, CoboundaryForm, ConnectionForm)
+
+#: Atoms ``C^∞``-multilinear in EVERY rewritable slot by definition:
+#: ``g(u,v)`` on ``E`` and ``g(X,Y)`` (metric, a (0,2)-tensor);
+#: ``Q(X,Y,Z) = X(g(Y,Z)) − g(∇_X Y,Z) − g(Y,∇_X Z) = (∇_X g)(Y,Z)``
+#: (the ``X(h)`` terms cancel against Leibniz of ``∇``: a tensor);
+#: ``L`` (trilinear [MC Def 3.5]); ``Φ`` / ``𝒫`` (bundle maps);
+#: ``g⁻¹`` (bundle iso); ``ρ(X)`` as a vector-field value (bundle map).
+_MULTILINEAR_SLOT_ATOMS = (
+    EMetric,
+    MetricValue,
+    NonMetricity,
+    LocalityOperator,
+    MappedSection,
+    MetricSharp,
+    AnchoredVF,
+)
 
 
 def _is_operator(e: Expr) -> bool:
-    """An operator (acts on its argument, need not be pointwise):
-    ``∇_X``, ``ρ(X)`` / ``ι_X`` / ``L_X`` / ``d`` and any other
-    derivation that is not a section value, or a composition
-    (``compose`` stores ``D1∘D2`` as a :class:`Product`)."""
-    if isinstance(e, Product):
+    """An operator even when it stands last: ``∇_X``, ``ρ(X)`` /
+    ``ι_X`` / ``L_X`` / ``d`` or any other non-section derivation, a
+    composition (``compose`` stores ``D1∘D2`` as a :class:`Product`),
+    looking through ``Neg``/``Sum``/``Product``."""
+    if isinstance(e, (Neg, Sum, Product)):
         return any(_is_operator(c) for c in e.children)
     return isinstance(e, Derivation) and not isinstance(e, _SECTION_VALUES)
 
@@ -112,12 +136,13 @@ class _LinearityCertifier:
 
     * ``Neg``: ``−`` is ``C^∞``-linear. ``Sum``: all summands the SAME
       degree (0/1 mixed is affine: ``Σ_s c_s(A + B[e^s]) ≠ A + B[Df]``).
-    * ``Product``: pointwise multiplication is ``C^∞``-multilinear, but
-      ``Product`` also stores compositions. The hole may sit in ONE
-      factor that is a value (not an operator) and every factor to its
-      left must be a scalar function: ``a·(hX) = h·(aX)``, while
-      ``D∘(hX) = h·D∘X + D(h)·X`` (Leibniz) and ``(hD)`` as a bare
-      operator factor is not a pointwise value.
+    * ``Product`` is non-commutative and also stores compositions
+      (see :meth:`product_degree`): the hole sits in one factor with
+      only scalar functions to its left, and that factor is a scalar
+      or stands last as a value (a non-scalar followed by another
+      factor acts on it: ``D∘(hX) = h·D∘X + D(h)·X``). The recombined
+      coefficient ``ρ(e_s)(f)`` may itself be pulled out only if every
+      factor left of it is a scalar function.
     * ``Act(op, arg)``, hole in the operator only (``arg`` is where
       Leibniz lives, except for ``ι``):
         - ``∇_{hX}(·) = h·∇_X(·)``: the direction slot of a connection
@@ -131,7 +156,8 @@ class _LinearityCertifier:
           (``ι_{hX}(d_E μ)(v) = d_E μ(hX, v) ≠ h·d_E μ(X, v)`` for a
           non-skew bracket);
       hole in the argument: only ``ι_X(hμ) = h·ι_Xμ``.
-    * ``⟨α, X⟩``, ``g(u, v)`` (:class:`EMetric`, a (0,2)-tensor) and
+    * ``⟨α, X⟩``, ``g(u, v)`` (:class:`EMetric` / :class:`MetricValue`,
+      (0,2)-tensors), ``Q(X,Y,Z)`` (:class:`NonMetricity`) and
       ``H(X_1, …)`` (:class:`MultiEval`): bilinear/multilinear ONLY if
       every hole-free slot (the head included) is a certified tensor.
       ``⟨ι_u(d_E μ), hX⟩`` is not ``h⟨ι_u(d_E μ), X⟩``: by Palais,
@@ -172,16 +198,16 @@ class _LinearityCertifier:
             return True
         if isinstance(e, _TENSOR_ATOMS):
             return True
-        if isinstance(
-            e, (LocalityOperator, MappedSection, MetricSharp, AnchoredVF)
-        ):
+        if isinstance(e, _MULTILINEAR_SLOT_ATOMS):
             return all(self.certified(s) for s in e.rewritable_slots)
         if isinstance(e, (Neg, Sum)):
             return all(self.certified(c) for c in e.children)
         if isinstance(e, Product):
             *left, last = e.children
-            return all(self._scalar(c) for c in left) and self.certified(
-                last
+            return (
+                all(self._scalar(c) for c in left)
+                and not _is_operator(last)
+                and self.certified(last)
             )
         if isinstance(e, Act) and isinstance(e.op, CovariantOp):
             # ∇ of a tensor is a tensor.
@@ -228,8 +254,7 @@ class _LinearityCertifier:
             return self._act_degree(e)
         if isinstance(e, (Pairing, MultiEval)):
             return self._slots_degree(e.children)
-        if isinstance(e, (EMetric, LocalityOperator, MappedSection,
-                          MetricSharp, AnchoredVF)):
+        if isinstance(e, _MULTILINEAR_SLOT_ATOMS):
             return self._slots_degree(tuple(e.rewritable_slots))
         # Unknown node / atom: fine only if the hole is absent.
         if e.children:
@@ -239,16 +264,42 @@ class _LinearityCertifier:
             return 0
         return _NONLINEAR
 
-    def product_degree(self, factors) -> int:
-        degs = [self.degree(c) for c in factors]
+    def product_degree(self, factors, coefficient: int = -1) -> int:
+        """Degree of the (possibly non-commutative, composition-storing)
+        product ``factors``. The hole sits in one factor ``j``:
+
+        * every factor left of ``j`` is a scalar function (a Derivation
+          there would act on the hole: ``D∘(hX) = hD∘X + D(h)X``);
+        * factor ``j`` is a scalar, or it stands LAST and is a value
+          (not an operator) — a non-scalar followed by another factor
+          acts on it.
+
+        ``coefficient`` is the index of ``ρ(e_s)(f)`` in the ORIGINAL
+        factor list (−1: none). Pulling it out of the product is
+        ``C^∞``-linear only if every factor left of it is a scalar
+        function; otherwise it sits inside an operator's argument
+        (``Σ_s ⟨e^s,v⟩·ρ(w)∘ρ(e_s)(f)`` loses the Leibniz term
+        ``Σ_s ⟨e^s,v⟩·ρ(w)(ρ(e_s)f)``).
+        """
+        if coefficient >= 0 and not all(
+            self._scalar(c) for c in factors[:coefficient]
+        ):
+            return _NONLINEAR
+        degs = [
+            0 if i == coefficient else self.degree(c)
+            for i, c in enumerate(factors)
+        ]
         if _NONLINEAR in degs or sum(degs) > 1:
             return _NONLINEAR
         if sum(degs) == 0:
             return 0
         j = degs.index(1)
-        if _is_operator(factors[j]):
-            return _NONLINEAR
         if not all(self._scalar(c) for c in factors[:j]):
+            return _NONLINEAR
+        hole_factor = factors[j]
+        if self._scalar(hole_factor):
+            return 1
+        if j != len(factors) - 1 or _is_operator(hole_factor):
             return _NONLINEAR
         return 1
 
@@ -273,26 +324,22 @@ class _LinearityCertifier:
             return 1 if len(ops) == 1 and isinstance(op, Interior) else _NONLINEAR
         if d_ops[0] != 1:
             return _NONLINEAR  # hole in a non-leftmost factor
+        # d_ops[0] == 1 from here on: certify the leading operator's slot.
         lead = ops[0]
         if isinstance(lead, CovariantOp):
-            return self.degree(lead.vector)
+            return 1  # ∇_{hX}(·) = h·∇_X(·), whatever follows
         if isinstance(lead, AnchoredVF):
+            # ρ(hX)(a) = h·ρ(X)(a) only on a scalar; a chain of vector
+            # fields keeps a scalar a scalar.
             if all(
                 isinstance(o, (AnchoredVF, VectorField)) for o in ops[1:]
             ) and self._scalar(arg):
-                return self.degree(lead.section)
+                return 1
             return _NONLINEAR
         if isinstance(lead, Interior) and len(ops) == 1:
-            if self.certified(arg):
-                return self.degree(lead.vector)
-            return _NONLINEAR
+            # ι_{hX}μ = h·ι_Xμ only for a genuine tensor μ.
+            return 1 if self.certified(arg) else _NONLINEAR
         return _NONLINEAR
-
-
-def _hole_degree(expr: Expr, hole: Expr, registry=None) -> int:
-    """Certified degree of ``expr`` in ``hole`` (see
-    :class:`_LinearityCertifier`)."""
-    return _LinearityCertifier(hole, registry).degree(expr)
 
 
 class CoframeRecombinationDefinition(Definition):
@@ -379,14 +426,14 @@ class CoframeRecombinationDefinition(Definition):
                 contains_index(r, dummy) for r in rest
             ):
                 continue
-            return sign, c.arg, rest, coframe_atom
+            return sign, c.arg, rest, coframe_atom, factors, k
         return None
 
     def matches(self, expr: Expr) -> bool:
         split = self._split(expr)
         if split is None:
             return False
-        sign, f, rest, coframe_atom = split
+        sign, f, rest, coframe_atom, factors, k = split
         dummy = expr.dummy._repr_inner()
         substituted = [
             r.substitute_atom(coframe_atom, self._alg.D(f))
@@ -398,13 +445,14 @@ class CoframeRecombinationDefinition(Definition):
             return False
         # (ii) ... AND the remaining factors are C^∞-linear in e^s
         # (degree exactly 1 across the whole product).
-        # ``rest`` is read as the product it is (ρ(e_s)(f) is a scalar,
-        # so removing it changes no left-scalar condition).
+        # Certified on the ORIGINAL factor list: the product is
+        # non-commutative and stores compositions, so WHERE ρ(e_s)(f)
+        # stands decides whether it may be pulled out at all.
         cert = _LinearityCertifier(coframe_atom, self._registry)
-        return cert.product_degree(rest) == 1
+        return cert.product_degree(factors, coefficient=k) == 1
 
     def rewrite(self, expr: Expr) -> Expr:
-        sign, f, rest, coframe_atom = self._split(expr)
+        sign, f, rest, coframe_atom, _, _ = self._split(expr)
         substituted = [
             r.substitute_atom(coframe_atom, self._alg.D(f))
             for r in rest

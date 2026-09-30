@@ -498,3 +498,157 @@ def test_item5_metric_and_interior_slots_fire(cr):
     assert cr["rule"].rewrite(lhs) == Act(Interior(gDf), mu)
     # ι_X of a NON-tensorial form stays refused
     assert not _fires(cr, Act(Interior(X), d_E(E, mu)))
+
+
+# ===================================================================== #
+# M7-1 follow-up 3: the coefficient's POSITION in the (non-commutative,
+# composition-storing) product, and the missing tensor atoms
+# ===================================================================== #
+#
+# Product also stores compositions: Product(⟨e^s,v⟩, ρ(w), ρ(e_s)f)
+# applied to g is ⟨e^s,v⟩·ρ(w)(ρ(e_s)f·g), so
+#   Σ_s ⟨e^s,v⟩·ρ(w)∘ρ(e_s)f (g)
+#     = ρ(v)f·ρ(w)g + g·Σ_s ⟨e^s,v⟩·ρ(w)(ρ(e_s)f)       (TRUE)
+#     ≠ ⟨Df,v⟩·ρ(w)(g)                                   (what firing gave)
+# the Leibniz term Σ_s ⟨e^s,v⟩ g ρ(w)(ρ(e_s)f) is lost. The same holds for
+# a Neg/Sum-wrapped operator, a TM vector field Y, and ∇_w. On fb21fd8
+# the four false targets below were PROVED by ExpandAndSimplify + _engine.
+
+from jacopy.central.objects import vector_fields  # noqa: E402
+from jacopy.packages.metric_affine.frame_components import (  # noqa: E402
+    ConnectionForm,
+)
+from jacopy.packages.metric_affine.metric import (  # noqa: E402
+    MetricValue,
+    NonMetricity,
+)
+
+
+def _refused(ctx, lhs, false_rhs):
+    with pytest.raises(ProofFailure):
+        _prove(ctx, lhs, false_rhs)
+
+
+def test_item1_coefficient_right_of_operator_false_identity_rejected(cr):
+    E, es, v, w, f = cr["E"], cr["es"], cr["v"], cr["w"], cr["f"]
+    rho = cr["rho"]
+    (g,) = functions("g", registry=cr["reg"])
+    body = compose(Pairing(es, v), rho(w), cr["rho_f"])
+    lhs = Act(IndexedSum(FrameIndex("s"), cr["fr"], body), g)
+    false_rhs = Act(compose(Pairing(E.D(f), v), rho(w)), g)
+    assert not cr["rule"].matches(IndexedSum(FrameIndex("s"), cr["fr"], body))
+    _refused(cr, lhs, false_rhs)
+
+
+def test_item2_wrapped_operator_false_identity_rejected(cr):
+    E, X, f, c = cr["E"], cr["X"], cr["f"], cr["c"]
+    rho, fr = cr["rho"], cr["fr"]
+    (g,) = functions("g", registry=cr["reg"])
+    neg_body = Product(Neg(rho(X)), cr["rho_f"])
+    sum_body = Product(
+        Sum(rho(X), rho(MetricSharp(E.name, Product(c, cr["es"])))),
+        cr["rho_f"],
+    )
+    for body in (neg_body, sum_body):
+        assert not cr["rule"].matches(IndexedSum(FrameIndex("s"), fr, body))
+    lhs = Act(IndexedSum(FrameIndex("s"), fr, neg_body), g)
+    false_rhs = Act(Neg(rho(MetricSharp(E.name, E.D(f)))), g)
+    _refused(cr, lhs, false_rhs)
+
+
+def test_item3_tm_vector_field_and_nabla_false_identities_rejected(cr):
+    E, es, v, w, z, f = (
+        cr["E"], cr["es"], cr["v"], cr["w"], cr["z"], cr["f"]
+    )
+    fr = cr["fr"]
+    (g,) = functions("g", registry=cr["reg"])
+    (Y,) = vector_fields("Y")
+    body = Product(Pairing(es, v), Y, cr["rho_f"])
+    assert not cr["rule"].matches(IndexedSum(FrameIndex("s"), fr, body))
+    lhs = Act(IndexedSum(FrameIndex("s"), fr, body), g)
+    _refused(cr, lhs, Act(Product(Pairing(E.D(f), v), Y), g))
+    nab_w = CovariantOp("∇", w, bundle=E.bundle)
+    lhs = Act(
+        IndexedSum(
+            FrameIndex("s"), fr, compose(Pairing(es, v), nab_w, cr["rho_f"])
+        ),
+        z,
+    )
+    _refused(cr, lhs, Act(compose(Pairing(E.D(f), v), nab_w), z))
+
+
+def test_coefficient_left_of_operator_still_closes(cr):
+    # Σ_s ρ(e_s)f·⟨e^s,v⟩·ρ(w)(g) = ρ(v)f·ρ(w)(g): the coefficient stands
+    # left of every operator, pulling it out is C^∞-linear.
+    v, w, f, rho = cr["v"], cr["w"], cr["f"], cr["rho"]
+    (g,) = functions("g", registry=cr["reg"])
+    lhs = IndexedSum(
+        FrameIndex("s"),
+        cr["fr"],
+        Product(cr["rho_f"], Pairing(cr["es"], v), Act(rho(w), g)),
+    )
+    assert cr["rule"].matches(lhs)
+    _prove(cr, lhs, Product(Act(rho(v), f), Act(rho(w), g)))
+
+
+# ---- item 4: tensors certified from their definitions ---------------- #
+
+
+def test_nonmetricity_and_connection_form_are_tensorial_sympy():
+    # Generic ∇ (Γ^k_ij) and metric g_ij on ℝ²:
+    # Q(X,Y,Z) := X(g(Y,Z)) − g(∇_X Y, Z) − g(Y, ∇_X Z) is C^∞-linear in
+    # every slot, and ω^a_b(X) := ⟨e^a, ∇_X e_b⟩ in X (∇_{hX} = h∇_X).
+    x, y = sp.symbols("x y")
+    co = (x, y)
+    F = lambda n: sp.Function(n)(x, y)  # noqa: E731
+    G = [[F(f"g{i}{j}") if i <= j else F(f"g{j}{i}") for j in range(2)]
+         for i in range(2)]
+    Gam = [[[F(f"G{k}{i}{j}") for j in range(2)] for i in range(2)]
+           for k in range(2)]
+    vec = lambda n: [F(f"{n}{i}") for i in range(2)]  # noqa: E731
+    X, Y, Z, h = vec("X"), vec("Y"), vec("Z"), F("h")
+
+    def act(V, fn):
+        return sum(V[i] * sp.diff(fn, co[i]) for i in range(2))
+
+    def nabla(V, W):
+        return [
+            act(V, W[k])
+            + sum(Gam[k][i][j] * V[i] * W[j] for i in range(2) for j in range(2))
+            for k in range(2)
+        ]
+
+    def g(A, B):
+        return sum(G[i][j] * A[i] * B[j] for i in range(2) for j in range(2))
+
+    def Q(A, B, C):
+        return act(A, g(B, C)) - g(nabla(A, B), C) - g(B, nabla(A, C))
+
+    hs = lambda V: [h * c for c in V]  # noqa: E731
+    base = Q(X, Y, Z)
+    for args in ((hs(X), Y, Z), (X, hs(Y), Z), (X, Y, hs(Z))):
+        assert sp.expand(Q(*args) - h * base) == 0
+    e_b = [sp.Integer(1), sp.Integer(0)]
+    assert all(
+        sp.expand(a - h * b) == 0
+        for a, b in zip(nabla(hs(X), e_b), nabla(X, e_b))
+    )
+
+
+def test_item4_metric_value_nonmetricity_connection_form_fire(cr):
+    E, X, v, w, f = cr["E"], cr["X"], cr["v"], cr["w"], cr["f"]
+    gDf = MetricSharp(E.name, E.D(f))
+    for body, expected in [
+        (MetricValue("g", X, v), MetricValue("g", gDf, v)),
+        (
+            NonMetricity("∇", "g", X, v, w, bundle=E.bundle),
+            NonMetricity("∇", "g", gDf, v, w, bundle=E.bundle),
+        ),
+        (
+            Pairing(ConnectionForm("∇", "e", "a", "b"), X),
+            Pairing(ConnectionForm("∇", "e", "a", "b"), gDf),
+        ),
+    ]:
+        lhs = _sum(cr, body)
+        assert cr["rule"].matches(lhs), body
+        assert cr["rule"].rewrite(lhs) == expected
