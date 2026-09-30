@@ -5,6 +5,8 @@
   ``(d_E α)(u,u) = ρ(u)α(u) − ρ(u)α(u) − α([u,u]) = −α([u,u])``.
 * M2-2 (P0-5): ``L_X(fY) = ρ(X)(f)Y + f L_X Y`` is right Leibniz of the
   bracket; it must not follow from ``L_X`` being a ``Derivation``.
+* M2-3 (P1): the one-form ``d_E²`` defect formula needs antisymmetry;
+  in general a symmetric-part term survives.
 
 Every test builds the target equality itself; hand calculations are in
 the comments.
@@ -31,6 +33,7 @@ from jacopy.central.objects import Bundle, forms, functions, vector_fields
 from jacopy.central.objects.interior import Interior
 from jacopy.central.algebroid import algebroid, algebroid_engine, d_E, lie_E
 from jacopy.central.algebroid.calculus import algebroid_calculus, evaluate
+import jacopy.central.algebroid.defect_formulas as df
 
 
 def _prove(lhs, rhs, reg, eng=None):
@@ -69,6 +72,28 @@ class TestConcreteModels:
         table = {(0, 0): (0, 1)}
         e1, alpha = (1, 0), (0, 1)
         assert _palais_zero_anchor(alpha, table, e1, e1) == -1
+
+    def test_symmetric_part_correction_model(self):
+        # E = ℝ² over a point, ρ = 0, only [a,b] = a, μ = a*;
+        # u = a, v = b, w = a+b. With ρ = 0 the ordered double Palais
+        # is d²μ(u,v,w) = μ([[u,v],w] − [[u,w],v] + [[v,w],u]).
+        # [u,v] = a, [u,w] = a, [v,w] = 0 ⇒ d²μ = μ([a,a+b] − [a,b]) = 0.
+        # J(u,v,w) = [u,[v,w]] − [[u,v],w] − [v,[u,w]] = 0 − a − 0 = −a,
+        # so the skew-only formula gives −μ(J) = 1 ≠ 0 = d²μ, while the
+        # corrected −μ(J) + μ(S(u,[v,w]) − S(v,[u,w])) = 1 − 1 = 0.
+        table = {(0, 1): (1, 0)}
+        br = lambda x, y: _bracket(table, x, y)  # noqa: E731
+        add = lambda x, y: (x[0] + y[0], x[1] + y[1])  # noqa: E731
+        sub = lambda x, y: (x[0] - y[0], x[1] - y[1])  # noqa: E731
+        S = lambda x, y: add(br(x, y), br(y, x))  # noqa: E731
+        mu = lambda x: x[0]  # noqa: E731
+        u, v = (1, 0), (0, 1)
+        w = add(u, v)
+        d2 = mu(add(sub(br(br(u, v), w), br(br(u, w), v)), br(br(v, w), u)))
+        J = sub(sub(br(u, br(v, w)), br(br(u, v), w)), br(v, br(u, w)))
+        old_rhs = -mu(J)
+        new_rhs = -mu(J) + mu(sub(S(u, br(v, w)), S(v, br(u, w))))
+        assert (d2, old_rhs, new_rhs) == (0, 1, 0)
 
 
 # --------------------------------------------------------------------- #
@@ -246,3 +271,41 @@ class TestLieDerivativeRightLeibniz:
             reg,
             tangent_engine(registry=reg),
         ).steps
+
+
+# --------------------------------------------------------------------- #
+# M2-3: the one-form d² defect needs antisymmetry                        #
+# --------------------------------------------------------------------- #
+
+
+def _defect_setup(decls):
+    reg = PropertyRegistry()
+    E = algebroid("Ed3", Bundle("Ed3"), declare=decls)
+    u, v, w = E.sections("u v w")
+    (mu,) = forms("μ3", degree=1, bundle=E.bundle)
+    return reg, E, u, v, w, mu
+
+
+class TestDSquaredDefectScope:
+    def test_skew_formula_fails_bare_and_closes_skew(self):
+        reg, E, u, v, w, mu = _defect_setup(())
+        with pytest.raises(ProofFailure):
+            df.prove_defect_d_squared_on_one_forms(E, mu, u, v, w, registry=reg)
+        reg, E, u, v, w, mu = _defect_setup(("antisymmetric",))
+        assert df.prove_defect_d_squared_on_one_forms(
+            E, mu, u, v, w, registry=reg
+        ).steps
+
+    def test_general_formula_closes_bare(self):
+        # d²μ(u,v,w) = 𝒫(u,v)μ(w) − 𝒫(u,w)μ(v) + 𝒫(v,w)μ(u)
+        #   + μ([[u,v],w] − [[u,w],v] + [[v,w],u]),
+        # and the last bracket = −μ(J) + μ(S(u,[v,w]) − S(v,[u,w])).
+        reg, E, u, v, w, mu = _defect_setup(())
+        assert df.prove_defect_d_squared_on_one_forms_general(
+            E, mu, u, v, w, registry=reg
+        ).steps
+
+    def test_module_no_longer_claims_any_bracket_for_all(self):
+        doc = df.__doc__
+        assert "All DECLARATION-FREE" not in doc
+        assert "NEEDS ``antisymmetric``" in doc
