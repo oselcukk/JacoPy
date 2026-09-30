@@ -112,11 +112,40 @@ class ComponentInput:
     def set_anholonomy(
         self, upper, first, second, value
     ) -> None:
-        """``γ^upper_{first second} := value`` (and the
-        antisymmetric partner is implied by the caller)."""
-        self._anholonomy[
-            (str(upper), str(first), str(second))
-        ] = self._value(value)
+        """``γ^upper_{first second} := value``.
+
+        ``γ^c_{ab} := ⟨e^c, [e_a, e_b]⟩`` (``anholonomy.py``,
+        PDF item 9b) is ANTISYMMETRIC in its two lower indices because
+        the bracket is, so both orders are written together
+        (``γ^c_{ba} := −value``, as :meth:`set_pi` does) and either order
+        may be given. The canonical atom :func:`anholonomy_coefficient`
+        looks up the ``a < b`` key, which a non-canonical call used to
+        leave unset (``total=True`` then read it as ``0``; audit 0b00e1b
+        M7-2). Like the other setters a later call OVERWRITES — both
+        orders at once, so the pair stays antisymmetric.
+        ``first == second`` forces ``value == 0`` (:class:`ValueError`
+        otherwise)."""
+        from jacopy.algorithms.simplify import simplify
+        from jacopy.core.expr import Neg
+
+        c, a, b = str(upper), str(first), str(second)
+        v = self._value(value)
+        if a == b:
+            if v != Integer(0) and simplify(v) != Integer(0):
+                raise ValueError(
+                    f"γ^{c}_{{{a}{b}}} is antisymmetric in its lower "
+                    f"indices, so it must be 0 (got {v!r})"
+                )
+            self._anholonomy[(c, a, b)] = Integer(0)
+            return
+        if isinstance(v, Integer):
+            neg = Integer(-v.value)
+        elif isinstance(v, Neg):
+            neg = v.arg
+        else:
+            neg = Neg(v)
+        self._anholonomy[(c, a, b)] = v
+        self._anholonomy[(c, b, a)] = neg
 
     def set_metric(self, a, b, value) -> None:
         """``g_{ab} := value`` (symmetric: both orders stored)."""
