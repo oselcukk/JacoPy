@@ -322,3 +322,96 @@ def test_contradictory_partner_and_diagonal_raise():
     with pytest.raises(ValueError):
         data.set_anholonomy(1, 0, 0, 3)  # γ^1_{00} must vanish
     data.set_anholonomy(1, 0, 0, 0)  # the zero is fine
+
+
+# ===================================================================== #
+# M7-1 follow-up (verifier): MultiEval heads and the f-index guard
+# ===================================================================== #
+#
+# (d_E μ)(u,v) = ρ(u)μ(v) − ρ(v)μ(u) − μ([u,v])  (Palais). For a bracket
+# that is only left-anchored/Leibniz, e.g. the Dorfman bracket with
+#     [hX, v] = h[X,v] − ρ(v)(h)X + ⟨X,v⟩·Dh,
+# one gets
+#     (d_E μ)(hX, v) − h·(d_E μ)(X, v) = −⟨X,v⟩·⟨μ, Dh⟩ ≠ 0,
+# so d_E μ is NOT a tensor and Σ_s ρ(e_s)f·(d_E μ)(g⁻¹e^s, v) ≠
+# (d_E μ)(g⁻¹Df, v) in general. Before this fix the rule fired and
+# produced exactly that right-hand side.
+
+from jacopy.central.algebroid import d_E  # noqa: E402
+from jacopy.central.algebroid.context import MetricSharp  # noqa: E402
+from jacopy.central.objects import Form  # noqa: E402
+from jacopy.core.multi_eval import MultiEval  # noqa: E402
+
+
+def test_dorfman_d_mu_is_not_tensorial():
+    # E = TR ⊕ T*R, sections a∂ + b dx, ρ = projection to ∂-part,
+    # ⟨a∂+b dx, c∂+e dx⟩ = a e + c b, D h = h' dx,
+    # Dorfman [a∂+b dx, c∂+e dx] = (a c' − c a')∂ + (a e)' dx
+    # (L_X η with ι_Y dξ = 0 in dimension 1).
+    x = sp.symbols("x")
+    a, b, c, e, p, q, h = (
+        sp.Function(n)(x) for n in ("a", "b", "c", "e", "p", "q", "h")
+    )
+
+    def br(U, V):
+        (a1, b1), (c1, e1) = U, V
+        return (
+            a1 * sp.diff(c1, x) - c1 * sp.diff(a1, x),
+            sp.diff(a1 * e1, x),
+        )
+
+    def mu(U):  # μ(a∂ + b dx) = p a + q b
+        return p * U[0] + q * U[1]
+
+    def rho(U, g):
+        return U[0] * sp.diff(g, x)
+
+    def dmu(U, V):
+        return rho(U, mu(V)) - rho(V, mu(U)) - mu(br(U, V))
+
+    X, v = (a, b), (c, e)
+    hX = (h * a, h * b)
+    defect = sp.expand(dmu(hX, v) - h * dmu(X, v))
+    pairing = a * e + c * b
+    target = -pairing * mu((0, sp.diff(h, x)))  # −⟨X,v⟩·⟨μ, Dh⟩
+    assert sp.simplify(defect - target) == 0
+    assert defect != 0
+
+
+def test_d_E_head_multieval_does_not_fire(ctx):
+    E, es, v = ctx["E"], ctx["es"], ctx["v"]
+    mu = Form("μ", degree=1, bundle=E.bundle)
+    lhs = _sum(ctx, MultiEval(d_E(E, mu), MetricSharp(E.name, es), v))
+    # the FALSE target (d_E μ)(g⁻¹ Df, v)
+    false_rhs = MultiEval(
+        d_E(E, mu), MetricSharp(E.name, E.D(ctx["f"])), v
+    )
+    assert not ctx["rule"].matches(lhs)
+    assert ctx["rule"].rewrite(lhs) == false_rhs  # what firing WOULD give
+
+
+def test_declared_form_head_multieval_still_fires(ctx):
+    E, es, v = ctx["E"], ctx["es"], ctx["v"]
+    om = Form("ω", degree=2, bundle=E.bundle)  # a genuine tensor
+    lhs = _sum(ctx, MultiEval(om, MetricSharp(E.name, es), v))
+    assert ctx["rule"].matches(lhs)
+    assert ctx["rule"].rewrite(lhs) == MultiEval(
+        om, MetricSharp(E.name, E.D(ctx["f"])), v
+    )
+
+
+def test_split_refuses_s_dependent_f(ctx):
+    # f_s := ⟨e^s, u⟩ depends on s; Σ_s ρ(e_s)(f_s)·⟨e^s,w⟩ is not
+    # ⟨D f_s, w⟩ for any single function. matches() also rejects it
+    # through the post-substitution index check (D f_s still carries
+    # s), so the guard is pinned at the _split contract that rewrite()
+    # relies on: no candidate with an s-dependent f is ever produced.
+    E, fr, es, u, w = ctx["E"], ctx["fr"], ctx["es"], ctx["u"], ctx["w"]
+    fs = Pairing(es, u)
+    lhs = IndexedSum(
+        FrameIndex("s"),
+        fr,
+        Product(Act(E.anchor(fr.field("s")), fs), Pairing(es, w)),
+    )
+    assert ctx["rule"]._split(lhs) is None
+    assert not ctx["rule"].matches(lhs)

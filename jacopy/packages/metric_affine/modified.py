@@ -48,6 +48,8 @@ from jacopy.proof.strategies import ExpandAndSimplify
 from jacopy.central.calculus.indexed_rules import contains_index
 from jacopy.central.calculus.scalars import is_scalar_function
 from jacopy.central.objects.connection import Connection, CovariantOp
+from jacopy.central.objects.form import Form
+from jacopy.central.objects.tensor import Tensor
 from jacopy.central.objects.frame import (
     CoframeField,
     Frame,
@@ -91,9 +93,30 @@ _LINEAR_SLOT_ATOMS = (
 )
 
 #: Structural nodes ``C^∞``-multilinear in every child: products of
-#: functions/sections, the pairing ``⟨α, X⟩`` and the multilinear
-#: evaluation ``ω(X_1, …, X_p)``.
-_MULTILINEAR_NODES = (Product, Pairing, MultiEval)
+#: functions/sections and the pairing ``⟨α, X⟩``. The evaluation
+#: ``H(X_1, …, X_p)`` (:class:`MultiEval`) is NOT here: it is
+#: ``C^∞``-multilinear only when the head ``H`` is a genuine tensor,
+#: see :func:`_certified_tensor_head`.
+_MULTILINEAR_NODES = (Product, Pairing)
+
+
+def _certified_tensor_head(head: Expr, hole: Expr) -> bool:
+    """True when ``head(X_1, …)`` is certainly ``C^∞``-multilinear in
+    its argument slots: the head is the hole itself or a DECLARED
+    tensor atom (:class:`Form` / :class:`Tensor`, the coframe
+    included), which is a section of a tensor bundle by definition.
+
+    A composite head is NOT certified. The case that matters is
+    ``d_E μ``: by Palais ``(d_E μ)(u,v) = ρ(u)μ(v) − ρ(v)μ(u) −
+    μ([u,v])``, so with a bracket that is only left-anchored/
+    Leibniz (metric, Courant), ``[hX,v] = h[X,v] − ρ(v)(h)X +
+    ⟨X,v⟩Dh`` gives
+
+        (d_E μ)(hX, v) − h·(d_E μ)(X, v) = −⟨X,v⟩·⟨μ, Dh⟩ ≠ 0;
+
+    it is tensorial only for a skew (Lie-algebroid) bracket, a fact not
+    available locally here — so every non-atomic head is refused."""
+    return head == hole or isinstance(head, (Form, Tensor))
 
 
 def _hole_degree(expr: Expr, hole: Expr) -> int:
@@ -108,7 +131,10 @@ def _hole_degree(expr: Expr, hole: Expr) -> int:
     * ``Neg`` → degree of its argument;
     * ``Sum`` → the common degree of its summands (a mix of 0 and 1 is
       AFFINE, not linear: ``Σ_s c_s·(A + B(e^s)) ≠ A + B(Df)``);
-    * a multilinear node (``Product``, ``⟨·,·⟩``, ``ω(·,…)``) and a
+    * ``H(X_1, …)`` → as a multilinear node only when
+      :func:`_certified_tensor_head` certifies ``H``, else
+      :data:`_NONLINEAR`;
+    * a multilinear node (``Product``, ``⟨·,·⟩``) and a
       linear-slot atom (``L``, ``Φ``, ``g⁻¹``, ``ρ``, ``∇_·``) → the
       SUM of the child degrees, which must be ≤ 1 (two occurrences are
       quadratic);
@@ -134,7 +160,11 @@ def _hole_degree(expr: Expr, hole: Expr) -> int:
         if _hole_degree(expr.arg, hole) != 0:
             return _NONLINEAR
         return _hole_degree(expr.op, hole)
-    if isinstance(expr, _MULTILINEAR_NODES):
+    if isinstance(expr, MultiEval):
+        if not _certified_tensor_head(expr.head, hole):
+            return _NONLINEAR
+        kids = expr.children
+    elif isinstance(expr, _MULTILINEAR_NODES):
         kids = expr.children
     elif isinstance(expr, _LINEAR_SLOT_ATOMS) and expr.is_atom:
         kids = tuple(expr.rewritable_slots)
