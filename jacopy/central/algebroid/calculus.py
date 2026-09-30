@@ -18,7 +18,7 @@ operator code. The canonical definitions are inherited verbatim:
 * ``ι_u`` — the generic slot-insertion interior product (bundle-blind
   by construction).
 
-**Axiom-carrying operators (audit 0B00E1B-FULL M2-1).** For a
+**Axiom-carrying operators (audit 0B00E1B-FULL M2-1/M2-2).** For a
 general ℝ-bilinear bracket the Palais/Koszul expression is an ORDERED
 ℝ-multilinear map, not an exterior form:
 ``(d_E α)(u,u) = −α([u,u])``, which is nonzero on the Dorfman-type
@@ -33,6 +33,11 @@ general ℝ-bilinear bracket the Palais/Koszul expression is an ORDERED
   the plain one (``MultiEval`` flag protocol). Without
   right Leibniz it is not even ``C^∞``-multilinear (first slot), so it
   is a tensor only on almost-Lie algebroids (skew + right Leibniz).
+* ``L^E_u`` acts on sections by the bracket, including on
+  ``C^∞``-multiples: ``L^E_u(f v) = [u, f v]_E`` definitionally; the
+  split ``ρ(u)(f) v + f [u,v]_E`` is the DECLARED ``right-leibniz``
+  rule firing on that bracket (``right_leibniz=False`` on the calculus:
+  the property is a declaration of the bracket, never structural).
 
 **Conditional Cartan structure** — the theorems hold exactly under
 their hierarchy declarations, and fail honestly otherwise:
@@ -85,8 +90,10 @@ def algebroid_calculus(alg: Algebroid) -> BracketCalculus:
         d_name=f"d_{alg.name}",
         lie_name=f"L^{alg.name}",
         # d_E is an alternating form operator only for a skew bracket
-        # (M2-1).
+        # (M2-1); right Leibniz is a DECLARATION of an algebroid, whose
+        # rule acts on [u, f v]_E — L^E never assumes it (M2-2).
         skew=alg.declares("antisymmetric"),
+        right_leibniz=False,
     )
 
 

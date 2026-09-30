@@ -3,6 +3,8 @@
 * M2-1 (P0-4): the Palais/Koszul ``d_E`` is an ALTERNATING form only for
   a skew bracket. On a Dorfman-type bracket
   ``(d_E α)(u,u) = ρ(u)α(u) − ρ(u)α(u) − α([u,u]) = −α([u,u])``.
+* M2-2 (P0-5): ``L_X(fY) = ρ(X)(f)Y + f L_X Y`` is right Leibniz of the
+  bracket; it must not follow from ``L_X`` being a ``Derivation``.
 
 Every test builds the target equality itself; hand calculations are in
 the comments.
@@ -13,15 +15,21 @@ import itertools
 import pytest
 
 from jacopy.algebra.derivation import Act
+from jacopy.algebra.lie_bracket_vf import LieBracketVF
 from jacopy.algorithms.simplify import simplify
-from jacopy.core.expr import Integer, Neg, Sum
+from jacopy.core.expr import Integer, Neg, Product, Sum
 from jacopy.core.multi_eval import MultiEval, admits_alternation
 from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
+from jacopy.proof.expansion import ExpansionEngine
 from jacopy.proof.strategies import ExpandAndSimplify, ProofFailure
-from jacopy.central.objects import Bundle, forms
+from jacopy.central.calculus.bracket_calculus import (
+    BracketCalculus,
+    IntrinsicLDefinition,
+)
+from jacopy.central.objects import Bundle, forms, functions, vector_fields
 from jacopy.central.objects.interior import Interior
-from jacopy.central.algebroid import algebroid, algebroid_engine, d_E
+from jacopy.central.algebroid import algebroid, algebroid_engine, d_E, lie_E
 from jacopy.central.algebroid.calculus import algebroid_calculus, evaluate
 
 
@@ -140,3 +148,101 @@ class TestDEAlternation:
 
         reg, C, u, v, m = _alg("courant", "Cmag")
         assert prove_cartan_magic_on_one_forms(C, u, m, v, registry=reg).steps
+
+
+# --------------------------------------------------------------------- #
+# M2-2: L on C^∞-multiples of sections needs right Leibniz               #
+# --------------------------------------------------------------------- #
+
+
+class TestLieDerivativeRightLeibniz:
+    def test_zero_bracket_identity_anchor(self):
+        # M = ℝ, E = Tℝ, ρ = id, [u,v] := 0 (ℝ-bilinear, NOT right
+        # Leibniz). e = ∂x: L_e(x e) = [e, x e] = 0, whereas the product
+        # rule would give ρe(x) e + x[e,e] = 1·e ≠ 0.
+        reg = PropertyRegistry()
+        (x,) = functions("x", registry=reg)
+        (e,) = vector_fields("e")
+        calc = BracketCalculus(
+            "zero-id", anchor=lambda s: s, bracket=lambda a, b: Integer(0)
+        )
+        eng = ExpansionEngine([IntrinsicLDefinition(calc, reg)])
+        lhs = Act(calc.lie(e), Product(x, e))
+        assert _prove(lhs, Integer(0), reg, eng).steps
+        with pytest.raises(ProofFailure):
+            _prove(lhs, Product(Act(e, x), e), reg, eng)
+
+    def test_twice_lie_counter_model(self):
+        # ρ = id, [u,v] := 2[u,v]_Lie. By definition
+        # L_e(x e2) = 2[e, x e2]_Lie = 2e(x)e2 + 2x[e,e2]; the product rule
+        # would give e(x)e2 + 2x[e,e2], short by e(x)e2.
+        reg = PropertyRegistry()
+        (x,) = functions("x", registry=reg)
+        e, e2 = vector_fields("e e2")
+        calc = BracketCalculus(
+            "twice-lie",
+            anchor=lambda s: s,
+            bracket=lambda a, b: Product(Integer(2), LieBracketVF(a, b)),
+        )
+        eng = ExpansionEngine([IntrinsicLDefinition(calc, reg)])
+        lhs = Act(calc.lie(e), Product(x, e2))
+        wrong = Sum(
+            Product(Act(e, x), e2),
+            Product(x, Integer(2), LieBracketVF(e, e2)),
+        )
+        with pytest.raises(ProofFailure):
+            _prove(lhs, wrong, reg, eng)
+        assert _prove(
+            lhs, Product(Integer(2), LieBracketVF(e, Product(x, e2))), reg, eng
+        ).steps
+
+    @pytest.mark.parametrize(
+        "decl", [(), ("antisymmetric", "jacobi"), ("symmetric-part",)]
+    )
+    def test_undeclared_right_leibniz_does_not_close(self, decl):
+        reg = PropertyRegistry()
+        (f,) = functions("f", registry=reg)
+        A = algebroid("Anr", Bundle("Anr"), declare=decl)
+        u, v = A.sections("u v")
+        eng = algebroid_engine(A, registry=reg)
+        lhs = Act(lie_E(A, u), Product(f, v))
+        with pytest.raises(ProofFailure):
+            _prove(
+                lhs,
+                Sum(Product(Act(A.anchor(u), f), v), Product(f, A.bracket(u, v))),
+                reg,
+                eng,
+            )
+        # the definition L_u(f v) = [u, f v] still holds
+        assert _prove(lhs, A.bracket(u, Product(f, v)), reg, eng).steps
+
+    @pytest.mark.parametrize("level", ["almost-leibniz", "lie", "leibniz"])
+    def test_declared_right_leibniz_closes_with_trace(self, level):
+        reg = PropertyRegistry()
+        (f,) = functions("f", registry=reg)
+        A = algebroid("Arl", Bundle("Arl"), declare=(level,))
+        u, v = A.sections("u v")
+        chain = _prove(
+            Act(lie_E(A, u), Product(f, v)),
+            Sum(Product(Act(A.anchor(u), f), v), Product(f, A.bracket(u, v))),
+            reg,
+            algebroid_engine(A, registry=reg),
+        )
+        assert any("right-Leibniz" in s.rule for s in chain.steps)
+
+    def test_tangent_product_rule_still_closes(self):
+        # E = TM: [X, fY] = X(f)Y + f[X,Y] by construction.
+        from jacopy.central.tangent.engine import tangent_engine
+        from jacopy.central.tangent.exterior import CARTAN_TM
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+
+        reg = PropertyRegistry()
+        (f,) = functions("f", registry=reg)
+        X, Y = vector_fields("X Y")
+        assert CARTAN_TM.right_leibniz and CARTAN_TM.skew
+        assert _prove(
+            Act(CARTAN_TM.lie(X), Product(f, Y)),
+            Sum(Product(Act(X, f), Y), Product(f, lie_bracket(X, Y))),
+            reg,
+            tangent_engine(registry=reg),
+        ).steps

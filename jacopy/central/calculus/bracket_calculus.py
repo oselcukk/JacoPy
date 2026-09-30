@@ -18,16 +18,21 @@ matches the determinant wedge convention fixed in Phase 1
 Everything else about ``d`` — ``d² = 0``, the wedge Leibniz rule, the
 Cartan relations — is a **theorem** proved from this definition.
 
-**Axiom flag (audit 0B00E1B-FULL M2-1).** The formula above is
+**Axiom flags (audit 0B00E1B-FULL M2-1/M2-2).** The formula above is
 an ORDERED ℝ-multilinear expression for any ℝ-bilinear bracket, but
 it is an *alternating* form only when the bracket is skew-symmetric:
 ``dα(u,u) = ρ(u)α(u) − ρ(u)α(u) − α([u,u]) = −α([u,u])``, nonzero for
-a Leibniz/Dorfman bracket. Hence the explicit calculus flag ``skew``
-(default ``False``):
+a Leibniz/Dorfman bracket. Likewise ``L_X`` is a derivation on
+``C^∞``-multiples of sections, ``L_X(fY) = ρ(X)(f)Y + f L_X Y``, only
+under right Leibniz. Both are therefore explicit calculus flags
+(``skew``, ``right_leibniz``), default ``False``:
 
 * ``skew=False`` → ``d`` carries ``alternating_values = False``: its
   evaluations are plain multilinear (``MultiEval(…, alternating=False)``;
-  a requested ``alternating=True`` is normalized away at construction).
+  a requested ``alternating=True`` is normalized away at construction);
+* ``right_leibniz=False`` → ``L_X`` on a section expression ``f·Y``
+  is the bracket ``[X, f·Y]`` (the definition), never the product rule;
+  any Leibniz split must come from the bracket's own (declared) rules.
 
 The machinery is *generic in the pair* ``(ρ, [·,·])``
 (:class:`BracketCalculus`): the TM case takes the identity anchor and
@@ -189,6 +194,7 @@ class BracketCalculus:
         "_form_degree",
         "_section_test",
         "_skew",
+        "_right_leibniz",
     )
 
     def __init__(
@@ -202,6 +208,7 @@ class BracketCalculus:
         form_degree=None,
         section_test=None,
         skew: bool = False,
+        right_leibniz: bool = False,
     ) -> None:
         """``form_degree``/``section_test`` are the calculus' grading
         hooks (Phase 5.D): the TILDE calculus on ``T*M`` swaps the
@@ -215,7 +222,10 @@ class BracketCalculus:
 
         ``skew`` — the bracket is skew-symmetric (by construction or by
         declaration); only then is ``d`` an alternating operator.
-        Default ``False`` (no silent axioms, audit 0B00E1B-FULL M2-1)."""
+        ``right_leibniz`` — the bracket satisfies right Leibniz BY
+        CONSTRUCTION, so ``L_X`` may split ``C^∞``-multiples of
+        sections by the product rule. Both default to ``False`` (no
+        silent axioms, audit 0B00E1B-FULL M2-1/M2-2)."""
         if not isinstance(name, str) or not name:
             raise ValueError("BracketCalculus name must be a non-empty str")
         if not callable(anchor) or not callable(bracket):
@@ -223,9 +233,10 @@ class BracketCalculus:
         self._name = name
         self._anchor = anchor
         self._bracket = bracket
-        if not isinstance(skew, bool):
-            raise TypeError("skew must be a bool")
+        if not isinstance(skew, bool) or not isinstance(right_leibniz, bool):
+            raise TypeError("skew and right_leibniz must be bools")
         self._skew = skew
+        self._right_leibniz = right_leibniz
         self._d = ExteriorDerivative(name, name=d_name, skew=skew)
         self._lie_name = lie_name
         self._form_degree = form_degree
@@ -260,6 +271,25 @@ class BracketCalculus:
     def skew(self) -> bool:
         """Is the bracket skew-symmetric (``d`` alternating)?"""
         return self._skew
+
+    @property
+    def right_leibniz(self) -> bool:
+        """Does the bracket satisfy right Leibniz by construction?"""
+        return self._right_leibniz
+
+    def is_section_expression(self, expr: Expr, registry=None) -> bool:
+        """``f_1 ⋯ f_k · Y`` — scalar functions times ONE section."""
+        if self.is_section(expr):
+            return True
+        if not isinstance(expr, Product):
+            return False
+        from jacopy.central.calculus.scalars import is_scalar_function
+
+        rest = [
+            c for c in expr.children
+            if not is_scalar_function(c, registry)
+        ]
+        return len(rest) == 1 and self.is_section(rest[0])
 
     @property
     def d(self) -> ExteriorDerivative:
@@ -499,8 +529,18 @@ class IntrinsicLDefinition(Definition):
         if isinstance(expr, Act) and isinstance(expr.op, LieDerivative):
             if expr.op.calculus_name != self._calc.name:
                 return False
-            return is_scalar_function(expr.arg, self._registry) or (
+            if is_scalar_function(expr.arg, self._registry) or (
                 self._is_section(expr.arg)
+            ):
+                return True
+            # M2-2: without CONSTRUCTIVE right Leibniz, L_X(f·Y) is the
+            # bracket [X, f·Y] by definition — the generic product rule
+            # (L_X a Derivation) would silently assume right Leibniz.
+            return not self._calc.right_leibniz and (
+                isinstance(expr.arg, Product)
+                and self._calc.is_section_expression(
+                    expr.arg, self._registry
+                )
             )
         if isinstance(expr, Pairing):
             if not self._is_this_L(expr.alpha):

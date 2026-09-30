@@ -41,8 +41,10 @@ CARTAN_TM = BracketCalculus(
     "Cartan-TM",
     anchor=lambda X: X,
     bracket=lie_bracket,
-    # The Lie bracket of vector fields is skew by construction.
+    # The Lie bracket of vector fields is skew and right-Leibniz by
+    # construction ([X, fY] = X(f)Y + f[X,Y]).
     skew=True,
+    right_leibniz=True,
 )
 
 
