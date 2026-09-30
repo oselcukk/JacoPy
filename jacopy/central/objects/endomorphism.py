@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from jacopy.algebra.derivation import Derivation, degree_of
+from jacopy.algebra.derivation import Derivation
 from jacopy.core.expr import Atom, Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -112,13 +112,20 @@ class EndoForm(Atom):
 
     @property
     def degree(self) -> Degree:
-        deg = getattr(self._arg, "degree", None)
-        if isinstance(deg, Degree):
-            return deg
-        try:
-            return degree_of(self._arg, None)
-        except ValueError:
-            raise AttributeError("EndoForm degree undetermined")
+        # The Λᵖ-side acts on FORMS only (audit 0b00e1b follow-up): a
+        # vector field's instance degree is its OPERATOR degree 0, so
+        # reading it made m̃(X) a "0-form", i.e. a scalar function.
+        # Anything not typed as a form (or a 0-form) has no degree here.
+        from jacopy.central.objects.kind import kind_of  # noqa: WPS433
+
+        k = kind_of(self._arg, None)
+        if k.kind in ("form", "function", "zero") and isinstance(
+            k.degree, Degree
+        ):
+            return k.degree
+        raise AttributeError(
+            "EndoForm degree undetermined: the argument is not a form"
+        )
 
     @property
     def rewritable_slots(self):

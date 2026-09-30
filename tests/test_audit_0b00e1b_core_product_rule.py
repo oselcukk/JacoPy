@@ -266,6 +266,137 @@ def test_p0_2_certified_scalar_still_multiplies():
     )
 
 
+# P0-2 follow-up (code review) ------------------------------------------ #
+#
+# Leibniz is a DERIVATION's property: D(ab) = D(a)b ± aD(b). Default
+# reject: only a Derivation (not marked leibniz=False), an operator that
+# declares leibniz=True, or a commutator of two such is split. The
+# public musical Sharp is C∞-LINEAR (Λ♯(f·dh) = f·Λ♯(dh)), not a
+# derivation — the old split produced the false Λ♯(f·dh) =
+# Λ♯(f)·dh + f·Λ♯(dh); likewise a Graded(1) symbol Q is no derivation.
+
+
+def test_p0_2_followup_non_derivation_is_not_split():
+    from jacopy.core.expr import Product, Symbol
+    from jacopy.core.properties import Graded
+
+    reg, a, b, lam, dh, Sharp = _hamiltonian_setup()
+    from jacopy.central.objects import functions
+
+    (f,) = functions("f", registry=reg)
+    S = Sharp(lam)
+    node = Act(S, Product(f, dh))
+    assert product_rule(node, reg) == node
+    false_leibniz = Sum(Product(Act(S, f), dh), Product(f, Act(S, dh)))
+    with pytest.raises(ProofFailure):
+        show_equal(node, false_leibniz, registry=reg)
+    Q = Symbol("Q")
+    reg.declare(Q, Graded(1))
+    nodeQ = Act(Q, Product(a, b))
+    assert product_rule(nodeQ, reg) == nodeQ
+
+
+def test_p0_2_followup_numeric_factor_pulls_out_of_linear_operator():
+    # (h) ℝ-linearity of any operator: X_h(2·a) = 2·X_h(a); a FUNCTION
+    # factor does not pull out (X_h(f·a) ≠ f·X_h(a) in general).
+    from jacopy.core.expr import Integer, Product
+
+    reg, a, b, lam, dh, Sharp = _hamiltonian_setup()
+    V = Act(Sharp(lam), dh)
+    assert product_rule(Act(V, Product(Integer(2), a)), reg) == Product(
+        Integer(2), Act(V, a)
+    )
+    assert product_rule(Act(V, Product(b, a)), reg) == Act(V, Product(b, a))
+
+
+def test_p0_2_followup_splits_over_product_protocol():
+    # (e) operator-level protocol: splits_over_product(arg, registry)
+    # -> False keeps Act(op, f·Y) unexpanded, in product_rule AND in the
+    # engine rule ActExpansionDefinition (same code path).
+    from jacopy.algebra.derivation import Derivation
+    from jacopy.central.calculus import ActExpansionDefinition
+    from jacopy.central.objects import functions
+    from jacopy.core.expr import Product
+    from jacopy.core.registry import PropertyRegistry
+
+    class NoRightLeibniz(Derivation):
+        def splits_over_product(self, arg, registry=None):
+            return False
+
+    class YesLeibniz(Derivation):
+        def splits_over_product(self, arg, registry=None):
+            return True
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    (Y,) = vector_fields("Y")
+    L = NoRightLeibniz("L", degree=0)
+    node = Act(L, Product(f, Y))
+    assert product_rule(node, reg) == node
+    assert not ActExpansionDefinition(reg).matches(node)
+    # linearity still applies
+    assert product_rule(Act(L, Sum(f, Y)), reg) == Sum(Act(L, f), Act(L, Y))
+    M = YesLeibniz("M", degree=0)
+    assert product_rule(Act(M, Product(f, Y)), reg) == Sum(
+        Product(Act(M, f), Y), Product(f, Act(M, Y))
+    )
+
+
+def test_p0_2_followup_endoform_of_vector_is_not_scalar():
+    # (f) m̃ acts on FORMS; m̃(X) for a vector field X has no form degree
+    # (X's instance degree 0 is its operator degree) and is no scalar.
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.central.objects.endomorphism import EndoForm
+
+    (X,) = vector_fields("X")
+    (alpha,) = forms("alpha", degree=1)
+    assert not is_scalar_function(EndoForm("m", X))
+    with pytest.raises(AttributeError):
+        EndoForm("m", X).degree
+    assert EndoForm("m", alpha).degree == alpha.degree
+
+
+def test_p0_2_followup_genuine_scalars_certified():
+    # (g) sound type certificates, not degree: ι_X α with α a 1-form is
+    # a function (1 − 1 = 0, form⊗vector contraction); f² for a function
+    # f; the value of a bracket DECLARED function-valued on functions
+    # (Poisson-type {f, g}). Λ♯(dh) (degree 0, a vector) stays rejected.
+    from jacopy.brackets.base import GradedBracket
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.central.objects import functions
+    from jacopy.central.objects.interior import Interior
+    from jacopy.central.tangent.lie_bracket import (
+        ScalarActAsMultiplicationDefinition,
+    )
+    from jacopy.core.expr import Integer, Power, Product
+
+    reg, a, b, lam, dh, Sharp = _hamiltonian_setup()
+    (f,) = functions("f", registry=reg)
+    (X,) = vector_fields("X")
+    (alpha,) = forms("alpha", degree=1)
+
+    class PB(GradedBracket):
+        function_valued = True
+
+        def expand(self, a, b, registry=None):
+            raise NotImplementedError
+
+    class Undeclared(GradedBracket):
+        def expand(self, a, b, registry=None):
+            raise NotImplementedError
+
+    iota = Act(Interior(X), alpha)
+    for s in (iota, Power(f, Integer(2)), PB("pb")(a, b)):
+        assert is_scalar_function(s, reg), s
+        # acts by multiplication in operator position
+        assert product_rule(Act(s, Product(a, b)), reg) == Product(
+            s, Product(a, b)
+        )
+        assert ScalarActAsMultiplicationDefinition(reg).matches(Act(s, a))
+    assert not is_scalar_function(Undeclared("u")(a, b), reg)
+    assert not is_scalar_function(Act(Sharp(lam), dh), reg)
+
+
 # --------------------------------------------------------------------- #
 # K1-1 ≡ M1X-5 — collect_pairings folds only SCALAR coefficients         #
 # --------------------------------------------------------------------- #

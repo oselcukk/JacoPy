@@ -107,7 +107,7 @@ class ScalarActAsMultiplicationDefinition(Definition):
     a vector field, not a multiplier, and is left untouched.
     """
 
-    name = "scalar action: s(x) = s*x  (s a degree-0 scalar)"
+    name = "scalar action: s(x) = s*x  (s a certified C∞ scalar)"
     anchor = Act
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:

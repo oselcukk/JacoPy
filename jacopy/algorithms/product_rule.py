@@ -17,6 +17,23 @@ undetermined factor raises :class:`ValueError`: the modelling gap is
 something the user needs to fix, not something we should silently paper
 over with a zero-degree assumption.
 
+Who is split (default-reject; audit 0b00e1b P0-2 and its code
+review): the graded Leibniz rule is applied only to a certified
+derivation — a :class:`Derivation` not marked ``leibniz = False``, an
+operator declaring ``leibniz = True``, or a commutator of two such. An
+operator may take the decision itself through the PROTOCOL
+
+    ``op.splits_over_product(arg, registry) -> bool``
+
+(``arg`` the Product/Wedge operand): ``False`` keeps ``Act(op, arg)``
+unexpanded (e.g. a Lie-derivative model that is not Leibniz in that
+slot), ``True`` splits; a :class:`Derivation` without the method
+behaves as ``True``. ``leibniz = False`` operators are C∞-linear
+(scalars pull out). A certified scalar function in operator position
+multiplies; every other operator is only ℝ-linear (sums, signs and
+numeric factors pass through). :class:`~jacopy.central.calculus.bracket_calculus.ActExpansionDefinition`
+delegates here, so the engine rule follows the same protocol.
+
 The pass is bottom-up and inert on nodes that aren't :class:`Act` at
 their head: inner structure inside the argument is expanded first, so
 ``D(E(a*b))`` first expands the inner ``E`` Leibniz then the outer
@@ -119,35 +136,18 @@ def _expand_act(
         for d in reversed(op.children):
             result = _expand_act(d, result, registry)
         return result
-    if not isinstance(op, Derivation):
+    from jacopy.central.calculus.scalars import is_scalar_function
+
+    if not isinstance(op, Derivation) and is_scalar_function(op, registry):
         # A CERTIFIED scalar function in operator position is a
         # coefficient (compositions like f·X put scalars there): it
         # acts by multiplication, NEVER by Leibniz — splitting s(ab)
-        # into s(a)b + a·s(b) double-counts to 2s·ab.
-        #
-        # "Degree 0" alone is NOT that certificate (audit 0b00e1b P0-2,
-        # M1-3): Λ♯(dh) built with the public Sharp has degree −1+1 = 0
-        # but is a VECTOR FIELD, and multiplying turned the false
-        # X_h(a·b) = a·X_h(b) into a closed proof. An uncertified
-        # degree-0 non-derivation stays linear-only (sums and signs
-        # distribute; no multiplication, no Leibniz) — the Leibniz rule
-        # needs a Derivation (e.g. the Poisson package's SharpVF).
-        from jacopy.central.calculus.scalars import is_scalar_function
-
-        if is_scalar_function(op, registry):
-            return Product(op, arg)
-        try:
-            deg0 = degree_of(op, registry) == Degree.const(0)
-        except ValueError:
-            deg0 = False
-        if deg0:
-            if isinstance(arg, Sum):
-                return Sum.make(
-                    *(_expand_act(op, c, registry) for c in arg.children)
-                )
-            if isinstance(arg, Neg):
-                return Neg(_expand_act(op, arg.arg, registry))
-            return Act(op, arg)
+        # into s(a)b + a·s(b) double-counts to 2s·ab. "Degree 0" alone
+        # is NOT that certificate (audit 0b00e1b P0-2, M1-3): Λ♯(dh)
+        # from the public Sharp has degree −1+1 = 0 but is a vector
+        # field.
+        return Product(op, arg)
+    # Every operator in Act position is additive (ℝ-linear).
     if isinstance(arg, Sum):
         return Sum.make(
             *(_expand_act(op, c, registry) for c in arg.children)
@@ -155,52 +155,93 @@ def _expand_act(
     if isinstance(arg, Neg):
         inner = _expand_act(op, arg.arg, registry)
         return Neg(inner)
-    if isinstance(arg, Product):
-        if getattr(op, "leibniz", True) is False:
-            # LINEAR-ONLY operator (e.g. the multivector interior
-            # ι_P for p ≥ 2 — a COMPOSITION of derivations, not a
-            # derivation): scalar factors pull out, no Leibniz
-            # split (6.H.2 soundness catch, 2026-09-07).
-            from jacopy.central.calculus.scalars import (
-                is_scalar_function,
-            )
-
-            scalars = [
-                c
-                for c in arg.children
-                if is_scalar_function(c, registry)
-            ]
-            rest = [
-                c
-                for c in arg.children
-                if not is_scalar_function(c, registry)
-            ]
-            if scalars and rest:
-                core = (
-                    rest[0]
-                    if len(rest) == 1
-                    else Product(*rest)
-                )
-                return Product(
-                    *scalars, _expand_act(op, core, registry)
-                )
-            return Act(op, arg)
-        return _expand_leibniz(op, arg, registry)
     from jacopy.core.wedge import Wedge as _Wedge
 
-    if isinstance(arg, _Wedge):
-        if getattr(op, "leibniz", True) is False:
-            # the LINEAR-ONLY guard applies to the wedge path too:
-            # ι_P (p ≥ 2) over α∧β is NOT a graded Leibniz split
-            # (2026-09-09 catch: the Product branch was guarded, the
-            # Wedge branch was not — ι_{Π₃}(η₂∧dω₂) was being split).
-            return Act(op, arg)
-        # Graded Leibniz over the WEDGE product (the wedge is the
-        # graded product of forms — Phase 5.E.4):
-        # D(α∧β) = D(α)∧β + (−1)^{|D||α|} α∧D(β) + …
-        return _expand_wedge_leibniz(op, arg, registry)
+    if isinstance(arg, (Product, _Wedge)):
+        mode = _product_mode(op, arg, registry)
+        if mode == "leibniz":
+            if isinstance(arg, Product):
+                return _expand_leibniz(op, arg, registry)
+            # Graded Leibniz over the WEDGE product (the wedge is the
+            # graded product of forms — Phase 5.E.4):
+            # D(α∧β) = D(α)∧β + (−1)^{|D||α|} α∧D(β) + …
+            return _expand_wedge_leibniz(op, arg, registry)
+        if mode == "cinf-linear" and isinstance(arg, Product):
+            # LINEAR-ONLY C∞-linear operator (e.g. the multivector
+            # interior ι_P for p ≥ 2 — a COMPOSITION of derivations,
+            # not a derivation): scalar factors pull out, no Leibniz
+            # split (6.H.2 soundness catch, 2026-09-07). Over a Wedge
+            # it stays inert (2026-09-09 catch).
+            return _pull_out(op, arg, registry, is_scalar_function)
+        if mode == "linear" and isinstance(arg, Product):
+            # uncertified operator: ℝ-linearity only — NUMERIC factors
+            # pull out (X_h(2·a) = 2·X_h(a)), functions do not.
+            return _pull_out(
+                op, arg, registry,
+                lambda c, _r: isinstance(c, (Integer, Rational)),
+            )
+        # "blocked" (the operator declined via splits_over_product),
+        # or a Wedge under a non-Leibniz operator: inert.
+        return Act(op, arg)
     # Atom or other compound (Power, Act, Commutator, ...): leave inert.
     return Act(op, arg)
+
+
+def _pull_out(op: Expr, prod: Product, registry, is_coefficient) -> Expr:
+    """``op(c₁⋯c_k·r) → c₁⋯c_k·op(r)`` for the factors accepted by
+    ``is_coefficient`` (requires at least one coefficient and one
+    remaining factor; otherwise inert)."""
+    coeffs = [c for c in prod.children if is_coefficient(c, registry)]
+    rest = [c for c in prod.children if not is_coefficient(c, registry)]
+    if coeffs and rest:
+        core = rest[0] if len(rest) == 1 else Product(*rest)
+        return Product(*coeffs, _expand_act(op, core, registry))
+    return Act(op, prod)
+
+
+def _is_certified_derivation(op: Expr) -> bool:
+    """Leibniz certificate, DEFAULT-REJECT: a :class:`Derivation` not
+    marked ``leibniz = False``; any operator declaring
+    ``leibniz = True`` explicitly; a :class:`Commutator` of two
+    certified derivations (the graded commutator of graded
+    derivations is one). Nothing else — a public ``Sharp``/Hodge
+    star, a ``Graded(k)`` symbol, an arbitrary operator — is split."""
+    from jacopy.algebra.commutator import Commutator
+
+    marker = getattr(op, "leibniz", None)
+    if isinstance(op, Derivation):
+        return marker is not False
+    if marker is True:
+        return True
+    if isinstance(op, Commutator):
+        return _is_certified_derivation(op.a) and _is_certified_derivation(
+            op.b
+        )
+    return False
+
+
+def _product_mode(op: Expr, arg: Expr, registry) -> str:
+    """How ``op`` acts on the product ``arg`` (a Product or Wedge):
+
+    * ``"cinf-linear"`` — ``op.leibniz is False`` (C∞-linear, not a
+      derivation: scalars pull out, no split);
+    * the operator PROTOCOL ``op.splits_over_product(arg, registry)``
+      when the operator defines it: ``True`` → ``"leibniz"``,
+      ``False`` → ``"blocked"`` (the Act stays inert — e.g. a
+      Lie-derivative model that is not Leibniz in that slot);
+    * ``"leibniz"`` for a certified derivation
+      (:func:`_is_certified_derivation`; the protocol's default for a
+      :class:`Derivation` is ``True``, the pre-protocol behaviour);
+    * ``"linear"`` otherwise (numeric factors pull out only).
+    """
+    if getattr(op, "leibniz", None) is False:
+        return "cinf-linear"
+    hook = getattr(op, "splits_over_product", None)
+    if callable(hook):
+        return "leibniz" if hook(arg, registry) else "blocked"
+    if _is_certified_derivation(op):
+        return "leibniz"
+    return "linear"
 
 
 def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
