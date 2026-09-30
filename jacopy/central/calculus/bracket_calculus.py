@@ -18,6 +18,17 @@ matches the determinant wedge convention fixed in Phase 1
 Everything else about ``d`` — ``d² = 0``, the wedge Leibniz rule, the
 Cartan relations — is a **theorem** proved from this definition.
 
+**Axiom flag (audit 0B00E1B-FULL M2-1).** The formula above is
+an ORDERED ℝ-multilinear expression for any ℝ-bilinear bracket, but
+it is an *alternating* form only when the bracket is skew-symmetric:
+``dα(u,u) = ρ(u)α(u) − ρ(u)α(u) − α([u,u]) = −α([u,u])``, nonzero for
+a Leibniz/Dorfman bracket. Hence the explicit calculus flag ``skew``
+(default ``False``):
+
+* ``skew=False`` → ``d`` carries ``alternating_values = False``: its
+  evaluations are plain multilinear (``MultiEval(…, alternating=False)``;
+  a requested ``alternating=True`` is normalized away at construction).
+
 The machinery is *generic in the pair* ``(ρ, [·,·])``
 (:class:`BracketCalculus`): the TM case takes the identity anchor and
 the Lie bracket (:mod:`jacopy.central.tangent.exterior`), a general
@@ -34,7 +45,7 @@ from typing import Any, Callable, Optional, Tuple
 
 from jacopy.algebra.derivation import Act, Derivation, degree_of
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
-from jacopy.core.multi_eval import MultiEval
+from jacopy.core.multi_eval import MultiEval, admits_alternation
 from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -49,15 +60,26 @@ class ExteriorDerivative(Derivation):
     distinct operators even if displayed similarly.
     """
 
-    __slots__ = ("_calculus_name",)
+    __slots__ = ("_calculus_name", "_skew")
 
-    def __init__(self, calculus_name: str, *, name: str = "d") -> None:
+    def __init__(
+        self, calculus_name: str, *, name: str = "d", skew: bool = True
+    ) -> None:
         super().__init__(name, degree=1)
         self._calculus_name = calculus_name
+        self._skew = bool(skew)
 
     @property
     def calculus_name(self) -> str:
         return self._calculus_name
+
+    @property
+    def alternating_values(self):
+        """Evaluation protocol of :func:`~jacopy.core.multi_eval.
+        admits_alternation`: ``dω`` is alternating iff ``ω`` is AND the
+        bracket is skew-symmetric; for a non-skew bracket the Palais
+        formula is only an ordered multilinear map (M2-1)."""
+        return "inherit" if self._skew else False
 
     def _key(self) -> Any:
         return (self._name, self._degree, self._calculus_name)
@@ -81,6 +103,11 @@ class LieDerivative(Derivation):
     """
 
     __slots__ = ("_calculus_name", "_vector", "_op_name")
+
+    #: ``L_X`` preserves alternation: for an alternating ω,
+    #: ``(L_Xω)(Y,Y) = ρ(X)ω(Y,Y) − ω([X,Y],Y) − ω(Y,[X,Y]) = 0`` for
+    #: ANY bracket; on a non-alternating argument it stays so.
+    alternating_values = "inherit"
 
     def __init__(
         self,
@@ -161,6 +188,7 @@ class BracketCalculus:
         "_lie_name",
         "_form_degree",
         "_section_test",
+        "_skew",
     )
 
     def __init__(
@@ -173,6 +201,7 @@ class BracketCalculus:
         lie_name: str = "L",
         form_degree=None,
         section_test=None,
+        skew: bool = False,
     ) -> None:
         """``form_degree``/``section_test`` are the calculus' grading
         hooks (Phase 5.D): the TILDE calculus on ``T*M`` swaps the
@@ -182,7 +211,11 @@ class BracketCalculus:
         registry) -> Degree`` resolves the calculus-form degree
         (default: the ordinary form grading); ``section_test(expr) ->
         bool`` recognizes the calculus' sections (default: the
-        wedge-degree-1 derivation protocol)."""
+        wedge-degree-1 derivation protocol).
+
+        ``skew`` — the bracket is skew-symmetric (by construction or by
+        declaration); only then is ``d`` an alternating operator.
+        Default ``False`` (no silent axioms, audit 0B00E1B-FULL M2-1)."""
         if not isinstance(name, str) or not name:
             raise ValueError("BracketCalculus name must be a non-empty str")
         if not callable(anchor) or not callable(bracket):
@@ -190,7 +223,10 @@ class BracketCalculus:
         self._name = name
         self._anchor = anchor
         self._bracket = bracket
-        self._d = ExteriorDerivative(name, name=d_name)
+        if not isinstance(skew, bool):
+            raise TypeError("skew must be a bool")
+        self._skew = skew
+        self._d = ExteriorDerivative(name, name=d_name, skew=skew)
         self._lie_name = lie_name
         self._form_degree = form_degree
         self._section_test = section_test
@@ -219,6 +255,11 @@ class BracketCalculus:
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def skew(self) -> bool:
+        """Is the bracket skew-symmetric (``d`` alternating)?"""
+        return self._skew
 
     @property
     def d(self) -> ExteriorDerivative:
@@ -278,6 +319,9 @@ def _evaluate(
         return omega
     if len(args) == 1:
         return Pairing(omega, args[0])
+    # Never upgrade: a head that is not an alternating form (the d of a
+    # non-skew calculus, M2-1) is evaluated plain-multilinear.
+    alternating = alternating and admits_alternation(omega)
     return MultiEval(
         omega, *args, alternating=alternating, slot_kind=slot_kind
     )
@@ -360,13 +404,21 @@ class IntrinsicDDefinition(Definition):
             return Act(self._calc.anchor(expr.X), omega)
         omega = expr.head.arg
         args = expr.args
+        # Inner flag: normally inherited from the node being unrolled.
+        # For a NON-skew calculus the outer node is forced plain
+        # multilinear by the operator itself (M2-1), which says nothing
+        # about the argument: d's argument is a form, so its own
+        # evaluations keep ITS alternation.
+        inner_alt = expr.alternating or (
+            not self._calc.skew and admits_alternation(omega)
+        )
         terms = []
         for i, Xi in enumerate(args):
             rest = args[:i] + args[i + 1:]
             inner = _evaluate(
                 omega,
                 rest,
-                alternating=expr.alternating,
+                alternating=inner_alt,
                 slot_kind=expr.slot_kind,
             )
             term: Expr = Act(self._calc.anchor(Xi), inner)
@@ -380,7 +432,7 @@ class IntrinsicDDefinition(Definition):
                 inner = _evaluate(
                     omega,
                     (br,) + rest,
-                    alternating=expr.alternating,
+                    alternating=inner_alt,
                     slot_kind=expr.slot_kind,
                 )
                 terms.append(Neg(inner) if (i + j) % 2 else inner)

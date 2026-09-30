@@ -54,7 +54,7 @@ from __future__ import annotations
 
 from typing import Any, Optional, Tuple
 
-from jacopy.core.expr import Expr, Integer, Zero
+from jacopy.core.expr import Expr, Integer, Neg, Product, Sum, Zero
 from jacopy.core.registry import PropertyRegistry
 
 
@@ -110,6 +110,14 @@ class MultiEval(Expr):
                 f"slot_kind must be one of {_ALLOWED_SLOT_KINDS}, "
                 f"got {slot_kind!r}"
             )
+        if alternating and len(args) >= 2 and not admits_alternation(head):
+            # The flag is a CLAIM about the head; a head that is not an
+            # alternating form (d of a bracket that is not declared
+            # skew-symmetric — d_E on a Leibniz/Courant level, where
+            # dα(u,u) = −α([u,u]) ≠ 0) cannot honour it, so the node is
+            # normalized to a plain multilinear evaluation instead of
+            # licensing ω(u,u) = 0 (audit 0B00E1B-FULL M2-1).
+            alternating = False
         self._head = head
         self._args = tuple(args)
         self._alternating = alternating
@@ -199,6 +207,33 @@ class MultiEval(Expr):
 # --------------------------------------------------------------------- #
 # Helpers                                                                #
 # --------------------------------------------------------------------- #
+
+
+def admits_alternation(head: Expr) -> bool:
+    """May ``head`` be evaluated as an ALTERNATING multilinear map?
+
+    Operator protocol (duck-typed, no calculus import): an ``Act``-like
+    head whose operator sets ``alternating_values = False`` produces
+    values that are NOT alternating (the exterior derivative of a
+    bracket calculus whose bracket is not declared skew-symmetric: the
+    Palais/Koszul formula gives ``dα(u,u) = −α([u,u])`` there); an
+    operator with ``alternating_values = "inherit"`` (interior product,
+    Lie derivative, a skew calculus' ``d``) is alternating exactly when
+    its argument is. Sums, negations and products are checked factor
+    by factor; any other node (forms, wedges, scalars) admits
+    alternation. Audit 0B00E1B-FULL M2-1."""
+    if isinstance(head, (Sum, Neg, Product)):
+        return all(admits_alternation(c) for c in head.children)
+    op = getattr(head, "op", None)
+    arg = getattr(head, "arg", None)
+    if op is None or not isinstance(arg, Expr):
+        return True
+    flag = getattr(op, "alternating_values", True)
+    if flag is False:
+        return False
+    if flag == "inherit":
+        return admits_alternation(arg)
+    return True
 
 
 def multi_eval(

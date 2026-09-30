@@ -18,12 +18,28 @@ operator code. The canonical definitions are inherited verbatim:
 * ``ι_u`` — the generic slot-insertion interior product (bundle-blind
   by construction).
 
+**Axiom-carrying operators (audit 0B00E1B-FULL M2-1).** For a
+general ℝ-bilinear bracket the Palais/Koszul expression is an ORDERED
+ℝ-multilinear map, not an exterior form:
+``(d_E α)(u,u) = −α([u,u])``, which is nonzero on the Dorfman-type
+``leibniz`` / ``almost-courant`` / ``courant`` levels. Hence:
+
+* ``d_E`` is ALTERNATING only when ``antisymmetric`` is declared
+  (the calculus is built with ``skew=alg.declares("antisymmetric")``).
+  Otherwise every evaluation of ``d_E ω`` (p ≥ 1), of ``ι_u d_E ω`` and
+  of ``L_u d_E ω`` is a plain multilinear ``MultiEval(…,
+  alternating=False)`` in the Palais slot order (``ι_u`` inserts into
+  the FIRST slot); a requested alternating evaluation is normalized to
+  the plain one (``MultiEval`` flag protocol). Without
+  right Leibniz it is not even ``C^∞``-multilinear (first slot), so it
+  is a tensor only on almost-Lie algebroids (skew + right Leibniz).
+
 **Conditional Cartan structure** — the theorems hold exactly under
 their hierarchy declarations, and fail honestly otherwise:
 
 * the Cartan magic formula ``L^E_u = d_E ι_u + ι_u d_E`` needs NO
-  hierarchy axiom (pure consequence of the definitions, any anchored
-  bundle with an ℝ-bilinear bracket);
+  hierarchy axiom as an identity of the ordered evaluation formulas
+  (any anchored bundle with an ℝ-bilinear bracket);
 * ``d_E² = 0`` on functions ⟺ the anchor is a bracket morphism
   (closes under ``anchor-morphism``; under ``leibniz`` it closes by
   citing the Phase 3.D theorem instead);
@@ -38,7 +54,7 @@ from typing import List, Optional, Tuple
 
 from jacopy.algebra.derivation import Act
 from jacopy.core.expr import Expr, Integer, Neg, Sum
-from jacopy.core.multi_eval import MultiEval
+from jacopy.core.multi_eval import MultiEval, admits_alternation
 from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
@@ -68,6 +84,23 @@ def algebroid_calculus(alg: Algebroid) -> BracketCalculus:
         bracket=alg.bracket,
         d_name=f"d_{alg.name}",
         lie_name=f"L^{alg.name}",
+        # d_E is an alternating form operator only for a skew bracket
+        # (M2-1).
+        skew=alg.declares("antisymmetric"),
+    )
+
+
+def evaluate(head: Expr, *args: Expr) -> Expr:
+    """``head(args…)`` on sections with the CORRECT symmetry flag:
+    alternating iff the head admits it (``d_E`` of a non-antisymmetric
+    algebroid does not — M2-1)."""
+    if len(args) == 1:
+        return Pairing(head, args[0])
+    return MultiEval(
+        head,
+        *args,
+        alternating=admits_alternation(head),
+        slot_kind="vector",
     )
 
 
@@ -136,10 +169,10 @@ def prove_palais_on_one_forms(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """``(d_E α)(u, v) = ρ(u)(α(v)) − ρ(v)(α(u)) − α([u,v]_E)``."""
-    lhs = MultiEval(
-        d_E(alg, alpha), u, v, alternating=True, slot_kind="vector"
-    )
+    """``(d_E α)(u, v) = ρ(u)(α(v)) − ρ(v)(α(u)) − α([u,v]_E)`` — the
+    ordered formula, valid on every algebroid; the evaluation is
+    alternating only under ``antisymmetric`` (M2-1)."""
+    lhs = evaluate(d_E(alg, alpha), u, v)
     rhs = Sum(
         Act(alg.anchor(u), Pairing(alpha, v)),
         Neg(Act(alg.anchor(v), Pairing(alpha, u))),
@@ -241,9 +274,7 @@ def prove_d_squared_zero_on_functions(
     algebroid pass an ``engine`` with the Phase 3.D theorem cited.
     Fails honestly otherwise.
     """
-    lhs = MultiEval(
-        d_E(alg, d_E(alg, f)), u, v, alternating=True, slot_kind="vector"
-    )
+    lhs = evaluate(d_E(alg, d_E(alg, f)), u, v)
     return ExpandAndSimplify().prove(
         lhs,
         Integer(0),
@@ -399,14 +430,7 @@ def prove_d_squared_zero_on_one_forms(
         book.add(thm_neg)
         used.append(thm_neg)
         cite(engine, book, thm_neg.name, allow_legacy=True)
-    lhs = MultiEval(
-        d_E(alg, d_E(alg, alpha)),
-        u,
-        v,
-        w,
-        alternating=True,
-        slot_kind="vector",
-    )
+    lhs = evaluate(d_E(alg, d_E(alg, alpha)), u, v, w)
     chain = ExpandAndSimplify().prove(
         lhs, Integer(0), registry=registry, engine=engine
     )

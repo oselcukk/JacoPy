@@ -41,7 +41,7 @@ from typing import Optional
 
 from jacopy.algebra.derivation import Act
 from jacopy.core.expr import Expr, Integer, Neg, Sum
-from jacopy.core.multi_eval import MultiEval
+from jacopy.core.multi_eval import MultiEval, admits_alternation
 from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
@@ -118,7 +118,7 @@ def prove_defect_d_squared_on_functions(
             d_E(alg, d_E(alg, f)),
             u,
             v,
-            alternating=True,
+            alternating=admits_alternation(d_E(alg, d_E(alg, f))),
             slot_kind="vector",
         ),
         Neg(_P(alg, u, v, f)),
@@ -202,7 +202,7 @@ def prove_defect_d_squared_on_one_forms(
             u,
             v,
             w,
-            alternating=True,
+            alternating=admits_alternation(d_E(alg, d_E(alg, mu))),
             slot_kind="vector",
         ),
         Neg(_P(alg, u, v, _iota(w, mu))),
@@ -231,7 +231,7 @@ def prove_defect_lie_d_on_one_forms(
             Act(lie_E(alg, u), d_E(alg, mu)),
             v,
             w,
-            alternating=True,
+            alternating=admits_alternation(d_E(alg, mu)),
             slot_kind="vector",
         ),
         Neg(
@@ -239,7 +239,7 @@ def prove_defect_lie_d_on_one_forms(
                 d_E(alg, Act(lie_E(alg, u), mu)),
                 v,
                 w,
-                alternating=True,
+                alternating=admits_alternation(d_E(alg, mu)),
                 slot_kind="vector",
             )
         ),

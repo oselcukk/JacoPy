@@ -492,6 +492,9 @@ def lichnerowicz_calculus(N: NambuPoissonStructure, registry=None):
         lie_name="L̃",
         form_degree=form_degree,
         section_test=section_test,
+        # [ω,η]_Π = L_{Πω}η − ι_{Πη}dω is skew only for p = 1 (a
+        # bivector: the Koszul bracket), see nambu_koszul_bracket.
+        skew=N.p == 1,
     )
 
 

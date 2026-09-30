@@ -41,6 +41,8 @@ CARTAN_TM = BracketCalculus(
     "Cartan-TM",
     anchor=lambda X: X,
     bracket=lie_bracket,
+    # The Lie bracket of vector fields is skew by construction.
+    skew=True,
 )
 
 

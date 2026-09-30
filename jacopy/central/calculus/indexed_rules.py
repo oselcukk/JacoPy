@@ -251,10 +251,12 @@ class WedgeEvalDefinition(Definition):
         def eval_factor(factor: Expr, slots) -> Expr:
             if len(slots) == 1:
                 return Pairing(factor, slots[0])
+            from jacopy.core.multi_eval import admits_alternation
+
             return MultiEval(
                 factor,
                 *slots,
-                alternating=True,
+                alternating=admits_alternation(factor),
                 slot_kind=expr.slot_kind,
             )
 
