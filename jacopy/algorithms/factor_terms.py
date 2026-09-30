@@ -114,7 +114,9 @@ def collect_pairings(expr: Expr, registry=None) -> Expr:
     only self-certifying scalars qualify (numerals, evaluations,
     degree-0 non-derivation atoms); declared symbols need the registry.
     A certified scalar commutes with the (scalar-valued) evaluation, so
-    it may stand on either side.
+    it may stand on either side. The certificate is by TYPE, not degree
+    (``ι_X α``, ``f²`` fold; the degree-0 vector ``Λ♯(dh)`` or ``m̃(X)``
+    does not).
     """
     from jacopy.central.calculus.scalars import is_scalar_function
     from jacopy.core.multi_eval import MultiEval

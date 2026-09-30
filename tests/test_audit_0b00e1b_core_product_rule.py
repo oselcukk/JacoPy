@@ -476,3 +476,29 @@ def test_k1_1_scalar_coefficients_still_fold():
     assert collect_pairings(num) == Pairing(
         alpha, Sum(Product(Integer(2), U), Product(Integer(3), V))
     )
+
+
+def test_k1_1_followup_type_certified_coefficients_fold():
+    # K1-1 follow-up (code review, item g): the scalar gate must not
+    # lose genuine C∞ coefficients. ι_X α (α a 1-form) and f² are
+    # functions, so ι_Xα·⟨β,U⟩ + f²·⟨β,V⟩ = ⟨β, ι_Xα·U + f²·V⟩; a
+    # degree-0 VECTOR (Λ♯(dh)) or m̃(X) is still not folded.
+    from jacopy.algorithms.factor_terms import collect_pairings
+    from jacopy.central.objects import functions
+    from jacopy.central.objects.endomorphism import EndoForm
+    from jacopy.central.objects.interior import Interior
+    from jacopy.core.expr import Integer, Power, Product
+    from jacopy.core.pairing import Pairing
+
+    reg, a, b, lam, dh, Sharp = _hamiltonian_setup()
+    (f,) = functions("f", registry=reg)
+    X, U, V = vector_fields("X U V")
+    alpha, beta = forms("alpha beta", degree=1)
+    iota, f2 = Act(Interior(X), alpha), Power(f, Integer(2))
+    expr = Sum(Product(iota, Pairing(beta, U)), Product(f2, Pairing(beta, V)))
+    assert collect_pairings(expr, reg) == Pairing(
+        beta, Sum(Product(iota, U), Product(f2, V))
+    )
+    for bad in (Act(Sharp(lam), dh), EndoForm("m", X)):
+        e = Sum(Product(bad, Pairing(beta, U)), Product(f2, Pairing(beta, V)))
+        assert collect_pairings(e, reg) == e
