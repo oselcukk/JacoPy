@@ -187,7 +187,20 @@ def _expand_act(
 def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
     """``D(a₁∧…∧a_n) → Σ_i sign_i · a₁∧…∧D(a_i)∧…∧a_n`` with
     ``sign_i = (−1)^{|D|·(|a₁|+…+|a_{i−1}|)}`` — the Wedge twin of
-    :func:`_expand_leibniz`."""
+    :func:`_expand_leibniz`.
+
+    WHICH degree ``|a_j|``: the Wedge is the graded product of the
+    exterior algebra (forms, or multivectors), so the sign is computed
+    in the EXTERIOR grading — the one :func:`degree_of` already uses
+    for the Wedge node itself (the ``wedge_degree`` lift). A vector
+    field is a 1-vector there (``|X| = 1``) even though its OPERATOR
+    degree (as a derivation of functions) is 0; reading the operator
+    degree made ``d̃(X∧Y)`` expand to ``d̃X∧Y + X∧d̃Y`` instead of the
+    correct ``d̃X∧Y − X∧d̃Y`` (audit 0b00e1b P0-1: K1-2 ≡ M1X-1). See
+    :func:`_wedge_factor_degree`. ``|D|`` is the operator's own degree
+    (``degree_of(op)``): for the operators that act on a wedge algebra
+    that IS their shift in the exterior grading (``d``, ``d̃``: +1;
+    ``ι``, ``ι̃_ω``: −1; ``ℒ``: 0)."""
     from jacopy.core.wedge import Wedge as _Wedge
 
     factors = tuple(wedge.children)
@@ -217,8 +230,55 @@ def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
             term = Neg(term)
         terms.append(term)
         if not deg_op_is_zero and i + 1 < len(factors):
-            running = running + _factor_degree(fac, registry)
+            running = running + _wedge_factor_degree(fac, registry)
     return Sum.make(*terms)
+
+
+def _wedge_factor_degree(fac: Expr, registry) -> Degree:
+    """Exterior degree of a Wedge factor, for the wedge Leibniz sign.
+
+    Resolution (first determinable answer wins):
+
+    1. the node's own ``wedge_degree`` lift (vector fields, their
+       brackets, algebroid sections) — exactly what
+       :func:`degree_of` uses for a ``Wedge`` node, so the running
+       sign and ``|a₁∧…∧a_{i−1}|`` agree;
+    2. the exterior degree of :func:`~jacopy.algebra.grading.exterior_degree`
+       (``kind_of``: forms, multivectors, ``f·X``, ``♯α``, …);
+    3. structural recursion with the same laws for shapes ``kind_of``
+       leaves unknown: ``Neg``/homogeneous ``Sum`` keep the degree,
+       ``Product``/``Wedge`` add, and ``D(a)`` for a derivation ``D``
+       is ``|D| + |a|_ext`` (so ``d̃X`` is a bivector, 2 — the
+       operator-degree reading gave 1);
+    4. otherwise :func:`_factor_degree` (numbers, registry grades),
+       which raises on a truly undetermined factor.
+    """
+    lift = getattr(fac, "wedge_degree", None)
+    if isinstance(lift, Degree):
+        return lift
+    from jacopy.algebra.grading import exterior_degree  # noqa: WPS433 - layering: kind_of lives in central
+
+    ext = exterior_degree(fac, registry)
+    if isinstance(ext, Degree):
+        return ext
+    if isinstance(fac, Neg):
+        return _wedge_factor_degree(fac.arg, registry)
+    if isinstance(fac, Act) and isinstance(fac.op, Derivation):
+        return degree_of(fac.op, registry) + _wedge_factor_degree(
+            fac.arg, registry
+        )
+    from jacopy.core.wedge import Wedge as _Wedge
+
+    if isinstance(fac, (Product, _Wedge)) and fac.children:
+        total = Degree.const(0)
+        for c in fac.children:
+            total = total + _wedge_factor_degree(c, registry)
+        return total
+    if isinstance(fac, Sum) and fac.children:
+        degs = [_wedge_factor_degree(c, registry) for c in fac.children]
+        if all(d == degs[0] for d in degs[1:]):
+            return degs[0]
+    return _factor_degree(fac, registry)
 
 
 def _expand_leibniz(
