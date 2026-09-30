@@ -190,9 +190,11 @@ def _expand_act(
 def _pull_out(op: Expr, prod: Product, registry, is_coefficient) -> Expr:
     """``op(c₁⋯c_k·r) → c₁⋯c_k·op(r)`` for the factors accepted by
     ``is_coefficient`` (requires at least one coefficient and one
-    remaining factor; otherwise inert)."""
-    coeffs = [c for c in prod.children if is_coefficient(c, registry)]
-    rest = [c for c in prod.children if not is_coefficient(c, registry)]
+    remaining factor; otherwise inert). One classification pass."""
+    coeffs: List[Expr] = []
+    rest: List[Expr] = []
+    for c in prod.children:
+        (coeffs if is_coefficient(c, registry) else rest).append(c)
     if coeffs and rest:
         core = rest[0] if len(rest) == 1 else Product(*rest)
         return Product(*coeffs, _expand_act(op, core, registry))
@@ -374,61 +376,102 @@ def _wedge_factor_degree(fac: Expr, registry) -> Degree:
     )
 
 
-def _is_geometric(c: Expr, registry) -> bool:
-    """Not a scalar: neither a certified scalar function nor of
-    ``kind_of`` kind function/zero (``ι_U(f)`` is zero, not an
-    element to wedge with)."""
-    from jacopy.central.calculus.scalars import is_scalar_function
+# --- factor classification (one pass per product) --------------------- #
+
+_SCALAR, _FORM, _MULTI, _OTHER = "scalar", "form", "multi", "other"
+
+
+def _classify(c: Expr, registry) -> Tuple[str, Optional[Degree]]:
+    """``(class, exterior degree or None)`` of a product factor, from
+    the one type source :func:`~jacopy.central.objects.kind.kind_of`:
+    ``scalar`` (function / zero), ``form``, ``multi`` (vector /
+    multivector — where a Product would read as a composition), or
+    ``other`` (unknown, operator, tensor, mismatch)."""
     from jacopy.central.objects.kind import kind_of  # noqa: WPS433
 
-    if is_scalar_function(c, registry):
-        return False
-    return kind_of(c, registry).kind not in ("function", "zero")
-
-
-def _is_multivector_like(c: Expr, registry) -> bool:
-    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
-
+    k = kind_of(c, registry)
+    if k.kind in ("function", "zero"):
+        return _SCALAR, Degree.const(0)
+    deg = k.degree if isinstance(k.degree, Degree) else None
+    if k.kind == "form" and deg is not None:
+        return _FORM, deg
+    if k.kind in ("vector", "multivector") and deg is not None:
+        return _MULTI, deg
     if isinstance(getattr(c, "wedge_degree", None), Degree):
-        return True
-    return kind_of(c, registry).kind in ("vector", "multivector")
+        return _MULTI, c.wedge_degree
+    return _OTHER, None
 
 
-def _exterior_scalar_product_degrees(
-    factors: Tuple[Expr, ...], registry
+def _has_multivector_content(c: Expr, registry) -> bool:
+    """Does ``c`` contain a vector / multivector anywhere? Only then do
+    the operator grading (``degree_of``: a vector field counts 0) and
+    the exterior grading (it counts 1) disagree."""
+    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
+
+    for node in c.walk():
+        if isinstance(getattr(node, "wedge_degree", None), Degree):
+            return True
+        if kind_of(node, registry).kind in ("vector", "multivector"):
+            return True
+    return False
+
+
+def _product_degrees(
+    factors: Tuple[Expr, ...], classes, registry
 ) -> Optional[List[Degree]]:
-    """Exterior degrees of a SCALAR PRODUCT ``s₁⋯s_k·a`` (certified
-    scalar functions and at most one geometric factor ``a`` with a
-    determinable exterior degree), else ``None``.
+    """Leibniz degrees ``|a_1|, …, |a_{n−1}|`` of a Product, from ONE
+    source, or ``None`` when no sound grading exists (the caller then
+    distributes a Sum factor or leaves the node inert):
 
-    Such a Product is the C∞-module product, i.e. the wedge with
-    functions (``u·X = X·u = X∧u``), so its Leibniz sign must come from
-    the same exterior grading as the Wedge path: scalars count 0, the
-    element its exterior degree. Anything else (two geometric factors =
-    a composition, abstract operators) is graded by the operator
-    degree as before."""
+    * scalars count 0; forms their degree (their Product is their
+      wedge); a vector / multivector its exterior degree — but only as
+      the SOLE non-scalar factor (``s·X`` is the module product ``X∧s``;
+      ``X·Y`` is a composition: ``None``);
+    * an untyped factor: without vector/multivector content both
+      gradings agree and :func:`degree_of` is used (abstract graded
+      algebras, operator products — raises when undetermined, as
+      before); with such content, the structural exterior degree
+      (:func:`_wedge_factor_degree`, e.g. ``d̃X``) when it is the sole
+      non-scalar factor, else ``None`` — never the operator degree.
+    """
+    geometric = sum(1 for cls, _ in classes if cls != _SCALAR)
     out: List[Degree] = []
-    geometric = 0
-    for c in factors:
-        if not _is_geometric(c, registry):
-            out.append(Degree.const(0))
-            continue
-        geometric += 1
-        if geometric > 1:
-            return None
-        try:
-            out.append(_wedge_factor_degree(c, registry))
-        except ValueError:
+    for fac, (cls, deg) in zip(factors[:-1], classes[:-1]):
+        if cls in (_SCALAR, _FORM):
+            out.append(deg)
+        elif cls == _MULTI:
+            if geometric > 1:
+                return None
+            out.append(deg)
+        elif not _has_multivector_content(fac, registry):
+            out.append(_factor_degree(fac, registry))
+        elif geometric == 1:
+            try:
+                out.append(_wedge_factor_degree(fac, registry))
+            except ValueError:
+                return None
+        else:
             return None
     return out
 
 
-def _mixed_exterior_factor(factors: Tuple[Expr, ...], registry) -> bool:
-    """A factor that is KNOWN to have no single exterior degree (a
-    ``kind_of`` mismatch, e.g. ``X + u``): no Leibniz sign exists."""
-    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
-
-    return any(kind_of(c, registry).kind == "mismatch" for c in factors)
+def _distribute_sum_factor(
+    op: Expr, prod: Product, registry
+) -> Optional[Expr]:
+    """ℝ-bilinearity fallback: ``D(a·(b+c)·e) = D(a·b·e) + D(a·c·e)``
+    for the first Sum factor (every Act operator is additive and the
+    product is multilinear), so a sum of pieces with different
+    gradings expands piecewise instead of stalling — consistently with
+    the already-split right-hand side."""
+    for i, c in enumerate(prod.children):
+        if isinstance(c, Sum):
+            pieces = []
+            for t in c.children:
+                kids = list(prod.children)
+                kids[i] = t
+                pieces.append(_expand_act(op, Product(*kids), registry))
+            return Sum.make(*pieces)
+    return None
 
 
 def _expand_leibniz(
@@ -436,20 +479,14 @@ def _expand_leibniz(
 ) -> Expr:
     """``D(a1*...*an) → Σ_i sign_i * a1*...*D(a_i)*...*an``.
 
-    ``sign_i = (−1)^{|D| * (|a1|+...+|a_{i−1}|)}``. Undecidable sign
-    parity raises, the caller needs to narrow down the degrees. Scalar
-    factors (degree 0) contribute nothing to the running sign, so
-    symbolic-degree factors only cause trouble when they actually
-    precede a splitting point.
-
-    Degree source (one source with the Wedge path): a scalar product
-    ``s·a`` of a geometric element is graded EXTERIORLY
-    (:func:`_exterior_scalar_product_degrees`) — ``d̃(X·u) =
-    d̃X·u − X∧d̃u``, the same as ``d̃(X∧u)``; a term in which two
-    geometric factors meet is rebuilt as their wedge. Other Products
-    (compositions, products of abstract graded elements) keep the
-    operator grading of :func:`degree_of`. A factor known to be of
-    mixed degree leaves the node inert.
+    ``sign_i = (−1)^{|D| * (|a1|+...+|a_{i−1}|)}``, the degrees from
+    :func:`_product_degrees` (one source with the Wedge path: the
+    exterior grading wherever a vector/multivector is involved).
+    Without a sound grading a Sum factor is distributed
+    (:func:`_distribute_sum_factor`), otherwise the node stays inert.
+    Undecidable sign parity raises. When ``D`` turns a scalar into a
+    second (multi)vector next to the existing one, that term is
+    rebuilt as their wedge (``d̃(X·u) = d̃X·u − X∧d̃u``).
     """
     factors: Tuple[Expr, ...] = prod.children
     if not factors:
@@ -464,13 +501,14 @@ def _expand_leibniz(
     # declaring a grading for operand factors that don't have one.
     deg_op_is_zero = deg_op == Degree.const(0)
 
-    exterior: Optional[List[Degree]] = None
+    classes = [_classify(c, registry) for c in factors]
+    degrees: List[Degree] = []
     if not deg_op_is_zero:
-        exterior = _exterior_scalar_product_degrees(factors, registry)
-        if exterior is None and _mixed_exterior_factor(
-            factors[:-1], registry
-        ):
-            return Act(op, prod)
+        found = _product_degrees(factors, classes, registry)
+        if found is None:
+            distributed = _distribute_sum_factor(op, prod, registry)
+            return distributed if distributed is not None else Act(op, prod)
+        degrees = found
 
     running = Degree.const(0)  # |a_1| + ... + |a_{i-1}|
     terms: List[Expr] = []
@@ -492,49 +530,41 @@ def _expand_leibniz(
         # distribute in the same pass instead of stranding
         # ``D(2)``/``D(a+b)`` nodes into the simplify pipeline.
         new_factors[i] = _expand_act(op, fac, registry)
-        if exterior is not None:
-            term = _exterior_term(new_factors, registry)
-        else:
-            term = (
-                Product(*new_factors)
-                if len(new_factors) > 1
-                else new_factors[0]
-            )
+        term = _leibniz_term(new_factors, i, classes, registry)
         if parity == 1:
             term = Neg(term)
         terms.append(term)
         if not deg_op_is_zero and i + 1 < len(factors):
-            running = running + (
-                exterior[i]
-                if exterior is not None
-                else _factor_degree(fac, registry)
-            )
+            running = running + degrees[i]
 
     return Sum.make(*terms)
 
 
-def _exterior_term(new_factors: List[Expr], registry) -> Expr:
-    """Rebuild one Leibniz term of an exterior scalar product: when
-    ``D`` turned a scalar into a geometric element next to the
-    existing one (``X·d̃u``), the product of the two is their WEDGE
-    (``X∧d̃u``, order kept), scalars in front — when one of them is a
-    vector/multivector (a Product would read as a composition there);
-    otherwise the plain Product."""
+def _leibniz_term(
+    new_factors: List[Expr], i: int, classes, registry
+) -> Expr:
+    """Rebuild one Leibniz term. When the product had at most one
+    non-scalar factor and ``D(a_i)`` created a second one next to a
+    vector/multivector (``X·d̃u``), the product of the two is their
+    WEDGE (``X∧d̃u``, order kept, scalars in front) — a Product there
+    would read as a composition. A Product of forms stays a Product
+    (the library's accepted transient wedge spelling). Only the new
+    factor is reclassified."""
     from jacopy.core.wedge import Wedge as _Wedge
 
     if len(new_factors) == 1:
         return new_factors[0]
-    scalars = [c for c in new_factors if not _is_geometric(c, registry)]
-    geometric = [c for c in new_factors if _is_geometric(c, registry)]
+    cls = list(classes)
+    cls[i] = _classify(new_factors[i], registry)
+    geometric = [j for j, (c, _) in enumerate(cls) if c != _SCALAR]
     if len(geometric) <= 1 or not any(
-        _is_multivector_like(c, registry) for c in geometric
+        cls[j][0] == _MULTI for j in geometric
     ):
-        # a Product of FORMS is the library's accepted transient
-        # spelling of their wedge (HeadFormProductLiftDefinition) —
-        # keep it; only a Product involving a vector/multivector would
-        # read as an operator composition.
         return Product(*new_factors)
-    w = _Wedge(*geometric)
+    if sum(1 for c, _ in classes if c != _SCALAR) > 1:
+        return Product(*new_factors)  # was already a multi-factor product
+    scalars = [new_factors[j] for j, (c, _) in enumerate(cls) if c == _SCALAR]
+    w = _Wedge(*(new_factors[j] for j in geometric))
     return Product(*scalars, w) if scalars else w
 
 

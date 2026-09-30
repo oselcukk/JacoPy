@@ -605,3 +605,26 @@ def test_review2_form_product_degree_and_endoform():
     assert product_rule(Act(d, Product(m, alpha))) == Sum(
         Product(Act(d, m), alpha), Product(m, Act(d, alpha))
     )
+
+
+def test_review2_product_path_never_uses_operator_degree_for_vectors():
+    # (3) S = X + Y(Z) has no exterior type (Y(Z) is untyped). The old
+    # Product path graded it by the operator degree (|S| = 0) and closed
+    # the false d̃(S·u) = d̃S·u + S·d̃u (on the X part the sign is "−":
+    # d̃(X·u) = d̃X·u − X∧d̃u). Now: ℝ-bilinearity splits the sum, the
+    # typed piece expands, the untyped one stays inert — and the
+    # linearity statement d̃(S·u) = d̃(X·u) + d̃(Y(Z)·u) closes.
+    # d̃(X·Y) and d̃(u·X·Y) are compositions: inert.
+    from jacopy.core.expr import Product
+
+    D, u, reg = _dtilde_u()
+    X, Y, Z = vector_fields("X Y Z")
+    S = Sum(X, Act(Y, Z))
+    lhs = Act(D, Product(S, u))
+    false_rhs = Sum(Product(Act(D, S), u), Product(S, Act(D, u)))
+    with pytest.raises(ProofFailure):
+        show_equal(lhs, false_rhs, registry=reg)
+    lin = Sum(Act(D, Product(X, u)), Act(D, Product(Act(Y, Z), u)))
+    assert show_equal(lhs, lin, registry=reg).steps
+    for node in (Act(D, Product(X, Y)), Act(D, Product(u, X, Y))):
+        assert product_rule(node, reg) == node
