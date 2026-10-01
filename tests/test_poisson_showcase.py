@@ -103,7 +103,7 @@ class TestHamiltonianMorphism:
         book = TheoremBook()
         book.add(thm)
         engine = showcase_engine(P, registry=reg)
-        cite(engine, book, thm.name)
+        cite(engine, book, thm.name, allow_legacy=True)  # requirements-derived, chain unreplayed (audit 0b00e1b-FULL M1-5)
         with pytest.raises(ProofFailure):
             ExpandAndSimplify().prove(
                 Act(P.hamiltonian(P.bracket(f, g)), h),

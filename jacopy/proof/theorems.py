@@ -137,6 +137,24 @@ class Theorem:
             raise TypeError("Theorem.requires must be a tuple of Assumption records")
         if not isinstance(self.requires_verified, bool):
             raise TypeError("Theorem.requires_verified must be a bool")
+        if self.requires_verified:
+            # "derived" is a property of the record, not a flag a caller
+            # sets (audit 0b00e1b-FULL M1-5): the requirements must be
+            # exactly what the chain yields
+            from collections import Counter
+
+            from jacopy.proof.result import structural_requires
+
+            derived = structural_requires(self)
+
+            def sig(reqs):  # (the "structure" records name the owner, which an explicit transfer re-points)
+                return Counter((a.kind, a.name) for a in reqs if a.kind != "structure")
+
+            if sig(self.requires) != sig(derived):
+                raise ValueError(
+                    "Theorem.requires_verified=True but `requires` is not what the chain yields; "
+                    "use Theorem.with_structural_requires()"
+                )
 
     # ---- Faz 8 step 3b ------------------------------------------------ #
 
@@ -160,6 +178,27 @@ class Theorem:
         from jacopy.proof.result import structural_requires
 
         return dataclasses.replace(self, requires=structural_requires(self), requires_verified=True)
+
+    @property
+    def requirements_derived(self) -> bool:
+        """The honest name of ``requires_verified`` (audit 0b00e1b-FULL
+        M1-5): the requirement records were DERIVED from the chain — it
+        says nothing about whether the chain proves the claim (that is
+        :attr:`chain_replayed`)."""
+        return self.requires_verified
+
+    @property
+    def chain_replayed(self) -> bool:
+        """True when the requirements were derived AND the chain (and,
+        transitively, every cited record's chain) replays into
+        ``lhs = rhs`` with accountable steps only
+        (:func:`jacopy.proof.replay.chain_verdict`)."""
+        return self.requires_verified and not any(
+            getattr(a, "kind", None) in ("unreplayed", "legacy") for a in self.requires
+        )
+
+    def unreplayed_reasons(self) -> Tuple[str, ...]:
+        return tuple(a.name for a in self.requires if getattr(a, "kind", None) == "unreplayed")
 
     @property
     def registry_facts(self) -> tuple:
@@ -231,10 +270,22 @@ class TheoremBook:
         self.add(theorem, unverified=unverified)
 
     def is_verified(self, name: str) -> bool:
-        """True when the record was accepted as a verified theorem."""
+        """True when the record was accepted with DERIVED requirements
+        (not as an explicit unverified assumption). Historical name:
+        it does not mean the chain was replayed — see
+        :meth:`is_chain_replayed` (audit 0b00e1b-FULL M1-5)."""
         if name not in self._theorems:
             raise KeyError(f"no theorem named {name!r}; known: {self.names()}")
         return name not in self._unverified
+
+    def is_requirements_derived(self, name: str) -> bool:
+        """The honest name of :meth:`is_verified`."""
+        return self.is_verified(name)
+
+    def is_chain_replayed(self, name: str) -> bool:
+        """Accepted with derived requirements AND a chain that replays
+        into its claim (:attr:`Theorem.chain_replayed`)."""
+        return self.is_verified(name) and self._theorems[name].chain_replayed
 
     def unverified_names(self) -> Tuple[str, ...]:
         return tuple(n for n in self._theorems if n in self._unverified)
@@ -321,6 +372,8 @@ def check_citation(theorem: Theorem, engine, *, allow_legacy: bool = False, regi
       must be present as a registered assumption rule of the same name;
     * requirements are already transitive (``with_structural_requires``
       folds cited theorems' requirements in);
+    * a record whose chain does not replay into its claim (``unreplayed``,
+      audit 0b00e1b-FULL M1-5) is citable only with ``allow_legacy=True``;
     * every ``registry`` requirement (a registry answer the proof relied
       on, audit 0b00e1b-FULL P0-3) must be answered the same way by the
       citing ``registry`` — by default the current proof context
@@ -337,6 +390,15 @@ def check_citation(theorem: Theorem, engine, *, allow_legacy: bool = False, regi
             f"({'; '.join(theorem.unverified_reasons())}); pass allow_legacy=True to cite "
             "it explicitly — the result will carry the 'unverified citation' marker"
         )
+    unreplayed = theorem.unreplayed_reasons()
+    if unreplayed and not legacy:
+        legacy = True  # (reported like a legacy record: explicit opt-in only)
+        if not allow_legacy:
+            reasons.append(
+                f"theorem {theorem.name!r} is requirements-derived but its chain is not replayed "
+                f"({'; '.join(unreplayed)}); pass allow_legacy=True to cite it explicitly — "
+                "every citing result carries the 'unreplayed' record"
+            )
     if registry is not REGISTRY_SKIP:
         reasons.extend(_registry_reasons(theorem, registry))
     owners = dict(getattr(engine, "owners", {}) or {})
@@ -528,7 +590,10 @@ class TheoremDefinition(Definition):
         if self._theorem.legacy and not self._allow_legacy:
             return CitationCheck(False, (f"theorem {self._theorem.name!r} has unverified requirements; "
                                          "pass allow_legacy=True to cite it explicitly",), legacy=True)
-        return CitationCheck(True, legacy=self._theorem.legacy)
+        if self._theorem.unreplayed_reasons() and not self._allow_legacy:
+            return CitationCheck(False, (f"theorem {self._theorem.name!r}: chain not replayed; "
+                                         "pass allow_legacy=True to cite it explicitly",), legacy=True)
+        return CitationCheck(True, legacy=self._theorem.legacy or bool(self._theorem.unreplayed_reasons()))
 
     @property
     def citable(self) -> bool:
@@ -718,8 +783,13 @@ def cite(
     for n in names:
         thm = book.get(n)
         unverified = not book.is_verified(n)
-        if (thm.legacy or unverified) and not allow_legacy:
-            why = "; ".join(thm.unverified_reasons()) if thm.legacy else "the book holds it as an explicit unverified assumption"
+        unreplayed = thm.unreplayed_reasons()
+        if (thm.legacy or unverified or unreplayed) and not allow_legacy:
+            why = (
+                "; ".join(thm.unverified_reasons()) if thm.legacy
+                else "the book holds it as an explicit unverified assumption" if unverified
+                else "its chain is not replayed: " + "; ".join(unreplayed)
+            )
             raise LegacyTheoremError(
                 f"theorem {n!r} is not a verified record ({why}); "
                 "cite it explicitly with allow_legacy=True — the result will carry the marker"

@@ -195,7 +195,7 @@ class TestConditionalRelations:
         book = TheoremBook()
         book.add(thm)
         eng = algebroid_engine(E, registry=reg)
-        cite(eng, book, thm.name)
+        cite(eng, book, thm.name, allow_legacy=True)  # requirements-derived, chain unreplayed (audit 0b00e1b-FULL M1-5)
         chain = prove_d_squared_zero_on_functions(
             E, u, v, f, registry=reg, engine=eng
         )

@@ -50,7 +50,7 @@ from jacopy.proof.chain import ProofChain
 from jacopy.proof.step import ProofStep
 
 STATUSES = ("CLOSED", "RESIDUAL", "BUDGET", "INVALID")
-ASSUMPTION_KINDS = ("declared", "structure", "scope", "legacy", "textual", "registry")
+ASSUMPTION_KINDS = ("declared", "structure", "scope", "legacy", "textual", "registry", "unreplayed")
 PROVENANCE_KINDS = ("theorem", "definition", "canonicalization", "engine-step", "computation")
 
 _CANONICAL_RULES = ("simplify", "canonicalize", "normalize", "collect", "sort", "flatten", "distribute")
@@ -232,7 +232,7 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                         bump(assumptions, "legacy", f"unverified citation: theorem {cited.name}", getattr(cited, "owner", None), s.before)
                     else:
                         for a in cited.requires:
-                            if a.kind in ("declared", "legacy", "scope", "registry"):
+                            if a.kind in ("declared", "legacy", "scope", "registry", "unreplayed"):
                                 bump(assumptions, a.kind, a.name, a.owner, a.example, a.key)
                 elif getattr(s, "key", None) is None and not s.children:
                     # a HAND-BUILT theorem claim with neither the cited object
@@ -434,13 +434,45 @@ class ProofResult:
             raise TypeError("from_chain expects a ProofChain")
         if not isinstance(goal, Goal):
             raise TypeError("from_chain expects a Goal")
+        if status not in (None, "CLOSED", "RESIDUAL", "BUDGET"):
+            raise ValueError(
+                f"from_chain status must be None, 'CLOSED', 'RESIDUAL' or 'BUDGET', got {status!r} "
+                "(an ill-typed goal is ProofResult.invalid)"
+            )
         if len(chain) and chain.initial != goal.lhs:
             raise ValueError(
                 f"the chain starts at {chain.initial._repr_inner()}, not at the goal's "
                 f"left-hand side {goal.lhs._repr_inner()}"
             )
-        final = chain.final if len(chain) else goal.lhs
+        # the transcript must be CONNECTED (audit 0b00e1b-FULL M1-6 ≡
+        # K2-7): every step rewrites what the previous one left (a
+        # whole-expression step, or a local step at its first site)
+        from jacopy.proof.replay import replay
+
+        replayed, why = replay(goal.lhs, chain.steps)
+        if replayed is None:
+            raise ValueError(f"the chain is not connected: {why}")
+        if status == "CLOSED" and replayed != goal.rhs:
+            # a CLOSED status is a claim the transcript must carry, not a
+            # flag the caller sets (audit 0b00e1b-FULL M1-6)
+            raise ValueError(
+                f"status='CLOSED' but the chain ends at {replayed._repr_inner()[:200]}, "
+                f"not at the goal's right-hand side {goal.rhs._repr_inner()[:200]}"
+            )
+        final = replayed
         req, prov = _classify(tuple(chain.steps) + tuple(side_steps), principal=owner)
+        # a hand-built step (no provenance tag, no rule key) is the
+        # author's word, not a licensed rewrite: a legacy assumption
+        # (audit 0b00e1b-FULL M1-5), never silent provenance
+        from jacopy.proof.replay import unaccountable_steps
+
+        hand: dict = {}
+        for rule in unaccountable_steps(tuple(chain.steps) + tuple(side_steps)):
+            hand[rule] = hand.get(rule, 0) + 1
+        req = req + tuple(
+            Assumption("legacy", f"hand-built step without a tag or rule key: {rule}", instances=n)
+            for rule, n in hand.items()
+        )
         req = req + tuple(extra)
         if generality == "instance":
             req = req + (Assumption("scope", "instance proof — the certificate is not generalized"),)
@@ -467,19 +499,11 @@ class ProofResult:
             raise TypeError("from_theorem expects a Theorem")
         goal = Goal(theorem.lhs, theorem.rhs)
         chain = theorem.proof
-        req, prov = _classify(chain.steps, principal=theorem.owner)
-        known = {a.name for a in req} | {p.name for p in prov}
-        legacy: List[Assumption] = []
-        for text in theorem.from_axioms:
-            if text not in known and not any(text in k for k in known):
-                legacy.append(Assumption("textual", f"from_axioms: {text}", theorem.owner))
-        # (a Theorem's chain is the engine's transcript of LOCAL rewrites;
-        # its endpoints are not the whole sides, so the chain's shape is
-        # not judged here — the record asserts the closure, the
-        # requirements say what it depends on)
-        req = req + tuple(legacy)
-        if theorem.generality == "instance":
-            req = req + (Assumption("scope", "instance proof — the certificate is not generalized"),)
+        # the record's requirements, its chain verdict included (audit
+        # 0b00e1b-FULL M1-5): a chain that does not replay into
+        # ``lhs = rhs`` is an ``unreplayed`` record, an empty / purely
+        # hand-built one a legacy record
+        req, prov = _theorem_requirements(theorem)
         if owners is None:
             # the structures the record itself names (its owner and the
             # owners of its steps); none at all → unknown to the oracle
@@ -495,14 +519,12 @@ class ProofResult:
         )
 
 
-def structural_requires(theorem) -> Tuple[Assumption, ...]:
-    """The requirement records of a theorem derived from its OWN chain
-    (Faz 8 step 3b): declared axiom instances, the structures behind
-    them, the transitive requirements of cited theorems, a scope entry
-    for an instance proof, and a legacy entry for every ``from_axioms``
-    text no step accounts for. The chain's endpoint shape is not a
-    requirement and is not judged here (``ProofResult.from_theorem``
-    flags it)."""
+def _theorem_requirements(theorem):
+    """``(requires, provenance)`` of a theorem record derived from its
+    OWN chain (shared by :func:`structural_requires` and
+    :meth:`ProofResult.from_theorem`)."""
+    from jacopy.proof.replay import chain_verdict
+
     req, prov = _classify(theorem.proof.steps, principal=theorem.owner)
     known = {a.name for a in req} | {p.name for p in prov}
     out = list(req)
@@ -511,7 +533,29 @@ def structural_requires(theorem) -> Tuple[Assumption, ...]:
             out.append(Assumption("textual", f"from_axioms: {text}", theorem.owner))
     if theorem.generality == "instance" and not any(a.kind == "scope" for a in out):
         out.append(Assumption("scope", "instance proof — the certificate is not generalized"))
-    return tuple(out)
+    verdict = chain_verdict(theorem.lhs, theorem.rhs, theorem.proof)
+    if verdict.hard:
+        out.append(Assumption("legacy", f"theorem {theorem.name}: not a proof of its claim — {verdict.hard}", theorem.owner))
+    elif not verdict.replayed:
+        out.append(Assumption(
+            "unreplayed",
+            f"theorem {theorem.name}: chain does not replay into its claim — " + "; ".join(verdict.soft),
+            theorem.owner, key=("unreplayed", theorem.name),
+        ))
+    return tuple(out), prov
+
+
+def structural_requires(theorem) -> Tuple[Assumption, ...]:
+    """The requirement records of a theorem derived from its OWN chain
+    (Faz 8 step 3b): declared axiom instances, the structures behind
+    them, the transitive requirements of cited theorems, the registry
+    answers the steps relied on (``registry``, audit 0b00e1b-FULL
+    P0-3), a scope entry for an instance proof, a legacy entry for
+    every ``from_axioms`` text no step accounts for — and the chain
+    verdict (audit 0b00e1b-FULL M1-5, :func:`jacopy.proof.replay.chain_verdict`):
+    ``legacy`` for an empty / purely hand-built chain, ``unreplayed``
+    for a chain that does not replay into ``lhs = rhs``."""
+    return _theorem_requirements(theorem)[0]
 
 
 # ------------------------------------------------------------------ #

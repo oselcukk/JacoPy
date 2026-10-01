@@ -51,7 +51,7 @@ def test_closed_under_declared_assumptions_and_definitions_apart(alg):
     assert any(a.kind == "structure" and a.owner is E for a in res.requires)
     assert res.provenance and all(p.kind in ("definition", "engine-step", "canonicalization", "theorem") for p in res.provenance)
     # a definition is provenance, never an assumption
-    names_req = {a.name for a in res.requires}
+    names_req = {a.name for a in res.requires if a.kind != "unreplayed"}  # (that record quotes rule names)
     assert not any("definition" in n.lower() for n in names_req if "from_axioms" not in n)
     text = res.summary()
     assert text.startswith("CLOSED") and "under the assumptions below" in text and "requires declared" in text
@@ -163,11 +163,16 @@ def test_from_chain_checks_the_goal_and_classifies_canonicalization():
     X, Y = vector_fields("X Y")
     with pytest.raises(ValueError, match="starts at"):
         ProofResult.from_chain(ProofChain([ProofStep(X, Y, rule="r")]), Goal(om, Y))
-    s1 = ProofStep(Sum(X, Neg(X)), Integer(0), rule="simplify")
+    s1 = ProofStep(Sum(X, Neg(X)), Integer(0), rule="simplify", key=("pass", "simplify"))
     res = ProofResult.from_chain(ProofChain([s1]), Goal(Sum(X, Neg(X)), Integer(0)))
     assert res.closed and res.provenance == (Provenance("canonicalization", "simplify"),)
     assert res.requires == ()
     assert "assumption-free" in res.summary()
+    # a hand-built step (no tag, no rule key) is the author's word: legacy
+    # (audit 0b00e1b-FULL M1-5), not silent canonicalization provenance
+    hand = ProofResult.from_chain(ProofChain([ProofStep(Sum(X, Neg(X)), Integer(0), rule="simplify")]),
+                                  Goal(Sum(X, Neg(X)), Integer(0)))
+    assert hand.closed and any(a.legacy and "hand-built" in a.name for a in hand.requires)
     # an empty chain closes only a trivial goal
     assert ProofResult.from_chain(ProofChain(), Goal(X, X)).closed
     assert ProofResult.from_chain(ProofChain(), Goal(X, Y)).status == "RESIDUAL"

@@ -44,7 +44,7 @@ def _cited_engine(E, thm, reg, *, mode="efficient"):
     book.add(thm)
     eng = algebroid_engine(E, registry=reg, mode=mode)
     eng.register(LieBracketActionDefinition())
-    cite(eng, book, thm.name)
+    cite(eng, book, thm.name, allow_legacy=True)  # requirements-derived, chain unreplayed (audit 0b00e1b-FULL M1-5)
     return eng
 
 

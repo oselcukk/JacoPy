@@ -120,7 +120,13 @@ def test_indirect_prerequisites_propagate_through_citations(world):
     chain, thm_a = prove_anchor_morphism(E_lie, u, v, f, registry=reg)   # needs E_lie's axioms (jacobi among them)
     # thm_b: proved in E_sup by CITING thm_a (E_sup has no anchor-morphism declaration)
     eng = algebroid_engine(E_sup, registry=reg)
+    # thm_a's chain is a narrative, not a replayable transcript (audit
+    # 0b00e1b-FULL M1-5): requirements-derived, cited only explicitly
+    assert not thm_a.legacy and not thm_a.chain_replayed
     eng.register(TheoremDefinition(thm_a))
+    assert not eng.definitions[-1].citable
+    eng = algebroid_engine(E_sup, registry=reg)
+    eng.register(TheoremDefinition(thm_a, allow_legacy=True))
     assert eng.definitions[-1].citable
     res = prove(eng, thm_a.lhs, thm_a.rhs, registry=reg)
     assert res.closed and res.theorems_cited

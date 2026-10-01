@@ -340,7 +340,11 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
                         rhs=Integer(0),
                         proof=ProofChain([step]),
                         generality="instance",
-                    ).with_structural_requires()
+                    ).with_structural_requires(),
+                    # one hand-built step asserting the instance: not a
+                    # proof record (audit 0b00e1b-FULL M1-5) — kept as an
+                    # explicit unverified assumption, visible in every citation
+                    unverified=True,
                 )
                 names.append(nm)
     if names:
