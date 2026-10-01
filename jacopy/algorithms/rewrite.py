@@ -27,6 +27,8 @@ from jacopy.core.registry import PropertyRegistry
 from jacopy.core.wildcards import (
     Bindings,
     PayloadSubstitutionError,
+    binder_violation,
+    has_sigma_wildcard_dummy,
     wildcard_names,
     match,
     substitute,
@@ -76,6 +78,16 @@ class Rule:
     name: str = ""
     guard: Optional[Guard] = field(default=None, compare=False)
 
+    def __post_init__(self) -> None:
+        # Σ patterns match only a same-named concrete dummy; a wildcard
+        # dummy is not supported (audit 0B00E1B-FULL M1X-6, narrow
+        # binder contract — see jacopy.core.wildcards)
+        if has_sigma_wildcard_dummy(self.lhs) or has_sigma_wildcard_dummy(self.rhs):
+            raise ValueError(
+                "a Σ with a wildcard dummy is not supported in a Rule; "
+                "use the concrete dummy name of the target"
+            )
+
     def try_at(
         self, expr: Expr, registry: Optional[PropertyRegistry] = None
     ) -> Optional[Expr]:
@@ -91,6 +103,9 @@ class Rule:
         # payload hole cannot be filled or a bound term would escape
         # its Σ binder
         if not wildcard_names(self.rhs) <= set(bindings):
+            return None
+        # a bound term would escape its Σ, or a free one be captured
+        if binder_violation(self.lhs, self.rhs, bindings) is not None:
             return None
         try:
             return substitute(self.rhs, bindings)
