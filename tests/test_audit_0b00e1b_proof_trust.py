@@ -544,3 +544,20 @@ class TestReviewRound3:
         moves = _definition_moves(ExpansionEngine([ExplicitAssumption(a, b)]), Product(a, a))
         assert {m[0] for m in moves} == {Product(b, a), Product(a, b)}
         assert all(is_minted(step) for _, step in moves)
+
+    def test_end_reads_removes_by_identity(self):
+        # 40ce6c7: end_reads used stack.remove(log) — by VALUE: with
+        # mismatched nesting an equal (empty) outer log was removed
+        from jacopy.core.registry import _READS, begin_reads, end_reads
+
+        base = begin_reads()
+        outer = begin_reads()
+        inner = begin_reads()
+        try:
+            end_reads(outer)                       # out of order; base == outer == [] by value
+            assert any(l is base for l in _READS.stack)
+            assert _READS.stack[-1] is inner and all(l is not outer for l in _READS.stack)
+        finally:
+            end_reads(inner)
+            end_reads(base)
+        assert not any(l is inner or l is outer or l is base for l in _READS.stack)

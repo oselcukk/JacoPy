@@ -72,8 +72,13 @@ def end_reads(log: list) -> None:
     stack = _READS.stack
     if stack and stack[-1] is log:
         stack.pop()
-    else:  # pragma: no cover - mismatched nesting
-        stack.remove(log)
+        return
+    # mismatched nesting: remove THIS log by identity (list.remove
+    # compares by value — an equal, e.g. empty, outer log would go)
+    for i in range(len(stack) - 1, -1, -1):
+        if stack[i] is log:
+            del stack[i]
+            return
 
 
 @contextmanager
