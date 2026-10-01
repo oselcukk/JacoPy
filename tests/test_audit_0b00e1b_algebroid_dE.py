@@ -651,3 +651,32 @@ class TestProductProtocolByType:
         assert mk(True) != mk(False)
         assert mk(True).splits_over_product(Product(f, X), reg)
         assert not mk(False).splits_over_product(Product(f, X), reg)
+
+
+class TestIndexedSumSuffixGuard:
+    def test_operator_valued_sum_keeps_suffix(self):
+        # (Σ_s ⟨e^s,v⟩·ρ(e_s)·h)(g) = Σ_s ⟨e^s,v⟩ ρ(e_s)(h g)
+        #   = h·ρ(v)(g) + g·ρ(v)(h);  pulling h out leaves an operator-
+        # valued Σ that scalar action then multiplies: h·(Σ…)(g) drops
+        # g·ρ(v)(h). CLOSED (4 steps) on base 0b00e1b and on c2feac2.
+        from jacopy.core.indexed_sum import IndexedSum
+        from jacopy.central.objects.frame import Frame, FrameIndex
+        from jacopy.packages.metric_affine.torsion_curvature import _engine
+
+        reg = PropertyRegistry()
+        g, h = functions("g h", registry=reg)
+        E = algebroid("Esg", Bundle("Esg"), declare=("lie",))
+        (v,) = E.sections("v")
+        fr = Frame("e", bundle=E.bundle)
+        s = FrameIndex("s")
+        c = Pairing(fr.dual().field("s"), v)
+        r = E.anchor(fr.field("s"))
+        lhs = Act(IndexedSum(s, fr, Product(c, r, h)), g)
+        rhs = Product(h, Act(IndexedSum(s, fr, Product(c, r)), g))
+        with pytest.raises(ProofFailure):
+            _prove(lhs, rhs, reg, _engine(reg))
+        from jacopy.central.calculus.indexed_rules import (
+            IndexedSumLinearityDefinition as R,
+        )
+
+        assert not R(reg).matches(IndexedSum(s, fr, Product(c, r, h)))

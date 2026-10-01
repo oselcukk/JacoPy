@@ -112,12 +112,23 @@ class IndexedSumLinearityDefinition(Definition):
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
         self._registry = registry
+        self._memo = None  # (expr, split) of the last matches() call
+
+    def _scalar(self, x: Expr) -> bool:
+        from jacopy.central.calculus.scalars import is_scalar_function
+
+        return is_scalar_function(x, self._registry)
 
     def _split(self, expr: IndexedSum):
         """``(prefix, inner, suffix)`` for a product body, or ``None``
-        when nothing can be pulled (or nothing is bound)."""
-        from jacopy.central.calculus.scalars import is_scalar_function
+        when nothing can be pulled (or nothing is bound).
 
+        The SUFFIX is pulled only when every inner factor is a scalar
+        function: otherwise the remaining ``Σ_s(… B_s)`` would be
+        OPERATOR-valued, and a later scalar-action rule could misread
+        ``(Σ_s ⟨e^s,v⟩ ρ(e_s))(g)·h`` as a product (second review)."""
+        if self._memo is not None and self._memo[0] is expr:
+            return self._memo[1]
         dummy_name = expr.dummy._repr_inner()
         kids = list(expr.body.children)
         free = [not contains_index(c, dummy_name) for c in kids]
@@ -130,14 +141,17 @@ class IndexedSumLinearityDefinition(Definition):
         hi = len(kids)
         while free[hi - 1]:
             hi -= 1
-        prefix, suffix = kids[:lo], kids[hi:]
+        prefix = kids[:lo]
         inner = []
         for c, fr in zip(kids[lo:hi], free[lo:hi]):
-            scal = lambda x: is_scalar_function(x, self._registry)  # noqa: E731
-            if fr and scal(c) and all(scal(k) for k in inner):
+            if fr and self._scalar(c) and all(self._scalar(k) for k in inner):
                 prefix.append(c)
             else:
                 inner.append(c)
+        suffix = kids[hi:]
+        if suffix and not all(self._scalar(k) for k in inner):
+            inner.extend(suffix)
+            suffix = []
         if not prefix and not suffix:
             return None
         return prefix, inner, suffix
@@ -149,7 +163,9 @@ class IndexedSumLinearityDefinition(Definition):
         if isinstance(body, (Sum, Neg)) or body == Integer(0):
             return True
         if isinstance(body, Product):
-            return self._split(expr) is not None
+            split = self._split(expr)
+            self._memo = (expr, split)
+            return split is not None
         return False
 
     def rewrite(self, expr: Expr) -> Expr:
