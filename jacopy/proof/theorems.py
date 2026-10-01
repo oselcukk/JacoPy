@@ -176,6 +176,19 @@ class Theorem:
                     "use Theorem.with_structural_requires()"
                 )
 
+    def __reduce__(self):
+        """Copies and pickles are REBUILT (review 2026-10-01 r3 #7): a
+        deep copy's chain holds new step objects, which are not minted,
+        so a copied verdict (``chain_replayed`` …) would be stale. A
+        record with derived requirements is re-derived from its copied
+        chain — consistently requirements-derived / unreplayed / legacy
+        as the copy's provenance allows; an underived one keeps its
+        requirements as recorded."""
+        import dataclasses as _dc
+
+        fields = {f.name: getattr(self, f.name) for f in _dc.fields(self)}
+        return (_rebuild_theorem, (fields,))
+
     # ---- Faz 8 step 3b ------------------------------------------------ #
 
     @property
@@ -240,6 +253,15 @@ class Theorem:
             return ("requirements were never derived structurally (pre-3b record); "
                     "call Theorem.with_structural_requires() in the prover",)
         return tuple(a.name for a in self.requires if getattr(a, "legacy", False))
+
+
+def _rebuild_theorem(fields: dict) -> "Theorem":
+    """Inverse of :meth:`Theorem.__reduce__`."""
+    fields = dict(fields)
+    if fields.get("requires_verified"):
+        fields["requires"], fields["requires_verified"] = (), False
+        return Theorem(**fields).with_structural_requires()
+    return Theorem(**fields)
 
 
 class TheoremBook:

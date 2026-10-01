@@ -633,3 +633,25 @@ class TestReviewRound3:
             TheoremDefinition(liar)
         req, _ = _classify((ProofStep(x, Integer(0), rule="cite", provenance_tag="theorem", cites=liar),))
         assert any(r.legacy and "not a Theorem record" in r.name for r in req)
+
+    @pytest.mark.parametrize("how", ["deepcopy", "pickle", "copy"])
+    def test_copies_are_rebuilt_consistently(self, how):
+        # d72e36c: a deep copy / pickle kept chain_replayed=True although its
+        # (new, unminted) steps re-derive as unreplayed — replace() then
+        # raised ValueError on the copy
+        import copy
+        import dataclasses
+        import pickle
+
+        p, q = Symbol("p"), Symbol("q")
+        reg = PropertyRegistry()
+        for s in (p, q):
+            reg.declare(s, Graded(0))
+        r = prove(ExpansionEngine(), Product(p, q), Product(q, p), registry=reg)
+        t = Theorem("pq", "pq = qp", Product(p, q), Product(q, p), r.chain).with_structural_requires()
+        assert t.chain_replayed
+        c = {"deepcopy": copy.deepcopy, "pickle": lambda o: pickle.loads(pickle.dumps(o)), "copy": copy.copy}[how](t)
+        assert type(c) is Theorem and c.requirements_derived
+        dataclasses.replace(c, notes="still consistent")          # no ValueError
+        assert c.chain_replayed == (how == "copy")                 # a shallow copy shares the minted steps
+        assert c.registry_facts == t.registry_facts
