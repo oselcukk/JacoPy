@@ -204,7 +204,113 @@ def _match(
     if pattern.is_atom:
         return pattern == target
 
-    return _match_children(pattern.children, target.children, bindings, registry)
+    # Non-child identity payload first (audit 0B00E1B-FULL M1X-6): two
+    # nodes of the same class with the same children can still mean
+    # different things (BracketApply's bracket, MultiEval's
+    # alternating flag, d's skew/calculus, an IndexedSum's dummy).
+    # A payload field holding a wildcard on the pattern side binds
+    # like any other hole; every other field must agree exactly.
+    snapshot = dict(bindings)
+    if not _match_payload(
+        node_payload(pattern), node_payload(target), bindings, registry
+    ):
+        bindings.clear()
+        bindings.update(snapshot)
+        return False
+    if _match_children(pattern.children, target.children, bindings, registry):
+        return True
+    bindings.clear()
+    bindings.update(snapshot)
+    return False
+
+
+# --------------------------------------------------------------------- #
+# Non-child payload                                                     #
+# --------------------------------------------------------------------- #
+
+
+class _Dropped:
+    """Placeholder for a child removed from a ``_key()`` payload."""
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:  # pragma: no cover - debug only
+        return "<child>"
+
+
+_CHILD = _Dropped()
+
+
+def node_payload(expr: Expr) -> Any:
+    """The NON-CHILD identity payload of ``expr``.
+
+    ``Expr`` equality is ``type + _key()``; matching walks ``children``.
+    Whatever is in ``_key()`` but is not a child (a bracket object, an
+    ``alternating``/``skew`` flag, a calculus name, a bound dummy, a
+    metric) is the node's payload, and two same-typed nodes with equal
+    children are the SAME node only when their payloads agree.
+
+    Resolution order:
+
+    * a class may define ``_payload_key()`` returning its payload
+      explicitly (extension hook);
+    * :class:`~jacopy.core.indexed_sum.IndexedSum`, whose α-canonical
+      ``_key()`` does not contain its child, is ``(dummy, range-key)``;
+    * otherwise ``_key()`` with every child (by identity) replaced by
+      a placeholder, recursively through tuples, so the remaining
+      leaves are exactly the payload fields.
+    """
+    hook = getattr(type(expr), "_payload_key", None)
+    if hook is not None:
+        return hook(expr)
+    from jacopy.core.indexed_sum import IndexedSum, _range_key
+
+    if isinstance(expr, IndexedSum):
+        return (expr.dummy, _range_key(expr.range_))
+    child_ids = {id(c) for c in expr.children}
+    return _strip_children(expr._key(), child_ids)
+
+
+def _strip_children(key: Any, child_ids: set) -> Any:
+    """Replace children (by identity) with one placeholder per RUN of
+    consecutive children, so a SeqWildcard pattern child that absorbs
+    several target children leaves the same payload shape."""
+    if isinstance(key, Expr) and id(key) in child_ids:
+        return _CHILD
+    if type(key) is tuple:
+        out: List[Any] = []
+        for k in key:
+            item = _strip_children(k, child_ids)
+            if item is _CHILD and out and out[-1] is _CHILD:
+                continue
+            out.append(item)
+        return tuple(out)
+    return key
+
+
+def _match_payload(
+    pk: Any,
+    tk: Any,
+    bindings: Bindings,
+    registry: Optional[PropertyRegistry],
+) -> bool:
+    if pk is _CHILD or tk is _CHILD:
+        return pk is tk
+    if isinstance(pk, (Wildcard, SeqWildcard)) or (
+        isinstance(pk, Expr) and isinstance(tk, Expr)
+    ):
+        if not isinstance(tk, Expr):
+            return False
+        return _match(pk, tk, bindings, registry)
+    if type(pk) is tuple and type(tk) is tuple:
+        if len(pk) != len(tk):
+            return False
+        return all(
+            _match_payload(a, b, bindings, registry) for a, b in zip(pk, tk)
+        )
+    if isinstance(tk, Expr) or type(pk) is not type(tk):
+        return False
+    return pk == tk
 
 
 def _match_children(
