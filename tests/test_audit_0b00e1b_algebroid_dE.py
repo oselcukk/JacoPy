@@ -680,3 +680,20 @@ class TestIndexedSumSuffixGuard:
         )
 
         assert not R(reg).matches(IndexedSum(s, fr, Product(c, r, h)))
+
+
+class TestGeneralDSquaredCoupling:
+    def test_bare_copy_unrolls_declared_d_by_name(self):
+        # Pins the coupling documented in
+        # prove_defect_d_squared_on_one_forms_general: the declared d
+        # (skew, lie) and the bare copy's d differ as nodes, but the
+        # copy's Palais rule matches by calculus name.
+        from jacopy.central.calculus.bracket_calculus import (
+            IntrinsicDDefinition,
+        )
+
+        reg, E, u, v, w, mu = _defect_setup(("lie",))
+        bare = algebroid(E.name, E.bundle, anchor_name=E.anchor_name)
+        assert d_E(E, mu) != d_E(bare, mu)
+        rule = IntrinsicDDefinition(algebroid_calculus(bare), reg)
+        assert rule.matches(MultiEval(d_E(E, mu), u, v))

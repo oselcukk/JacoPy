@@ -265,9 +265,17 @@ def prove_defect_d_squared_on_one_forms_general(
 
     The identity uses NO axiom, so by default it is proved with the
     engine of the declaration-free copy of ``alg`` (same name, anchor
-    and bundle, hence the same ``d_E``/bracket nodes): declared rules
-    such as ``J → 0`` would otherwise fire on one side only. It then
-    holds in every declared context."""
+    and bundle): declared rules such as ``J → 0`` would otherwise fire
+    on one side only. It then holds in every declared context.
+
+    COUPLING (pinned by a test): this relies on
+    ``IntrinsicDDefinition`` recognizing a ``d`` by its CALCULUS NAME
+    only (``Cartan-<alg.name>``). The copy's ``d`` is structurally a
+    different node whenever ``alg`` declares ``antisymmetric`` (the
+    skew flag is part of its key), yet the copy's Palais rule must
+    still unroll ``alg``'s ``d``; the copy's bracket/anchor nodes are
+    identical by name. If ``d`` matching ever becomes key-based, pass
+    an ``engine`` explicitly."""
     node = Sum(
         MultiEval(
             d_E(alg, d_E(alg, mu)),
