@@ -174,6 +174,64 @@ class TestM31ClosedFormScope:
         assert not wl.matches(Act(A.d, Wedge(a, b)))
         assert _is_exact(d(g)) and not _is_exact(Act(A.d, g))
 
+    def test_tm_rules_survive_pickle_and_deepcopy(self):
+        import copy
+        import pickle
+        from types import SimpleNamespace
+
+        from jacopy.packages.poisson.nambu import (
+            DSquaredZeroDefinition,
+            DWedgeLeibnizDefinition,
+        )
+        from jacopy.packages.poisson.showcase import _is_exact
+        from jacopy.packages.poisson.symplectic import (
+            SymplecticClosedDeclaration,
+            symplectic_engine,
+        )
+        from jacopy.packages.poisson.tilde import LieDCommutationDefinition
+
+        S, _, _, _ = _so3_plus_r()
+        reg = PropertyRegistry()
+        (g,) = functions("g", registry=reg)
+        a, b = forms("a b", degree=1)
+        (X,) = vector_fields("X")
+        exprs = {
+            "dd": Act(CARTAN_TM.d, Act(CARTAN_TM.d, g)),
+            "dw": Act(CARTAN_TM.d, Wedge(a, b)),
+            "ex": d(g),
+            "Ld": Act(CARTAN_TM.lie(X), d(g)),
+            "dom": d(S.omega),
+        }
+        rules = {
+            "dd": DSquaredZeroDefinition(),
+            "dw": DWedgeLeibnizDefinition(reg),
+            "Ld": LieDCommutationDefinition(reg),
+            "dom": SymplecticClosedDeclaration(S),
+        }
+        for how in (copy.deepcopy, lambda e: pickle.loads(pickle.dumps(e))):
+            for k, e in exprs.items():
+                e2 = how(e)
+                assert e2 == e and belongs_to(e2.op, CARTAN_TM)
+                if k in rules:
+                    assert rules[k].matches(e2), k
+            assert _is_exact(how(exprs["ex"]))
+            assert how(CARTAN_TM) is CARTAN_TM
+            # the proofs close on the copies
+            r = prove(symplectic_engine(S, registry=reg), how(exprs["dom"]),
+                      Integer(0), registry=reg)
+            assert r.closed and any("dω = 0" in n for n in _declared(r.requires))
+            lhs, rhs = how(exprs["Ld"]), d(Act(X, g))
+            r2 = prove(ExpansionEngine([LieDCommutationDefinition(reg)]), lhs, rhs, registry=reg)
+            assert r2.closed
+            # a theorem carrying TM operators round-trips (Integer
+            # nodes themselves do not pickle on main either)
+            t = Theorem("Ld", "L_X dg = d(Xg)", lhs, rhs, r2.chain).with_structural_requires()
+            t2 = how(t)
+            assert t2.lhs == t.lhs and belongs_to(t2.lhs.op, CARTAN_TM)
+        # an owner that only LOOKS like the TM calculus is refused
+        with pytest.raises(TypeError):
+            ExteriorDerivative("Cartan-TM", skew=True, calculus=SimpleNamespace(name="Cartan-TM"))
+
     def test_tm_calculus_name_is_reserved(self):
         with pytest.raises(ValueError, match="reserved"):
             BracketCalculus(
@@ -270,6 +328,23 @@ def _jacobiator(P, a, b, c, X):
         Pairing(KoszulBracket(pi, b, KoszulBracket(pi, c, a)), X),
         Pairing(KoszulBracket(pi, c, KoszulBracket(pi, a, b)), X),
     )
+
+
+@pytest.fixture(scope="module")
+def library_seeds():
+    """Seeds minted by the library's own seed space (no search)."""
+    from jacopy.packages.poisson import poisson_structure
+    from jacopy.packages.poisson.koszul_jacobi import _rich_engine, _seed_records
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    alpha, beta, gamma = forms("α β γ", degree=1)
+    (X,) = vector_fields("X")
+    P = poisson_structure()
+    vectors, _ = _seed_records(
+        P, _rich_engine(P, reg, declare=True), alpha, beta, gamma, X, f, reg
+    )
+    return reg, P, [seed for _, seed, _ in vectors]
 
 
 class TestM33SeedRecords:
@@ -383,39 +458,36 @@ class TestM33SeedRecords:
         t = prover()
         assert t is prover() and t.lhs == expr and t.chain_replayed
 
-    def test_certificate_accepts_only_checked_library_seeds(self, poisson_setup):
+    def test_certificate_accepts_only_checked_library_seeds(self, library_seeds):
+        import dataclasses
         from fractions import Fraction
 
         from jacopy.packages.poisson.koszul_jacobi import (
-            _SEED_TOKEN,
             KoszulJacobiCertificate,
             ZeroSeed,
-            _SeedProvers,
-            _rich_engine,
             prove_koszul_zero_by_certificate,
         )
 
-        reg, f, a, b, c, X, P = poisson_setup
-        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
-        S = Pairing(c, pv.defect(a, b))
+        reg, P, seeds = library_seeds
+        seed = next(z for z in seeds if z.family == "pairD")
+        S = seed.expr
         # a seed cannot be minted outside the library's seed space
         with pytest.raises(TypeError):
             ZeroSeed("fake", S, S, "caller", lambda: None)
-        # S + S = 0 "proved" by a theorem about another expression
-        other = pv.zero_pair_defect(b, a, c)
-        bad = ZeroSeed("pairD", S, S, "t", lambda: other, _token=_SEED_TOKEN)
+        # a library seed re-labelled with another expression: its zero
+        # theorem does not prove the new claim (and the copy does not
+        # share the original's cached theorem)
+        assert seed.theorem.lhs == S
+        forged = dataclasses.replace(seed, expr=Sum(S, S))
+        assert forged._cache == {}
         with pytest.raises(ProofFailure, match="not"):
             prove_koszul_zero_by_certificate(
-                P, Sum(S, S), KoszulJacobiCertificate(((Fraction(2), bad),)),
+                P, Sum(S, S), KoszulJacobiCertificate(((Fraction(1), forged),)),
                 registry=reg,
             )
         # one seed, coefficient 1, expr == target: no self-citation loop
-        good = ZeroSeed(
-            "pairD", S, S, "t", lambda: pv.zero_pair_defect(c, a, b),
-            _token=_SEED_TOKEN,
-        )
         chain = prove_koszul_zero_by_certificate(
-            P, S, KoszulJacobiCertificate(((Fraction(1), good),)), registry=reg
+            P, S, KoszulJacobiCertificate(((Fraction(1), seed),)), registry=reg
         )
         assert chain.initial == S and chain.final == Integer(0)
         r = ProofResult.from_chain(chain, Goal(S, Integer(0)))
@@ -424,8 +496,44 @@ class TestM33SeedRecords:
         # a wrong combination (S counted twice) does not reduce S
         with pytest.raises(ProofFailure):
             prove_koszul_zero_by_certificate(
-                P, S, KoszulJacobiCertificate(((Fraction(2), good),)), registry=reg
+                P, S, KoszulJacobiCertificate(((Fraction(2), seed),)), registry=reg
             )
+
+    def test_generic_function_leaves_the_registry_unchanged(self, poisson_setup):
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+        from jacopy.packages.poisson.koszul_jacobi import (
+            _SeedProvers,
+            _rich_engine,
+        )
+
+        reg, f, a, b, c, X, P = poisson_setup
+        (Y,) = vector_fields("Y")
+        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
+        V, W = pv._sharp(a), pv._sharp(b)
+        before = repr(reg._snapshot())
+        with pytest.raises(ProofFailure):
+            pv.zero_vf_jacobi(lie_bracket(X, Y))
+        pv.zero_vf_jacobi(Sum(
+            lie_bracket(X, lie_bracket(V, W)),
+            lie_bracket(V, lie_bracket(W, X)),
+            lie_bracket(W, lie_bracket(X, V)),
+        ))
+        assert repr(reg._snapshot()) == before
+
+    def test_two_nf_budget_overrun_is_a_proof_failure(self, poisson_setup):
+        from jacopy.core.expr import Symbol
+        from jacopy.packages.poisson.koszul_jacobi import (
+            _SeedProvers,
+            _rich_engine,
+        )
+        from jacopy.proof.expansion import ExplicitAssumption
+
+        reg, f, a, b, c, X, P = poisson_setup
+        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
+        p, q = Symbol("p"), Symbol("q")
+        looping = ExpansionEngine([ExplicitAssumption(p, q), ExplicitAssumption(q, p)])
+        with pytest.raises(ProofFailure):
+            pv.zero_two_nf(p, looping)
 
     def test_a_wrong_seed_claim_fails(self, poisson_setup):
         # ⟨c,[a♯,b♯]⟩ − a♯π(b,c) − π(b, L_{a♯}c): sign of the last term

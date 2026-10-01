@@ -359,7 +359,7 @@ class ZeroSeed:
     origin: str
     _prover: Callable[[], Theorem] = field(repr=False)
     _token: object = field(default=None, repr=False)
-    _cache: dict = field(default_factory=dict, repr=False)
+    _cache: dict = field(init=False, default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         if self._token is not _SEED_TOKEN:
@@ -621,27 +621,23 @@ class _SeedProvers:
         return self._memoized(("brD", c, a, b, X), build)
 
     def zero_two_nf(self, node, sharp_only) -> Tuple[Expr, Callable]:
-        """``(n_sharp − n_full, prover)`` for one node. The search needs
-        only the two normal forms; the recorded chains are produced by
-        the (memoized) prover, i.e. only for a 2NF seed a certificate
-        uses, and must reproduce the same normal forms."""
+        """``(n_sharp − n_full, prover)`` for one node: both normal
+        forms are recorded once; the zero theorem is built by the
+        (memoized) prover only for a 2NF seed a certificate uses. A
+        normalization budget overrun is a :class:`ProofFailure`."""
         from jacopy.packages.poisson.tilde import _normal_form
 
         reg = self._registry
-        n_full = _normal_form(self._engine, node, reg).expr
-        n_sharp = _normal_form(sharp_only, node, reg).expr
-        expr = Sum(n_sharp, Neg(n_full))
+        try:
+            # recorded ONCE: the search uses the normal forms, the
+            # (lazy) prover the chains
+            nf_full = _normal_form(self._engine, node, reg, record=True)
+            nf_sharp = _normal_form(sharp_only, node, reg, record=True)
+        except RuntimeError as exc:
+            raise ProofFailure(f"koszul seed 2NF: {exc}")
+        expr = Sum(nf_sharp.expr, Neg(nf_full.expr))
 
-        def nf_theorem(engine, expected, label):
-            try:
-                nf = _normal_form(engine, node, reg, record=True)
-            except RuntimeError as exc:
-                raise ProofFailure(f"koszul seed 2NF ({label}): {exc}")
-            if nf.expr != expected:
-                raise ProofFailure(
-                    f"koszul seed 2NF ({label}): the recorded normal form "
-                    "differs from the searched one"
-                )
+        def nf_theorem(nf, label):
             return Theorem(
                 name=f"koszul seed 2NF: {label} normal form",
                 statement=f"{node._repr_inner()[:200]} = {nf.expr._repr_inner()[:200]}",
@@ -649,8 +645,8 @@ class _SeedProvers:
             ).with_structural_requires()
 
         def build():
-            full = nf_theorem(self._engine, n_full, "full-engine")
-            sharp = nf_theorem(sharp_only, n_sharp, "sharp-only")
+            full = nf_theorem(nf_full, "full-engine")
+            sharp = nf_theorem(nf_sharp, "sharp-only")
             return _theorem(
                 "koszul seed 2NF = 0", expr, Integer(0),
                 self._cite(sharp, full, reverse=(0, 1)), reg,
@@ -669,15 +665,19 @@ class _SeedProvers:
             reg = self._registry
             if reg is None:
                 reg = PropertyRegistry()
-            chain = AgreementOnGenerators(_GenericFunction(J, reg)).prove(
-                J, Integer(0), registry=reg,
-                engine=tangent_engine(registry=reg),
-            )
-            return Theorem(
-                name="koszul seed jac: vector-field Jacobi combination = 0",
-                statement=f"{J._repr_inner()[:200]} = 0",
-                lhs=J, rhs=Integer(0), proof=chain,
-            ).with_structural_requires()
+            # the generic function lives only inside this proof: its
+            # declaration is rolled back (the caller's registry keeps
+            # its fingerprint, also when the proof fails)
+            with reg.scope():
+                chain = AgreementOnGenerators(_GenericFunction(J, reg)).prove(
+                    J, Integer(0), registry=reg,
+                    engine=tangent_engine(registry=reg),
+                )
+                return Theorem(
+                    name="koszul seed jac: vector-field Jacobi combination = 0",
+                    statement=f"{J._repr_inner()[:200]} = 0",
+                    lhs=J, rhs=Integer(0), proof=chain,
+                ).with_structural_requires()
 
         return self._memoized(("jac", J), build)
 
