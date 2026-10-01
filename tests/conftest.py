@@ -29,6 +29,8 @@ def pytest_configure(config):
     mode = config.getoption("--oracle")
     if mode is None or mode == "off":
         return
+    if config.getoption("--oracle-samples") < 1:
+        raise pytest.UsageError("--oracle-samples must be a positive int")
     os.environ["JACOPY_ORACLE"] = mode
     os.environ["JACOPY_ORACLE_SAMPLES"] = str(config.getoption("--oracle-samples"))
     os.environ["JACOPY_ORACLE_SEED"] = str(config.getoption("--oracle-seed"))

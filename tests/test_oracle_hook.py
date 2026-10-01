@@ -121,3 +121,112 @@ def test_prove_and_show_equal_call_the_hook(monkeypatch):
     assert rep.verdict == "AGREE" and rep.detail.startswith("trivial")
     hook.REPORTS.clear()
     hook.set_context(nodeid="")
+
+
+def _jacobi(pi):
+    from jacopy.central.objects import functions
+    from jacopy.core.registry import PropertyRegistry
+    from jacopy.packages.poisson.core import PoissonBracketValue as B
+
+    reg = PropertyRegistry()
+    f, g, h = functions("f g h", registry=reg)
+    return Sum(B(pi, f, B(pi, g, h)), B(pi, g, B(pi, h, f)), B(pi, h, B(pi, f, g))), reg
+
+
+def test_dedup_key_includes_owners_requires_and_registry_identity():
+    pytest.importorskip("sympy")
+    from types import SimpleNamespace
+
+    from jacopy.core.registry import PropertyRegistry
+    from jacopy.packages.poisson.core import poisson_structure
+
+    P = poisson_structure("π", declare=("poisson",))
+    P0 = poisson_structure("π")
+    jac, reg = _jacobi(P.pi)
+    hook.set_context(nodeid="dedup-owners")
+    assert hook.on_closed(jac, Integer(0), registry=reg, owners=[P], mode="warn").verdict == "AGREE"
+    with pytest.raises(hook.OracleDisagreement):  # different owners: a fresh check
+        hook.on_closed(jac, Integer(0), registry=reg, owners=[P0], mode="strict")
+    used = (SimpleNamespace(kind="declared", owner=P, name="Poisson"),)
+    hook.set_context(nodeid="dedup-requires")
+    assert hook.on_closed(jac, Integer(0), registry=reg, owners=[P], requires=used, mode="warn").verdict == "AGREE"
+    with pytest.raises(hook.OracleDisagreement):  # different record: ASSUMPTION_LEAK
+        hook.on_closed(jac, Integer(0), registry=reg, owners=[P], requires=(), mode="strict")
+    # registries are kept alive by the cache: no id reuse
+    from jacopy.algebra.derivation import Act
+    from jacopy.central.objects import functions, vector_fields
+    from jacopy.core.expr import Product, Symbol
+    from jacopy.core.properties import Scalar
+
+    X, = vector_fields("X")
+    c, f = Symbol("c"), Symbol("f")
+    eq = (Act(X, Product(c, f)), Product(c, Act(X, f)))
+    hook.set_context(nodeid="dedup-registry")
+    reps = []
+    for declare in (True, False):
+        r = PropertyRegistry()
+        functions("f", registry=r)
+        if declare:
+            r.declare(c, Scalar())
+        reps.append(hook.on_closed(*eq, registry=r, owners=[], mode="warn"))
+        del r
+    assert [x.verdict for x in reps] == ["AGREE", "UNSUPPORTED"]
+    hook.set_context(nodeid="")
+
+
+def test_no_dedup_without_context():
+    pytest.importorskip("sympy")
+    lhs, good, _ = _cartan_case()
+    hook.set_context(nodeid="")
+    a = hook.on_closed(lhs, good, mode="warn")
+    b = hook.on_closed(lhs, good, mode="warn")
+    assert a is not b and not hook._seen
+
+
+def test_show_equal_uses_the_strategy_engine():
+    pytest.importorskip("sympy")
+    from jacopy.packages.poisson.core import poisson_structure
+    from jacopy.proof import show_equal
+    from jacopy.proof.chain import ProofChain
+
+    P0 = poisson_structure("π")
+    jac, reg = _jacobi(P0.pi)
+
+    class Bogus:  # wrongly "closes" anything, without its own hook
+        def prove(self, lhs, rhs, registry=None, engine=None):
+            return ProofChain()
+
+    hook.set_context(nodeid="bogus")
+    hook.REPORTS.clear()
+    show_equal(jac, Integer(0), registry=reg, strategy=Bogus(), oracle="warn")
+    assert hook.REPORTS[-1].verdict == "DISAGREE"  # default engine: owners known, π generic
+    hook.set_context(nodeid="")
+
+
+def test_ambiguous_warns_and_strict_raises(monkeypatch):
+    pytest.importorskip("sympy")
+    from jacopy.central.objects import functions, vector_fields
+    from jacopy.core.expr import Product
+    from jacopy.core.registry import PropertyRegistry
+
+    reg = PropertyRegistry()
+    f, = functions("f", registry=reg)
+    X, = vector_fields("X")
+    with warnings.catch_warnings(record=True) as rec:
+        warnings.simplefilter("always")
+        rep = hook.on_closed(Product(X, f), Product(f, X), registry=reg, mode="warn")
+    assert rep.verdict == "AMBIGUOUS" and any(issubclass(w.category, hook.OracleWarning) for w in rec)
+    with pytest.raises(hook.OracleAmbiguity):
+        hook.on_closed(Product(X, f), Product(f, X), registry=reg, mode="strict")
+
+
+@pytest.mark.parametrize("raw", ["0", "-3", "two"])
+def test_bad_samples_rejected_once_and_off(monkeypatch, raw):
+    monkeypatch.setenv("JACOPY_ORACLE_SAMPLES", raw)
+    hook._warned_bad_values.discard(("samples", raw))
+    lhs, good, _ = _cartan_case()
+    with warnings.catch_warnings(record=True) as rec:
+        warnings.simplefilter("always")
+        assert hook.on_closed(lhs, good, mode="warn") is None
+        assert hook.on_closed(lhs, good, mode="warn") is None
+    assert sum(issubclass(w.category, hook.OracleWarning) for w in rec) == 1

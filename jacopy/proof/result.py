@@ -441,12 +441,13 @@ class ProofResult:
         )
 
     @classmethod
-    def from_theorem(cls, theorem) -> "ProofResult":
+    def from_theorem(cls, theorem, *, registry=None, owners=None) -> "ProofResult":
         """Wrap a :class:`~jacopy.proof.theorems.Theorem` (the old
         ``(chain, theorem)`` return shape). The record's closure is
         taken as CLOSED; textual ``from_axioms`` entries no step
         accounts for, and a chain that does not literally run
-        ``lhs → rhs``, are kept as ``legacy`` assumptions."""
+        ``lhs → rhs``, are kept as ``legacy`` assumptions. ``registry`` /
+        ``owners`` only inform the model oracle (default off)."""
         from jacopy.proof.theorems import Theorem
 
         if not isinstance(theorem, Theorem):
@@ -466,8 +467,15 @@ class ProofResult:
         req = req + tuple(legacy)
         if theorem.generality == "instance":
             req = req + (Assumption("scope", "instance proof — the certificate is not generalized"),)
-        on_closed(theorem.lhs, theorem.rhs, source="from_theorem",
-                  owners=None if theorem.owner is None else [theorem.owner], requires=req)
+        if owners is None:
+            # the structures the record itself names (its owner and the
+            # owners of its steps); none at all → unknown to the oracle
+            from jacopy.proof.ownership import chain_owners
+
+            found = ([theorem.owner] if theorem.owner is not None else []) + [
+                o for o in chain_owners(chain) if o is not theorem.owner]
+            owners = found or None
+        on_closed(theorem.lhs, theorem.rhs, source="from_theorem", registry=registry, owners=owners, requires=req)
         return cls(
             goal=goal, status="CLOSED", requires=req, provenance=prov, chain=chain, residual=None,
             budget=Budget(len(chain)), generality=theorem.generality, owner=theorem.owner,

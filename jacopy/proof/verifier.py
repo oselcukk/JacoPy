@@ -25,7 +25,7 @@ from jacopy.core.properties import Property, Provenance
 from jacopy.core.registry import PropertyRegistry
 from jacopy.oracle.hook import on_closed, oracle_mode
 from jacopy.proof.chain import ProofChain
-from jacopy.proof.expansion import ExpansionEngine
+from jacopy.proof.expansion import ExpansionEngine, default_engine
 from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import (
     AgreementOnGenerators,
@@ -60,7 +60,7 @@ def show_equal(
         # (an inner ExpandAndSimplify closure of the same equation is
         # deduplicated by the hook)
         on_closed(lhs, rhs, registry=registry, source=f"show_equal:{type(strat).__name__}",
-                  engine=engine, chain=chain)
+                  engine=engine, engine_factory=default_engine, chain=chain)
     return chain
 
 
@@ -175,7 +175,8 @@ def prove_equivalence(
         rhs_flat = _expand_all_brackets(rhs, registry)
         strat = strategy if strategy is not None else ExpandAndSimplify()
         chain = strat.prove(lhs_flat, rhs_flat, registry=registry, engine=engine)
-        on_closed(lhs, rhs, registry=registry, source="prove_equivalence:brackets", engine=engine, chain=chain)
+        on_closed(lhs, rhs, registry=registry, source="prove_equivalence:brackets", engine=engine,
+                  engine_factory=default_engine, chain=chain)
         return chain
 
     if isinstance(stmt1, VanishingCondition) and isinstance(stmt2, VanishingCondition):
@@ -191,7 +192,7 @@ def prove_equivalence(
             engine=engine,
         )
         on_closed(stmt1.obstruction, stmt2.obstruction, registry=registry,
-                  source="prove_equivalence:vanishing", engine=engine, chain=chain)
+                  source="prove_equivalence:vanishing", engine=engine, engine_factory=default_engine, chain=chain)
         return chain
 
     if isinstance(stmt1, Expr) and isinstance(stmt2, Expr):
@@ -258,7 +259,8 @@ def prove_operator_equation(
     """
     strat = AgreementOnGenerators(algebra, sub_strategy=sub_strategy)
     chain = strat.prove(op1, op2, registry=registry, engine=engine)
-    on_closed(op1, op2, registry=registry, source="prove_operator_equation", engine=engine, chain=chain)
+    on_closed(op1, op2, registry=registry, source="prove_operator_equation", engine=engine,
+              engine_factory=default_engine, chain=chain)
     return chain
 
 
