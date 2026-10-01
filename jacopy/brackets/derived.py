@@ -106,12 +106,14 @@ class DerivedBracket(GradedBracket):
         The generator's degree, measured in the BASE bracket's grading
         (:meth:`~jacopy.brackets.base.GradedBracket.grading_degree`:
         multivector degree for SN, so ``|π| = 2``). When omitted it is
-        DERIVED from ``Q`` through that hook, falling back to ``0``
-        when ``Q``'s degree is not determinable without a registry; an
+        DERIVED from ``Q`` through that hook; when ``Q``'s degree is
+        not determinable without a registry it stays SYMBOLIC
+        (``|Q|``), never a silent 0, so parity checks refuse. An
         explicit value contradicting a determinable degree raises
         :class:`ValueError`. The derived bracket's own degree is
-        ``degree_Q + 2·|base|`` (each base layer contributes its
-        degree).
+        ``degree_Q + 2·k_base`` with ``k_base`` the base's degree in
+        its own grading (``operand_shift``; −1 for SN), and −1 in
+        ``acting_on`` (Koszul) mode.
     name
         Optional display name. Defaults to a structured tag derived
         from the base bracket and generator.
@@ -160,8 +162,14 @@ class DerivedBracket(GradedBracket):
             q_deg = None
         if degree_Q is None:
             # derived from the base grading (review: DerivedBracket(SN,
-            # π) must not need an explicit |π|); 0 when undeterminable
-            self._degree_Q = q_deg if q_deg is not None else as_degree(0)
+            # π) must not need an explicit |π|). Undeterminable (needs a
+            # registry, symbolic): a SYMBOLIC degree |Q| — never a silent
+            # 0; every parity that depends on it is then undecidable and
+            # refused (DerivedBracketStrategy, the obstructions)
+            self._degree_Q = (
+                q_deg if q_deg is not None
+                else Degree.var(f"|{Q._repr_inner()}|")
+            )
         else:
             self._degree_Q = as_degree(degree_Q)
         if (
@@ -191,9 +199,19 @@ class DerivedBracket(GradedBracket):
         # 2026-09-08 re-audit, finding 2) and Jacobi is conditional
         # on [Q, Q]_base = 0 + the theorem's preconditions, checked
         # by the proof layer. Both surfaced as non-claims here.
+        # The bracket's degree in its operands' grading (review D): the
+        # base contributes its degree IN ITS OWN grading
+        # (``operand_shift``: −1 for SN, so |{f, g}_π| = 0); in
+        # acting_on (Koszul) mode the bracket on Ω(M) has degree −1
+        # (two 1-forms give a 1-form).
+        if acting_on is not None:
+            own_degree = Degree.const(-1)
+        else:
+            k_b = base.operand_shift
+            own_degree = self._degree_Q + k_b + k_b
         super().__init__(
             display,
-            degree=self._degree_Q + base.degree + base.degree,
+            degree=own_degree,
             is_graded_antisymmetric=False,
             satisfies_leibniz=True,
             satisfies_graded_jacobi=None,
@@ -231,12 +249,8 @@ class DerivedBracket(GradedBracket):
             return degree_of(x, registry)
         return self._base.grading_degree(x, registry)
 
-    @property
-    def operand_shift(self) -> Degree:
-        if self._acting_on is not None:
-            return Degree.const(-1)
-        k_b = self._base.operand_shift
-        return self._degree_Q + k_b + k_b
+    # operand_shift: the inherited default (the recorded degree above,
+    # already measured in the operands' grading)
 
     def module_product(self, b: Expr, c: Expr) -> Expr:
         if self._acting_on is not None:
