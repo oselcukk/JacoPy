@@ -140,7 +140,8 @@ def test_leibniz_level_uses_a_non_skew_model():
     E, u, v, w, al, be = make("leibniz")
     rep = ok(evaluate(d_E(E, al), u, v), palais(E, al, u, v), E)
     assert rep.verdict == "AGREE"
-    assert any("dorfman" in m for m in rep.models) and any("lie" in m for m in rep.models), rep.models
+    # the cover needs a non-skew Courant model and a left-Leibniz breaker
+    assert any("dorfman" in m for m in rep.models) and any("rho0" in m for m in rep.models), rep.models
 
 
 def test_locality_operator_left_leibniz():
@@ -262,17 +263,17 @@ def test_frame_duality_and_anholonomy():
     X, = vector_fields("X")
     al, = forms("alpha", degree=1)
     # ⟨e^a, e_b⟩ = δ^a_b over every index assignment (a = b included)
-    assert check_equal(fr.pairing("a", "b"), kronecker_delta("a", "b"), registry=reg, owners=[]).verdict == "AGREE"
-    assert check_equal(fr.pairing("a", "b"), Integer(0), registry=reg, owners=[]).verdict == "DISAGREE"
+    assert check_equal(fr.pairing("a", "b"), kronecker_delta("a", "b"), registry=reg, owners=[], requires=()).verdict == "AGREE"
+    assert check_equal(fr.pairing("a", "b"), Integer(0), registry=reg, owners=[], requires=()).verdict == "DISAGREE"
     # frame decomposition Σ_s ⟨α, e_s⟩⟨e^s, X⟩ = ⟨α, X⟩
     s = FrameIndex("s")
     dec = IndexedSum(s, fr, Product(Pairing(al, fr.field("s")), Pairing(cf.field("s"), X)))
-    assert check_equal(dec, Pairing(al, X), registry=reg, owners=[]).verdict == "AGREE"
+    assert check_equal(dec, Pairing(al, X), registry=reg, owners=[], requires=()).verdict == "AGREE"
     # de^c(e_a, e_b) = −γ^c_ab (Palais, γ^c_ab = ⟨e^c, [e_a, e_b]⟩)
     lhs = evaluate(d(cf.field("c")), fr.field("a"), fr.field("b"))
     gam = AnholonomyCoefficient("e", "c", "a", "b")
-    assert check_equal(lhs, Neg(gam), registry=reg, owners=[]).verdict == "AGREE"
-    assert check_equal(lhs, gam, registry=reg, owners=[]).verdict == "DISAGREE"
+    assert check_equal(lhs, Neg(gam), registry=reg, owners=[], requires=()).verdict == "AGREE"
+    assert check_equal(lhs, gam, registry=reg, owners=[], requires=()).verdict == "DISAGREE"
 
 
 # ---- model self-check ------------------------------------------------ #
@@ -290,3 +291,81 @@ def test_family_structures_self_check(family):
         st = build_structure(family, n, r, pool)
         assert st.satisfied == claims
         assert st.violated >= {a for a in ALGEBRAIC if a not in claims}
+
+
+def test_tm_frame_with_unknown_record_is_unsupported():
+    # the ownerless holonomic-frame rule may have been used: no verdict
+    fr = Frame("e")
+    rep = check_equal(fr.pairing("a", "b"), kronecker_delta("a", "b"), registry=reg, owners=[])
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "frame[proof record unknown]", str(rep)
+
+
+# ---- false-AGREE probes (review): never a plain AGREE ----------------- #
+
+
+def _never_agree(rep):
+    assert rep.verdict in ("DISAGREE", "UNSUPPORTED"), str(rep)
+    return rep
+
+
+def test_metric_level_does_not_assume_anchor_morphism():
+    E, u, v, w, al, be = make("metric")
+    rep = _never_agree(ok(E.anchor(E.bracket(u, v)), LieBracketVF(E.anchor(u), E.anchor(v)), E))
+    assert rep.verdict == "DISAGREE"
+
+
+def test_almost_courant_does_not_assume_metric_invariance():
+    E, u, v, w, al, be = make("almost-courant")
+    mi = (Act(E.anchor(u), E.metric(v, w)), Sum(E.metric(E.bracket(u, v), w), E.metric(v, E.bracket(u, w))))
+    assert _never_agree(ok(*mi, E)).verdict == "DISAGREE"
+
+
+@pytest.mark.parametrize("level", ["pre-leibniz", "leibniz"])
+def test_left_leibniz_consequence_is_not_assumed(level):
+    # [fh·u, v] − f[hu, v] = h[fu, v] − hf[u, v] holds under left Leibniz only
+    E, u, v, w, al, be = make(level)
+    lhs = Sum(E.bracket(Product(f, h, u), v), Neg(Product(f, E.bracket(Product(h, u), v))))
+    rhs = Sum(Product(h, E.bracket(Product(f, u), v)), Neg(Product(h, f, E.bracket(u, v))))
+    assert _never_agree(ok(lhs, rhs, E)).verdict == "DISAGREE"
+    # and it AGREEs where left Leibniz is declared
+    E, u, v, w, al, be = make("local")
+    lhs = Sum(E.bracket(Product(f, h, u), v), Neg(Product(f, E.bracket(Product(h, u), v))))
+    rhs = Sum(Product(h, E.bracket(Product(f, u), v)), Neg(Product(h, f, E.bracket(u, v))))
+    assert ok(lhs, rhs, E).verdict == "AGREE"
+
+
+def test_free_indices_are_enumerated_exhaustively():
+    from jacopy.core.expr import Integer as I
+
+    fr = Frame("e")
+    d1, d2, d3 = kronecker_delta("a", "b"), kronecker_delta("c", "d"), kronecker_delta("a", "c")
+    lhs = Product(d1, d2, Sum(I(1), Neg(d3)), fr.pairing("a", "b"))
+    rep = check_equal(lhs, I(0), registry=reg, owners=[], requires=(), seed=0)
+    assert _never_agree(rep).verdict == "DISAGREE"
+    # too many labels: UNSUPPORTED, never a sampled AGREE
+    many = Product(*(kronecker_delta(x, y) for x, y in ("ab", "cd", "ef")))
+    rep = check_equal(many, many if False else Product(kronecker_delta("b", "a"), kronecker_delta("c", "d"),
+                                                       kronecker_delta("e", "f")), registry=reg, owners=[], requires=())
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "index-sampling", str(rep)
+
+
+def test_metric_invariance_alone_derives_right_leibniz():
+    E, u, v, w, al, be = make("metric")
+    rl = (E.bracket(u, Product(f, v)), Sum(Product(Act(E.anchor(u), f), v), Product(f, E.bracket(u, v))))
+    rep = ok(*rl, E, requires=_declared(E, "metric invariance"))
+    assert rep.verdict == "AGREE", str(rep)
+
+
+def test_lwx_courant_data():
+    from jacopy.core.expr import Rational
+
+    E = algebroid("C", declare=("anchor-morphism", "antisymmetric", "courant-invariance"))
+    x, y, z = E.sections("x y z")
+    half_D = lambda a, b: Product(Rational(1, 2), E.sharp(E.D(E.metric(a, b))))  # noqa: E731
+    c5 = (Act(E.anchor(x), E.metric(y, z)),
+          Sum(E.metric(Sum(E.bracket(x, y), half_D(x, y)), z), E.metric(y, Sum(E.bracket(x, z), half_D(x, z)))))
+    rep = ok(*c5, E)
+    assert rep.verdict == "AGREE" and any("lwx" in m for m in rep.models), str(rep)
+    # metric invariance WITHOUT the D-terms is not an LWX axiom
+    mi = (Act(E.anchor(x), E.metric(y, z)), Sum(E.metric(E.bracket(x, y), z), E.metric(y, E.bracket(x, z))))
+    assert ok(*mi, E).verdict == "DISAGREE"
