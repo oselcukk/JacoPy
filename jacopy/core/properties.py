@@ -103,6 +103,12 @@ class Property:
 # --------------------------------------------------------------------- #
 
 
+class ScalarContractError(ValueError):
+    """An input contradicts the :class:`Scalar` contract (a Scalar is an
+    ℝ-constant): a rule giving a Scalar a non-zero derivative, or a
+    Scalar also declared ``Graded(k ≠ 0)`` / ``NonCommuting``."""
+
+
 @dataclass(frozen=True)
 class Scalar(Property):
     """Expression is an ℝ-CONSTANT scalar (audit 0b00e1b M1-1 ≡ M1-2).
@@ -124,9 +130,15 @@ class Scalar(Property):
     does), never ``Scalar``. Declaring ``Scalar`` on ``x`` and also
     supplying a rule ``D(x) ≠ 0`` is a contradictory input: the engine
     may then derive either value (``D(x) = 0`` from this contract or the
-    rule's value) and nothing it closes is meaningful. The registry
-    cannot see engine rules, so this is not checked here; it is the
-    caller's obligation.
+    rule's value) and nothing it closes is meaningful. Checked where
+    visible: :class:`~jacopy.proof.expansion.ExpansionEngine` raises
+    :class:`ScalarContractError` when a rule rewrites ``D(c)`` (``D`` a
+    certified derivation, ``c`` Scalar) to anything non-zero, and the
+    registry refuses ``Scalar`` together with ``Graded(k ≠ 0)`` or
+    ``NonCommuting`` on the same expression. A rule's value that never
+    reaches the engine (``D(c)`` already killed inside a Leibniz split)
+    cannot be seen; avoiding the contradiction stays the caller's
+    obligation.
     """
 
 

@@ -187,6 +187,37 @@ class ExplicitAssumption(Definition):
 # --------------------------------------------------------------------- #
 
 
+def _check_scalar_contract(expr: Expr, after: Expr, rule) -> None:
+    """Scalar contract guard (audit 0b00e1b M1-1, chef decision (d)): a
+    Scalar is an ℝ-constant, so a certified derivation kills it
+    (``product_rule``). A rule rewriting ``D(c)`` to anything non-zero
+    contradicts the declaration — raise instead of letting the engine
+    pick either value."""
+    from jacopy.algebra.derivation import Act
+
+    if not isinstance(expr, Act) or after == Integer(0):
+        return
+    from jacopy.proof.registry_facts import current_context
+
+    ctx = current_context()
+    registry = ctx[0] if ctx is not None else None
+    if registry is None:
+        registry = getattr(rule, "_registry", None)
+    if not isinstance(registry, PropertyRegistry):
+        return
+    from jacopy.algorithms.product_rule import _is_certified_derivation
+    from jacopy.core.properties import Scalar, ScalarContractError
+
+    if _is_certified_derivation(expr.op) and registry.has(expr.arg, Scalar):
+        raise ScalarContractError(
+            f"{expr.arg._repr_inner()} is declared Scalar (an ℝ-constant, "
+            f"annihilated by every derivation) but rule "
+            f"{getattr(rule, 'name', type(rule).__name__)!r} rewrites "
+            f"{expr._repr_inner()} to {after._repr_inner()}; declare it "
+            "Graded(0) if it is a function"
+        )
+
+
 def _is_degree_zero(expr: Expr, registry: Optional[PropertyRegistry]) -> bool:
     """Safe degree-zero check: returns False on any undecidable case."""
     try:
@@ -444,7 +475,15 @@ class ExpansionEngine:
                 if d.matches(expr):
                     after = d.rewrite(expr)
                     # the STEP's hypotheses: the fired rule's own reads
-                    return d, after, facts_from_log(log[start:])
+                    facts = facts_from_log(log[start:])
+                    # the contract guard only refuses; its reads are
+                    # not hypotheses of the step
+                    mark = len(log)
+                    try:
+                        _check_scalar_contract(expr, after, d)
+                    finally:
+                        del log[mark:]
+                    return d, after, facts
             return None
         finally:
             # the WHOLE log reaches an enclosing log: when this engine

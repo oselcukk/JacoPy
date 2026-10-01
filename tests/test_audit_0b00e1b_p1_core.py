@@ -245,11 +245,12 @@ def test_m1_1_noncommuting_beats_scalar():
         show_equal(compose(D, x), compose(x, D), registry=reg)
     assert prove(ExpansionEngine(), compose(D, x), compose(x, D), registry=reg).status == "RESIDUAL"
     assert sort_product(Product(D, x), reg)[0] == Product(D, x)
-    # NonCommuting declared on the Scalar itself also blocks
+    # a class-level NonCommuting still beats an exact Scalar (the
+    # exact same-expression combination is refused by the registry)
     from jacopy.core.properties import NonCommuting
 
     E = vector_fields("E")[0]
-    reg.declare(c, NonCommuting())
+    reg.declare_for_class(type(E), NonCommuting())
     assert sort_product(Product(E, c), reg)[0] == Product(E, c)
 
 
@@ -336,3 +337,39 @@ def test_m1_1_scalar_contract_matches_the_model_oracle():
     assert verdict(compose(X, c), compose(c, X)) == "AGREE"
     assert verdict(Act(X, c), Integer(0)) == "AGREE"
     assert verdict(Act(X, f), Integer(0)) == "DISAGREE"
+
+
+def test_m1_1_engine_refuses_nonzero_derivative_of_a_scalar():
+    # chef decision (d)/(i): a rule D(x) = 1 on a Scalar x is reported,
+    # never silently resolved either way
+    from jacopy.algebra.derivation import Act, Derivation
+    from jacopy.core.properties import Scalar, ScalarContractError
+    from jacopy.proof import show_equal
+    from jacopy.proof.expansion import Definition, ExpansionEngine
+    from jacopy.proof.result import prove
+
+    D, x = Derivation("D", degree=0), Symbol("x")
+
+    class DX(Definition):
+        name = "D(x)=1"
+        anchor = Act
+
+        def matches(self, e):
+            return e == Act(D, x)
+
+        def rewrite(self, e):
+            return Integer(1)
+
+    bad = PropertyRegistry()
+    bad.declare(x, Scalar())
+    with pytest.raises(ScalarContractError, match="declared Scalar"):
+        prove(ExpansionEngine([DX()]), Act(D, x), Integer(1), registry=bad)
+    with pytest.raises(ScalarContractError):
+        show_equal(Act(D, x), Integer(1), registry=bad, engine=ExpansionEngine([DX()]))
+    good = PropertyRegistry()
+    good.declare(x, Graded(0))
+    assert prove(ExpansionEngine([DX()]), Act(D, x), Integer(1), registry=good).closed
+    # the guard's own registry reads are not hypotheses of the step
+    r = prove(ExpansionEngine([DX()]), Act(D, x), Integer(1), registry=good)
+    assert not any("Scalar" in a.name for a in r.requires)
+
