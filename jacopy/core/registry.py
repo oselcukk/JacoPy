@@ -102,6 +102,45 @@ def track_reads():
 Predicate = Callable[[Expr], bool]
 
 
+def _check_scalar_contract(expr: Expr, prop: Property, present) -> None:
+    """Refuse an exact declaration that contradicts the Scalar contract
+    (:class:`~jacopy.core.properties.Scalar` = ℝ-constant, audit 0b00e1b
+    M1-1): a constant has degree 0, so ``Graded(k)`` with ``k`` a
+    non-zero constant contradicts it; and a constant commutes with every
+    ℝ-linear operator, so ``NonCommuting`` contradicts it too. Only
+    the same exact expression is checked (class / predicate sources may
+    still meet an exact Scalar; there ``NonCommuting`` takes precedence
+    in ``sort_product``). A symbolic degree is not provably non-zero
+    and is accepted."""
+    from jacopy.core.properties import (
+        Graded,
+        NonCommuting,
+        Scalar,
+        ScalarContractError,
+    )
+
+    def clash(a: Property, b: Property) -> bool:
+        if isinstance(a, Scalar):
+            a, b = b, a
+        if not isinstance(b, Scalar):
+            return False
+        if isinstance(a, NonCommuting):
+            return True
+        if isinstance(a, Graded):
+            k = a.degree.as_int()
+            return k is not None and k != 0
+        return False
+
+    for other in present:
+        if clash(prop, other):
+            raise ScalarContractError(
+                f"{type(prop).__name__} on {expr!r} contradicts its "
+                f"{type(other).__name__} declaration: Scalar means an "
+                "ℝ-constant (degree 0, commutes with every operator); "
+                "declare a function Graded(0) instead of Scalar"
+            )
+
+
 class PropertyRegistry:
     """Stores properties keyed by expression, class, or predicate.
 
@@ -149,6 +188,7 @@ class PropertyRegistry:
             raise ValueError(
                 f"{type(prop).__name__} already declared on {expr!r}"
             )
+        _check_scalar_contract(expr, prop, bucket.values())
         bucket[type(prop)] = prop
 
     def retract(

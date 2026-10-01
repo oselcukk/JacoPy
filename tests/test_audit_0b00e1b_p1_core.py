@@ -373,3 +373,26 @@ def test_m1_1_engine_refuses_nonzero_derivative_of_a_scalar():
     r = prove(ExpansionEngine([DX()]), Act(D, x), Integer(1), registry=good)
     assert not any("Scalar" in a.name for a in r.requires)
 
+
+def test_m1_1_registry_refuses_contradictory_scalar_declarations():
+    from jacopy.core.properties import NonCommuting, Scalar, ScalarContractError
+    from jacopy.core.symbolic_degree import Degree
+
+    for first, second in (
+        (Scalar(), Graded(1)),
+        (Graded(2), Scalar()),
+        (Scalar(), NonCommuting()),
+        (NonCommuting(), Scalar()),
+    ):
+        reg = PropertyRegistry()
+        x = Symbol("x")
+        reg.declare(x, first)
+        with pytest.raises(ScalarContractError):
+            reg.declare(x, second)
+    # consistent: a constant is a degree-0 (constant) function; a
+    # symbolic degree is not provably non-zero
+    reg = PropertyRegistry()
+    reg.declare(Symbol("x"), Scalar())
+    reg.declare(Symbol("x"), Graded(0))
+    reg.declare(Symbol("y"), Graded(Degree.var("k")))
+    reg.declare(Symbol("y"), Scalar())
