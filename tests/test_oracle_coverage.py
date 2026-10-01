@@ -22,21 +22,7 @@ UNSUPPORTED_ALLOWLIST = {
     "jacopy.core.wildcards.Wildcard",
     "jacopy.packages.generalized.bourbaki_precalculus._SlotAtom",
     "jacopy.proof.verifier._PropertyMarker",
-    # F2: algebroid, frames, indexed sums
-    "jacopy.central.algebroid.context.AlgebroidBracket",
-    "jacopy.central.algebroid.context.AnchoredVF",
-    "jacopy.central.algebroid.context.CoboundaryForm",
-    "jacopy.central.algebroid.context.LocalityOperator",
-    "jacopy.central.algebroid.operators.Derivator",
-    "jacopy.central.algebroid.operators.Jacobiator",
-    "jacopy.central.algebroid.operators.MappedSection",
-    "jacopy.central.algebroid.operators.Predator",
-    "jacopy.central.objects.frame.CoframeField",
-    "jacopy.central.objects.frame.FrameField",
-    "jacopy.central.objects.frame.FrameIndex",
-    "jacopy.central.objects.frame.KroneckerDelta",
-    "jacopy.central.tangent.anholonomy.AnholonomyCoefficient",
-    "jacopy.core.indexed_sum.IndexedSum",
+    # F2: the binder token of α-normalized keys (never in a closed equation)
     "jacopy.core.indexed_sum._BoundSumToken",
     # F3: Poisson / tilde remainder
     "jacopy.packages.poisson.symplectic.SymplecticHamiltonianVF",
@@ -62,8 +48,6 @@ UNSUPPORTED_ALLOWLIST = {
     "jacopy.packages.metric_affine.torsion_curvature.Curvature",
     "jacopy.packages.metric_affine.torsion_curvature.Torsion",
     # F5: generalized / Courant / Drinfeld
-    "jacopy.central.algebroid.context.EMetric",
-    "jacopy.central.algebroid.context.MetricSharp",
     "jacopy.packages.generalized.bourbaki_exact.ChiSec",
     "jacopy.packages.generalized.bourbaki_exact.PhiSec",
     "jacopy.packages.generalized.bourbaki_precalculus.BD",
