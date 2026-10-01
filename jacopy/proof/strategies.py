@@ -381,10 +381,19 @@ class AgreementOnGenerators(Strategy):
         # every derivation and lies in the ground field — agreement on
         # it is automatic and certifies nothing, so it is dropped from
         # the certificate; the remaining generators must carry it.
+        # The decision depends on registry answers ("g is Scalar", its
+        # Graded): they are recorded as the parent step's hypotheses,
+        # so a citation only works where the same facts hold.
         from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433 - central imports this module
+        from jacopy.core.registry import track_reads
+        from jacopy.proof.registry_facts import facts_from_log
 
-        constant = [g for g in generators if is_real_constant(g, registry)]
-        generators = tuple(g for g in generators if not is_real_constant(g, registry))
+        constant, kept = [], []
+        with track_reads() as _log:
+            for g in generators:  # one pass
+                (constant if is_real_constant(g, registry) else kept).append(g)
+        drop_facts = facts_from_log(_log)
+        generators = tuple(kept)
         if not generators:
             raise ProofFailure(
                 "AgreementOnGenerators: every generator is an ℝ-constant "
@@ -397,6 +406,7 @@ class AgreementOnGenerators(Strategy):
             lhs,
             rhs,
             key=("strategy", "agreement-on-generators"),
+            registry_facts=drop_facts,
             rule=self.name,
             justification=(
                 f"both of degree {deg_for_step}; agree on "
