@@ -217,6 +217,32 @@ class InteriorAnticommuteDefinition(Definition):
         return core if sign else Neg(core)
 
 
+def _is_cartan_tm_d(op) -> bool:
+    """Is ``op`` the ``d`` of the TM Cartan calculus? (audit
+    0B00E1B-FULL M3-1/M3-2 family, P1-roadmap lane.)
+
+    The fundamental identity is a statement about the TM Cartan
+    calculus, so its consequences may fire on THAT ``d`` only. DEFAULT
+    REJECT: the ``d`` of any other calculus (an algebroid's ``d_E``, a
+    Koszul / tilde calculus, a derived calculus …) is refused. Uses the
+    central ``belongs_to`` (calculus OBJECT identity) when it exists;
+    otherwise the structural identity ``(name, degree, calculus name,
+    skew)`` of ``CARTAN_TM.d`` — and, once operators carry their owning
+    calculus, that owner must be ``CARTAN_TM`` itself."""
+    from jacopy.central.tangent.exterior import CARTAN_TM
+
+    try:
+        from jacopy.central.calculus.bracket_calculus import belongs_to
+    except ImportError:  # P1-B not merged yet: local equivalent
+        belongs_to = None
+    if belongs_to is not None:
+        return belongs_to(op, CARTAN_TM)
+    if op != CARTAN_TM.d:
+        return False
+    owner = getattr(op, "_calculus", CARTAN_TM)
+    return owner is CARTAN_TM
+
+
 class FISharpPairingSwapDefinition(Definition):
     """THEOREM-tagged CONSEQUENCE of the declared FI (both
     orientations + Lie antisymmetry):
@@ -224,7 +250,10 @@ class FISharpPairingSwapDefinition(Definition):
         Π( d( ι_{Πa} b ) ) → −Π( d( ι_{Πb} a ) )
 
     applied as a canonical-ordering rewrite (fires when ``repr(a) >
-    repr(b)``; strictly order-reducing, hence terminating).
+    repr(b)``; strictly order-reducing, hence terminating). Scoped to
+    the TM Cartan ``d`` (:func:`_is_cartan_tm_d`): under the ``d`` of
+    any other calculus the rewrite is not a consequence of the FI and
+    does not fire.
 
     Derivation: FI gives [Πa,Πb] = Π[a,b]_Kos for BOTH orderings;
     with [Πb,Πa] = −[Πa,Πb] and the Koszul symmetric part
@@ -258,6 +287,7 @@ class FISharpPairingSwapDefinition(Definition):
         if not (
             isinstance(slot, Act)
             and isinstance(slot.op, ExteriorDerivative)
+            and _is_cartan_tm_d(slot.op)
         ):
             return None
         inner = slot.arg
