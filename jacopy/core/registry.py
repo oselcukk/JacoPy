@@ -56,6 +56,26 @@ P = TypeVar("P", bound=Property)
 _READS = threading.local()
 
 
+def begin_reads() -> list:
+    """Open a read log on this thread without a context manager (the
+    expansion engine's hot path); close it with :func:`end_reads`."""
+    stack = getattr(_READS, "stack", None)
+    if stack is None:
+        stack = _READS.stack = []
+    log: list = []
+    stack.append(log)
+    return log
+
+
+def end_reads(log: list) -> None:
+    """Close the log opened by :func:`begin_reads`."""
+    stack = _READS.stack
+    if stack and stack[-1] is log:
+        stack.pop()
+    else:  # pragma: no cover - mismatched nesting
+        stack.remove(log)
+
+
 @contextmanager
 def track_reads():
     """Record every :meth:`PropertyRegistry.get` answer given inside the

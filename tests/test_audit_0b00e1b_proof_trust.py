@@ -418,3 +418,29 @@ class TestReviewProbes:
         assert t.legacy
         lib = normalize(ExpansionEngine(), Sum(x, Neg(x)), passes=("simplify",), record=True)
         assert all(accountable(s) for s in lib.chain) and lib.chain[0].key == ("pass", "simplify")
+
+    def test_modulo_match_is_normalized_once_per_firing(self):
+        # 967f8f3: the engine re-ran matches under the read recorder, so a
+        # modulo match (a full normalization) ran twice per firing
+        y = Symbol("y")
+        r = prove(ExpansionEngine(), Sum(y, Neg(y)), Integer(0))
+        t = Theorem("ysub", "y - y = 0", Sum(y, Neg(y)), Integer(0), r.chain).with_structural_requires()
+        b, c = Symbol("b"), Symbol("c")
+        calls = []
+
+        class Counting(ExpansionEngine):
+            __slots__ = ()
+
+            def expand(self, expr, **kw):
+                calls.append(expr)
+                return super().expand(expr, **kw)
+
+        modeng = Counting([ExplicitAssumption(b), ExplicitAssumption(c)])
+        outer = ExpansionEngine([TheoremDefinition(t, modulo=modeng)])
+        _, step = outer.expand_once(Sum(b, c))
+        assert step is not None and len(calls) == 2      # one normalization: 2 rounds (change, fix-point)
+        calls.clear()
+        from jacopy.proof.search import _definition_moves
+
+        moves = _definition_moves(outer, Sum(b, c))
+        assert moves and len(calls) == 2

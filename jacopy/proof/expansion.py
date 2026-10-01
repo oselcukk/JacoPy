@@ -367,7 +367,7 @@ class ExpansionEngine:
 
     # -- single-step ----------------------------------------------------- #
 
-    def _match(self, expr: Expr) -> Optional[Definition]:
+    def _candidates(self, expr: Expr):
         # Gather anchored candidates via the expression's MRO so a rule
         # anchored at a base class also fires on subclasses, then merge
         # with the unanchored fallback list in registration order.
@@ -375,10 +375,37 @@ class ExpansionEngine:
         for cls in type(expr).__mro__:
             candidates.extend(self._index.get(cls, ()))
         candidates.sort(key=lambda pair: pair[0])
-        for _, d in candidates:
+        return candidates
+
+    def _match(self, expr: Expr) -> Optional[Definition]:
+        for _, d in self._candidates(expr):
             if d.matches(expr):
                 return d
         return None
+
+    def _fire(self, expr: Expr):
+        """``(rule, rewritten, registry facts)`` for the first matching
+        rule at ``expr``, or ``None``. The registry answers the FIRED
+        rule consulted — its match decision and its rewrite — are the
+        step's hypotheses (audit 0b00e1b-FULL P0-3); they are recorded
+        during the one ``matches`` call that decided (no second call:
+        review 2026-10-01 #6 — a modulo match is a full normalization)."""
+        candidates = self._candidates(expr)
+        if not candidates:
+            return None
+        from jacopy.core.registry import begin_reads, end_reads
+        from jacopy.proof.registry_facts import facts_from_log
+
+        log = begin_reads()
+        try:
+            for _, d in candidates:
+                start = len(log)
+                if d.matches(expr):
+                    after = d.rewrite(expr)
+                    return d, after, facts_from_log(log[start:])
+            return None
+        finally:
+            end_reads(log)
 
     def _build_step(self, expr: Expr, after: Expr, d: Definition) -> ProofStep:
         """Create the :class:`ProofStep` for a fired rewrite, with mode-dependent children."""
@@ -445,21 +472,12 @@ class ExpansionEngine:
                     if step is not None:
                         new_slots = slots[:i] + (new_sub,) + slots[i + 1:]
                         return expr.with_slots(*new_slots), step
-        d = self._match(expr)
-        if d is not None:
-            # the registry answers the FIRED rule consulted (its match
-            # decision and its rewrite) are hypotheses of the step (audit
-            # 0b00e1b-FULL P0-3); matches is re-run under the recorder —
-            # it is a predicate of the node, the rewrite consumes it
-            from jacopy.core.registry import track_reads
-            from jacopy.proof.registry_facts import facts_from_log
-
-            with track_reads() as log:
-                d.matches(expr)
-                after = d.rewrite(expr)
+        fired = self._fire(expr)
+        if fired is not None:
+            d, after, facts = fired
             step = self._build_step(expr, after, d)
-            if log:
-                step._registry_facts = facts_from_log(log)
+            if facts:
+                step._registry_facts = facts
             return after, step
         return expr, None
 

@@ -120,20 +120,15 @@ def _definition_moves(
         if not sub.is_atom:
             for i, c in enumerate(sub.children):
                 visit(c, path + (i,))
-        d = engine._match(sub)
-        if d is not None:
+        fired = engine._fire(sub)
+        if fired is not None:
             # the engine's own step record (owner, role, citation, key,
             # registry facts — audit 0b00e1b-FULL P0-3 / K2-3) for the
             # local rewrite, carried as the child of the whole step
-            from jacopy.core.registry import track_reads
-            from jacopy.proof.registry_facts import facts_from_log
-
-            with track_reads() as log:
-                d.matches(sub)
-                after_sub = d.rewrite(sub)
+            d, after_sub, facts = fired
             local = engine._build_step(sub, after_sub, d)
-            if log:
-                local._registry_facts = facts_from_log(log)
+            if facts:
+                local._registry_facts = facts
             after_root = _rewrite_at(root, path, after_sub)
             from jacopy.proof.result import _whole_step
 
