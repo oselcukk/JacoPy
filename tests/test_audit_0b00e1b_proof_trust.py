@@ -664,3 +664,26 @@ class TestReviewRound3:
         dataclasses.replace(c, notes="still consistent")          # no ValueError
         assert c.chain_replayed == (how == "copy")                 # a shallow copy shares the minted steps
         assert c.registry_facts == t.registry_facts
+
+
+class TestProofTrust2:
+    def test_end_reads_hands_to_the_enclosing_log_only(self):
+        # main 75acc5a: with mismatched nesting end_reads appended to
+        # stack[-1] (a log opened LATER), and a log that was never opened
+        # or closed twice still extended the top log
+        from jacopy.core.registry import _READS, begin_reads, end_reads
+
+        base = begin_reads()
+        outer = begin_reads()
+        inner = begin_reads()
+        outer.append("o")
+        try:
+            end_reads(outer)                       # out of order
+            assert base == ["o"] and inner == []
+            end_reads(outer)                       # closed twice: no effect
+            end_reads(["stray"])                   # never opened: no effect
+            assert base == ["o"] and inner == []
+        finally:
+            end_reads(inner)
+            end_reads(base)
+        assert not any(l is inner or l is outer or l is base for l in getattr(_READS, "stack", []))
