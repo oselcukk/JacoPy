@@ -134,6 +134,11 @@ class Theorem:
     #: (``TheoremDefinition(..., allow_legacy=True)`` is the explicit
     #: opt-in, and the result then carries the marker).
     requires_verified: bool = field(default=False, compare=False)
+    #: Literature source of the result (metadata only): a
+    #: :class:`jacopy.bibliography.Citation` or a tuple of them. A
+    #: citation of this theorem (:class:`TheoremDefinition`) carries it
+    #: onto its proof steps; nothing in the proof logic reads it.
+    source: object = field(default=None, compare=False)
 
     def __post_init__(self) -> None:
         if not isinstance(self.name, str) or not self.name:
@@ -664,6 +669,11 @@ class TheoremDefinition(Definition):
     @property
     def blocked(self) -> Tuple[str, ...]:
         return self.check.reasons
+
+    @property
+    def source(self):
+        """The cited theorem's literature source (display metadata)."""
+        return getattr(self._theorem, "source", None)
 
     def _source(self) -> Expr:
         return self._theorem.rhs if self._reverse else self._theorem.lhs
