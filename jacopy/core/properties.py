@@ -104,9 +104,9 @@ class Property:
 
 
 class ScalarContractError(ValueError):
-    """An input contradicts the :class:`Scalar` contract (a Scalar is an
-    ℝ-constant): a rule giving a Scalar a non-zero derivative, or a
-    Scalar also declared ``Graded(k ≠ 0)`` / ``NonCommuting``."""
+    """A DECLARATION contradicts the :class:`Scalar` contract (a Scalar
+    is an ℝ-constant): ``Scalar`` together with ``Graded(k ≠ 0)`` or
+    ``NonCommuting`` (refused by the registry)."""
 
 
 @dataclass(frozen=True)
@@ -128,17 +128,17 @@ class Scalar(Property):
     A symbol that may have a non-zero derivative is a FUNCTION: declare
     it ``Graded(0)`` (as :func:`~jacopy.central.objects.function.functions`
     does), never ``Scalar``. Declaring ``Scalar`` on ``x`` and also
-    supplying a rule ``D(x) ≠ 0`` is a contradictory input: the engine
-    may then derive either value (``D(x) = 0`` from this contract or the
-    rule's value) and nothing it closes is meaningful. Checked where
-    visible: :class:`~jacopy.proof.expansion.ExpansionEngine` raises
-    :class:`ScalarContractError` when a rule rewrites ``D(c)`` (``D`` a
-    certified derivation, ``c`` Scalar) to anything non-zero, and the
-    registry refuses ``Scalar`` together with ``Graded(k ≠ 0)`` or
-    ``NonCommuting`` on the same expression. A rule's value that never
-    reaches the engine (``D(c)`` already killed inside a Leibniz split)
-    cannot be seen; avoiding the contradiction stays the caller's
-    obligation.
+    supplying a rule ``D(x) ≠ 0`` is a contradictory input; the
+    declaration wins. Resolution:
+    only an EXACT Scalar declaration on an atom of kind function counts
+    (:func:`~jacopy.central.calculus.scalars.is_real_constant`), and the
+    expansion engine applies the recorded contract step
+    ``D(c) = 0`` (:class:`~jacopy.proof.expansion.ScalarConstantContract`)
+    BEFORE any registered rule — a rule giving ``c`` a non-zero
+    derivative is simply never used (it is not an error: rules that
+    would rewrite ``D(c)`` to an expression equal to 0 stay harmless).
+    The registry refuses ``Scalar`` together with ``Graded(k ≠ 0)`` or
+    ``NonCommuting`` (exact and class-level, :class:`ScalarContractError`).
     """
 
 

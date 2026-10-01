@@ -187,35 +187,43 @@ class ExplicitAssumption(Definition):
 # --------------------------------------------------------------------- #
 
 
-def _check_scalar_contract(expr: Expr, after: Expr, rule) -> None:
-    """Scalar contract guard (audit 0b00e1b M1-1, chef decision (d)): a
-    Scalar is an ℝ-constant, so a certified derivation kills it
-    (``product_rule``). A rule rewriting ``D(c)`` to anything non-zero
-    contradicts the declaration — raise instead of letting the engine
-    pick either value."""
-    from jacopy.algebra.derivation import Act
+class ScalarConstantContract(Definition):
+    """``D(c) = 0`` for a certified derivation ``D`` and an ℝ-constant
+    ``c`` (an EXACT Scalar atom, :func:`~jacopy.central.calculus.scalars.is_real_constant`)
+    — the Scalar contract (audit 0b00e1b M1-1, chef decision). Built
+    into every engine and consulted BEFORE the registered rules, so no
+    rule ever sees ``Act(D, c)``: a user rule giving a Scalar a non-zero
+    derivative is simply never used (the declaration wins; declare a
+    function ``Graded(0)``). The step records "``c`` is Scalar" as its
+    registry hypothesis."""
 
-    if not isinstance(expr, Act) or after == Integer(0):
-        return
-    from jacopy.proof.registry_facts import current_context
+    name = "Scalar contract: D(c)=0 (c declared ℝ-constant)"
+    role = "definition"
 
-    ctx = current_context()
-    registry = ctx[0] if ctx is not None else None
-    if registry is None:
-        registry = getattr(rule, "_registry", None)
-    if not isinstance(registry, PropertyRegistry):
-        return
-    from jacopy.algorithms.product_rule import _is_certified_derivation
-    from jacopy.core.properties import Scalar, ScalarContractError
+    def matches(self, expr: Expr) -> bool:
+        from jacopy.algebra.derivation import Act
 
-    if _is_certified_derivation(expr.op) and registry.has(expr.arg, Scalar):
-        raise ScalarContractError(
-            f"{expr.arg._repr_inner()} is declared Scalar (an ℝ-constant, "
-            f"annihilated by every derivation) but rule "
-            f"{getattr(rule, 'name', type(rule).__name__)!r} rewrites "
-            f"{expr._repr_inner()} to {after._repr_inner()}; declare it "
-            "Graded(0) if it is a function"
-        )
+        if not isinstance(expr, Act) or not expr.arg.is_atom:
+            return False
+        from jacopy.algorithms.product_rule import _is_certified_derivation
+
+        if not _is_certified_derivation(expr.op):
+            return False
+        from jacopy.proof.registry_facts import current_context
+
+        ctx = current_context()
+        registry = ctx[0] if ctx is not None else None
+        if not isinstance(registry, PropertyRegistry):
+            return False
+        from jacopy.central.calculus.scalars import is_real_constant
+
+        return is_real_constant(expr.arg, registry)
+
+    def rewrite(self, expr: Expr) -> Expr:
+        return Integer(0)
+
+
+_SCALAR_CONTRACT = ScalarConstantContract()
 
 
 def _is_degree_zero(expr: Expr, registry: Optional[PropertyRegistry]) -> bool:
@@ -463,6 +471,11 @@ class ExpansionEngine:
         during the one ``matches`` call that decided (no second call:
         review 2026-10-01 #6 — a modulo match is a full normalization)."""
         candidates = self._candidates(expr)
+        from jacopy.algebra.derivation import Act
+
+        if isinstance(expr, Act):
+            # the Scalar contract precedes every registered rule
+            candidates = [(None, _SCALAR_CONTRACT)] + list(candidates)
         if not candidates:
             return None
         from jacopy.core.registry import begin_reads, end_reads
@@ -475,15 +488,7 @@ class ExpansionEngine:
                 if d.matches(expr):
                     after = d.rewrite(expr)
                     # the STEP's hypotheses: the fired rule's own reads
-                    facts = facts_from_log(log[start:])
-                    # the contract guard only refuses; its reads are
-                    # not hypotheses of the step
-                    mark = len(log)
-                    try:
-                        _check_scalar_contract(expr, after, d)
-                    finally:
-                        del log[mark:]
-                    return d, after, facts
+                    return d, after, facts_from_log(log[start:])
             return None
         finally:
             # the WHOLE log reaches an enclosing log: when this engine

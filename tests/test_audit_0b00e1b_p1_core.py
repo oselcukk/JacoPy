@@ -339,12 +339,12 @@ def test_m1_1_scalar_contract_matches_the_model_oracle():
     assert verdict(Act(X, f), Integer(0)) == "DISAGREE"
 
 
-def test_m1_1_engine_refuses_nonzero_derivative_of_a_scalar():
-    # chef decision (d)/(i): a rule D(x) = 1 on a Scalar x is reported,
-    # never silently resolved either way
+def test_m1_1_engine_applies_the_scalar_contract_before_any_rule():
+    # chef decision (review): D(c) = 0 is a recorded contract step that
+    # precedes every rule — a contradictory user rule D(x) = 1 on a
+    # Scalar x is never used (no crash, no silent use of either value)
     from jacopy.algebra.derivation import Act, Derivation
-    from jacopy.core.properties import Scalar, ScalarContractError
-    from jacopy.proof import show_equal
+    from jacopy.core.properties import Scalar
     from jacopy.proof.expansion import Definition, ExpansionEngine
     from jacopy.proof.result import prove
 
@@ -362,16 +362,97 @@ def test_m1_1_engine_refuses_nonzero_derivative_of_a_scalar():
 
     bad = PropertyRegistry()
     bad.declare(x, Scalar())
-    with pytest.raises(ScalarContractError, match="declared Scalar"):
-        prove(ExpansionEngine([DX()]), Act(D, x), Integer(1), registry=bad)
-    with pytest.raises(ScalarContractError):
-        show_equal(Act(D, x), Integer(1), registry=bad, engine=ExpansionEngine([DX()]))
+    assert not prove(ExpansionEngine([DX()]), Act(D, x), Integer(1), registry=bad).closed
+    r = prove(ExpansionEngine([DX()]), Act(D, x), Integer(0), registry=bad)
+    assert r.closed
+    assert [s.rule for s in r.chain.steps][0].startswith("Scalar contract")
+    assert any(a.kind == "registry" and "Scalar" in a.name for a in r.requires)
     good = PropertyRegistry()
     good.declare(x, Graded(0))
-    assert prove(ExpansionEngine([DX()]), Act(D, x), Integer(1), registry=good).closed
-    # the guard's own registry reads are not hypotheses of the step
     r = prove(ExpansionEngine([DX()]), Act(D, x), Integer(1), registry=good)
-    assert not any("Scalar" in a.name for a in r.requires)
+    assert r.closed and not any("Scalar" in a.name for a in r.requires)
+
+
+def test_m1_1_poisson_hamiltonian_on_a_scalar_does_not_crash():
+    # review regression: X_f(c) → {f, c} was refused by the earlier
+    # guard and killed the whole portfolio
+    from jacopy.algebra.derivation import Act
+    from jacopy.core.properties import Scalar
+    from jacopy.packages.poisson.core import poisson_engine, poisson_structure
+    from jacopy.proof import show_equal
+    from jacopy.proof.result import prove
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    c = Symbol("c")
+    reg.declare(c, Scalar())
+    P = poisson_structure("π", declare=("poisson",))
+    eng = poisson_engine(registry=reg, structures=(P,), declare_sn=False)
+    assert prove(eng, Act(P.hamiltonian(f), c), Integer(0), registry=reg).closed
+    show_equal(Act(P.hamiltonian(f), c), Integer(0), registry=reg, engine=eng)
+
+
+def test_m1_1_only_an_exact_scalar_atom_is_a_constant():
+    from jacopy.algebra.derivation import Act, Derivation
+    from jacopy.algorithms.product_rule import product_rule
+    from jacopy.central.calculus.scalars import is_real_constant
+    from jacopy.core.properties import Scalar, ScalarContractError
+
+    D = Derivation("D", degree=1)
+    # class-level Scalar vs an exact Graded(1): refused either order
+    reg = PropertyRegistry()
+    reg.declare_for_class(Symbol, Scalar())
+    with pytest.raises(ScalarContractError):
+        reg.declare(Symbol("w"), Graded(1))
+    reg = PropertyRegistry()
+    reg.declare(Symbol("w"), Graded(1))
+    with pytest.raises(ScalarContractError):
+        reg.declare_for_class(Symbol, Scalar())
+    # a predicate-level Scalar cannot be cross-checked: it is simply
+    # not trusted as a constant
+    reg = PropertyRegistry()
+    w = Symbol("w")
+    reg.declare(w, Graded(1))
+    reg.declare_for_predicate(lambda e: isinstance(e, Symbol), Scalar())
+    assert not is_real_constant(w, reg)
+    assert product_rule(Act(D, w), reg) == Act(D, w)
+    # a Scalar on a composite is not a constant atom either
+    c = Symbol("c")
+    reg.declare(c, Scalar())
+    assert is_real_constant(c, reg) and not is_real_constant(Product(c, c), reg)
+
+
+def test_m1_1_leibniz_proofs_do_not_accumulate_scalar_reads():
+    # review: the D(c) = 0 check queried Scalar on every Act and piled up
+    # "x is not Scalar" requirements (X(Y(fg)) facts 4 → 10)
+    from jacopy.algebra.derivation import Act
+    from jacopy.algorithms.product_rule import product_rule
+    from jacopy.core.properties import Scalar
+    from jacopy.core.registry import track_reads
+
+    reg, X, Y, Z, W, f, eng = _tm()
+    (g,) = functions("g", registry=reg)
+    expr = Act(X, Act(Y, Product(f, g)))
+    with track_reads() as log:
+        product_rule(expr, reg)
+    import sys
+
+    pr = sys.modules["jacopy.algorithms.product_rule"]
+
+    saved = pr._is_real_constant
+    pr._is_real_constant = lambda arg, registry: False  # contract check off
+    try:
+        with track_reads() as base:
+            product_rule(expr, reg)
+    finally:
+        pr._is_real_constant = saved
+    # the contract check adds no (negative) Scalar reads of its own
+    assert len(log) == len(base)
+    c = Symbol("c")
+    reg.declare(c, Scalar())
+    with track_reads() as log:
+        assert simplify(product_rule(Act(X, Product(c, f)), reg), reg) == Product(c, Act(X, f))
+    assert {r[0] for r in log if r[1] is Scalar and r[2] is not None} == {c}
 
 
 def test_m1_1_registry_refuses_contradictory_scalar_declarations():
