@@ -202,6 +202,33 @@ class LieZDefinitionRule(CitedTheoremMixin, Definition):
         return ChiSec(BLieZ(expr.u.U, expr.v.z))
 
 
+class ExactnessDeclaration(Definition):
+    """The DECLARED exactness (8.5) of an exact (pre-)Bourbaki
+    structure: ``0 → Z → E → TM → 0`` exact, i.e. ``ker ρ = im χ``.
+
+    It carries no rewrite (it never matches): it is the LICENSING RULE
+    of the ``exact`` declaration flag, registered by
+    :func:`exact_bourbaki_engine` exactly when the structure declares
+    ``exact``, so a requirement "exactness (8.5)" is a declared rule of
+    the citing engine and :func:`~jacopy.proof.theorems.check_citation`
+    can verify it (audit 0B00E1B-FULL M1-4 review)."""
+
+    role = "assumption"
+
+    anchor = ChiSec
+
+    def __init__(self, alg: Algebroid) -> None:
+        self._alg = alg
+        self.owner = alg
+        self.name = f"exactness (8.5) ({alg.name}): ker ρ = im χ"
+
+    def matches(self, expr: Expr) -> bool:
+        return False
+
+    def rewrite(self, expr: Expr) -> Expr:  # pragma: no cover - never matches
+        return expr
+
+
 def _liez_well_defined_theorem(alg: Algebroid) -> Theorem:
     """The record cited by :class:`LieZDefinitionRule`: ``[φV, χz]_E ∈
     im χ`` = Lemma 9.1 (``ρ([u, χz]) = 0``, proved on ``alg``) + the
@@ -227,13 +254,10 @@ def _liez_well_defined_theorem(alg: Algebroid) -> Theorem:
             ),
             ProofStep(
                 node, node,
-                rule=(
-                    f"exactness (8.5) ({alg.name}): ker ρ = im χ, so "
-                    "[u, χz] ∈ im χ"
-                ),
+                rule=ExactnessDeclaration(alg).name,
                 justification="declared exactness of the structure",
                 provenance_tag="axiom", role="assumption", owner=alg,
-                key=("AlgebroidDeclaration", alg.name, "exact"),
+                key=ExactnessDeclaration(alg).key,
             ),
         ]
     )
@@ -444,6 +468,8 @@ def exact_bourbaki_engine(
     ]
     if isotropic:
         rules.append(IsotropyDeclaration())
+    if alg.declares("exact"):
+        rules.append(ExactnessDeclaration(alg))
     eng = ExpansionEngine(rules)
     from jacopy.packages.generalized.bourbaki_precalculus import (
         BDFirstOrderDefinition,

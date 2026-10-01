@@ -446,3 +446,30 @@ def test_cited_rule_inert_and_cached_when_prover_diverges():
     assert rule.theorem is None
     assert len(calls) == 1
     assert prove(ExpansionEngine([rule]), x, Integer(0)).status == "RESIDUAL"
+
+
+def test_liez_result_is_citable_in_its_own_engine():
+    # review of 03a70c1: the exactness step carried a key no rule had,
+    # so check_citation refused the LieZ result even in
+    # exact_bourbaki_engine. The `exact` flag is now licensed by the
+    # registered ExactnessDeclaration.
+    from jacopy.proof.theorems import Theorem, check_citation
+    from jacopy.packages.generalized.bourbaki_exact import (
+        ChiSec,
+        PhiSec,
+        exact_bourbaki_context,
+        exact_bourbaki_engine,
+    )
+    from jacopy.packages.generalized.bourbaki_precalculus import BD
+
+    reg = PropertyRegistry()
+    h, k = functions("h k", registry=reg)
+    (V,) = vector_fields("V")
+    X = exact_bourbaki_context("X")
+    lhs = Act(X.anchor(X.bracket(PhiSec(V), ChiSec(BD(k)))), h)
+    eng = exact_bourbaki_engine(X, reg)
+    r = prove(eng, lhs, Integer(0), registry=reg)
+    assert r.status == "CLOSED"
+    assert any(kd == "declared" and n.startswith("exactness (8.5) (X)") for kd, n in _kinds(r))
+    t = Theorem("liez_use", "ρ([φV, χz])(h) = 0", lhs, Integer(0), r.chain).with_structural_requires()
+    assert check_citation(t, exact_bourbaki_engine(X, reg)).ok
