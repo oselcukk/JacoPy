@@ -447,26 +447,47 @@ class TestGeneralSNEval:
     def test_general_koszul_jacobi_CLOSED(self, setup):
         """5.E.2b CLOSED (2026-09-07): the general Koszul Jacobi
         identity closes via the greedy stall-difference + exact
-        ℚ-linear citation phase (packages/poisson/koszul_jacobi.py),
-        engine-verified. ~42 s — runs with JACOPY_RUN_SLOW=1; the
-        honest-fail companion below always runs."""
+        ℚ-linear certificate search (packages/poisson/koszul_jacobi.py).
+        The target is built HERE; the returned chain must prove exactly
+        it, replay from cited records only, and name the declared
+        ``[π,π] = 0`` (audit 0B00E1B-FULL M3-3). ~1 min — runs with
+        JACOPY_RUN_SLOW=1; the honest-fail companion below always
+        runs."""
         import os
 
         if not os.environ.get("JACOPY_RUN_SLOW"):
             pytest.skip(
-                "42 s closure; set JACOPY_RUN_SLOW=1 to run "
-                "(verified offline: 18 steps)"
+                "~1 min closure; set JACOPY_RUN_SLOW=1 to run"
             )
+        from jacopy.packages.poisson.koszul import KoszulBracket
         from jacopy.packages.poisson.koszul_jacobi import (
             prove_general_koszul_jacobi,
         )
+        from jacopy.proof.result import Goal, ProofResult
+        from jacopy.proof.theorems import Theorem
 
         reg, f, _, _, alpha, beta, X, P = setup
         (gamma,) = forms("γ", degree=1)
+        pi = P.pi
+        target = Sum(
+            Pairing(KoszulBracket(pi, alpha, KoszulBracket(pi, beta, gamma)), X),
+            Pairing(KoszulBracket(pi, beta, KoszulBracket(pi, gamma, alpha)), X),
+            Pairing(KoszulBracket(pi, gamma, KoszulBracket(pi, alpha, beta)), X),
+        )
         chain = prove_general_koszul_jacobi(
             P, alpha, beta, gamma, X, f, registry=reg
         )
-        assert chain.steps
+        assert chain.initial == target and chain.final == Integer(0)
+        result = ProofResult.from_chain(chain, Goal(target, Integer(0)))
+        assert result.closed and not result.legacy
+        assert any(
+            a.kind == "declared" and "[π, π]_SN = 0" in a.name
+            for a in result.requires
+        )
+        record = Theorem(
+            "koszul_jacobi_general", "Jac_π = 0", target, Integer(0), chain
+        ).with_structural_requires()
+        assert record.chain_replayed and not record.legacy
 
     def test_general_koszul_jacobi_needs_declaration(self, setup):
         """Without the declared [π,π] = 0 the general Jacobi must

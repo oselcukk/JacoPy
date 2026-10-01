@@ -220,3 +220,184 @@ class TestM32NambuFIScope:
         # (−1 on Π = ∂x∧∂y∧∂z, while L^B η = 0 gives 0)
         with pytest.raises(ProofFailure):
             ExpandAndSimplify().prove(foreign, tm_nf, registry=reg, engine=engine())
+
+
+# --------------------------------------------------------------------- #
+# M3-3: Koszul Jacobi — records, witness, declaration                  #
+# --------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def poisson_setup():
+    from jacopy.packages.poisson import poisson_structure
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    alpha, beta, gamma = forms("α β γ", degree=1)
+    (X,) = vector_fields("X")
+    return reg, f, alpha, beta, gamma, X, poisson_structure()
+
+
+def _jacobiator(P, a, b, c, X):
+    from jacopy.packages.poisson.koszul import KoszulBracket
+
+    pi = P.pi
+    return Sum(
+        Pairing(KoszulBracket(pi, a, KoszulBracket(pi, b, c)), X),
+        Pairing(KoszulBracket(pi, b, KoszulBracket(pi, c, a)), X),
+        Pairing(KoszulBracket(pi, c, KoszulBracket(pi, a, b)), X),
+    )
+
+
+class TestM33SeedRecords:
+    """Fast: the seed families' zero theorems are replayed library
+    chains; the defect slices depend on the declaration — and fail
+    without it."""
+
+    def test_defect_slice_needs_and_names_the_declaration(self, poisson_setup):
+        from jacopy.packages.poisson.koszul_jacobi import (
+            _SeedProvers,
+            _rich_engine,
+        )
+
+        reg, f, a, b, c, X, P = poisson_setup
+        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
+        lhs = Pairing(c, pv.defect(a, b))  # ⟨γ, [α♯,β♯] − ♯[α,β]_π⟩
+        t = pv.zero_pair_defect(c, a, b)
+        assert t.lhs == lhs and t.rhs == Integer(0)
+        assert t.chain_replayed and not t.legacy
+        assert any("[π, π]_SN = 0" in n for n in _declared(t.requires))
+        # brD / dpairD lift through the same record
+        brd = pv.zero_bracket_defect(c, a, b, X)
+        assert brd.chain_replayed
+        assert any("[π, π]_SN = 0" in n for n in _declared(brd.requires))
+        # WITHOUT the declaration the same claim does not close
+        bare = _SeedProvers(P, _rich_engine(P, reg, declare=False), reg)
+        with pytest.raises(ProofFailure):
+            bare.zero_pair_defect(c, a, b)
+
+    def test_bridge_and_jacobi_seeds_are_assumption_free(self, poisson_setup):
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+        from jacopy.packages.poisson.koszul_jacobi import (
+            _SeedProvers,
+            _rich_engine,
+        )
+
+        reg, f, a, b, c, X, P = poisson_setup
+        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
+        V, W = pv._sharp(a), pv._sharp(b)
+        sbr = pv.zero_sbr(a, b, c)
+        assert sbr.lhs == Sum(
+            Pairing(c, lie_bracket(V, W)),
+            Neg(Act(V, pv._pp(b, c))),
+            pv._pp(b, Act(CARTAN_TM.lie(V), c)),
+        )
+        J = Sum(
+            lie_bracket(X, lie_bracket(V, W)),
+            lie_bracket(V, lie_bracket(W, X)),
+            lie_bracket(W, lie_bracket(X, V)),
+        )
+        jac = pv.zero_vf_jacobi(J, f)
+        for t in (sbr, jac):
+            assert t.chain_replayed and not t.legacy
+            assert not _declared(t.requires)
+
+    def test_a_wrong_seed_claim_fails(self, poisson_setup):
+        # ⟨c,[a♯,b♯]⟩ − a♯π(b,c) − π(b, L_{a♯}c): sign of the last term
+        # flipped — not a zero; the bridge must not close it
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+        from jacopy.packages.poisson.koszul_jacobi import (
+            _InstanceOf,
+            _SeedProvers,
+            _rich_engine,
+        )
+        from jacopy.central.calculus.bracket_calculus import IntrinsicLDefinition
+
+        reg, f, a, b, c, X, P = poisson_setup
+        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
+        V, W = pv._sharp(a), pv._sharp(b)
+        LVc = Act(CARTAN_TM.lie(V), c)
+        wrong = Sum(
+            Pairing(c, lie_bracket(V, W)),
+            Neg(Act(V, Pairing(c, W))),
+            Neg(Pairing(LVc, W)),
+        )
+        eng = ExpansionEngine(
+            [_InstanceOf(IntrinsicLDefinition(CARTAN_TM, reg), Pairing(LVc, W))]
+        )
+        with pytest.raises(ProofFailure):
+            ExpandAndSimplify().prove(wrong, Integer(0), registry=reg, engine=eng)
+
+
+slow = pytest.mark.skipif(
+    not os.environ.get("JACOPY_RUN_SLOW"),
+    reason="certificate search ~1 min; set JACOPY_RUN_SLOW=1",
+)
+
+
+@pytest.fixture(scope="module")
+def koszul_run():
+    from jacopy.packages.poisson import poisson_structure
+    from jacopy.packages.poisson.koszul_jacobi import koszul_jacobi_certificate
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    alpha, beta, gamma = forms("α β γ", degree=1)
+    (X,) = vector_fields("X")
+    P = poisson_structure()
+    jac = _jacobiator(P, alpha, beta, gamma, X)
+    cert = koszul_jacobi_certificate(
+        P, alpha, beta, gamma, X, f, target=jac, registry=reg
+    )
+    return reg, P, (alpha, beta, gamma, X, f), jac, cert
+
+
+@slow
+class TestM33KoszulChain:
+    def test_chain_proves_the_jacobiator_and_replays(self, koszul_run):
+        from jacopy.packages.poisson.koszul_jacobi import (
+            prove_koszul_zero_by_certificate,
+        )
+
+        reg, P, _, jac, cert = koszul_run
+        chain = prove_koszul_zero_by_certificate(P, jac, cert, registry=reg)
+        assert chain_shape(jac, Integer(0), chain).ok
+        r = ProofResult.from_chain(chain, Goal(jac, Integer(0)))
+        assert r.closed and not r.legacy
+        assert any("[π, π]_SN = 0" in n for n in _declared(r.requires))
+        t = Theorem("koszul_jacobi_general", "Jac_π(α,β,γ;X) = 0", jac, Integer(0), chain).with_structural_requires()
+        assert t.chain_replayed and not t.legacy
+        # the witness: the first step rewrites Jac to Σ c_i S_i, the
+        # certificate's combination, as a cited replayed reduction
+        first = chain.steps[0]
+        assert first.before == jac and first.after == cert.combination()
+        assert first.cites is not None and first.cites.chain_replayed
+        # every seed is a record with its own replayed zero theorem
+        assert cert.terms
+        for c, seed in cert.terms:
+            assert c != 0 and seed.theorem.lhs == seed.expr
+            assert seed.theorem.chain_replayed and seed.origin
+
+    def test_public_prover_returns_the_same_shape(self, koszul_run):
+        from jacopy.packages.poisson.koszul_jacobi import (
+            prove_general_koszul_jacobi,
+        )
+
+        reg, P, (a, b, c, X, f), jac, _ = koszul_run
+        chain = prove_general_koszul_jacobi(P, a, b, c, X, f, registry=reg)
+        assert chain.initial == jac and chain.final == Integer(0)
+
+    def test_wrong_target_or_tampered_certificate_fails(self, koszul_run):
+        from jacopy.packages.poisson.koszul import KoszulBracket
+        from jacopy.packages.poisson.koszul_jacobi import (
+            KoszulJacobiCertificate,
+            prove_koszul_zero_by_certificate,
+        )
+
+        reg, P, (a, b, c, X, f), jac, cert = koszul_run
+        wrong = Sum(jac, Pairing(KoszulBracket(P.pi, a, b), X))
+        with pytest.raises(ProofFailure):
+            prove_koszul_zero_by_certificate(P, wrong, cert, registry=reg)
+        tampered = KoszulJacobiCertificate(cert.terms[1:])
+        with pytest.raises(ProofFailure):
+            prove_koszul_zero_by_certificate(P, jac, tampered, registry=reg)

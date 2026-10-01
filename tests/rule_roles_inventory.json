@@ -164,6 +164,7 @@
  "jacopy.packages.poisson.core.SharpEvaluationDefinition": "definition",
  "jacopy.packages.poisson.koszul.KoszulBracketDefinition": "definition",
  "jacopy.packages.poisson.koszul.SharpVFLinearityDefinition": "definition",
+ "jacopy.packages.poisson.koszul_jacobi._InstanceOf": "definition",
  "jacopy.packages.poisson.nambu.DSquaredZeroDefinition": "definition",
  "jacopy.packages.poisson.nambu.DWedgeLeibnizDefinition": "definition",
  "jacopy.packages.poisson.nambu.NambuFIDeclaration": "assumption",
