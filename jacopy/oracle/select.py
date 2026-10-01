@@ -25,7 +25,6 @@ This module reads owners and records by duck typing (no engine import).
 from __future__ import annotations
 
 import itertools
-import random
 from typing import Dict, List, Optional, Tuple
 
 from jacopy.central.algebroid.context import (
@@ -45,7 +44,9 @@ from jacopy.central.tangent.anholonomy import AnholonomyCoefficient
 from jacopy.core.expr import Expr
 from jacopy.core.indexed_sum import IndexedSum
 
-from jacopy.oracle.models.algebroid import AM, AS, FAMILIES, J, LL, MI, MODELED, REG, RL, SP, family_rank
+from jacopy.oracle.models.algebroid import (
+    AM, AS, CI, FAMILIES, J, LL, MI, MODELED, REG, RL, SP, build_structure, family_rank,
+)
 from jacopy.oracle.values import Unsupported
 
 #: rule-name prefix → declared axiom (declarations.py ``self.name``)
@@ -57,6 +58,7 @@ RULE_PREFIXES = (
     ("antisymmetry", AS),
     ("metric invariance", MI),
     ("symmetric part", SP),
+    ("[C5] invariance", CI),
 )
 
 #: (premises, conclusion): theorems of the library's hierarchy
@@ -66,15 +68,32 @@ RULE_PREFIXES = (
 #: + right Leibniz ⇒ left Leibniz (L = 0, resp. L = g(u,v) g⁻¹Df).
 DERIVABLE = (
     (frozenset({RL, J}), AM),
+    # metric invariance ALONE gives right Leibniz: expanding
+    # ρ(u)g(v, f w) with C1 twice leaves g(v, [u,fw] − ρ(u)(f)w − f[u,w]) = 0
+    # for every v, and g is non-degenerate by definition [MC Def 3.1]
+    (frozenset({MI}), RL),
     (frozenset({SP, MI}), RL),
     (frozenset({AS, RL}), LL),
     (frozenset({SP, RL}), LL),
+    # LWX: [C5] at (y, f z) with the Leibniz rule of D gives
+    # [x, fz] = ρ(x)(f)z + f[x,z] − (x,z)·Df; with skewness this is left
+    # Leibniz with L(Df,z,x) = (z,x)·Df, C∞-linear in Df since
+    # D = ½g⁻¹ρ*d (Uchino Prop 2.2, courant_axioms.py)
+    (frozenset({AS, CI}), LL),
 )
 
 #: violation weights for the greedy family cover (structural axioms first)
-WEIGHTS = {RL: 3, AS: 3, J: 3, AM: 3, LL: 2, SP: 1, MI: 1, REG: 1}
+WEIGHTS = {RL: 3, AS: 3, J: 3, AM: 3, LL: 2, SP: 1, MI: 1, CI: 1, REG: 1}
 
-MAX_INDEX_ASSIGNMENTS = 12
+#: free frame-index assignments are enumerated EXHAUSTIVELY up to this
+#: many; beyond it the check is UNSUPPORTED(index-sampling)
+MAX_INDEX_ASSIGNMENTS = 81
+
+#: axioms a D-model must VIOLATE unless declared or derivable. ``regular``
+#: is exempt: it carries no rewrite rule (context.py DECLARATIONS), so the
+#: engine can only use it through a recorded projector rule — and an
+#: unrecognised algebroid-owned rule is already UNSUPPORTED.
+FALSIFIABLE = tuple(a for a in MODELED if a != REG)
 
 
 def axiom_of_rule(name: str) -> Optional[str]:
@@ -239,6 +258,9 @@ def scan_algebroid(*exprs, max_nodes: int = 20_000):
             bundles.add(e.bundle)
         if isinstance(e, _INDEXED):
             b = getattr(e, "bundle", None) if isinstance(e, (FrameField, CoframeField)) else None
+            if isinstance(e, AnholonomyCoefficient) or (
+                    isinstance(e, (FrameField, CoframeField)) and getattr(b, "is_tangent", False)):
+                needs.setdefault(None, set()).add("tm-frame")
             for lab in e.index_names:
                 if lab not in bound and free.get(lab) is None:
                     # a label seen on an E-frame ranges over rank(E)
@@ -260,9 +282,12 @@ def scan_algebroid(*exprs, max_nodes: int = 20_000):
 # --------------------------------------------------------------------- #
 
 
-def _violations(family: str) -> frozenset:
-    claims = FAMILIES[family][0]
-    return frozenset(a for a in MODELED if a not in claims)
+def _violations(cand) -> frozenset:
+    """The CERTIFIED violations of a candidate ``(family, n, r)``: read
+    from the self-checked structure (build_structure verifies every
+    non-claimed axiom, regularity by an anchor-rank jump)."""
+    fam, nf, r = cand
+    return build_structure(fam, nf, r, 0).violated
 
 
 def candidates(target, n: int, need: int, dim=None, metric: bool = False) -> List[Tuple[str, int, int]]:
@@ -295,11 +320,11 @@ def cover(cands, wanted) -> List[Tuple[str, int, int]]:
     pool = list(cands)
     while pool:
         def score(c):
-            v = _violations(c[0]) & left
+            v = _violations(c) & left
             return (sum(WEIGHTS.get(a, 1) for a in v), -len(FAMILIES[c[0]][0]), -(c[1] * c[2]), c[0])
 
         best = max(pool, key=score)
-        gain = _violations(best[0]) & left
+        gain = _violations(best) & left
         if chosen and not gain:
             break
         chosen.append(best)
@@ -352,6 +377,11 @@ def plan_algebroids(lhs, rhs, owners, requires, chain, need: int):
     names, bundles, free, needs = scan_algebroid(lhs, rhs)
     plan = AlgebroidPlan()
     plan.free_labels = free
+    if "tm-frame" in needs.get(None, ()) and algebroid_usage(requires, chain) is None:
+        # the holonomic-frame rule ([e_a, e_b] → 0, anholonomy.py) is an
+        # OWNERLESS assumption: with an unknown record it may have been
+        # used, and the random (anholonomic) frame would refute falsely
+        raise Unsupported("frame[proof record unknown]", (), "a TM frame with no readable proof record")
     if not names and not bundles:
         return plan
     infos = algebroid_owners(owners)
@@ -391,8 +421,13 @@ def plan_algebroids(lhs, rhs, owners, requires, chain, need: int):
         if not cands:
             extra = "+metric" if need_metric else ""
             raise Unsupported(f"algebroid-model[{','.join(sorted(req)) or 'none'}{extra}]", (), name)
-        wanted = set(MODELED) - closure(target)
+        wanted = set(FALSIFIABLE) - closure(req)
         chosen = cover(cands, wanted)
+        left = wanted - set().union(*(_violations(c) for c in chosen))
+        if left:
+            # every D-model would satisfy an undeclared, underivable axiom:
+            # an AGREE could hide its silent use (never a plain AGREE)
+            raise Unsupported(f"no-model-violating[{','.join(sorted(left))}]", (), name)
         # samples beyond the cover cycle through the other candidates
         order = chosen + [c for c in cands if c not in chosen]
         plan.algebroids[name] = dict(info, target=target, used=used, cover=chosen, order=order, bundle=b, dim=dim,
@@ -422,7 +457,7 @@ def leak_counter_plans(plan: AlgebroidPlan, need: int):
         cands = candidates(base | info["extra"], 3, need, info["dim"], metric=info["metric"])
         left = set(unused)
         for fam in cover(cands, unused):
-            hit = _violations(fam[0]) & left
+            hit = _violations(fam) & left
             if not hit:
                 continue
             out.append((name, fam, sorted(hit)))
@@ -438,10 +473,11 @@ def leak_counter_plans(plan: AlgebroidPlan, need: int):
 
 
 def index_assignments(free: Dict[str, object], dims: Dict[str, int], seed: int) -> List[Dict[str, int]]:
-    """Values of the free index labels: every assignment when there are
-    at most :data:`MAX_INDEX_ASSIGNMENTS`, else the all-equal one, an
-    all-distinct one and random ones (distinct labels may name the same
-    index — ``kronecker_delta`` keeps ``δ^a_b`` symbolic)."""
+    """EVERY assignment of values to the free index labels (distinct
+    labels may name the same index — ``kronecker_delta`` keeps ``δ^a_b``
+    symbolic, so equal and unequal values must all hold). More than
+    :data:`MAX_INDEX_ASSIGNMENTS` is UNSUPPORTED(index-sampling): a
+    sample could miss the one refuting assignment."""
     labels = sorted(free)
     if not labels:
         return [{}]
@@ -449,10 +485,6 @@ def index_assignments(free: Dict[str, object], dims: Dict[str, int], seed: int) 
     total = 1
     for r in ranges:
         total *= len(r)
-    if total <= MAX_INDEX_ASSIGNMENTS:
-        return [dict(zip(labels, c)) for c in itertools.product(*ranges)]
-    rng = random.Random(seed)
-    out = [dict.fromkeys(labels, 0), {lab: i % dims[lab] for i, lab in enumerate(labels)}]
-    while len(out) < MAX_INDEX_ASSIGNMENTS:
-        out.append({lab: rng.randrange(dims[lab]) for lab in labels})
-    return out
+    if total > MAX_INDEX_ASSIGNMENTS:
+        raise Unsupported("index-sampling", (), f"{len(labels)} free index labels: {total} > {MAX_INDEX_ASSIGNMENTS} assignments")
+    return [dict(zip(labels, c)) for c in itertools.product(*ranges)]
