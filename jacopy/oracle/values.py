@@ -48,6 +48,14 @@ class Unsupported(Exception):
         self.detail = detail
 
 
+class DomainError(Unsupported):
+    """An operator applied to a value kind outside its MATHEMATICAL domain
+    (``ι_X`` on a vector field, ``d`` on a multivector, a vector field on
+    a form). Unlike a plain :class:`Unsupported` (a gap of the oracle),
+    this is a fact about the operator: two operators whose domains differ
+    on a test argument where one of them is nonzero are different."""
+
+
 class Budget(Exception):
     """The per-check time or size budget ran out."""
 

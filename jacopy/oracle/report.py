@@ -51,6 +51,9 @@ class OracleReport:
     witnesses: List[Witness] = field(default_factory=list)
     reproduced: Optional[bool] = None
     leak_structure: Optional[str] = None
+    #: the ASSUMPTION_LEAK counter-model could not be evaluated (AGREE is
+    #: then NOT a leak-free certificate; strict mode reports it)
+    leak_unchecked: Optional[str] = None
     source: str = ""
     nodeid: str = ""
     elapsed: float = 0.0
@@ -68,8 +71,11 @@ class OracleReport:
     def summary(self) -> str:
         """One LaTeX-safe line for ProofResult displays (plain text)."""
         if self.verdict == AGREE:
+            if self.detail.startswith("trivial"):
+                return f"oracle: AGREE ({self.detail})"
             extra = f"; {', '.join(self.degree_assignments)} checked" if self.degree_assignments else ""
-            return f"oracle: AGREE ({self.samples} model(s), seed {self.seed}{extra})"
+            leak = f"; assumption-leak check NOT done ({self.leak_unchecked})" if self.leak_unchecked else ""
+            return f"oracle: AGREE ({self.samples} model(s), seed {self.seed}{extra}{leak})"
         if self.verdict == UNSUPPORTED:
             return f"oracle: UNSUPPORTED ({self.unsupported_type} at {self.unsupported_path})"
         return f"oracle: {self.verdict} ({self.detail})"

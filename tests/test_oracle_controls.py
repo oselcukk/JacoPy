@@ -256,3 +256,92 @@ def test_used_unmodeled_assumption_is_unsupported():
     assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "assumption[SimpleNamespace]"
     used = (SimpleNamespace(kind="declared", owner=P, name="Poisson"),)
     assert ok(l, r, owners=[P], requires=used).verdict == "DISAGREE"
+
+
+# --------------------------------------------------------------------- #
+# Review probes: equations the first version wrongly AGREEd on          #
+# --------------------------------------------------------------------- #
+
+sig, = forms("sigma_p", degree=Degree.var("p"))
+tau, = forms("tau_q", degree=Degree.var("q"))
+rho, = forms("rho_r", degree=Degree.var("r"))
+a1, a2, a3, a4 = forms("a1 a2 a3 a4", degree=1)
+
+FALSE_AGREE_PROBES = {
+    # 1) every degree variable must take every value (σ_p∧τ_q∧ρ_r swap)
+    "σ_p∧τ_q∧ρ_r = σ_p∧ρ_r∧τ_q": (Wedge(sig, tau, rho), Wedge(sig, rho, tau)),
+    # 2) the dimension must exceed every subnode's degree
+    "four 1-forms wedge to 0": (Wedge(a1, a2, a3, a4), Integer(0)),
+    "ω∧ω = 0": (Wedge(om, om), Integer(0)),
+    "ω∧α∧β = −α∧ω∧β": (Wedge(om, al, be), Neg(Wedge(al, om, be))),
+    "d(ω∧α∧β) = 0": (d(Wedge(om, al, be)), Integer(0)),
+    # 3) operator domains: equal operators agree on the whole test basis
+    "ι_X = ι̃_α": (Interior(X), TildeInterior(al)),
+    "L_X = X": (CARTAN_TM.lie(X), X),
+    # 6) both Product readings refuted → DISAGREE, not AMBIGUOUS
+    "X·f = g·X": (Product(X, f), Product(g, X)),
+}
+
+
+@pytest.mark.parametrize("name", sorted(FALSE_AGREE_PROBES))
+def test_review_false_agree_probes_disagree(name):
+    lhs, rhs = FALSE_AGREE_PROBES[name]
+    rep = ok(lhs, rhs)
+    assert rep.verdict == "DISAGREE", str(rep)
+
+
+def test_degree_assignments_cover_every_value_jointly():
+    rep = ok(Wedge(sig, tau), Wedge(tau, sig))  # true only when p·q even
+    assert rep.verdict == "DISAGREE"
+    rep = ok(Wedge(sig, tau, rho), Wedge(sig, tau, rho))
+    assert rep.verdict == "AGREE"
+    rep = ok(d(Wedge(sig, tau)), Sum(Wedge(d(sig), tau), Wedge(sig, d(tau))))  # sign (−1)^p missing
+    assert rep.verdict == "DISAGREE"
+    assert "full product, 9 assignment(s)" in rep.degree_assignments
+
+
+def test_too_many_degree_variables_is_budget_unsupported():
+    vs = forms("v1 v2 v3 v4", degree=Degree.var("k"))  # one variable: fine
+    assert ok(Wedge(*vs[:2]), Wedge(*vs[:2])).verdict == "AGREE"
+    many = [forms(f"w{i}", degree=Degree.var(f"k{i}"))[0] for i in range(4)]
+    rep = ok(d(d(Wedge(*many))), Integer(0))
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type in ("budget[degree-assignments]", "dimension")
+
+
+def test_model_dimension_follows_subnode_degrees():
+    rep = ok(Wedge(om, om), Wedge(om, om))
+    assert rep.verdict == "AGREE" and all(m.startswith("R^5") for m in rep.models)
+    rep = ok(d(Wedge(om, al, be)), d(Wedge(om, al, be)) + Integer(0))
+    assert all(m.startswith("R^6") for m in rep.models)
+
+
+def test_samples_must_be_positive():
+    l, r = NEGATIVE["Cartan with minus"]
+    for bad in (0, -1):
+        with pytest.raises(ValueError):
+            check_equal(l, r, registry=reg, samples=bad)
+
+
+def test_poisson_sample_zero_is_never_degenerate():
+    from jacopy.oracle.models.tangent import TangentModel
+
+    degenerate = 0
+    for target in range(300):
+        n = (2, 3, 4)[target % 3]
+        m = TangentModel(n, 10_000 + target, bivectors={"π": "poisson"}, sample=0)
+        pi = m.structure_bivector("π")
+        if max(c.total_degree() for c in pi.d.values()) < 2:  # ∂π or ∂²π vanishes
+            degenerate += 1
+    assert degenerate == 0
+
+
+def test_leak_check_failure_is_flagged_not_plain_agree(monkeypatch):
+    from jacopy.oracle.models.tangent import TangentModel
+    from jacopy.oracle.values import Unsupported
+
+    def refuse(self, rng):
+        raise Unsupported("counter-model-test")
+
+    monkeypatch.setattr(TangentModel, "_counter", refuse)
+    rep = ok(d_tilde(P, d_tilde(P, f)), Integer(0), owners=[P], requires=())
+    assert rep.verdict == "AGREE" and rep.leak_unchecked and "NOT done" in rep.summary()

@@ -56,7 +56,7 @@ from jacopy.packages.poisson.koszul import KoszulBracket
 from jacopy.packages.poisson.nambu import NambuSharpVF
 
 from jacopy.oracle import values as V
-from jacopy.oracle.values import Budget, FormV, MultiV, OpV, Unsupported, VecV
+from jacopy.oracle.values import Budget, DomainError, FormV, MultiV, OpV, Unsupported, VecV
 
 # --------------------------------------------------------------------- #
 # Registration table                                                     #
@@ -303,7 +303,7 @@ def to_op(v, R, path=()) -> OpV:
         def deriv(a, X=X):
             if is_scalar(a):
                 return V.vf_apply(R, X, a)
-            raise Unsupported(f"Act[vector field on {kind(a)}]", path)
+            raise DomainError(f"Act[vector field on {kind(a)}]", path)
 
         return OpV(deriv, 0, "vector field")
     raise Unsupported(f"operator-from-{kind(v)}", path)
@@ -683,7 +683,7 @@ def _exterior_derivative(e, env, path):
     if calc == CARTAN_TM_NAME:
         def d(a):
             if isinstance(a, (VecV, MultiV, OpV)):
-                raise Unsupported(f"d[on {kind(a)}]", path)
+                raise DomainError(f"d[on {kind(a)}]", path)
             return norm(FormV(V.d_form(R, as_form(a, R, path))), R)
 
         return OpV(d, 1, "d")
@@ -692,7 +692,7 @@ def _exterior_derivative(e, env, path):
 
         def dt(a):
             if isinstance(a, (FormV, OpV)):
-                raise Unsupported(f"d̃[on {kind(a)}]", path)
+                raise DomainError(f"d̃[on {kind(a)}]", path)
             return norm(MultiV(V.tilde_d(R, pi, as_multi(a, R, path))), R)
 
         return OpV(dt, 1, "d̃")
@@ -715,7 +715,7 @@ def _lie_derivative(e, env, path):
                 return norm(FormV(V.lie_form(R, X, a.d)), R)
             if isinstance(a, MultiV):
                 return norm(MultiV(V.lie_multi(R, X, a.d)), R)
-            raise Unsupported(f"L_X[on {kind(a)}]", path)
+            raise DomainError(f"L_X[on {kind(a)}]", path)
 
         return OpV(L, 0, "L_X")
     if calculus_structure(calc) is not None:
@@ -724,7 +724,7 @@ def _lie_derivative(e, env, path):
 
         def Lt(a):
             if isinstance(a, (FormV, OpV)):
-                raise Unsupported(f"L̃[on {kind(a)}]", path)
+                raise DomainError(f"L̃[on {kind(a)}]", path)
             return norm(MultiV(V.tilde_lie(R, pi, alpha, as_multi(a, R, path))), R)
 
         return OpV(Lt, 0, "L̃_α")
@@ -741,7 +741,7 @@ def _interior(e, env, path):
             return R.zero()
         if isinstance(a, FormV):
             return norm(FormV(V.dinterior(X, a.d)), R)
-        raise Unsupported(f"ι_X[on {kind(a)}]", path)
+        raise DomainError(f"ι_X[on {kind(a)}]", path)
 
     return OpV(i, -1, "ι_X")
 
@@ -757,7 +757,7 @@ def _tilde_interior(e, env, path):
             return R.zero()
         if isinstance(a, (VecV, MultiV)):
             return norm(MultiV(V.dinterior(alpha, as_multi(a, R, path))), R)
-        raise Unsupported(f"ι̃_α[on {kind(a)}]", path)
+        raise DomainError(f"ι̃_α[on {kind(a)}]", path)
 
     return OpV(it, -1, "ι̃_α")
 
@@ -779,7 +779,7 @@ def _multivector_interior(e, env, path):
                 return scale(P.get((), R.zero()), a, R)
             return R.zero()
         if not isinstance(a, FormV):
-            raise Unsupported(f"ι_P[on {kind(a)}]", path)
+            raise DomainError(f"ι_P[on {kind(a)}]", path)
         out = {}
         for K, c in P.items():
             term = a.d
