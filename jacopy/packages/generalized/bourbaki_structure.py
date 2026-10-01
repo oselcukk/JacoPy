@@ -547,6 +547,9 @@ def prove_right_leibniz_from_r_invariance(
         rule=inv.name,
         justification="declared axiom at the composite site",
         provenance_tag="axiom",
+        # an application of the declared (7.8) rule: a declared, keyed
+        # requirement (audit 0B00E1B-FULL M1-4)
+        owner=alg, role="assumption", key=inv.key,
     )
     from jacopy.central.algebroid.theorems import _normalize as _n
 

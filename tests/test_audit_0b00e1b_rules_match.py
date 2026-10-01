@@ -154,3 +154,122 @@ def test_sequence_wildcards_unaffected():
 def test_alpha_equal_respects_expr_type_k1_12():
     assert not alpha_equal(Wildcard("A", expr_type=Symbol), Wildcard("A", expr_type=Sum))
     assert alpha_equal(Wildcard("A", expr_type=Symbol), Wildcard("B", expr_type=Symbol))
+
+
+# --------------------------------------------------------------------- #
+# M1-4: theorem-like rules cite their theorem / need their hypotheses    #
+# --------------------------------------------------------------------- #
+
+
+def test_right_leibniz_rule_on_bare_algebroid_carries_its_hypothesis():
+    # counter-model without (7.8): [u,v] := 0, ρ = id ⇒ [u, f·v] = 0
+    # but f[u,v] + ρ(u)(f)v = u(f)·v ≠ 0 — the equality is NOT
+    # assumption-free; it holds under the (7.8) invariance it cites
+    from jacopy.packages.generalized.bourbaki_severa import severa_engine
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    E = algebroid("E")
+    u, v = E.sections("u v")
+    lhs = E.bracket(u, Product(f, v))
+    rhs = Sum(Product(f, E.bracket(u, v)), Product(Act(E.anchor(u), f), v))
+    r = prove(severa_engine(E, reg), lhs, rhs, registry=reg)
+    assert r.status == "CLOSED"
+    assert r.requires, "must not read assumption-free"
+    assert any(k == "declared" and n.startswith("(7.8) invariance (E)") for k, n in _kinds(r))
+
+
+def test_dd_zero_and_pairing_unfold_need_the_courant_data():
+    # counter-model: E = TM, ρ = id, positive-definite g, D := grad_g
+    # obeys (L) but ρ(Dk)(k) = |dk|² ≠ 0 and (Df,u) = u(f) ≠ ½u(f)
+    from jacopy.packages.generalized.courant_axioms import (
+        CourantD,
+        DDZeroDefinition,
+        DPairingUnfoldDefinition,
+        courant_context,
+    )
+
+    reg = PropertyRegistry()
+    f, k = functions("f k", registry=reg)
+    A = algebroid("A")
+    (u,) = A.sections("u")
+    act_lhs, act_rhs = Act(A.anchor(CourantD("A", k)), k), Integer(0)
+    eng = ExpansionEngine([DDZeroDefinition(A)])
+    assert prove(eng, act_lhs, act_rhs, registry=reg).status == "RESIDUAL"
+    with pytest.raises(ProofFailure):
+        ExpandAndSimplify().prove(act_lhs, act_rhs, registry=reg, engine=eng)
+    mlhs = A.metric(CourantD("A", f), CourantD("A", k))
+    assert prove(eng, mlhs, Integer(0), registry=reg).status == "RESIDUAL"
+    plhs = A.metric(CourantD("A", f), u)
+    prhs = Product(Rational(1, 2), Act(A.anchor(u), f))
+    assert prove(ExpansionEngine([DPairingUnfoldDefinition(A)]), plhs, prhs, registry=reg).status == "RESIDUAL"
+
+    # on the LWX data the citations close, carrying [C2] and [C5]
+    C = courant_context("C")
+    (y,) = C.sections("y")
+    r = prove(ExpansionEngine([DDZeroDefinition(C)]), Act(C.anchor(CourantD("C", k)), k), Integer(0), registry=reg)
+    assert r.status == "CLOSED"
+    names = [n for kind, n in _kinds(r) if kind == "declared"]
+    assert any(n.startswith("[C5] invariance (C)") for n in names)
+    assert any(n.startswith("anchor morphism (C)") for n in names)
+    r2 = prove(
+        ExpansionEngine([DPairingUnfoldDefinition(C)]),
+        C.metric(CourantD("C", f), y),
+        Product(Rational(1, 2), Act(C.anchor(y), f)),
+        registry=reg,
+    )
+    assert r2.status == "CLOSED"
+    assert any(k_ == "declared" and n.startswith("[C5] invariance (C)") for k_, n in _kinds(r2))
+    assert not any(k_ == "legacy" for k_, _ in _kinds(r2))
+
+
+def test_courant_locality_is_a_recorded_assumption():
+    # ᵍL(Ω,u,v) = g(u,v)·g⁻¹(Ω) is MC Prop 4.1 on an almost-Courant
+    # algebroid only; registering the rule is a hypothesis
+    from jacopy.central.algebroid.context import LocalityOperator
+    from jacopy.central.objects import Bundle
+    from jacopy.packages.metric_affine.admissible import CourantLocalityDefinition
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    E = algebroid("E", Bundle("E"))
+    u, v = E.sections("u v")
+    lhs = LocalityOperator(E.name, E.D(f), u, v)
+    rhs = Product(E.metric(u, v), E.sharp(E.D(f)))
+    r = prove(ExpansionEngine([CourantLocalityDefinition(E)]), lhs, rhs, registry=reg)
+    assert r.status == "CLOSED"
+    assert any(k == "declared" and n.startswith("Courant locality (E)") for k, n in _kinds(r))
+
+
+def test_severa_library_theorems_record_the_cited_leibniz():
+    from jacopy.packages.generalized.bourbaki_exact import exact_bourbaki_context
+    from jacopy.packages.generalized.bourbaki_severa import (
+        prove_delta_first_slot_anomaly,
+        prove_delta_tensorial_second_slot,
+    )
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    E = exact_bourbaki_context()
+    U, V = vector_fields("U V")
+    _, t2 = prove_delta_tensorial_second_slot(E, U, V, f, registry=reg)
+    assert any(a.kind == "declared" and a.name.startswith("(7.8) invariance (E)") for a in t2.requires)
+    assert not t2.legacy
+    # the left-Leibniz record rests on undeclared (6.11) instances:
+    # the honest state is the legacy marker, not assumption-free
+    _, t1 = prove_delta_first_slot_anomaly(E, U, V, f, registry=reg)
+    assert t1.legacy
+
+
+def test_cited_theorem_does_not_touch_the_callers_registry():
+    # the cited theorem is proved with helper symbols in a PRIVATE
+    # registry (K3: no fixed-name helpers written into user registries)
+    from jacopy.packages.generalized.courant_axioms import CourantD, DDZeroDefinition, courant_context
+
+    reg = PropertyRegistry()
+    (k,) = functions("k", registry=reg)
+    before = dict(reg._props)
+    C = courant_context("C")
+    r = prove(ExpansionEngine([DDZeroDefinition(C)]), Act(C.anchor(CourantD("C", k)), k), Integer(0), registry=reg)
+    assert r.status == "CLOSED"
+    assert dict(reg._props) == before

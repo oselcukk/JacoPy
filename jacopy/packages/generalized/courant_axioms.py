@@ -55,6 +55,10 @@ from jacopy.central.algebroid.context import (
     algebroid,
 )
 from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.packages.generalized._cited_rule import (
+    CitedTheoremMixin,
+    private_function,
+)
 from jacopy.central.algebroid.theorems import (
     _fresh_section,
     _metric_coefficient_of,
@@ -362,11 +366,18 @@ class SkewSwapCompositeDefinition(Definition):
         )
 
 
-class DPairingUnfoldDefinition(Definition):
+class DPairingUnfoldDefinition(CitedTheoremMixin, Definition):
     """THEOREM-classified rule citing the proven Prop 2.2:
     ``(Df, u) → ½ρ(u)(f)`` (unfold direction). Registered only in
     engines that do NOT carry [C5], so the rewrite terminates (the
-    produced action has no pairing argument left)."""
+    produced action has no pairing argument left).
+
+    A CITATION, not a definition (audit 0B00E1B-FULL M1-4): Prop 2.2
+    holds only under [C5] + (L) on the LWX (skew) data. The rule
+    fires only on a context that declares ``antisymmetric`` and on
+    which :func:`prove_d_pairing_formula` succeeds; every step cites
+    that theorem, so its declared requirements ([C5], (L), skew) flow
+    into the result instead of it reading assumption-free."""
 
     anchor = EMetric
 
@@ -376,6 +387,15 @@ class DPairingUnfoldDefinition(Definition):
         self.name = (
             f"cite Prop 2.2 ({alg.name}): (Df, u) = ½ρ(u)(f)"
         )
+
+    def _prove_cited(self):
+        if not self._alg.declares("antisymmetric"):
+            return None
+        (f,), reg = private_function("f")
+        x, y = self._alg.sections("x y")
+        return prove_d_pairing_formula(
+            self._alg, x, y, f, registry=reg
+        )[1]
 
     def _split(self, expr: EMetric):
         for a, b in ((expr.u, expr.v), (expr.v, expr.u)):
@@ -392,6 +412,7 @@ class DPairingUnfoldDefinition(Definition):
             isinstance(expr, EMetric)
             and expr.algebroid_name == self._alg.name
             and self._split(expr) is not None
+            and self._licensed()
         )
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -402,10 +423,18 @@ class DPairingUnfoldDefinition(Definition):
         )
 
 
-class DDZeroDefinition(Definition):
+class DDZeroDefinition(CitedTheoremMixin, Definition):
     """THEOREM-classified rule citing the proven Prop 2.1(ii) +
     Prop 2.2: ``ρ∘D = 0``, hence ``(Da, Db) → 0`` and
-    ``ρ(D(a))(h) → 0``."""
+    ``ρ(D(a))(h) → 0``.
+
+    A CITATION, not a definition (audit 0B00E1B-FULL M1-4): ``ρ∘D = 0``
+    is Uchino's theorem under [C2] + [C5] + (L) (a gradient ``D`` on a
+    bare anchored bundle violates it). The rule fires only on a context
+    declaring ``anchor-morphism`` ([C2]) and ``antisymmetric`` on which
+    both propositions are proved; each step cites the combined record
+    (:func:`_dd_zero_theorem`), whose requirements flow into the
+    result."""
 
     anchor = (EMetric, Act)
 
@@ -417,6 +446,14 @@ class DDZeroDefinition(Definition):
             "ρ(Da)(h) = 0"
         )
 
+    def _prove_cited(self):
+        if not (
+            self._alg.declares("anchor-morphism")
+            and self._alg.declares("antisymmetric")
+        ):
+            return None
+        return _dd_zero_theorem(self._alg)
+
     def matches(self, expr: Expr) -> bool:
         if (
             isinstance(expr, EMetric)
@@ -424,16 +461,62 @@ class DDZeroDefinition(Definition):
             and isinstance(expr.u, CourantD)
             and isinstance(expr.v, CourantD)
         ):
-            return True
+            return self._licensed()
         return (
             isinstance(expr, Act)
             and isinstance(expr.op, AnchoredVF)
             and expr.op.algebroid_name == self._alg.name
             and isinstance(expr.op.section, CourantD)
+            and self._licensed()
         )
 
     def rewrite(self, expr: Expr) -> Expr:
         return Integer(0)
+
+
+def _dd_zero_theorem(alg: Algebroid) -> Theorem:
+    """The record cited by :class:`DDZeroDefinition`:
+    ``(Da, Db) = ½ρ(Db)(a) = 0`` — Prop 2.2 at the section ``Db``,
+    then Prop 2.1(ii) (``ρ∘D = 0``) probed on ``a``. Both cited
+    theorems are proved on ``alg`` (generic symbols, private
+    registry); the record's requirements are theirs, transitively."""
+    (a, b, h), reg = private_function("a b h")
+    x, y = alg.sections("x y")
+    _, t22 = prove_d_pairing_formula(alg, x, y, a, registry=reg)
+    _, t21 = prove_anchor_annihilates_d(alg, x, y, b, h, registry=reg)
+    Da, Db = CourantD(alg.name, a), CourantD(alg.name, b)
+    lhs = alg.metric(Da, Db)
+    mid = Product(Rational(1, 2), Act(alg.anchor(Db), a))
+    chain = ProofChain(
+        [
+            ProofStep(
+                lhs, mid,
+                rule=f"cite {t22.name}: (Da, y) = ½ρ(y)(a) at y = Db",
+                justification="Prop 2.2 instance",
+                provenance_tag="theorem", role="theorem", cites=t22,
+                owner=alg,
+            ),
+            ProofStep(
+                mid, Integer(0),
+                rule=f"cite {t21.name}: ρ(Db) = 0, probed on a",
+                justification="Prop 2.1(ii) instance",
+                provenance_tag="theorem", role="theorem", cites=t21,
+                owner=alg,
+            ),
+        ]
+    )
+    return Theorem(
+        name=f"uchino_dd_zero_{alg.name}",
+        statement=(
+            f"ρ∘D = 0 and (Da, Db) = 0 on {alg.name} "
+            "(Uchino Prop 2.1(ii) + Prop 2.2)"
+        ),
+        lhs=lhs,
+        rhs=Integer(0),
+        proof=chain,
+        generality="generic-function",
+        notes="uchino.pdf Prop 2.1(ii), Prop 2.2",
+    ).with_structural_requires()
 
 
 class DNumericHomogeneityDeclaration(Definition):
@@ -637,6 +720,10 @@ def prove_left_leibniz_c3(
         rule=c5.name,
         justification="declared axiom applied at the composite site",
         provenance_tag="axiom",
+        # the step IS an application of the declared [C5] rule: name
+        # its licensing rule so the requirement is a declared one, not
+        # a legacy hand-built record (audit 0B00E1B-FULL M1-4)
+        owner=alg, role="assumption", key=c5.key,
     )
     n_a, steps_a = _normalize(after_c5, engine, registry)
     step_leg_a = ProofStep(
@@ -974,6 +1061,7 @@ def prove_d_pairing_formula(
             "declared axiom applied at the composite site f·x"
         ),
         provenance_tag="axiom",
+        owner=alg, role="assumption", key=c5.key,  # M1-4, as in 2.1(i)
     )
     n_a, steps_a = _normalize(after_c5, engine, registry)
     step_leg_a = ProofStep(

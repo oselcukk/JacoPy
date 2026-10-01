@@ -56,3 +56,37 @@ def test_declaration_classes_are_assumptions():
     for name, c in _classes().items():
         if name.endswith("Declaration"):
             assert c.role == "assumption", name
+
+
+# --- audit 0B00E1B-FULL M1-4 --------------------------------------- #
+#: A rule that presents itself as a CITED RESULT (class name says
+#: "Theorem", docstring says "THEOREM-classified" / "citing the
+#: proven") is not a definitional unfolding.
+import re as _re
+
+_CITATION_MARK = _re.compile(r"THEOREM-classified|citing the proven", _re.I)
+
+
+def _own_builder(c):
+    return c.theorem_proof_builder is not Definition.theorem_proof_builder
+
+
+def test_theorem_like_rules_are_not_bare_definitions():
+    # "Theorem" in the name / a citation docstring + role "definition"
+    # + no proof builder = the rule rewrites by a theorem while the
+    # engine records an assumption-free definitional step (M1-4)
+    offenders = []
+    for name, c in _classes().items():
+        doc = " ".join((c.__doc__ or "").split())[:300]
+        claims = "Theorem" in c.__name__ or _CITATION_MARK.search(doc)
+        if claims and c.role == "definition" and not _own_builder(c):
+            offenders.append(name)
+    assert not offenders, f"theorem-like rule(s) with role 'definition' and no proof builder: {offenders}"
+
+
+def test_theorem_role_rules_have_a_proof_builder():
+    # role "theorem" without a builder is tagged "axiom" by the engine
+    # and lands as a LEGACY requirement — the citation never flows
+    for name, c in _classes().items():
+        if c.role == "theorem":
+            assert _own_builder(c), name
