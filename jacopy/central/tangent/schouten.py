@@ -385,6 +385,7 @@ class LieOnMultivectorDefinition(Definition):
         from jacopy.algebra.derivation import Act as _Act
         from jacopy.central.calculus.bracket_calculus import (
             LieDerivative,
+            belongs_to,
         )
         from jacopy.central.tangent.exterior import CARTAN_TM
 
@@ -393,7 +394,7 @@ class LieOnMultivectorDefinition(Definition):
         op = expr.op
         if not (
             isinstance(op, LieDerivative)
-            and op.calculus_name == CARTAN_TM.name
+            and belongs_to(op, CARTAN_TM)
         ):
             return False
         m = multivector_degree(expr.arg, self._registry)

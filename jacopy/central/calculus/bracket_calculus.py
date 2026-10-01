@@ -265,45 +265,86 @@ def _guard_reserved_name(name: str) -> None:
         )
 
 
+def _canonical(name: str):
+    """The canonical instance of a reserved calculus name (``None`` for
+    an unreserved name, or while the canonical module is still being
+    initialized — the canonical construction itself)."""
+    spec = _RESERVED_NAMES.get(name)
+    if spec is None:
+        return None
+    import importlib
+
+    return getattr(importlib.import_module(spec[0]), spec[1], None)
+
+
+def _rebuild_reserved(name: str) -> "BracketCalculus":
+    """Unpickling a reserved calculus yields THE canonical instance."""
+    canon = _canonical(name)
+    if canon is None:
+        raise ValueError(f"no canonical calculus for {name!r}")
+    return canon
+
+
+def _rebuild_calculus(name, anchor, bracket, d_name, lie_name, form_degree,
+                      section_test, skew, right_leibniz) -> "BracketCalculus":
+    return BracketCalculus(
+        name, anchor=anchor, bracket=bracket, d_name=d_name,
+        lie_name=lie_name, form_degree=form_degree,
+        section_test=section_test, skew=skew, right_leibniz=right_leibniz,
+    )
+
+
 def _check_owner(calculus_name: str, calculus) -> None:
     """Operator construction contract (audit 0B00E1B-FULL M3-1 root):
-    an operator carrying a RESERVED calculus name must be built by that
-    calculus (the canonical instance — the name itself is reserved for
-    it, :func:`_guard_reserved_name`); an owner, when given, must carry
-    the operator's calculus name. Operator identity is name-based, so
-    an ownerless ``ExteriorDerivative("Cartan-TM")`` would compare
-    equal to the TM ``d`` and inherit every rule scoped to it."""
+    an owner, when given, is a :class:`BracketCalculus` carrying the
+    operator's calculus name; an operator with a RESERVED calculus name
+    is built only by the canonical instance (the name itself is
+    reserved for it, :func:`_guard_reserved_name`). Operator identity is
+    name-based, so an ownerless or look-alike-owned
+    ``ExteriorDerivative("Cartan-TM")`` would compare equal to the TM
+    ``d`` and inherit every rule scoped to it."""
+    if calculus is not None and not isinstance(calculus, BracketCalculus):
+        raise TypeError("an operator's owner must be a BracketCalculus")
     if calculus is not None and calculus.name != calculus_name:
         raise ValueError(
             f"operator calculus name {calculus_name!r} differs from its "
             f"owning calculus {calculus.name!r}"
         )
-    if calculus is None and calculus_name in _RESERVED_NAMES:
-        raise ValueError(
-            f"calculus name {calculus_name!r} is reserved: its operators "
-            "are built only by the canonical calculus (use CARTAN_TM.d / "
-            "CARTAN_TM.lie(X))"
-        )
+    if calculus_name in _RESERVED_NAMES:
+        canon = _canonical(calculus_name)
+        if calculus is None or (canon is not None and calculus is not canon):
+            raise ValueError(
+                f"calculus name {calculus_name!r} is reserved: its operators "
+                "are built only by the canonical calculus (use CARTAN_TM.d / "
+                "CARTAN_TM.lie(X))"
+            )
 
 
 def belongs_to(op: Any, calculus: "BracketCalculus") -> bool:
-    """Is ``op`` the ``d`` or an ``L_X`` derived from ``calculus``?
+    """Is ``op`` the ``d`` or an ``L_X`` of ``calculus``? THE shared
+    owner test of every calculus-scoped rule (audit 0B00E1B-FULL
+    M3-1/M3-2: ``dω = 0``, the Nambu FI, ``d² = 0``, the intrinsic
+    ``d``/``L`` …).
 
-    The scope guard for rules that hold for ONE calculus only (audit
-    0B00E1B-FULL M3-1/M3-2: ``dω = 0`` of a symplectic form, the Nambu
-    fundamental identity — both statements about the TM Cartan
-    calculus). DEFAULT REJECT: the operator must carry ``calculus`` as
-    its owner (object identity) AND agree with it structurally; an
-    operator built by hand without an owner, or by another calculus
-    (whatever its display name), is refused."""
-    if isinstance(op, ExteriorDerivative):
-        return op._calculus is calculus and op == calculus.d
-    if isinstance(op, LieDerivative):
-        return (
-            op._calculus is calculus
-            and op.calculus_name == calculus.name
-        )
-    return False
+    * a RESERVED calculus (``Cartan-TM``): the operator's owner must be
+      the canonical instance, by object identity (copies and pickles of
+      a calculus resolve to it), and ``calculus`` must be it too;
+    * any other calculus: the calculus name (operator identity is
+      name-based; same-named calculi are the same calculus).
+
+    For a reserved calculus a ``d`` must moreover BE its ``d``; an
+    unreserved calculus matches its ``d`` by name across bare/declared
+    copies (the algebroid layer's skew-declared copy, audit M2-1)."""
+    if not isinstance(op, (ExteriorDerivative, LieDerivative)):
+        return False
+    if op.calculus_name != calculus.name:
+        return False
+    if calculus.name in _RESERVED_NAMES:
+        canon = _canonical(calculus.name)
+        if canon is None or calculus is not canon or op._calculus is not canon:
+            return False
+        return not isinstance(op, ExteriorDerivative) or op == canon.d
+    return True
 
 
 class BracketCalculus:
@@ -473,6 +514,24 @@ class BracketCalculus:
     def __repr__(self) -> str:
         return f"BracketCalculus({self._name!r})"
 
+    # A calculus is immutable: copies are the calculus itself, and a
+    # reserved calculus unpickles to its canonical instance (its owner
+    # identity survives; no lambda is pickled for it).
+    def __copy__(self) -> "BracketCalculus":
+        return self
+
+    def __deepcopy__(self, memo) -> "BracketCalculus":
+        return self
+
+    def __reduce__(self):
+        if self._name in _RESERVED_NAMES:
+            return (_rebuild_reserved, (self._name,))
+        return (_rebuild_calculus, (
+            self._name, self._anchor, self._bracket, self._d.name,
+            self._lie_name, self._form_degree, self._section_test,
+            self._skew, self._right_leibniz,
+        ))
+
 
 def _slot_ok(
     calc: BracketCalculus, slot: Expr, registry
@@ -560,7 +619,7 @@ class IntrinsicDDefinition(Definition):
         return (
             isinstance(head, Act)
             and isinstance(head.op, ExteriorDerivative)
-            and head.op.calculus_name == self._calc.name
+            and belongs_to(head.op, self._calc)
         )
 
     def _degree_of_arg(self, omega: Expr) -> Optional[int]:
@@ -671,7 +730,7 @@ class IntrinsicLDefinition(Definition):
         return (
             isinstance(head, Act)
             and isinstance(head.op, LieDerivative)
-            and head.op.calculus_name == self._calc.name
+            and belongs_to(head.op, self._calc)
         )
 
     def _is_section(self, expr: Expr) -> bool:
@@ -692,7 +751,7 @@ class IntrinsicLDefinition(Definition):
         from jacopy.central.calculus.scalars import is_scalar_function
 
         if isinstance(expr, Act) and isinstance(expr.op, LieDerivative):
-            if expr.op.calculus_name != self._calc.name:
+            if not belongs_to(expr.op, self._calc):
                 return False
             if is_scalar_function(expr.arg, self._registry) or (
                 self._is_section(expr.arg)
