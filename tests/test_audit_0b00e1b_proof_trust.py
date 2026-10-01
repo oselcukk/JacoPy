@@ -7,6 +7,8 @@ results is only as good as the cited record).
   chain establishes (replay of connectivity + endpoints; hand-built,
   untagged, keyless steps are not evidence); ``from_chain`` refuses a
   disconnected chain and a CLOSED status the chain does not carry.
+* M1X-3 (with K2-13, M1-8): a modulo citation records the modulo
+  engine's steps, so its explicit assumptions reach the citing result.
 
 Every acceptance test builds its target equation here.
 """
@@ -264,3 +266,37 @@ def test_library_citation_keeps_transitive_requirements_under_the_oracle():
     assert any(a.kind == "unreplayed" and "poisson_jacobi" in a.name for a in res.requires)
     assert any(a.kind == "declared" and "Poisson" in a.name for a in res.requires)     # transitive axiom
     assert REPORTS and not any(r.refutes for r in REPORTS)
+
+
+# --------------------------------------------------------------------- #
+# M1X-3: modulo citations record the modulo engine's assumptions         #
+# --------------------------------------------------------------------- #
+
+
+class TestModuloRecordsAssumptions:
+    def _ysub(self):
+        y = Symbol("y")
+        r = prove(ExpansionEngine(), Sum(y, Neg(y)), Integer(0))
+        return Theorem("ysub", "y - y = 0", Sum(y, Neg(y)), Integer(0), r.chain).with_structural_requires()
+
+    def test_explicit_assumptions_of_the_modulo_engine_reach_the_result(self):
+        t = self._ysub()
+        assert t.requires == ()
+        b, c = Symbol("b"), Symbol("c")
+        modeng = ExpansionEngine([ExplicitAssumption(b), ExplicitAssumption(c)])
+        outer = ExpansionEngine([TheoremDefinition(t, modulo=modeng)])
+        assert prove(ExpansionEngine(), Sum(b, c), Integer(0)).status == "RESIDUAL"
+        res = prove(outer, Sum(b, c), Integer(0))
+        assert res.closed
+        names = {a.name for a in res.declared}
+        assert "explicit assumption: b = 0" in names and "explicit assumption: c = 0" in names
+        assert "assumption-free" not in res.summary()
+
+    def test_modulo_laundering_of_p_equals_minus_q(self):
+        t = self._ysub()
+        P, Q = Symbol("P"), Symbol("Q")
+        outer = ExpansionEngine([TheoremDefinition(t, modulo=ExpansionEngine([ExplicitAssumption(P, Neg(Q))]))])
+        res = prove(outer, Sum(P, Q), Integer(0))
+        assert res.closed and any("P = (-Q)" in a.name for a in res.declared)
+        thm = Theorem("pq0", "P + Q = 0", Sum(P, Q), Integer(0), res.chain).with_structural_requires()
+        assert any(a.kind == "declared" and "P = (-Q)" in a.name for a in thm.requires)

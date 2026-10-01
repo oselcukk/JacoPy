@@ -679,30 +679,33 @@ class TheoremDefinition(Definition):
         # expansion loop (measured: minutes instead of seconds).
         if len(expr.children) > len(src.children) + 4:
             return False
-        # Cost gate: modulo matching runs a full normalization, so
-        # attempt it only on STALL-SIZED sums (residual shapes), not
-        # on the giant intermediate sums of a hot expansion loop —
-        # otherwise every engine step pays a normalization per
-        # registered instance (measured: minutes instead of
-        # seconds on D.5).
-        if len(expr.children) > len(src.children) + 4:
-            return False
         diff_seed = Sum(
             *expr.children,
             *(Neg(t) for t in src.children),
         )
         TheoremDefinition._IN_MODULO = True
+        # every step of the modulo normalization is RECORDED (audit
+        # 0b00e1b-FULL M1X-3): the modulo engine's rules may be explicit
+        # assumptions — they become children of the citation step, so
+        # the citing result's requirements include them
+        recorded = []
         try:
             from jacopy.algorithms.product_rule import product_rule
             from jacopy.algorithms.simplify import simplify
+            from jacopy.proof.step import ProofStep
 
             cur = diff_seed
             for _ in range(12):
-                nxt, _steps = self._modulo.expand(
+                nxt, steps = self._modulo.expand(
                     cur, max_steps=self._modulo_max_steps
                 )
-                nxt = product_rule(nxt, None)
-                nxt = simplify(nxt, None)
+                recorded.extend(steps)
+                for rule, fn in (("product-rule", product_rule), ("simplify", simplify)):
+                    after = fn(nxt, None)
+                    if after != nxt:
+                        recorded.append(ProofStep(nxt, after, rule=rule, justification="modulo normalization pass",
+                                                  key=("pass", rule)))
+                    nxt = after
                 if nxt == cur:
                     break
                 cur = nxt
@@ -717,7 +720,7 @@ class TheoremDefinition(Definition):
             >= len(expr.children)
         ):
             return False
-        self._modulo_cache = (expr, diff)
+        self._modulo_cache = (expr, diff, diff_seed, tuple(recorded))
         return True
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -727,8 +730,15 @@ class TheoremDefinition(Definition):
             self._modulo_cache is not None
             and self._modulo_cache[0] == expr
         ):
-            _, diff = self._modulo_cache
+            _, diff, seed, recorded = self._modulo_cache
             self._modulo_cache = None
+            from jacopy.proof.step import ProofStep
+
+            self._side = (expr, (ProofStep(
+                seed, diff, rule=f"modulo normalization for theorem {self._theorem.name}",
+                justification="NF(expr − lhs) by the modulo engine; expr = NF(expr − lhs) + rhs",
+                children=list(recorded), key=("theorem-modulo", self._theorem.name),
+            ),))
             target = self._target()
             parts = []
             for piece in (diff, target):
@@ -752,6 +762,18 @@ class TheoremDefinition(Definition):
             else [target]
         )
         return Sum.make(*remaining, *extra)
+
+    #: the side derivation of the last modulo rewrite (consumed by
+    #: :meth:`side_steps`)
+    _side = None
+
+    def side_steps(self, expr: Expr):
+        """The recorded modulo normalization of the rewrite just made at
+        ``expr`` (attached under the citation step by the engine)."""
+        side, self._side = self._side, None
+        if side is not None and side[0] == expr:
+            return side[1]
+        return ()
 
     def theorem_proof_builder(self):
         chain = self._theorem.proof

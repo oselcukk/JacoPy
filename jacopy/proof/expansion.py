@@ -397,6 +397,13 @@ class ExpansionEngine:
             cites=(getattr(d, "theorem", None) if tag == "theorem" else None),
             key=d.key,
         )
+        # a rule's recorded side derivation (a modulo citation's
+        # normalization, audit 0b00e1b-FULL M1X-3) is ALWAYS attached:
+        # its assumptions are the step's assumptions
+        side = getattr(d, "side_steps", None)
+        if side is not None:
+            for sub_step in side(expr):
+                step.add_child(sub_step)
         if self._mode == "foundational" and d.is_theorem:
             builder = d.theorem_proof_builder()
             if builder is not None:
