@@ -74,10 +74,6 @@ class MappedSection(Derivation):
     # field); otherwise Φ(u) is a section of the target bundle, not an
     # operator on functions (audit 0b00e1b; default reject).
     @property
-    def leibniz(self):
-        return None if self._tangent else False
-
-    @property
     def section_value(self) -> bool:
         return not self._tangent
 
@@ -231,7 +227,6 @@ class Jacobiator(Derivation):
     of ``E`` (degree-0 atom acting through the anchor only)."""
 
     # Not a derivation: J(u,v,w) is a section of E, acting on functions only through ρ.
-    leibniz = False
     section_value = True
 
     __slots__ = ("_algebroid_name", "_u", "_v", "_w")
@@ -338,7 +333,6 @@ class Derivator(Derivation):
     ``C^∞``-linear ``Φ: E → E`` (item 10f), itself a section of E."""
 
     # Not a derivation: D_Φ(u,v) is a section of E (Φ: E → E), not an operator on functions.
-    leibniz = False
     section_value = True
 
     __slots__ = ("_algebroid_name", "_map_name", "_u", "_v")

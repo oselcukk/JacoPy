@@ -71,10 +71,6 @@ class Torsion(Derivation):
     # connection on another bundle it is a section, not an operator on
     # functions (audit 0b00e1b; default reject).
     @property
-    def leibniz(self):
-        return None if isinstance(self._bundle, TangentBundle) else False
-
-    @property
     def section_value(self) -> bool:
         return not isinstance(self._bundle, TangentBundle)
 
@@ -151,10 +147,6 @@ class Curvature(Derivation):
     # A derivation only on TM (then the value is a vector field); for a
     # connection on another bundle it is a section, not an operator on
     # functions (audit 0b00e1b; default reject).
-    @property
-    def leibniz(self):
-        return None if isinstance(self._bundle, TangentBundle) else False
-
     @property
     def section_value(self) -> bool:
         return not isinstance(self._bundle, TangentBundle)

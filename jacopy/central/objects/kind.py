@@ -359,6 +359,7 @@ def _kind_of_impl(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispat
         return UNKNOWN
 
     # --- the central objects ----------------------------------------
+    from jacopy.central.objects.endomorphism import EndoForm
     from jacopy.central.objects.form import Form
     from jacopy.central.objects.metric import InverseMetric, Metric
     from jacopy.central.objects.multivector import PVector
@@ -367,8 +368,6 @@ def _kind_of_impl(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispat
 
     if isinstance(expr, VectorField):
         return Kind("vector", bundle=expr.bundle)
-    from jacopy.central.objects.endomorphism import EndoForm
-
     if isinstance(expr, EndoForm):
         # m̃ acts degree-preservingly on FORMS (0-forms included); typed
         # here WITH the registry — EndoForm.degree has none, so m̃(f²)

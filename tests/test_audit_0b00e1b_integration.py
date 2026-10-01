@@ -489,3 +489,31 @@ class TestEndoFormRegistryKind:
         # unchanged: m̃ of a vector field has no form type
         assert kind_of(EndoForm("m", X), reg).kind == "unknown"
         assert not is_scalar_function(EndoForm("m", X), reg)
+
+
+# --------------------------------------------------------------------- #
+# Review (code-review fix/integration): section_value is the one marker  #
+# --------------------------------------------------------------------- #
+
+
+class TestSectionValueMarkerSuffices:
+    def test_marker_alone_blocks_and_derives_leibniz(self):
+        # review item 9: leibniz is DERIVED from section_value on a
+        # Derivation, and product_rule honours section_value even when a
+        # subclass overrides leibniz (fa7ec21 needed both markers).
+        from jacopy.algebra.derivation import Derivation
+
+        class _Val(Derivation):
+            section_value = True
+
+        class _ValOverride(Derivation):
+            section_value = True
+            leibniz = None
+
+        reg = PropertyRegistry()
+        f, g = functions("f g", registry=reg)
+        assert _Val("s").leibniz is False
+        assert Derivation("D").leibniz is None
+        for op in (_Val("s"), _ValOverride("t")):
+            assert product_rule(Act(op, Product(f, g)), reg) == Act(op, Product(f, g))
+            assert product_rule(Act(op, Integer(3)), reg) == Act(op, Integer(3))

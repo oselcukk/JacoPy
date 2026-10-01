@@ -118,7 +118,6 @@ class AlgebroidBracket(Derivation):
     """
 
     # Not a derivation: a section of E, acting on functions only through ρ (audit 0b00e1b).
-    leibniz = False
     section_value = True
 
     __slots__ = ("_algebroid_name", "_u", "_v")
@@ -242,7 +241,6 @@ LocalityMultilinearityDefinition`. The locality *structure* (the
     """
 
     # Not a derivation: L(ω,u,v) is a section of E (C∞-trilinear value), not an operator on functions.
-    leibniz = False
     section_value = True
 
     __slots__ = ("_algebroid_name", "_form", "_u", "_v")
@@ -428,7 +426,6 @@ class MetricSharp(Derivation):
     """
 
     # Not a derivation: g⁻¹(ω) is a section of E; it reaches functions only through ρ.
-    leibniz = False
     section_value = True
 
     __slots__ = ("_algebroid_name", "_metric_name", "_form")

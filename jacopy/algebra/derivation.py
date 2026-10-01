@@ -63,6 +63,21 @@ class Derivation(Atom):
     def _key(self) -> Any:
         return (self._name, self._degree)
 
+    #: Section-VALUE protocol (audit 0b00e1b integration): ``True`` for
+    #: an atom that subclasses Derivation only for slot plumbing — a
+    #: VALUE in a bundle other than TM ([u,v]_E, J_E, g⁻¹ω, …), not an
+    #: operator on functions. ``Act`` on it is undefined: the product
+    #: rule leaves it inert and ``kind_of`` does not type it.
+    section_value = False
+
+    @property
+    def leibniz(self):
+        """Leibniz marker DERIVED from :attr:`section_value`: a section
+        value is no derivation (``False``); otherwise undecided
+        (``None`` — the class contract). Subclasses that are operators
+        but not derivations override it (``ι_P``: ``leibniz = False``)."""
+        return False if self.section_value else None
+
     def _repr_inner(self) -> str:
         return self._name
 
