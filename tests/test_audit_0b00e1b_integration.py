@@ -701,3 +701,26 @@ def Kind_form1(bundle):
     from jacopy.central.objects.kind import Kind
 
     return Kind("form", 1, bundle=bundle)
+
+
+def test_modified_section_values_follow_the_protocol():
+    # review item 8: modified.py's class tuple _SECTION_VALUES is gone;
+    # "a value when last" reads the section_value protocol (+ TM vector
+    # fields). On ec63751/3044c27 [u,v]_E and J_E counted as operators.
+    from jacopy.central.algebroid import jacobiator
+    from jacopy.central.algebroid.context import LocalityOperator, MetricSharp
+    from jacopy.central.algebroid.operators import MappedSection
+    from jacopy.packages.metric_affine.modified import _is_operator
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    A = algebroid("Amv", Bundle("Amv"))
+    u, v = A.sections("u v")
+    (X,) = vector_fields("X")
+    for val in (
+        u, X, MappedSection("Φ", u), MetricSharp("Amv", A.D(f)),
+        LocalityOperator("Amv", A.D(f), u, v), A.bracket(u, v),
+        jacobiator(A, u, v, u),
+    ):
+        assert not _is_operator(val), val
+    assert _is_operator(A.anchor(u))

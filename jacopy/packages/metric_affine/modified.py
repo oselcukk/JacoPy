@@ -87,11 +87,16 @@ _HOLE_PROBE = Symbol("⟪coframe-recombination hole probe⟫")
 # ---- the kind tables (the ONLY place classes are listed) ------------ #
 
 #: Derivation subclasses that denote SECTIONS (values) when they stand
-#: LAST in a product: a section of ``E``, ``L(α,u,v)`` [MC Def 3.5],
-#: ``Φ(u)`` for a bundle map ``Φ`` (the projector ``𝒫`` included) and
-#: ``g⁻¹(ω)``. Followed by another factor, any Derivation (these
-#: included) is an operator acting on what follows.
-_SECTION_VALUES = (VectorField, LocalityOperator, MappedSection, MetricSharp)
+#: LAST in a product: every atom declaring the ``section_value``
+#: protocol (a section of ``E``, ``L(α,u,v)`` [MC Def 3.5], ``Φ(u)``
+#: for a bundle map ``Φ`` — the projector ``𝒫`` included — ``g⁻¹(ω)``,
+#: ``[u,v]_E``, …) plus the TM vector fields (a :class:`VectorField`
+#: is a section of its bundle; on TM it is not marked a section value
+#: because it also acts on functions). Followed by another factor, any
+#: Derivation (these included) is an operator acting on what follows.
+def _is_section_value(e: Expr) -> bool:
+    return isinstance(e, VectorField) or getattr(e, "section_value", False) is True
+
 
 #: Declared tensor ATOMS without slots — sections of a tensor bundle by
 #: definition: forms/tensors (coframe included), sections, ``Df``
@@ -123,7 +128,7 @@ def _is_operator(e: Expr) -> bool:
     looking through ``Neg``/``Sum``/``Product``."""
     if isinstance(e, (Neg, Sum, Product)):
         return any(_is_operator(c) for c in e.children)
-    return isinstance(e, Derivation) and not isinstance(e, _SECTION_VALUES)
+    return isinstance(e, Derivation) and not _is_section_value(e)
 
 
 class _LinearityCertifier:
