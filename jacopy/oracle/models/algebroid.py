@@ -810,7 +810,18 @@ class AlgebroidModel(TangentModel):
     # ---- test data ---------------------------------------------------- #
 
     def test_sections(self, bundle, count: int):
-        return [self.section(bundle, ("test", "section", i)) for i in range(count)]
+        """DENSE generic sections (every component a nonzero random
+        cubic): an E-form's zero test evaluates on them, so a sparse test
+        section would make a nonzero form (e.g. a coframe ``e^a``) look
+        zero."""
+        out = []
+        for i in range(count):
+            k = ("test-section", bundle, i)
+            if k not in self._cache:
+                rng = self._rng(k)
+                self._cache[k] = SecV(bundle, [self._poly(rng, 3) for _ in range(self.rank(bundle))])
+            out.append(self._cache[k])
+        return out
 
     def test_tuples(self, bundle, deg: int):
         """Two tuples of generic test sections for comparing E-forms (one

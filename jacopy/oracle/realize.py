@@ -842,18 +842,47 @@ def algebroid_of_calculus(name: str) -> Optional[str]:
     return None
 
 
-# the algebroid / frame realizers register themselves on import
+# the algebroid / frame realizers register themselves on import; their
+# helpers are looked up at CALL time (no circular-import order issue)
+def _e(name):
+    from jacopy.oracle import realize_e
+
+    return getattr(realize_e, name)
+
+
+def _e_exterior_derivative(*a):
+    return _e("_e_exterior_derivative")(*a)
+
+
+def _e_interior(*a):
+    return _e("_e_interior")(*a)
+
+
+def _e_lie_derivative(*a):
+    return _e("_e_lie_derivative")(*a)
+
+
+def _e_wedge(*a):
+    return _e("_e_wedge")(*a)
+
+
+def _eform_atom(*a):
+    return _e("_eform_atom")(*a)
+
+
+def _section_atom(*a):
+    return _e("_section_atom")(*a)
+
+
+def as_sec(*a):
+    return _e("as_sec")(*a)
+
+
+def free_index_labels(*a):
+    return _e("free_index_labels")(*a)
+
+
 from jacopy.oracle import realize_e as _realize_e  # noqa: E402,F401
-from jacopy.oracle.realize_e import (  # noqa: E402
-    _e_exterior_derivative,
-    _e_interior,
-    _e_lie_derivative,
-    _e_wedge,
-    _eform_atom,
-    _section_atom,
-    as_sec,
-    free_index_labels,
-)
 
 
 @register(TildeInterior)

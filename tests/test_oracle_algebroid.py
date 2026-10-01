@@ -369,3 +369,16 @@ def test_lwx_courant_data():
     # metric invariance WITHOUT the D-terms is not an LWX axiom
     mi = (Act(E.anchor(x), E.metric(y, z)), Sum(E.metric(E.bracket(x, y), z), E.metric(y, E.bracket(x, z))))
     assert ok(*mi, E).verdict == "DISAGREE"
+
+
+@pytest.mark.parametrize("level", ["local", "courant", "almost-courant", "metric", "lie"])
+def test_e_frame_decomposition_in_every_family(level):
+    # regression: a coframe e^a must never look zero on sparse test
+    # sections (E-form zero tests run on DENSE generic sections)
+    E = algebroid("Efr", Bundle("Efr"), declare=(level, "regular") if level != "lie" else (level,))
+    u, = E.sections("u")
+    fr = Frame("e", bundle=E.bundle)
+    body = Product(Act(E.anchor(fr.field("s")), f), Pairing(fr.dual().field("s"), u))
+    lhs = IndexedSum(FrameIndex("s"), fr, body)
+    rep = ok(lhs, Act(E.anchor(u), f), E, requires=())
+    assert rep.verdict == "AGREE", str(rep)
