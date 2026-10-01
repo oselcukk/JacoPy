@@ -54,15 +54,15 @@ patterns or SeqWildcards):
   Otherwise the rule does not fire: a bound term would escape its
   binder, or a free term would be captured. A value that mentions a
   dummy enclosed twice (nested same-named binders) is rejected too.
-* A SeqWildcard fills only a Sum/Product child run. Anywhere else (the
-  root, a Σ body, a single hole, a payload) a sequence binding raises
-  :class:`PayloadSubstitutionError`, so a literal wildcard never
-  reaches a Rule's result.
+* A SeqWildcard fills a run of CHILDREN (of a Sum, Product, Wedge, …,
+  wherever matching bound it). In a single position (the root, a
+  single hole, a payload, or a fixed-arity node it does not fit) a
+  sequence binding raises :class:`PayloadSubstitutionError`, so a
+  literal wildcard never reaches a Rule's result.
 """
 
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from jacopy.core.expr import Atom, Expr
@@ -221,20 +221,11 @@ def match(
     return None
 
 
-def _mentions(value: Any, atom: Expr) -> bool:
-    from jacopy.core.traverse import contains
-
-    if isinstance(value, tuple):
-        return any(contains(v, atom) for v in value)
-    return isinstance(value, Expr) and contains(value, atom)
-
-
-@lru_cache(maxsize=4096)
 def wildcard_names(expr: Expr) -> frozenset:
     """Names of every Wildcard/SeqWildcard in ``expr`` — children and
-    non-child payload alike (cached: called on rule patterns)."""
-    """Names of every Wildcard/SeqWildcard in ``expr`` — children and
-    non-child payload alike (cached: called on rule patterns)."""
+    non-child payload alike. Not cached globally: Expr equality is
+    α-canonical for Σ, so equal patterns can differ in their binders
+    (a :class:`~jacopy.algorithms.rewrite.Rule` precomputes per rule)."""
     out: set = set()
 
     def walk(e):
@@ -256,8 +247,6 @@ def wildcard_names(expr: Expr) -> frozenset:
 
     walk(expr)
     return frozenset(out)
-
-
 
 
 def _match(
@@ -336,10 +325,10 @@ def _payload_occurrences(pk: Any, ctx, out) -> None:
             _payload_occurrences(k, ctx, out)
 
 
-def _rule_occurrences(lhs: Expr, rhs: Expr) -> Dict[str, list]:
-    # NOT cached: Expr equality is α-canonical for Σ, so Σ_i ?f·Σ_j ?g
-    # equals Σ_i ?f·Σ_i ?g and an equality-keyed cache would hand one
-    # rule the other's binder contexts
+def rule_occurrences(lhs: Expr, rhs: Expr) -> Dict[str, list]:
+    """Wildcard name → the Σ-dummy contexts of all its occurrences in
+    ``lhs`` and ``rhs``. Precomputed per :class:`Rule` (never cached by
+    Expr equality, which is α-canonical for Σ)."""
     out: Dict[str, list] = {}
     _occurrences(lhs, (), out)
     _occurrences(rhs, (), out)
@@ -347,8 +336,8 @@ def _rule_occurrences(lhs: Expr, rhs: Expr) -> Dict[str, list]:
 
 
 def has_sigma_wildcard_dummy(expr: Expr) -> bool:
-    """True when ``expr`` contains a Σ whose dummy is a wildcard (not
-    supported by the narrow binder contract)."""
+    """True when ``expr`` contains — in children or payload — a Σ whose
+    dummy is a wildcard (not supported by the narrow binder contract)."""
     from jacopy.core.indexed_sum import IndexedSum
 
     if isinstance(expr, IndexedSum):
@@ -357,23 +346,42 @@ def has_sigma_wildcard_dummy(expr: Expr) -> bool:
         return has_sigma_wildcard_dummy(expr.body)
     if expr.is_atom:
         return False
+    if _payload_has(node_payload(expr), has_sigma_wildcard_dummy):
+        return True
     return any(has_sigma_wildcard_dummy(c) for c in expr.children)
 
 
-def binder_violation(lhs: Expr, rhs: Expr, bindings: Bindings) -> Optional[str]:
+def _payload_has(pk: Any, pred) -> bool:
+    if isinstance(pk, Expr):
+        return pred(pk)
+    if type(pk) is tuple:
+        return any(_payload_has(k, pred) for k in pk)
+    return False
+
+
+def binder_violation(
+    lhs: Expr,
+    rhs: Expr,
+    bindings: Bindings,
+    occurrences: Optional[Dict[str, list]] = None,
+) -> Optional[str]:
     """Why rewriting ``lhs → rhs`` under ``bindings`` would cross a Σ
     binder boundary (``None`` when it does not): for every wildcard, the
-    dummies its value mentions must be enclosed identically at every
+    dummies its value mentions FREE (:func:`~jacopy.core.indexed_sum.dummy_in`:
+    frame atoms such as ``e_a`` / ``δ^a_b`` included, an inner binder's
+    own occurrences excluded) must be enclosed identically at every
     occurrence on both sides, and never by nested same-named binders."""
-    from jacopy.core.traverse import contains
+    from jacopy.core.indexed_sum import dummy_in
 
-    for name, ctxs in _rule_occurrences(lhs, rhs).items():
+    if occurrences is None:
+        occurrences = rule_occurrences(lhs, rhs)
+    for name, ctxs in occurrences.items():
         value = bindings.get(name)
         if value is None:
             continue
         values = value if isinstance(value, tuple) else (value,)
         dummies = {d for ctx in ctxs for d in ctx}
-        mentioned = [d for d in dummies if any(contains(v, d) for v in values)]
+        mentioned = [d for d in dummies if any(dummy_in(v, d) for v in values)]
         if not mentioned:
             continue
         seen = None
@@ -481,9 +489,10 @@ def _strip_by_identity(key: Any, child_ids: set) -> Any:
     return key
 
 
-@lru_cache(maxsize=4096)
 def _pattern_payload(pattern: Expr) -> Any:
-    """Cached :func:`node_payload` for the PATTERN side."""
+    """:func:`node_payload` of a PATTERN node. Deliberately not cached
+    by Expr equality: ``⋆_{Σ_i ?m}`` and ``⋆_{Σ_j ?m}`` are α-equal, and
+    a shared entry would hand one rule the other's binder."""
     return node_payload(pattern)
 
 
@@ -637,18 +646,6 @@ def substitute(pattern: Expr, bindings: Bindings) -> Expr:
     return _subst(pattern, bindings)
 
 
-_VARIADIC = None
-
-
-def _variadic():
-    global _VARIADIC
-    if _VARIADIC is None:
-        from jacopy.core.expr import Product, Sum
-
-        _VARIADIC = (Sum, Product)
-    return _VARIADIC
-
-
 def _subst(pattern: Expr, bindings: Bindings) -> Expr:
     if isinstance(pattern, (Wildcard, SeqWildcard)):
         bound = bindings.get(pattern.name)
@@ -664,10 +661,11 @@ def _subst(pattern: Expr, bindings: Bindings) -> Expr:
     if pattern.is_atom:
         return pattern
 
-    splice = isinstance(pattern, _variadic())
     new_children: list[Expr] = []
+    spliced = False
     for child in pattern.children:
-        if splice and isinstance(child, SeqWildcard):
+        if isinstance(child, SeqWildcard):
+            spliced = True
             bound = bindings.get(child.name)
             if bound is None:
                 new_children.append(child)
@@ -683,7 +681,15 @@ def _subst(pattern: Expr, bindings: Bindings) -> Expr:
     # here, not simplification. Direct constructor call via _rebuild
     # so types whose __init__ diverges from children (BracketApply
     # carries its bracket outside children) reconstruct correctly.
-    rebuilt = pattern._rebuild(tuple(new_children))
+    try:
+        rebuilt = pattern._rebuild(tuple(new_children))
+    except (TypeError, ValueError) as exc:
+        if not spliced:
+            raise
+        # a sequence spliced into a fixed-arity node (a single position)
+        raise PayloadSubstitutionError(
+            f"a sequence binding does not fit {type(pattern).__name__}: {exc}"
+        ) from exc
     if _payload_has_wildcard(_pattern_payload(pattern)):
         rebuilt = _substitute_payload(rebuilt, bindings)
     return rebuilt

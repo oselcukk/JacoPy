@@ -29,6 +29,7 @@ from jacopy.core.wildcards import (
     PayloadSubstitutionError,
     binder_violation,
     has_sigma_wildcard_dummy,
+    rule_occurrences,
     wildcard_names,
     match,
     substitute,
@@ -78,6 +79,9 @@ class Rule:
     name: str = ""
     guard: Optional[Guard] = field(default=None, compare=False)
 
+    _rhs_names: frozenset = field(default=frozenset(), init=False, repr=False, compare=False)
+    _occurrences: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+
     def __post_init__(self) -> None:
         # Σ patterns match only a same-named concrete dummy; a wildcard
         # dummy is not supported (audit 0B00E1B-FULL M1X-6, narrow
@@ -87,6 +91,10 @@ class Rule:
                 "a Σ with a wildcard dummy is not supported in a Rule; "
                 "use the concrete dummy name of the target"
             )
+        # per-rule precomputation (never shared by Expr equality, which is
+        # α-canonical for Σ): the RHS wildcard names, the binder contexts
+        object.__setattr__(self, "_rhs_names", wildcard_names(self.rhs))
+        object.__setattr__(self, "_occurrences", rule_occurrences(self.lhs, self.rhs))
 
     def try_at(
         self, expr: Expr, registry: Optional[PropertyRegistry] = None
@@ -102,10 +110,10 @@ class Rule:
         # contains (audit 0B00E1B-FULL M1X-6 review); nor does it when a
         # payload hole cannot be filled or a bound term would escape
         # its Σ binder
-        if not wildcard_names(self.rhs) <= set(bindings):
+        if not self._rhs_names <= set(bindings):
             return None
         # a bound term would escape its Σ, or a free one be captured
-        if binder_violation(self.lhs, self.rhs, bindings) is not None:
+        if binder_violation(self.lhs, self.rhs, bindings, self._occurrences) is not None:
             return None
         try:
             return substitute(self.rhs, bindings)

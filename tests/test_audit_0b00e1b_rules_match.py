@@ -314,7 +314,7 @@ def test_liez_definition_rule_cites_lemma_91():
     # Lemma 9.1 gives only ρ([φV, χz]) = 0; im χ also needs exactness
     # ker ρ = im χ (8.5): declared, and carried as a requirement (review
     # of 3a38eb2: it was implicit)
-    assert any(kd == "declared" and n.startswith("exactness (8.5) (X)") for kd, n in _kinds(r))
+    assert any(kd == "textual" and "exactness (8.5) (X, declared)" in n for kd, n in _kinds(r))
     P = algebroid("P", declare=("anchor-morphism",))
     lhs_p = Act(P.anchor(P.bracket(PhiSec(V), ChiSec(BD(k)))), h)
     assert prove(exact_bourbaki_engine(P, reg), lhs_p, Integer(0), registry=reg).status == "RESIDUAL"
@@ -445,9 +445,10 @@ def test_liez_result_is_citable_in_its_own_engine():
     eng = exact_bourbaki_engine(X, reg)
     r = prove(eng, lhs, Integer(0), registry=reg)
     assert r.status == "CLOSED"
-    assert any(kd == "declared" and n.startswith("exactness (8.5) (X)") for kd, n in _kinds(r))
+    assert any(kd == "textual" and "exactness (8.5) (X, declared)" in n for kd, n in _kinds(r))
     t = Theorem("liez_use", "ρ([φV, χz])(h) = 0", lhs, Integer(0), r.chain).with_structural_requires()
-    assert check_citation(t, exact_bourbaki_engine(X, reg)).ok
+    assert t.chain_replayed
+    assert check_citation(t, exact_bourbaki_engine(X, reg), registry=reg).ok
 
 
 def _closes_wrongly(rule, lhs, rhs):
@@ -615,3 +616,94 @@ def test_binder_contexts_are_not_shared_between_alpha_equal_rules():
     assert bad.try_at(Product(S(i, F(i)), S(i, G(i)))) is None
     assert ok.try_at(Product(S(i, F(i)), S(j, G(j)))) == S(i, S(j, Product(F(i), G(j))))
     assert bad.try_at(Product(S(i, F(i)), S(i, G(i)))) is None
+
+
+def test_cited_records_replay_status_is_visible():
+    # after the proof-trust-2 rebase: a record built from hand-made steps
+    # is legacy/unreplayed. Lemma 9.1 (LieZ) and the DDZero record are
+    # now library chains; the Uchino / (7.2) provers are two-leg
+    # narrative chains (strip by non-degeneracy) — their `unreplayed`
+    # markers flow, VISIBLY, into every result citing them (a later task)
+    from jacopy.packages.generalized.bourbaki_exact import LieZDefinitionRule, exact_bourbaki_context
+    from jacopy.packages.generalized.bourbaki_severa import RightLeibnizTheoremRule
+    from jacopy.packages.generalized.courant_axioms import (
+        DDZeroDefinition,
+        DPairingUnfoldDefinition,
+        courant_context,
+    )
+
+    liez = LieZDefinitionRule(exact_bourbaki_context("X")).theorem
+    assert liez.chain_replayed and not liez.legacy
+    C = courant_context("C")
+    dd = DDZeroDefinition(C).theorem
+    assert not any(a.kind == "legacy" for a in dd.requires)  # its own chain is minted
+    assert any(a.kind == "unreplayed" and "uchino_d_formula" in a.name for a in dd.requires)
+    dp = DPairingUnfoldDefinition(C).theorem
+    assert any(a.kind == "unreplayed" for a in dp.requires)
+    reg = PropertyRegistry()
+    rl = RightLeibnizTheoremRule(algebroid("E", declare=("bourbaki-invariance",)), reg).theorem
+    assert any(a.kind == "unreplayed" for a in rl.requires)
+
+
+def test_alpha_equal_rules_do_not_share_payload_or_names():
+    # ⋆_{Σ_i ?m} and ⋆_{Σ_j ?m} patterns are α-EQUAL; a global
+    # equality-keyed cache made the Σ_j rule match ⋆_{Σ_i Q(i)} after
+    # the Σ_i rule had run (order-dependent escape, review of 65bf04e)
+    i, j, F, G, S, f, g = _sx()
+    a = Symbol("a")
+    Q = lambda x: Act(Derivation("Q"), x)  # noqa: E731
+    x, m = Wildcard("x"), Wildcard("m")
+
+    def mk(d):
+        return Rule(HodgeStar(x, 3, metric=S(d, m)), HodgeStar(Product(x, x), 3, metric=S(d, m)))
+
+    t = HodgeStar(a, 3, metric=S(i, Q(i)))
+    assert mk(j).try_at(t) is None  # cold
+    assert mk(i).try_at(t) == HodgeStar(Product(a, a), 3, metric=S(i, Q(i)))
+    assert mk(j).try_at(t) is None  # warm
+
+
+def test_frame_atoms_count_as_dummy_occurrences():
+    # e_a and δ^a_b carry the index a in a slot: traverse.contains missed
+    # them (escape and capture through a frame atom)
+    from jacopy.central.objects.frame import FrameField, FrameIndex, KroneckerDelta
+
+    a = FrameIndex("a")
+    f, g = Wildcard("f"), Wildcard("g")
+    S = lambda d, b: IndexedSum(d, None, b)  # noqa: E731
+    eA, eB, c = FrameField("e", "a"), FrameField("e", "b"), Symbol("c")
+    pull = Rule(S(a, Product(f, g)), Product(g, S(a, f)))
+    assert pull.try_at(S(a, Product(eA, c))) == Product(c, S(a, eA))
+    assert pull.try_at(S(a, Product(eA, eA))) is None
+    push = Rule(Product(S(a, f), g), S(a, Product(f, g)))
+    assert push.try_at(Product(S(a, eB), eA)) is None
+    assert push.try_at(Product(S(a, eB), KroneckerDelta("a", "b"))) is None
+    assert push.try_at(Product(S(a, eB), c)) == S(a, Product(eB, c))
+    # alpha_equal: an inner binder's own occurrence is not free
+    from jacopy.core.indexed_sum import dummy_in
+
+    assert dummy_in(eA, a)
+
+
+def test_sequence_splices_into_any_children_run():
+    # Wedge(a, ?*r) → Wedge(?*r, a): main rewrote it; 65bf04e refused
+    # every non-Sum/Product run (regression)
+    from jacopy.core.wedge import Wedge
+
+    a, b, c = Symbol("a"), Symbol("b"), Symbol("c")
+    r, x = SeqWildcard("r"), Wildcard("x")
+    assert Rule(Wedge(a, r), Wedge(r, a)).try_at(Wedge(a, b, c)) == Wedge(b, c, a)
+    assert Rule(Sum(x, r), Product(r, x)).try_at(Sum(a, b, c)) == Product(b, c, a)
+
+
+def test_sigma_wildcard_dummy_in_payload_refused():
+    i, j, F, G, S, f, g = _sx()
+    with pytest.raises(ValueError):
+        Rule(HodgeStar(Wildcard("x"), 3, metric=S(Wildcard("D"), Wildcard("m"))), Wildcard("x"))
+
+
+def test_alpha_equal_ignores_an_inner_binders_own_dummy():
+    i, j, F, G, S, f, g = _sx()
+    p = S(i, S(i, F(i)))
+    q = S(j, S(i, F(i)))
+    assert p == q and alpha_equal(p, q)

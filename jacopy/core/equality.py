@@ -118,8 +118,7 @@ def _alpha_indexed_sum(p, q, fwd: Dict[str, str], bwd: Dict[str, str]) -> bool:
     """Σ binders: equal ranges, dummies paired (two wildcard dummies by
     renaming; concrete ones by α-renaming ``q`` to ``p``'s dummy, never
     capturing a free occurrence), then the bodies."""
-    from jacopy.core.indexed_sum import _range_key
-    from jacopy.core.traverse import contains
+    from jacopy.core.indexed_sum import _range_key, dummy_in
 
     if _range_key(p.range_) != _range_key(q.range_):
         return False
@@ -131,7 +130,9 @@ def _alpha_indexed_sum(p, q, fwd: Dict[str, str], bwd: Dict[str, str]) -> bool:
         if not _alpha(pd, qd, fwd, bwd):
             return False
     elif pd != qd:
-        if contains(qbody, pd):
+        # FREE occurrence only (an inner binder's own is not captured);
+        # frame atoms (e_a, δ^a_b) carry the index in a slot
+        if dummy_in(qbody, pd):
             return False
         qbody = q.with_dummy(pd).body
     return _alpha(p.body, qbody, fwd, bwd)
