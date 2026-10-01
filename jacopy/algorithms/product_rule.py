@@ -160,12 +160,20 @@ def _expand_act(
     if isinstance(arg, (Product, _Wedge)):
         mode = _product_mode(op, arg, registry)
         if mode == "leibniz":
-            if isinstance(arg, Product):
-                return _expand_leibniz(op, arg, registry)
-            # Graded Leibniz over the WEDGE product (the wedge is the
-            # graded product of forms — Phase 5.E.4):
-            # D(α∧β) = D(α)∧β + (−1)^{|D||α|} α∧D(β) + …
-            return _expand_wedge_leibniz(op, arg, registry)
+            try:
+                if isinstance(arg, Product):
+                    return _expand_leibniz(op, arg, registry)
+                # Graded Leibniz over the WEDGE product (the wedge is
+                # the graded product of forms — Phase 5.E.4):
+                # D(α∧β) = D(α)∧β + (−1)^{|D||α|} α∧D(β) + …
+                return _expand_wedge_leibniz(op, arg, registry)
+            except ValueError:
+                if isinstance(op, Derivation):
+                    raise  # documented contract for derivation atoms
+                # a certified composite (commutator) with a symbolic
+                # sign parity: leave it inert rather than raise from
+                # inside an engine rule's matches()
+                return Act(op, arg)
         if mode == "cinf-linear" and isinstance(arg, Product):
             # LINEAR-ONLY C∞-linear operator (e.g. the multivector
             # interior ι_P for p ≥ 2 — a COMPOSITION of derivations,
@@ -244,8 +252,16 @@ def _product_mode(op: Expr, arg: Expr, registry) -> str:
     if _is_certified_derivation(op):
         if not isinstance(op, Derivation):
             # a certified composite (commutator of derivations) splits
-            # only when its degree is determinable — otherwise stay
-            # linear instead of raising from inside an engine match
+            # only when its degree is determinable and when NEITHER
+            # component vetoes the split through the protocol —
+            # otherwise stay linear instead of raising from inside an
+            # engine match
+            from jacopy.algebra.commutator import Commutator
+
+            if isinstance(op, Commutator):
+                for comp in (op.a, op.b):
+                    if _product_mode(comp, arg, registry) != "leibniz":
+                        return "linear"
             try:
                 degree_of(op, registry)
             except ValueError:

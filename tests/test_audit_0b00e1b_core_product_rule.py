@@ -758,6 +758,35 @@ def test_review3_endovf_applied_to_vector_is_untyped():
     assert kind_of(Act(EndoVF("m", X), f), reg).kind == "function"
 
 
+def test_review3_commutator_respects_component_veto_and_symbolic_degree():
+    # (6) a component that vetoes splitting (splits_over_product False)
+    # makes the commutator linear-only; (7) a commutator with a
+    # symbolic-parity sign stays inert instead of raising from
+    # ActExpansionDefinition.matches (7212be6: split / ValueError).
+    from jacopy.algebra.derivation import Derivation
+    from jacopy.central.calculus import ActExpansionDefinition
+    from jacopy.core.expr import Product, Symbol
+    from jacopy.core.properties import Graded
+    from jacopy.core.symbolic_degree import Degree
+
+    reg, f, g, h, X, Y, Z, W, alpha, Commutator = _review3()
+
+    class Veto(Derivation):
+        def splits_over_product(self, arg, registry=None):
+            return False
+
+    C = Commutator(Veto("L", degree=0), X)
+    node = Act(C, Product(f, g))
+    assert product_rule(node, reg) == node
+    D1 = Derivation("D1", degree=Degree.var("p"))
+    x, y = Symbol("x"), Symbol("y")
+    reg.declare(x, Graded(Degree.var("q")))
+    reg.declare(y, Graded(1))
+    node2 = Act(Commutator(D1, X), Product(x, y))
+    assert ActExpansionDefinition(reg).matches(node2) in (True, False)
+    assert product_rule(node2, reg) == node2
+
+
 def test_review3_multivector_interior_on_function_needs_certified_p():
     # (8) ι_P f = 0 only for a certified p-vector P (p ≥ 1).
     import jacopy.central.objects.multivector as mv
