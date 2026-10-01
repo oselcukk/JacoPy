@@ -142,6 +142,10 @@ def tilde_calculus(P: PoissonStructure) -> BracketCalculus:
         lie_name="L̃",
         form_degree=_form_degree,
         section_test=_section_test,
+        # The Koszul bracket of ANY bivector is skew and satisfies right
+        # Leibniz with anchor π♯ by construction.
+        skew=True,
+        right_leibniz=True,
     )
 
 

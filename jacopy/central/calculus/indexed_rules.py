@@ -98,10 +98,63 @@ def contains_index(expr: Expr, name: str) -> bool:
 
 class IndexedSumLinearityDefinition(Definition):
     """``Σ_s (a + b) → Σ_s a + Σ_s b``; ``Neg``/zero; factors free of
-    the bound index pull out."""
+    the bound index pull out — ORDER-PRESERVING (audit 0B00E1B-FULL
+    M7-1 root): ``Product`` is not commutative (operator factors such as
+    vector fields compose), so only the maximal free PREFIX goes left and
+    the maximal free SUFFIX goes right, in their order. A free factor in
+    the middle is moved to the front only when it and every factor it
+    passes are scalar functions (which commute); e.g.
+    ``Σ_s ⟨e^s,v⟩·ρ(w)·B_s`` keeps ``ρ(w)`` inside — pulling it out
+    would make it act on ``⟨e^s,v⟩`` too (a spurious Leibniz term)."""
 
-    name = "indexed sum linearity: Σ_s(a + b) = Σ_s a + Σ_s b, free factors pull out"
+    name = "indexed sum linearity: Σ_s(a + b) = Σ_s a + Σ_s b, free prefix/suffix factors pull out"
     anchor = IndexedSum
+
+    def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
+        self._registry = registry
+        self._memo = None  # (expr, split) of the last matches() call
+
+    def _scalar(self, x: Expr) -> bool:
+        from jacopy.central.calculus.scalars import is_scalar_function
+
+        return is_scalar_function(x, self._registry)
+
+    def _split(self, expr: IndexedSum):
+        """``(prefix, inner, suffix)`` for a product body, or ``None``
+        when nothing can be pulled (or nothing is bound).
+
+        The SUFFIX is pulled only when every inner factor is a scalar
+        function: otherwise the remaining ``Σ_s(… B_s)`` would be
+        OPERATOR-valued, and a later scalar-action rule could misread
+        ``(Σ_s ⟨e^s,v⟩ ρ(e_s))(g)·h`` as a product (second review)."""
+        if self._memo is not None and self._memo[0] is expr:
+            return self._memo[1]
+        dummy_name = expr.dummy._repr_inner()
+        kids = list(expr.body.children)
+        free = [not contains_index(c, dummy_name) for c in kids]
+        if all(free) or not any(free):
+            # all-free needs the symbolic dimension (stays inert, 4.E.2)
+            return None
+        lo = 0
+        while free[lo]:
+            lo += 1
+        hi = len(kids)
+        while free[hi - 1]:
+            hi -= 1
+        prefix = kids[:lo]
+        inner = []
+        for c, fr in zip(kids[lo:hi], free[lo:hi]):
+            if fr and self._scalar(c) and all(self._scalar(k) for k in inner):
+                prefix.append(c)
+            else:
+                inner.append(c)
+        suffix = kids[hi:]
+        if suffix and not all(self._scalar(k) for k in inner):
+            inner.extend(suffix)
+            suffix = []
+        if not prefix and not suffix:
+            return None
+        return prefix, inner, suffix
 
     def matches(self, expr: Expr) -> bool:
         if not isinstance(expr, IndexedSum):
@@ -110,15 +163,9 @@ class IndexedSumLinearityDefinition(Definition):
         if isinstance(body, (Sum, Neg)) or body == Integer(0):
             return True
         if isinstance(body, Product):
-            dummy_name = expr.dummy._repr_inner()
-            # Both a free factor (to pull) AND a bound one (to keep):
-            # an all-free body needs the symbolic dimension and stays
-            # inert; matching it would loop (caught in 4.E.2).
-            return any(
-                not contains_index(c, dummy_name) for c in body.children
-            ) and any(
-                contains_index(c, dummy_name) for c in body.children
-            )
+            split = self._split(expr)
+            self._memo = (expr, split)
+            return split is not None
         return False
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -133,18 +180,12 @@ class IndexedSumLinearityDefinition(Definition):
             return Sum(*(rebuilt(c) for c in body.children))
         if isinstance(body, Neg):
             return Neg(rebuilt(body.arg))
-        dummy_name = expr.dummy._repr_inner()
-        free = [
-            c for c in body.children if not contains_index(c, dummy_name)
-        ]
-        bound = [c for c in body.children if contains_index(c, dummy_name)]
-        if not bound:
-            # Nothing depends on the index: a symbolic-dimension count
-            # would be needed; leave inert (honest diagnostics beat a
-            # wrong `n·body`).
+        split = self._split(expr)
+        if split is None:
             return expr
-        inner = bound[0] if len(bound) == 1 else Product(*bound)
-        return Product(*free, rebuilt(inner))
+        prefix, inner, suffix = split
+        core = inner[0] if len(inner) == 1 else Product(*inner)
+        return Product(*prefix, rebuilt(core), *suffix)
 
 
 class IndexedSumEvalPushInDefinition(Definition):
@@ -251,10 +292,12 @@ class WedgeEvalDefinition(Definition):
         def eval_factor(factor: Expr, slots) -> Expr:
             if len(slots) == 1:
                 return Pairing(factor, slots[0])
+            from jacopy.core.multi_eval import admits_alternation
+
             return MultiEval(
                 factor,
                 *slots,
-                alternating=True,
+                alternating=admits_alternation(factor),
                 slot_kind=expr.slot_kind,
             )
 

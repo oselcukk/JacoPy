@@ -103,7 +103,16 @@ class InteriorEvalDefinition(Definition):
             return _evaluate(omega, (X, expr.X))
         omega = expr.head.arg
         X = expr.head.op.vector
-        return _evaluate(omega, (X,) + expr.args)
+        # Flags are INHERITED from the node being unrolled (same policy
+        # as the intrinsic d/L rules); ``_evaluate`` further refuses to
+        # mark a non-alternating head (d of a non-skew calculus, audit
+        # 0B00E1B-FULL M2-1) alternating.
+        return _evaluate(
+            omega,
+            (X,) + expr.args,
+            alternating=expr.alternating,
+            slot_kind=expr.slot_kind,
+        )
 
 
 class InteriorVectorLinearityDefinition(Definition):

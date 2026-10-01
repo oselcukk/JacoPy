@@ -54,7 +54,7 @@ from __future__ import annotations
 
 from typing import Any, Optional, Tuple
 
-from jacopy.core.expr import Expr, Integer, Zero
+from jacopy.core.expr import Expr, Integer, Neg, Product, Sum, Zero
 from jacopy.core.registry import PropertyRegistry
 
 
@@ -110,6 +110,14 @@ class MultiEval(Expr):
                 f"slot_kind must be one of {_ALLOWED_SLOT_KINDS}, "
                 f"got {slot_kind!r}"
             )
+        if alternating and len(args) >= 2 and not admits_alternation(head):
+            # The flag is a CLAIM about the head; a head that is not an
+            # alternating form (d of a bracket that is not declared
+            # skew-symmetric — d_E on a Leibniz/Courant level, where
+            # dα(u,u) = −α([u,u]) ≠ 0) cannot honour it, so the node is
+            # normalized to a plain multilinear evaluation instead of
+            # licensing ω(u,u) = 0 (audit 0B00E1B-FULL M2-1).
+            alternating = False
         self._head = head
         self._args = tuple(args)
         self._alternating = alternating
@@ -199,6 +207,75 @@ class MultiEval(Expr):
 # --------------------------------------------------------------------- #
 # Helpers                                                                #
 # --------------------------------------------------------------------- #
+
+
+def admits_alternation(head: Expr) -> bool:
+    """May ``head`` be evaluated as an ALTERNATING multilinear map?
+
+    DEFAULT REJECT (audit 0B00E1B-FULL M2-1 + code reviews): only an
+    explicitly certified head is alternating —
+
+    * an atom whose CLASS declares ``alternating_values = True``
+      (forms, multivectors, vector fields as 1-vectors) — never by
+      degree alone (``g♭`` has degree 1 but two slots) and never a
+      plain ``Symbol`` (it may stand for any tensor);
+    * ``Integer(0)`` (the zero map);
+    * ``Act(op, arg)`` whose operator declares ``"inherit"`` (interior
+      products, Lie derivatives, the ``d`` of a SKEW calculus) with a
+      certified or scalar ``arg``; the ``d`` of a non-skew calculus
+      declares ``False`` (``dα(u,u) = −α([u,u])``);
+    * ``Sum``/``Neg``/``Wedge`` when every child is certified;
+      ``Product`` when every factor is certified or a scalar
+      coefficient (number, plain symbol, pairing/evaluation value,
+      degree-0 derivation of a scalar) and at least one is certified.
+
+    Anything else — tensors, scalars used as heads, operators outside
+    the protocol, unknown nodes — is evaluated plain-multilinearly.
+    The per-node cost is a class-attribute lookup; no tree cache."""
+    from jacopy.core.wedge import Wedge
+
+    if isinstance(head, Integer):
+        return head == Integer(0)
+    if isinstance(head, (Sum, Neg, Wedge)):
+        return all(admits_alternation(c) for c in head.children)
+    if isinstance(head, Product):
+        certified = [admits_alternation(c) for c in head.children]
+        return any(certified) and all(
+            ok or _is_scalar(c) for ok, c in zip(certified, head.children)
+        )
+    op = getattr(head, "op", None)
+    arg = getattr(head, "arg", None)
+    if op is not None and isinstance(arg, Expr):
+        if getattr(op, "alternating_values", False) == "inherit":
+            return _is_scalar(arg) or admits_alternation(arg)
+        return False
+    if head.is_atom:
+        return getattr(type(head), "alternating_values", False) is True
+    return False
+
+
+def _is_scalar(h: Expr) -> bool:
+    """A scalar COEFFICIENT (never a head of ≥ 2 slots on its own)."""
+    from jacopy.core.expr import Rational, Symbol
+    from jacopy.core.pairing import Pairing
+
+    if isinstance(h, (Integer, Rational, Pairing, MultiEval)):
+        return True
+    if type(h) is Symbol:
+        return True
+    if isinstance(h, Neg):
+        return _is_scalar(h.arg)
+    if isinstance(h, (Sum, Product)):
+        return all(_is_scalar(c) for c in h.children)
+    op = getattr(h, "op", None)
+    arg = getattr(h, "arg", None)
+    if op is not None and isinstance(arg, Expr):
+        from jacopy.core.symbolic_degree import Degree
+
+        return getattr(op, "degree", None) == Degree.const(0) and _is_scalar(
+            arg
+        )
+    return False
 
 
 def multi_eval(

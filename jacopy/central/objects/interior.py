@@ -47,6 +47,10 @@ class Interior(Derivation):
 
     __slots__ = ("_vector",)
 
+    #: Evaluation protocol (:func:`~jacopy.core.multi_eval.
+    #: admits_alternation`): ``ι_X ω`` is alternating iff ``ω`` is.
+    alternating_values = "inherit"
+
     def __init__(self, X: Expr, *, name: Optional[str] = None) -> None:
         if not isinstance(X, Expr):
             raise TypeError("Interior requires an Expr vector field")

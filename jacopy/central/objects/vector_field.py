@@ -70,6 +70,10 @@ class VectorField(Derivation):
 
     __slots__ = ("_bundle",)
 
+    #: Certified alternating (:func:`~jacopy.core.multi_eval.
+    #: admits_alternation`): a vector field is a 1-vector.
+    alternating_values = True
+
     def __init__(
         self,
         name: str,

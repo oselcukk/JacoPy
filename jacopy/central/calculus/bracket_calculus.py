@@ -18,6 +18,25 @@ matches the determinant wedge convention fixed in Phase 1
 Everything else about ``d`` — ``d² = 0``, the wedge Leibniz rule, the
 Cartan relations — is a **theorem** proved from this definition.
 
+**Axiom flags (audit 0B00E1B-FULL M2-1/M2-2).** The formula above is
+an ORDERED ℝ-multilinear expression for any ℝ-bilinear bracket, but
+it is an *alternating* form only when the bracket is skew-symmetric:
+``dα(u,u) = ρ(u)α(u) − ρ(u)α(u) − α([u,u]) = −α([u,u])``, nonzero for
+a Leibniz/Dorfman bracket. Likewise ``L_X`` is a derivation on
+``C^∞``-multiples of sections, ``L_X(fY) = ρ(X)(f)Y + f L_X Y``, only
+under right Leibniz. Both are therefore explicit calculus flags
+(``skew``, ``right_leibniz``), default ``False``:
+
+* ``skew=False`` → ``d`` carries ``alternating_values = False``: its
+  evaluations are plain multilinear (``MultiEval(…, alternating=False)``;
+  a requested ``alternating=True`` is normalized away at construction);
+* ``right_leibniz=False`` → ``L_X`` on a section-valued expression
+  (``f·Y``, sums and negations of such) is the bracket ``[X, ·]`` (the
+  definition), never the product rule; any Leibniz split must come from
+  the bracket's own (declared) rules. ``LieDerivative.
+  splits_over_product`` states the same to the generic product-rule
+  pass (default reject).
+
 The machinery is *generic in the pair* ``(ρ, [·,·])``
 (:class:`BracketCalculus`): the TM case takes the identity anchor and
 the Lie bracket (:mod:`jacopy.central.tangent.exterior`), a general
@@ -34,7 +53,7 @@ from typing import Any, Callable, Optional, Tuple
 
 from jacopy.algebra.derivation import Act, Derivation, degree_of
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
-from jacopy.core.multi_eval import MultiEval
+from jacopy.core.multi_eval import MultiEval, admits_alternation
 from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -49,18 +68,35 @@ class ExteriorDerivative(Derivation):
     distinct operators even if displayed similarly.
     """
 
-    __slots__ = ("_calculus_name",)
+    __slots__ = ("_calculus_name", "_skew")
 
-    def __init__(self, calculus_name: str, *, name: str = "d") -> None:
+    def __init__(
+        self, calculus_name: str, *, name: str = "d", skew: bool = False
+    ) -> None:
         super().__init__(name, degree=1)
         self._calculus_name = calculus_name
+        self._skew = bool(skew)
 
     @property
     def calculus_name(self) -> str:
         return self._calculus_name
 
+    @property
+    def alternating_values(self):
+        """Evaluation protocol of :func:`~jacopy.core.multi_eval.
+        admits_alternation`: ``dω`` is alternating iff ``ω`` is AND the
+        bracket is skew-symmetric; for a non-skew bracket the Palais
+        formula is only an ordered multilinear map (M2-1)."""
+        return "inherit" if self._skew else False
+
+    @property
+    def skew(self) -> bool:
+        return self._skew
+
     def _key(self) -> Any:
-        return (self._name, self._degree, self._calculus_name)
+        # skew is part of the identity: two d's with different
+        # alternation semantics must not compare/hash equal.
+        return (self._name, self._degree, self._calculus_name, self._skew)
 
 
 class LieDerivative(Derivation):
@@ -80,7 +116,12 @@ class LieDerivative(Derivation):
     proved from this definition, never a definition itself.
     """
 
-    __slots__ = ("_calculus_name", "_vector", "_op_name")
+    __slots__ = ("_calculus_name", "_vector", "_op_name", "_calculus")
+
+    #: ``L_X`` preserves alternation: for an alternating ω,
+    #: ``(L_Xω)(Y,Y) = ρ(X)ω(Y,Y) − ω([X,Y],Y) − ω(Y,[X,Y]) = 0`` for
+    #: ANY bracket; on a non-alternating argument it stays so.
+    alternating_values = "inherit"
 
     def __init__(
         self,
@@ -89,6 +130,7 @@ class LieDerivative(Derivation):
         *,
         op_name: str = "L",
         name: Optional[str] = None,
+        calculus: Optional["BracketCalculus"] = None,
     ) -> None:
         if not isinstance(X, Expr):
             raise TypeError("LieDerivative requires an Expr direction")
@@ -99,6 +141,9 @@ class LieDerivative(Derivation):
         self._calculus_name = calculus_name
         self._vector = X
         self._op_name = op_name
+        # the owning calculus (NOT identity: carried for the product
+        # protocol below)
+        self._calculus = calculus
 
     @property
     def calculus_name(self) -> str:
@@ -107,6 +152,30 @@ class LieDerivative(Derivation):
     @property
     def vector(self) -> Expr:
         return self._vector
+
+    def splits_over_product(self, arg: Expr, registry=None) -> bool:
+        """Product-rule protocol (audit 0B00E1B-FULL M2-2): may the
+        generic graded-Leibniz pass split ``L_X(a_1 ⋯ a_n)``?
+
+        DEFAULT REJECT. Yes when the calculus' bracket is right-Leibniz
+        by construction. Otherwise only when every factor is a scalar
+        function or a determinable calculus-FORM (degree ≥ 1): on
+        functions ``L_X = ρ(X)`` is a vector field, and on forms the
+        evaluation formula makes ``L_X(fω) = ρ(X)(f)ω + f L_Xω`` hold
+        for any bracket. A section factor — ``L_X(fY) = [X, fY]`` — IS
+        right Leibniz, so it is refused."""
+        calc = self._calculus
+        if calc is None:
+            return False
+        if calc.right_leibniz:
+            return True
+        from jacopy.central.calculus.scalars import is_scalar_function
+
+        factors = arg.children if isinstance(arg, Product) else (arg,)
+        return all(
+            is_scalar_function(c, registry) or _is_certified_form(c, registry)
+            for c in factors
+        )
 
     # Slot protocol (Phase 6.E): the direction is a rewritable slot,
     # and it is ADDITIVE — L_{X+Y} = L_X + L_Y (ℝ-linearity of the
@@ -118,7 +187,10 @@ class LieDerivative(Derivation):
 
     def with_slots(self, X: Expr) -> "LieDerivative":
         return LieDerivative(
-            self._calculus_name, X, op_name=self._op_name
+            self._calculus_name,
+            X,
+            op_name=self._op_name,
+            calculus=self._calculus,
         )
 
     @property
@@ -126,7 +198,28 @@ class LieDerivative(Derivation):
         return (0,)
 
     def _key(self) -> Any:
-        return (self._name, self._degree, self._calculus_name, self._vector)
+        # the product-rule answer depends on the calculus' right-Leibniz
+        # flag, so it is part of the identity
+        rl = None if self._calculus is None else self._calculus.right_leibniz
+        return (
+            self._name, self._degree, self._calculus_name, self._vector, rl
+        )
+
+
+def _is_certified_form(expr: Expr, registry=None) -> bool:
+    """A FORM by type (default reject): ``kind_of`` says form with a
+    concrete degree ≥ 1 and the node is certified alternating. A
+    multivector (``PVector.degree`` also reads as a degree), a tensor,
+    or a symbolic-degree form are refused."""
+    from jacopy.central.objects.kind import kind_of
+    from jacopy.core.multi_eval import admits_alternation
+
+    try:
+        k = kind_of(expr, registry)
+        deg = k.degree.as_int() if k.kind == "form" else None
+    except (ValueError, TypeError, AttributeError):
+        return False
+    return isinstance(deg, int) and deg >= 1 and admits_alternation(expr)
 
 
 class BracketCalculus:
@@ -161,6 +254,8 @@ class BracketCalculus:
         "_lie_name",
         "_form_degree",
         "_section_test",
+        "_skew",
+        "_right_leibniz",
     )
 
     def __init__(
@@ -173,6 +268,8 @@ class BracketCalculus:
         lie_name: str = "L",
         form_degree=None,
         section_test=None,
+        skew: bool = False,
+        right_leibniz: bool = False,
     ) -> None:
         """``form_degree``/``section_test`` are the calculus' grading
         hooks (Phase 5.D): the TILDE calculus on ``T*M`` swaps the
@@ -182,7 +279,14 @@ class BracketCalculus:
         registry) -> Degree`` resolves the calculus-form degree
         (default: the ordinary form grading); ``section_test(expr) ->
         bool`` recognizes the calculus' sections (default: the
-        wedge-degree-1 derivation protocol)."""
+        wedge-degree-1 derivation protocol).
+
+        ``skew`` — the bracket is skew-symmetric (by construction or by
+        declaration); only then is ``d`` an alternating operator.
+        ``right_leibniz`` — the bracket satisfies right Leibniz BY
+        CONSTRUCTION, so ``L_X`` may split ``C^∞``-multiples of
+        sections by the product rule. Both default to ``False`` (no
+        silent axioms, audit 0B00E1B-FULL M2-1/M2-2)."""
         if not isinstance(name, str) or not name:
             raise ValueError("BracketCalculus name must be a non-empty str")
         if not callable(anchor) or not callable(bracket):
@@ -190,7 +294,11 @@ class BracketCalculus:
         self._name = name
         self._anchor = anchor
         self._bracket = bracket
-        self._d = ExteriorDerivative(name, name=d_name)
+        if not isinstance(skew, bool) or not isinstance(right_leibniz, bool):
+            raise TypeError("skew and right_leibniz must be bools")
+        self._skew = skew
+        self._right_leibniz = right_leibniz
+        self._d = ExteriorDerivative(name, name=d_name, skew=skew)
         self._lie_name = lie_name
         self._form_degree = form_degree
         self._section_test = section_test
@@ -221,6 +329,42 @@ class BracketCalculus:
         return self._name
 
     @property
+    def skew(self) -> bool:
+        """Is the bracket skew-symmetric (``d`` alternating)?"""
+        return self._skew
+
+    @property
+    def right_leibniz(self) -> bool:
+        """Does the bracket satisfy right Leibniz by construction?"""
+        return self._right_leibniz
+
+    def is_section_valued(self, expr: Expr, registry=None) -> bool:
+        """Is ``expr`` a section-valued expression: a section, a
+        ``C^∞``-multiple ``f_1⋯f_k·Y`` of one, or a sum/negation of
+        such (M2-2)?"""
+        if self.is_section(expr):
+            return True
+        from jacopy.central.objects.multivector import PVector
+
+        if isinstance(expr, PVector) and expr.degree == Degree.const(1):
+            return True  # a 1-vector IS a section
+        if isinstance(expr, Neg):
+            return self.is_section_valued(expr.arg, registry)
+        if isinstance(expr, Sum):
+            return bool(expr.children) and all(
+                self.is_section_valued(c, registry) for c in expr.children
+            )
+        if not isinstance(expr, Product):
+            return False
+        from jacopy.central.calculus.scalars import is_scalar_function
+
+        rest = [
+            c for c in expr.children
+            if not is_scalar_function(c, registry)
+        ]
+        return len(rest) == 1 and self.is_section_valued(rest[0], registry)
+
+    @property
     def d(self) -> ExteriorDerivative:
         """The derived exterior derivative of this calculus."""
         return self._d
@@ -235,7 +379,9 @@ class BracketCalculus:
 
     def lie(self, X: Expr) -> LieDerivative:
         """``L_X`` — the derived Lie derivative in the direction ``X``."""
-        return LieDerivative(self._name, X, op_name=self._lie_name)
+        return LieDerivative(
+            self._name, X, op_name=self._lie_name, calculus=self
+        )
 
     def __repr__(self) -> str:
         return f"BracketCalculus({self._name!r})"
@@ -278,6 +424,9 @@ def _evaluate(
         return omega
     if len(args) == 1:
         return Pairing(omega, args[0])
+    # Never upgrade: a head that is not an alternating form (the d of a
+    # non-skew calculus, M2-1) is evaluated plain-multilinear.
+    alternating = alternating and admits_alternation(omega)
     return MultiEval(
         omega, *args, alternating=alternating, slot_kind=slot_kind
     )
@@ -360,13 +509,24 @@ class IntrinsicDDefinition(Definition):
             return Act(self._calc.anchor(expr.X), omega)
         omega = expr.head.arg
         args = expr.args
+        # Inner flag: INHERITED from the node being unrolled. The one
+        # exception is decided by the node's OWN operator: the d of a
+        # non-skew calculus forces its node plain multilinear
+        # (``alternating_values is False``), so that flag says nothing
+        # about ω; ω is then evaluated alternating only if it is itself
+        # CERTIFIED (a Form yes, a Tensor no — ``admits_alternation``
+        # rejects by default).
+        forced = getattr(expr.head.op, "alternating_values", None) is False
+        inner_alt = expr.alternating or (
+            forced and admits_alternation(omega)
+        )
         terms = []
         for i, Xi in enumerate(args):
             rest = args[:i] + args[i + 1:]
             inner = _evaluate(
                 omega,
                 rest,
-                alternating=expr.alternating,
+                alternating=inner_alt,
                 slot_kind=expr.slot_kind,
             )
             term: Expr = Act(self._calc.anchor(Xi), inner)
@@ -380,7 +540,7 @@ class IntrinsicDDefinition(Definition):
                 inner = _evaluate(
                     omega,
                     (br,) + rest,
-                    alternating=expr.alternating,
+                    alternating=inner_alt,
                     slot_kind=expr.slot_kind,
                 )
                 terms.append(Neg(inner) if (i + j) % 2 else inner)
@@ -447,8 +607,15 @@ class IntrinsicLDefinition(Definition):
         if isinstance(expr, Act) and isinstance(expr.op, LieDerivative):
             if expr.op.calculus_name != self._calc.name:
                 return False
-            return is_scalar_function(expr.arg, self._registry) or (
+            if is_scalar_function(expr.arg, self._registry) or (
                 self._is_section(expr.arg)
+            ):
+                return True
+            # M2-2: without CONSTRUCTIVE right Leibniz, L_X(f·Y) is the
+            # bracket [X, f·Y] by definition — the generic product rule
+            # (L_X a Derivation) would silently assume right Leibniz.
+            return not self._calc.right_leibniz and (
+                self._calc.is_section_valued(expr.arg, self._registry)
             )
         if isinstance(expr, Pairing):
             if not self._is_this_L(expr.alpha):
