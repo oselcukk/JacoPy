@@ -166,17 +166,18 @@ class TestChainReplay:
         assert not chain_shape(Product(p, q), Integer(5), steps).ok
 
     def test_disconnected_keyed_chain_is_requirements_derived_only(self):
-        # a keyed (machine-looking) step that has nothing to do with the claim
+        # a GENUINE engine step that has nothing to do with the claim
         p, q, a, b = (Symbol(n) for n in "pqab")
-        steps = [ProofStep(a, b, rule="simplify", key=("pass", "simplify"))]
+        hyp = ExplicitAssumption(a, b)
+        _, steps = ExpansionEngine([hyp]).expand(a)
         t = Theorem("pq_ab", "p = q", p, q, ProofChain(steps)).with_structural_requires()
         assert not t.legacy and t.requirements_derived and not t.chain_replayed
         book = TheoremBook()
         book.add(t)                                           # accepted as requirements-derived …
         assert book.is_requirements_derived("pq_ab") and not book.is_chain_replayed("pq_ab")
         with pytest.raises(LegacyTheoremError):
-            cite(ExpansionEngine(), book, "pq_ab")            # … but never cited silently
-        eng = cite(ExpansionEngine(), book, "pq_ab", allow_legacy=True)
+            cite(ExpansionEngine([hyp]), book, "pq_ab")       # … but never cited silently
+        eng = cite(ExpansionEngine([hyp]), book, "pq_ab", allow_legacy=True)
         res = prove(eng, p, q)
         assert res.closed and any(a.kind == "unreplayed" for a in res.requires)
         assert "assumption-free" not in res.summary()
@@ -212,7 +213,7 @@ class TestChainReplay:
 
     def test_from_chain_refuses_disconnected_and_overridden_status(self):
         X, Y, Z = Symbol("X"), Symbol("Y"), Symbol("Z")
-        s = ProofStep(X, Y, rule="r", key=("pass", "r"))
+        (s,) = ExpansionEngine([ExplicitAssumption(X, Y)]).expand(X)[1]          # a genuine engine step
         with pytest.raises(ValueError, match="CLOSED"):
             ProofResult.from_chain(ProofChain([s]), Goal(X, Z), status="CLOSED")
         with pytest.raises(ValueError, match="not connected"):
@@ -220,12 +221,13 @@ class TestChainReplay:
         with pytest.raises(ValueError, match="status"):
             ProofResult.from_chain(ProofChain([s]), Goal(X, Y), status="INVALID")
         ok = ProofResult.from_chain(ProofChain([s]), Goal(X, Y), status="CLOSED")
-        assert ok.closed and ok.requires == ()
+        assert ok.closed and not ok.legacy and [a.name for a in ok.declared] == ["explicit assumption: X = Y"]
         assert ProofResult.from_chain(ProofChain([s]), Goal(X, Y), status="RESIDUAL").status == "RESIDUAL"
 
     def test_from_theorem_reports_the_chain_verdict(self):
         p, q, a, b = (Symbol(n) for n in "pqab")
-        t = Theorem("pq_ab", "p = q", p, q, ProofChain([ProofStep(a, b, rule="s", key=("pass", "s"))])).with_structural_requires()
+        _, steps = ExpansionEngine([ExplicitAssumption(a, b)]).expand(a)
+        t = Theorem("pq_ab", "p = q", p, q, ProofChain(steps)).with_structural_requires()
         res = ProofResult.from_theorem(t)
         assert any(r.kind == "unreplayed" for r in res.requires)
 
@@ -372,3 +374,47 @@ class TestReviewProbes:
         monkeypatch.setattr(R, "structural_requires", lambda t: calls.append(1) or orig(t))
         _scalar_theorem()
         assert len(calls) == 1
+
+    @pytest.mark.parametrize("forge", [{"key": ("pass", "simplify")}, {"provenance_tag": "computation"},
+                                       {"key": ("strategy", "agreement-on-generators")}])
+    def test_caller_supplied_tag_or_key_is_not_provenance(self, forge):
+        # 5600f83: ProofStep(x, 0, key=("pass", "simplify")) (or tag
+        # "computation") was accountable: chain_replayed, citable, and
+        # x = 0 closed "assumption-free"
+        x = Symbol("x")
+        step = ProofStep(x, Integer(0), rule="simplify", **forge)
+        t = Theorem("x_zero", "x = 0", x, Integer(0), ProofChain([step])).with_structural_requires()
+        assert t.legacy and not t.chain_replayed
+        with pytest.raises(LegacyTheoremError):
+            TheoremBook().add(t)
+        assert not TheoremDefinition(t).citable
+        res = ProofResult.from_chain(ProofChain([step]), Goal(x, Integer(0)))
+        assert any(a.legacy and "hand-built" in a.name for a in res.requires)
+        assert "assumption-free" not in res.summary()
+
+    def test_forged_step_spliced_into_a_genuine_chain(self):
+        # a genuine engine step followed by a forged keyed step
+        a, b = Symbol("a"), Symbol("b")
+        hyp = ExplicitAssumption(a, b)
+        (good,) = ExpansionEngine([hyp]).expand(a)[1]
+        bad = ProofStep(b, Integer(0), rule="simplify", key=("pass", "simplify"))
+        t = Theorem("a_zero", "a = 0", a, Integer(0), ProofChain([good, bad])).with_structural_requires()
+        assert not t.chain_replayed and any("hand-built" in r for r in t.unreplayed_reasons())
+
+    def test_user_pass_callable_is_not_a_library_pass(self):
+        # 5600f83: normalize(passes=(user_fn,)) stamped the step ("pass", name)
+        from jacopy.proof.normalize import normalize
+        from jacopy.proof.replay import accountable
+
+        x = Symbol("x")
+
+        def simplify(expr, registry):  # same NAME as the library pass
+            return Integer(0)
+
+        nf = normalize(ExpansionEngine(), x, passes=(simplify,), record=True)
+        (step,) = nf.chain
+        assert step.key is None and not accountable(step)
+        t = Theorem("x0", "x = 0", x, Integer(0), ProofChain(nf.chain)).with_structural_requires()
+        assert t.legacy
+        lib = normalize(ExpansionEngine(), Sum(x, Neg(x)), passes=("simplify",), record=True)
+        assert all(accountable(s) for s in lib.chain) and lib.chain[0].key == ("pass", "simplify")

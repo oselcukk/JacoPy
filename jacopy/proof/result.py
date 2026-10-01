@@ -47,7 +47,7 @@ from typing import Iterable, List, Optional, Sequence, Tuple
 from jacopy.core.expr import Expr, Integer
 from jacopy.oracle.hook import on_closed
 from jacopy.proof.chain import ProofChain
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint, is_minted
 
 STATUSES = ("CLOSED", "RESIDUAL", "BUDGET", "INVALID")
 ASSUMPTION_KINDS = ("declared", "structure", "scope", "legacy", "textual", "registry", "unreplayed")
@@ -331,24 +331,33 @@ def _whole_step(before: Expr, after: Expr, local: ProofStep) -> ProofStep:
     citation, so classification is unchanged."""
     if local.before == before and local.after == after:
         return local
-    return ProofStep(
+    wrapper = ProofStep(
         before, after, rule=local.rule, justification=local.justification, children=[local],
         provenance_tag=local.provenance_tag, owner=local.owner, role=getattr(local, "role", None),
         cites=getattr(local, "cites", None), key=getattr(local, "key", None),
         registry_facts=getattr(local, "registry_facts", ()),
     )
+    # minted only when the local step is and the wrapper IS its
+    # substitution into ``before`` (review 2026-10-01 #3)
+    if is_minted(local):
+        from jacopy.proof.replay import _replace_first
+
+        if _replace_first(before, local.before, local.after) == after:
+            _mint(wrapper)
+    return wrapper
 
 
 def _reversed_step(s: ProofStep) -> ProofStep:
     """The step read backwards, with ALL its semantic metadata (owner,
     role, citation, key, children) — reversing an equation must not
     drop what it depends on (audit dc44f79 F1)."""
-    return ProofStep(
+    rev = ProofStep(
         s.after, s.before, rule=s.rule, justification=(s.justification + " (reversed)").strip(),
         children=list(s.children), provenance_tag=s.provenance_tag, owner=s.owner, role=getattr(s, "role", None),
         cites=getattr(s, "cites", None), key=getattr(s, "key", None),
         registry_facts=getattr(s, "registry_facts", ()),
     )
+    return _mint(rev) if is_minted(s) else rev
 
 
 # ------------------------------------------------------------------ #
@@ -492,7 +501,7 @@ class ProofResult:
             )
         final = replayed
         req, prov = _classify(tuple(chain.steps) + tuple(side_steps), principal=owner)
-        # a hand-built step (no provenance tag, no rule key) is the
+        # a hand-built step (not minted by a library producer) is the
         # author's word, not a licensed rewrite: a legacy assumption
         # (audit 0b00e1b-FULL M1-5), never silent provenance
         from jacopy.proof.replay import unaccountable_steps
@@ -501,7 +510,7 @@ class ProofResult:
         for rule in unaccountable_steps(tuple(chain.steps) + tuple(side_steps)):
             hand[rule] = hand.get(rule, 0) + 1
         req = req + tuple(
-            Assumption("legacy", f"hand-built step without a tag or rule key: {rule}", instances=n)
+            Assumption("legacy", f"hand-built step (not produced by a library producer): {rule}", instances=n)
             for rule, n in hand.items()
         )
         req = req + tuple(extra)
@@ -680,8 +689,8 @@ def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simpl
         if simplify_normal_forms:
             simplified, facts = _tracked_simplify(cur, registry)
             if simplified != cur:
-                steps.append(ProofStep(cur, simplified, rule="simplify", justification="canonical form",
-                                       key=("pass", "simplify"), registry_facts=facts))
+                steps.append(_mint(ProofStep(cur, simplified, rule="simplify", justification="canonical form",
+                                             key=("pass", "simplify"), registry_facts=facts)))
                 cur = simplified
         return cur, steps, False
 
@@ -715,9 +724,9 @@ def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simpl
     if diff != left:
         # the right-hand side's normalization is attached to the residual
         # step so its assumptions and citations count (audit dc44f79 F1)
-        steps.append(ProofStep(left, diff, rule="residual: lhs − rhs", justification="normal forms differ; the difference is the residual",
+        steps.append(_mint(ProofStep(left, diff, rule="residual: lhs − rhs", justification="normal forms differ; the difference is the residual",
                                key=("pass", "residual"),
-                               children=list(rsteps), registry_facts=facts))
+                               children=list(rsteps), registry_facts=facts)))
         rside = ()
     else:
         rside = tuple(rsteps)

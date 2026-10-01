@@ -151,18 +151,19 @@ __all__ = ["ChainShape", "ENDPOINT_FORMS", "chain_shape", "replay"]
 
 def accountable(step) -> bool:
     """A step is ACCOUNTABLE when something other than its author's word
-    licenses it: a provenance tag (axiom / theorem / computation —
-    classified, and legacy when unlicensed, by
-    :func:`~jacopy.proof.result._classify`), a rule key (the engine's
-    fired rule, a normalization pass, a strategy's inference), or it is
-    an identity (``before == after``). An untagged, keyless step is a
-    hand-built claim (audit 0b00e1b-FULL M1-5: "etiketsiz el yapımı
-    adım")."""
-    return (
-        getattr(step, "provenance_tag", None) is not None
-        or getattr(step, "key", None) is not None
-        or step.before == step.after
-    )
+    licenses it: it was MINTED by a library producer — the expansion
+    engine's fired rule, a library normalization pass, a library
+    strategy's inference (:func:`jacopy.proof.step.is_minted`; threat
+    model there) — or it is an identity (``before == after``). Any step
+    built through the public ``ProofStep`` constructor is a hand-built
+    claim, whatever tag or key it carries (audit 0b00e1b-FULL M1-5:
+    "etiketsiz el yapımı adım"; review 2026-10-01 #3)."""
+    from jacopy.proof.step import is_minted
+
+    # (review 2026-10-01 #3) the caller-supplied tag / key are NOT
+    # evidence: anyone can write them. Only a step minted by a library
+    # producer — or an identity, which proves nothing — is accountable
+    return is_minted(step) or step.before == step.after
 
 
 def unaccountable_steps(steps) -> Tuple[str, ...]:
@@ -220,7 +221,7 @@ class ChainVerdict:
         if self.unaccountable:
             names = sorted(set(self.unaccountable))
             shown = ", ".join(repr(n[:60]) for n in names[:4]) + (f", … ({len(names)} rules)" if len(names) > 4 else "")
-            out.append(f"{len(self.unaccountable)} hand-built step(s) without a tag or rule key: {shown}")
+            out.append(f"{len(self.unaccountable)} hand-built step(s) not produced by a library producer: {shown}")
         return tuple(out)
 
 
@@ -231,7 +232,7 @@ def chain_verdict(lhs: Expr, rhs: Expr, chain) -> ChainVerdict:
     if not steps and lhs != rhs:
         hard = "empty chain for a non-trivial claim"
     elif steps and lhs != rhs and not _any_accountable(steps):
-        hard = "no step of the chain is machine-produced (every step is a hand-built, untagged, keyless claim)"
+        hard = "no step of the chain is machine-produced (every step is a hand-built claim)"
     return ChainVerdict(shape, unaccountable_steps(steps), hard)
 
 

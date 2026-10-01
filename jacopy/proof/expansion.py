@@ -29,7 +29,7 @@ from jacopy.algebra.derivation import Act, Derivation, compose, degree_of
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint
 
 
 
@@ -383,7 +383,7 @@ class ExpansionEngine:
     def _build_step(self, expr: Expr, after: Expr, d: Definition) -> ProofStep:
         """Create the :class:`ProofStep` for a fired rewrite, with mode-dependent children."""
         tag = "theorem" if d.is_theorem else "axiom"
-        step = ProofStep(
+        step = _mint(ProofStep(
             expr,
             after,
             rule=d.name,
@@ -396,7 +396,7 @@ class ExpansionEngine:
             role=_step_role(d, tag),
             cites=(getattr(d, "theorem", None) if tag == "theorem" else None),
             key=d.key,
-        )
+        ))
         # a rule's recorded side derivation (a modulo citation's
         # normalization, audit 0b00e1b-FULL M1X-3) is ALWAYS attached:
         # its assumptions are the step's assumptions

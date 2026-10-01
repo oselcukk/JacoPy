@@ -27,6 +27,7 @@ from jacopy.proof.result import (
     package_version,
     prove,
 )
+from jacopy.proof.expansion import ExpansionEngine
 from jacopy.proof.theorems import Theorem
 
 
@@ -163,7 +164,7 @@ def test_from_chain_checks_the_goal_and_classifies_canonicalization():
     X, Y = vector_fields("X Y")
     with pytest.raises(ValueError, match="starts at"):
         ProofResult.from_chain(ProofChain([ProofStep(X, Y, rule="r")]), Goal(om, Y))
-    s1 = ProofStep(Sum(X, Neg(X)), Integer(0), rule="simplify", key=("pass", "simplify"))
+    (s1,) = prove(ExpansionEngine(), Sum(X, Neg(X)), Integer(0)).chain.steps        # the library's own simplify step
     res = ProofResult.from_chain(ProofChain([s1]), Goal(Sum(X, Neg(X)), Integer(0)))
     assert res.closed and res.provenance == (Provenance("canonicalization", "simplify"),)
     assert res.requires == ()

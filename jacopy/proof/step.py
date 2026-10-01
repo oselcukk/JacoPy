@@ -19,9 +19,42 @@ without coupling.
 
 from __future__ import annotations
 
+import weakref
 from typing import List, Optional, Tuple
 
 from jacopy.core.expr import Expr
+
+
+#: Steps MINTED by the library's own producers (review 2026-10-01 #3).
+#:
+#: Threat model. A step's provenance (that the engine, a library
+#: normalization pass or a library strategy produced it from an actual
+#: computation) must not be claimable through the public API: a
+#: ``ProofStep(..., key=..., provenance_tag=...)`` built by any caller —
+#: by accident or deliberately — is NEVER minted, whatever metadata it
+#: carries; copies are not minted either. Only producer code inside
+#: :mod:`jacopy.proof` calls :func:`_mint` (the trusted computing base;
+#: patching module internals is outside the model, as in any Python
+#: library). Minting certifies ORIGIN only — that the step is the
+#: producer's record — not that the rule is mathematically right: the
+#: step's ``before = after`` is the rule's responsibility, checked
+#: independently by the model oracle (``check_chain``).
+_MINTED: "weakref.WeakSet" = weakref.WeakSet()
+
+
+def _mint(step: "ProofStep") -> "ProofStep":
+    """Record ``step`` as produced by a library producer (private)."""
+    _MINTED.add(step)
+    return step
+
+
+def is_minted(step) -> bool:
+    """True when ``step`` was produced by the library's own producers
+    (engine, normalization passes, strategies) — see :data:`_MINTED`."""
+    try:
+        return step in _MINTED
+    except TypeError:
+        return False
 
 
 class ProofStep:
@@ -39,6 +72,7 @@ class ProofStep:
         "_cites",
         "_key",
         "_registry_facts",
+        "__weakref__",
     )
 
     #: Recognised provenance tags. ``None`` means the step carries no

@@ -719,7 +719,7 @@ class TheoremDefinition(Definition):
         try:
             from jacopy.algorithms.product_rule import product_rule
             from jacopy.algorithms.simplify import simplify
-            from jacopy.proof.step import ProofStep
+            from jacopy.proof.step import ProofStep, _mint
 
             cur = diff_seed
             for _ in range(12):
@@ -730,8 +730,8 @@ class TheoremDefinition(Definition):
                 for rule, fn in (("product-rule", product_rule), ("simplify", simplify)):
                     after = fn(nxt, None)
                     if after != nxt:
-                        recorded.append(ProofStep(nxt, after, rule=rule, justification="modulo normalization pass",
-                                                  key=("pass", rule)))
+                        recorded.append(_mint(ProofStep(nxt, after, rule=rule, justification="modulo normalization pass",
+                                                        key=("pass", rule))))
                     nxt = after
                 if nxt == cur:
                     break
@@ -759,13 +759,13 @@ class TheoremDefinition(Definition):
         ):
             _, diff, seed, recorded = self._modulo_cache
             self._modulo_cache = None
-            from jacopy.proof.step import ProofStep
+            from jacopy.proof.step import ProofStep, _mint
 
-            self._side = (expr, (ProofStep(
+            self._side = (expr, (_mint(ProofStep(
                 seed, diff, rule=f"modulo normalization for theorem {self._theorem.name}",
                 justification="NF(expr − lhs) by the modulo engine; expr = NF(expr − lhs) + rhs",
                 children=list(recorded), key=("theorem-modulo", self._theorem.name),
-            ),))
+            )),))
             target = self._target()
             parts = []
             for piece in (diff, target):

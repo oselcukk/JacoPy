@@ -481,11 +481,16 @@ def _cite_fi_instances(engine, N, omega, eta, W, h, registry):
                             ]
                         ),
                         generality="instance",
-                    ).with_structural_requires()
+                    ).with_structural_requires(),
+                    # a hand-built axiom-instance step (+ congruence) whose
+                    # endpoints are not the record's sides: not a proof
+                    # record (audit 0b00e1b-FULL M1-5, review #3) — an
+                    # explicit unverified assumption, visible when cited
+                    unverified=True,
                 )
                 names.append(nm)
     for nm in names:
-        engine.register(TheoremDefinition(book.get(nm), allow_legacy=True))  # pre-3b records: explicit
+        engine.register(TheoremDefinition(book.get(nm), allow_legacy=True, unverified=True))  # pre-3b records: explicit
 
 
 def _prove_condition(

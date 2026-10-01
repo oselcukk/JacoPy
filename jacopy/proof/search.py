@@ -51,7 +51,7 @@ from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.registry_facts import in_registry_context
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import ExpansionEngine, default_engine
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint
 from jacopy.proof.strategies import ExpandAndSimplify, ProofFailure, Strategy
 
 
@@ -157,14 +157,14 @@ def _sweep_moves(
         moves.append(
             (
                 pr,
-                ProofStep(
+                _mint(ProofStep(
                     root,
                     pr,
                     rule="product-rule",
                     justification="graded Leibniz + linearity",
                     key=("pass", "product-rule"),
                     registry_facts=facts_from_log(log),
-                ),
+                )),
             )
         )
     with track_reads() as log:
@@ -173,14 +173,14 @@ def _sweep_moves(
         moves.append(
             (
                 sp,
-                ProofStep(
+                _mint(ProofStep(
                     root,
                     sp,
                     rule="simplify",
                     justification="canonical-form pipeline",
                     key=("pass", "simplify"),
                     registry_facts=facts_from_log(log),
-                ),
+                )),
             )
         )
     return moves

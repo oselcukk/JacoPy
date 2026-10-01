@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Sequence, Tuple
 
 from jacopy.core.expr import Expr
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint
 
 STOP_REASONS = ("fixpoint", "rounds", "steps", "target")
 
@@ -189,8 +189,15 @@ def _normalize(engine, expr, registry, rounds, max_steps, fns, inner_rounds, rec
             after = fn(before, registry)
         if after != before:
             rule, why = PASS_RULES.get(name, (name, "normalization pass"))
-            chain.append(ProofStep(before, after, rule=rule, justification=why,
-                                   key=("pass", rule), registry_facts=facts_from_log(log)))
+            if PASSES.get(name) is fn:
+                # a LIBRARY pass: keyed and minted
+                chain.append(_mint(ProofStep(before, after, rule=rule, justification=why,
+                                             key=("pass", rule), registry_facts=facts_from_log(log))))
+            else:
+                # a caller-supplied callable is the caller's word: no key,
+                # not minted — a hand-built step (review 2026-10-01 #4)
+                chain.append(ProofStep(before, after, rule=rule, justification=why,
+                                       registry_facts=facts_from_log(log)))
         return after
 
     def done(stopped_by, used_rounds, detail=""):

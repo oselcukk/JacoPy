@@ -32,7 +32,7 @@ from jacopy.core.symbolic_degree import Degree
 from jacopy.oracle.hook import on_closed
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import ExpansionEngine, default_engine
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint
 
 
 class ProofFailure(Exception):
@@ -380,7 +380,7 @@ class AgreementOnGenerators(Strategy):
                 "Algebra has no generators, cannot apply agreement strategy"
             )
 
-        parent = ProofStep(
+        parent = _mint(ProofStep(
             lhs,
             rhs,
             key=("strategy", "agreement-on-generators"),
@@ -389,7 +389,7 @@ class AgreementOnGenerators(Strategy):
                 f"both of degree {deg_for_step}; agree on "
                 f"{len(generators)} generator(s)"
             ),
-        )
+        ))
 
         for g in generators:
             lhs_on_g = Act(lhs, g)
@@ -408,13 +408,13 @@ class AgreementOnGenerators(Strategy):
                 )
             # Attach the sub-proof under a per-generator child step so
             # the transcript tree reads as "agreement ← on g1, on g2, …".
-            gen_step = ProofStep(
+            gen_step = _mint(ProofStep(
                 lhs_on_g,
                 rhs_on_g,
                 rule="check-on-generator",
                 key=("strategy", "check-on-generator"),
                 justification=f"generator g = {g._repr_inner()}",
-            )
+            ))
             for s in sub_chain:
                 gen_step.add_child(s)
             parent.add_child(gen_step)
@@ -663,7 +663,7 @@ class DerivedBracketStrategy:
         # Step 2: expand the base bracket on (Q, Q) using its own rule.
         if obstruction != obstruction_raw:
             chain.append(
-                ProofStep(
+                _mint(ProofStep(
                     obstruction_raw,
                     obstruction,
                     rule="base-bracket-expand",
@@ -671,19 +671,19 @@ class DerivedBracketStrategy:
                     justification=(
                         f"apply {bracket.base.name} definition to [Q, Q]"
                     ),
-                )
+                ))
             )
         # Step 3: canonical simplification of the obstruction.
         if reduced != obstruction:
             chain.append(
-                ProofStep(
+                _mint(ProofStep(
                     obstruction,
                     reduced,
                     rule="simplify",
                     justification="canonical-form pipeline",
                     key=("pass", "simplify"),
                     registry_facts=simplify_facts,
-                )
+                ))
             )
 
         if reduced != Integer(0):
