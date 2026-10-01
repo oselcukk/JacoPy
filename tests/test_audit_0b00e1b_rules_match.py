@@ -473,3 +473,56 @@ def test_liez_result_is_citable_in_its_own_engine():
     assert any(kd == "declared" and n.startswith("exactness (8.5) (X)") for kd, n in _kinds(r))
     t = Theorem("liez_use", "ρ([φV, χz])(h) = 0", lhs, Integer(0), r.chain).with_structural_requires()
     assert check_citation(t, exact_bourbaki_engine(X, reg)).ok
+
+
+# --------------------------------------------------------------------- #
+# review of cf9cf2c: Σ binder scope in match / substitute                #
+# --------------------------------------------------------------------- #
+
+
+def _sigma_setup():
+    i, j = Symbol("i"), Symbol("j")
+    F = lambda x: Act(Derivation("F"), x)  # noqa: E731
+    return i, j, F, Wildcard("D"), Wildcard("A"), Wildcard("B")
+
+
+def _closes_wrongly(rule, lhs, rhs):
+    eng = ExpansionEngine([_RuleAdapter(rule)])
+    assert prove(eng, lhs, rhs).status == "RESIDUAL"
+    with pytest.raises(ProofFailure):
+        ExpandAndSimplify().prove(lhs, rhs, engine=eng)
+
+
+def test_sigma_wildcard_dummy_does_not_capture_a_free_atom():
+    # Σ_D F(D)·i → i·Σ_D F(D) pulls the FREE i out. On Σ_i F(i)·i the i
+    # is bound: Σ_i F(i)·i ≠ i·Σ_j F(j) (n = 2, F = id: 1+4 ≠ 2·3).
+    # At cf9cf2c: CLOSED.
+    i, j, F, D, A, B = _sigma_setup()
+    rule = Rule(IndexedSum(D, None, Product(F(D), i)), Product(i, IndexedSum(D, None, F(D))))
+    _closes_wrongly(rule, IndexedSum(i, None, Product(F(i), i)), Product(i, IndexedSum(j, None, F(j))))
+    # the legitimate pull still works
+    assert rule.try_at(IndexedSum(j, None, Product(F(j), i))) == Product(i, IndexedSum(j, None, F(j)))
+
+
+def test_sigma_substitution_avoids_capture():
+    # A·Σ_D B → Σ_D (A·B) on i·Σ_i F(i): the outer i is free; pushing it
+    # in must rename the binder, not capture: Σ_k (i·F(k)) ≠ Σ_i (i·F(i)).
+    # At cf9cf2c: Σ_i (i·F(i)), CLOSED.
+    i, j, F, D, A, B = _sigma_setup()
+    rule = Rule(Product(A, IndexedSum(D, None, B)), IndexedSum(D, None, Product(A, B)))
+    t = Product(i, IndexedSum(i, None, F(i)))
+    out = rule.try_at(t)
+    assert out is not None and out == IndexedSum(j, None, Product(i, F(j)))  # α-equal
+    _closes_wrongly(rule, t, IndexedSum(i, None, Product(i, F(i))))
+    # no clash: plain push
+    assert rule.try_at(Product(j, IndexedSum(i, None, F(i)))) == IndexedSum(i, None, Product(j, F(i)))
+
+
+def test_sigma_bound_term_does_not_escape_its_binder():
+    # Σ_D (A·B) → A·Σ_D B pulls a constant factor out; on Σ_i F(i)·i the
+    # factor F(i) depends on the bound i: Σ_i F(i)·i ≠ F(i)·Σ_i i.
+    # At cf9cf2c: CLOSED.
+    i, j, F, D, A, B = _sigma_setup()
+    rule = Rule(IndexedSum(D, None, Product(A, B)), Product(A, IndexedSum(D, None, B)))
+    _closes_wrongly(rule, IndexedSum(i, None, Product(F(i), i)), Product(F(i), IndexedSum(i, None, i)))
+    assert rule.try_at(IndexedSum(i, None, Product(j, F(i)))) == Product(j, IndexedSum(i, None, F(i)))
