@@ -27,7 +27,8 @@ from jacopy.core.expr import Expr
 
 #: Steps MINTED by the library's own producers (review 2026-10-01 #3).
 #:
-#: Threat model. A step's provenance (that the engine, a library
+#: Threat model. Ordinary use of the public API — accidental or
+#: deliberate — cannot claim provenance: a step's provenance (that the engine, a library
 #: normalization pass or a library strategy produced it from an actual
 #: computation) must not be claimable through the public API: a
 #: ``ProofStep(..., key=..., provenance_tag=...)`` built by any caller —
@@ -35,26 +36,38 @@ from jacopy.core.expr import Expr
 #: carries; copies are not minted either. Only producer code inside
 #: :mod:`jacopy.proof` calls :func:`_mint` (the trusted computing base;
 #: patching module internals is outside the model, as in any Python
-#: library). Minting certifies ORIGIN only — that the step is the
-#: producer's record — not that the rule is mathematically right: the
-#: step's ``before = after`` is the rule's responsibility, checked
-#: independently by the model oracle (``check_chain``).
-_MINTED: "weakref.WeakSet" = weakref.WeakSet()
+#: library). Membership is by object IDENTITY and exact type
+#: (``type(step) is ProofStep``): a subclass cannot impersonate a minted
+#: step through ``__eq__`` / ``__hash__``. Out of scope (the Python
+#: limit): code that subclasses, monkeypatches or imports the private
+#: minting function on purpose. Minting certifies ORIGIN only — that
+#: the step is the producer's record — not that the rule is
+#: mathematically right: the step's ``before = after`` is the rule's
+#: responsibility, checked independently by the model oracle
+#: (``check_chain``).
+_MINTED: dict = {}
 
 
 def _mint(step: "ProofStep") -> "ProofStep":
     """Record ``step`` as produced by a library producer (private)."""
-    _MINTED.add(step)
+    if type(step) is ProofStep:
+        k = id(step)
+
+        def _forget(ref, k=k):
+            if _MINTED.get(k) is ref:
+                del _MINTED[k]
+
+        _MINTED[k] = weakref.ref(step, _forget)
     return step
 
 
 def is_minted(step) -> bool:
     """True when ``step`` was produced by the library's own producers
     (engine, normalization passes, strategies) — see :data:`_MINTED`."""
-    try:
-        return step in _MINTED
-    except TypeError:
+    if type(step) is not ProofStep:
         return False
+    ref = _MINTED.get(id(step))
+    return ref is not None and ref() is step
 
 
 class ProofStep:

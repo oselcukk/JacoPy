@@ -597,3 +597,39 @@ class TestReviewRound3:
             _, step = ExpansionEngine([Outer()]).expand_once(a)
         assert step is not None
         assert not any(f.expr == x for f in step.registry_facts)
+
+    def test_subclasses_cannot_impersonate_minted_steps_or_theorems(self):
+        # 2270a83: is_minted used WeakSet membership (__eq__/__hash__), and
+        # TheoremBook / TheoremDefinition / _classify accepted Theorem
+        # subclasses whose verdict properties can be overridden
+        from jacopy.proof.result import _classify
+        from jacopy.proof.step import is_minted
+
+        a, b = Symbol("a"), Symbol("b")
+        (real,) = ExpansionEngine([ExplicitAssumption(a, b)]).expand(a)[1]
+        assert is_minted(real)
+
+        class Twin(ProofStep):
+            __slots__ = ()
+
+            def __eq__(self, other):
+                return True
+
+            def __hash__(self):
+                return hash(real)
+
+        assert not is_minted(Twin(a, Integer(0), rule="r"))
+
+        class Liar(Theorem):
+            @property
+            def legacy(self):
+                return False
+
+        x = Symbol("x")
+        liar = Liar("liar", "x = 0", x, Integer(0), ProofChain())
+        with pytest.raises(TypeError):
+            TheoremBook().add(liar)
+        with pytest.raises(TypeError):
+            TheoremDefinition(liar)
+        req, _ = _classify((ProofStep(x, Integer(0), rule="cite", provenance_tag="theorem", cites=liar),))
+        assert any(r.legacy and "not a Theorem record" in r.name for r in req)

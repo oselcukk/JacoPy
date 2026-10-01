@@ -240,12 +240,18 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                     bump(assumptions, "legacy", f"unverified citation (record marked unverified): {s.rule}", owner, s.before)
                     if cited is not None:
                         inherit(cited)
-                elif cited is not None:
+                elif cited is not None and type(cited).__name__ == "Theorem" and type(cited).__module__ == "jacopy.proof.theorems":
                     # TRANSITIVE requirements (Faz 8 step 3b): a citation
                     # contributes ALL its own requirements; an unverified
                     # (legacy) one is, in addition, a legacy assumption
                     if getattr(cited, "legacy", True):
                         bump(assumptions, "legacy", f"unverified citation: theorem {cited.name}", getattr(cited, "owner", None), s.before)
+                    inherit(cited)
+                elif cited is not None:
+                    # not an exact Theorem record: its verdict properties
+                    # are not trusted (review r3 #8) — legacy, its
+                    # requirements still carried
+                    bump(assumptions, "legacy", f"unverified citation: {type(cited).__name__} is not a Theorem record: {s.rule}", owner, s.before)
                     inherit(cited)
                 elif getattr(s, "key", None) is None and not s.children:
                     # a HAND-BUILT theorem claim with neither the cited object

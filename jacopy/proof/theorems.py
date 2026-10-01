@@ -264,8 +264,10 @@ class TheoremBook:
         :class:`LegacyTheoremError` unless ``unverified=True`` records
         it explicitly as an unverified assumption — every result that
         cites it then depends on that assumption visibly."""
-        if not isinstance(theorem, Theorem):
-            raise TypeError("TheoremBook.add expects a Theorem")
+        if type(theorem) is not Theorem:
+            # exact type: a subclass could override the verdict
+            # properties (legacy, chain_replayed, requires) — review r3 #8
+            raise TypeError("TheoremBook.add expects a Theorem (not a subclass)")
         if theorem.name in self._theorems:
             raise KeyError(
                 f"Theorem {theorem.name!r} is already registered; "
@@ -283,8 +285,10 @@ class TheoremBook:
 
     def replace(self, theorem: Theorem, *, unverified: bool = False) -> None:
         """Register ``theorem``, overwriting an existing same-name entry."""
-        if not isinstance(theorem, Theorem):
-            raise TypeError("TheoremBook.replace expects a Theorem")
+        if type(theorem) is not Theorem:
+            # exact type: a subclass could override the verdict
+            # properties (legacy, chain_replayed, requires) — review r3 #8
+            raise TypeError("TheoremBook.replace expects a Theorem (not a subclass)")
         if theorem.legacy and not unverified:
             # validate BEFORE touching the existing record (audit dc44f79 F6)
             raise LegacyTheoremError(
@@ -535,8 +539,10 @@ class TheoremDefinition(Definition):
         allow_legacy: bool = False,
         unverified: bool = False,
     ) -> None:
-        if not isinstance(theorem, Theorem):
-            raise TypeError("TheoremDefinition expects a Theorem")
+        if type(theorem) is not Theorem:
+            # exact type: a subclass could override the verdict
+            # properties (legacy, chain_replayed, requires) — review r3 #8
+            raise TypeError("TheoremDefinition expects a Theorem (not a subclass)")
         self._theorem = theorem
         self._reverse = bool(reverse)
         self._modulo = modulo
