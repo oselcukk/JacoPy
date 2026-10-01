@@ -98,7 +98,30 @@ from jacopy.packages.metric_affine.torsion_curvature import (
     torsion,
 )
 
+from jacopy.packages.metric_affine.nonmetricity_forms import (
+    NonMetricityForm,
+    NonMetricityFormEvaluationDefinition,
+    nonmetricity_form,
+    prove_nonmetricity_form_cartan,
+    prove_nonmetricity_form_components,
+    prove_nonmetricity_form_symmetric,
+    prove_nonmetricity_form_tensorial,
+)
+from jacopy.packages.metric_affine.e_cartan import (
+    prove_e_cartan_first,
+    prove_e_cartan_second,
+)
+
 __all__ = [
+    "NonMetricityForm",
+    "NonMetricityFormEvaluationDefinition",
+    "nonmetricity_form",
+    "prove_nonmetricity_form_cartan",
+    "prove_nonmetricity_form_components",
+    "prove_nonmetricity_form_symmetric",
+    "prove_nonmetricity_form_tensorial",
+    "prove_e_cartan_first",
+    "prove_e_cartan_second",
     "ConnectionDirectionLinearityDefinition",
     "metric_affine_engine",
     "Curvature",

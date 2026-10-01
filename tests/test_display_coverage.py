@@ -120,6 +120,7 @@ def _recipes():
         MetricValue,
         NonMetricity,
     )
+    from jacopy.packages.metric_affine.nonmetricity_forms import NonMetricityForm
     from jacopy.packages.metric_affine.torsion_curvature import Curvature, Torsion
     from jacopy.packages.poisson.core import (
         HamiltonianVF,
@@ -191,6 +192,7 @@ def _recipes():
         "Torsion": Torsion("∇", X, Y), "Curvature": Curvature("∇", X, Y, Z),
         "ConnectionCoefficient": ConnectionCoefficient("∇", "e", "a", "b", "c"),
         "ConnectionForm": ConnectionForm("∇", "e", "a", "b"),
+        "NonMetricityForm": NonMetricityForm("∇", "g", "e", "a", "b"),
         "CourantD": CourantD("E", f),
         "BD": BD(om), "BIota": BIota(X, om), "BLieR": BLieR(X, om), "BLieZ": BLieZ(Y, om),
         "BSymbol": BSymbol(f, om), "BDop": BDop(om), "BLieRE": BLieRE(u, om),

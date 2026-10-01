@@ -152,6 +152,8 @@
  "jacopy.packages.metric_affine.metric.NonMetricityExpansionDefinition": "definition",
  "jacopy.packages.metric_affine.metric.TorsionFreeDefinition": "assumption",
  "jacopy.packages.metric_affine.modified.CoframeRecombinationDefinition": "definition",
+ "jacopy.packages.metric_affine.nonmetricity_forms.MetricIndexedSumPushDefinition": "definition",
+ "jacopy.packages.metric_affine.nonmetricity_forms.NonMetricityFormEvaluationDefinition": "definition",
  "jacopy.packages.metric_affine.rules.ConnectionArgumentLeibnizDefinition": "definition",
  "jacopy.packages.metric_affine.rules.ConnectionDirectionLinearityDefinition": "definition",
  "jacopy.packages.metric_affine.torsion_curvature.CurvatureExpansionDefinition": "definition",

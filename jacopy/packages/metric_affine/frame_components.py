@@ -31,6 +31,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.algebra.lie_bracket_vf import LieBracketVF
 from jacopy.core.expr import Atom, Expr, Integer, Neg, Product, Sum
 from jacopy.core.multi_eval import MultiEval
@@ -289,9 +290,11 @@ class FrameConnectionCoefficientDefinition(Definition):
 class ConnectionFormEvaluationDefinition(Definition):
     """``⟨ω^a_b, X⟩ → ⟨e^a, ∇_X e_b⟩`` — the defining evaluation of the
     connection 1-form (constructed per connection/frame pair so the
-    rewrite can rebuild ``∇`` and the coframe)."""
+    rewrite can rebuild ``∇`` and the coframe). Bundle-agnostic: on an
+    algebroid frame it is the E-connection 1-form of ADM (3.38)."""
 
     anchor = Pairing
+    source = cite("DereliDogan2023", "Eq. (2.12); Eq. (3.38) on an E-frame")
 
     def __init__(self, conn: Connection, fr: Frame) -> None:
         if not isinstance(conn, Connection):

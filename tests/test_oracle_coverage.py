@@ -42,6 +42,7 @@ UNSUPPORTED_ALLOWLIST = {
     "jacopy.core.tensor_product.TensorProduct",
     "jacopy.packages.metric_affine.frame_components.ConnectionCoefficient",
     "jacopy.packages.metric_affine.frame_components.ConnectionForm",
+    "jacopy.packages.metric_affine.nonmetricity_forms.NonMetricityForm",
     "jacopy.packages.metric_affine.metric.InverseMetricComponent",
     "jacopy.packages.metric_affine.metric.MetricValue",
     "jacopy.packages.metric_affine.metric.NonMetricity",
