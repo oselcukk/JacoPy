@@ -503,6 +503,17 @@ class MetricSharp(Derivation):
 #: states that the anchor has locally constant rank — it carries NO
 #: rewrite rule; it licenses structure that needs ``ker(ρ)`` to be a
 #: subbundle (the locality projector, Phase 3.E.4).
+#:
+#: Three more flags carry NO rewrite rule. They license the
+#: theorem-citing package rules (audit 0B00E1B-FULL M1-4 review): a
+#: rule that cites a theorem proved from one of these axioms fires only
+#: on a structure that declares the axiom.
+#:
+#: * ``bourbaki-invariance``: the R-valued metric invariance (7.8)
+#:   [pre-metric-Bourbaki Def 7.1].
+#: * ``courant-invariance``: the LWX pairing invariance [C5] [Uchino].
+#: * ``exact``: the sequence 0 → Z → E → TM → 0 (8.5) is exact, i.e.
+#:   ker ρ = im χ [pre-metric-Bourbaki Def 8.1].
 DECLARATIONS = (
     "right-leibniz",
     "left-leibniz",
@@ -512,6 +523,9 @@ DECLARATIONS = (
     "symmetric-part",
     "metric-invariance",
     "regular",
+    "bourbaki-invariance",
+    "courant-invariance",
+    "exact",
 )
 
 #: Hierarchy levels bundling their axioms [B §4, MC §3]. Derivable

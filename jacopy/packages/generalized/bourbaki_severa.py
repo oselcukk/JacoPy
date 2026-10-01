@@ -50,6 +50,10 @@ from jacopy.central.algebroid.context import (
     AlgebroidBracket,
 )
 from jacopy.central.tangent.lie_bracket import lie_bracket
+from jacopy.packages.generalized._cited_rule import (
+    CitedTheoremMixin,
+    private_function,
+)
 from jacopy.packages.generalized.bourbaki_exact import (
     ChiSec,
     PhiSec,
@@ -112,10 +116,20 @@ class SplitLinearityDefinition(Definition):
         return Product(f, expr.with_slots(rest))
 
 
-class RightLeibnizTheoremRule(Definition):
+class RightLeibnizTheoremRule(CitedTheoremMixin, Definition):
     """THEOREM-classified right-Leibniz on E, citing the proven
     (7.2): ``[u, f·v]_E → f·[u,v]_E + ρ(u)(f)·v`` (composite
-    second slot)."""
+    second slot).
+
+    A CITATION, not a definition (audit 0B00E1B-FULL M1-4): the rule
+    carries the (7.2) theorem proved on ``alg`` itself
+    (:func:`~jacopy.packages.generalized.bourbaki_structure.
+    prove_right_leibniz_from_r_invariance`), so every step records
+    ``cites`` and the theorem's requirements — the declared (7.8)
+    invariance of ``alg`` and the structure — flow into the result.
+    The rule fires only on a structure DECLARING ``bourbaki-invariance``
+    (Def 7.1), so the "(7.8) declared" requirement is backed by the
+    structure; if (7.2) cannot be proved on ``alg`` it never fires."""
 
     anchor = AlgebroidBracket
 
@@ -131,12 +145,28 @@ class RightLeibnizTheoremRule(Definition):
             "cite (7.2) right-Leibniz: [u, fv] = f[u,v] + ρ(u)f·v"
         )
 
+    def _prove_cited(self):
+        # (7.2) is proved FROM the (7.8) invariance: the structure must
+        # declare it (pre-metric-Bourbaki Def 7.1), else no citation
+        if not self._alg.declares("bourbaki-invariance"):
+            return None
+        from jacopy.packages.generalized.bourbaki_structure import (
+            prove_right_leibniz_from_r_invariance,
+        )
+
+        (f,), reg = private_function("f")
+        u, v = self._alg.sections("u v")
+        return prove_right_leibniz_from_r_invariance(
+            self._alg, u, v, f, registry=reg
+        )[1]
+
     def matches(self, expr: Expr) -> bool:
         return (
             isinstance(expr, AlgebroidBracket)
             and expr.algebroid_name == self._alg.name
             and _split_scalar(expr.v, self._registry)
             is not None
+            and self._licensed()
         )
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -154,10 +184,19 @@ class RightLeibnizTheoremRule(Definition):
         )
 
 
-class LeftLeibnizTheoremRule(Definition):
+class LeftLeibnizTheoremRule(CitedTheoremMixin, Definition):
     """THEOREM-classified left-Leibniz on E, citing the proven
     7.B.2f.2 corollary:
-    ``[f·u, v]_E → f·[u,v]_E − ρ(v)(f)·u + 𝕃_{df}(g(u,v))``."""
+    ``[f·u, v]_E → f·[u,v]_E − ρ(v)(f)·u + 𝕃_{df}(g(u,v))``.
+
+    A CITATION (audit 0B00E1B-FULL M1-4): the rule carries the
+    left-Leibniz theorem proved on ``alg``
+    (:func:`~jacopy.packages.generalized.bourbaki_structure.
+    prove_left_leibniz_bourbaki`); its requirements flow into every
+    result. That record is itself LEGACY — its (6.11) symmetric-part
+    instances are not licensed by a declared rule of the structure
+    engine — so results using this rule honestly carry the
+    "unverified citation" marker instead of reading assumption-free."""
 
     anchor = AlgebroidBracket
 
@@ -174,12 +213,27 @@ class LeftLeibnizTheoremRule(Definition):
             "+ 𝕃_df g(u,v)"
         )
 
+    def _prove_cited(self):
+        # rests on (7.2), hence on the declared (7.8) invariance
+        if not self._alg.declares("bourbaki-invariance"):
+            return None
+        from jacopy.packages.generalized.bourbaki_structure import (
+            prove_left_leibniz_bourbaki,
+        )
+
+        (f,), reg = private_function("f")
+        u, v = self._alg.sections("u v")
+        return prove_left_leibniz_bourbaki(
+            self._alg, u, v, f, registry=reg
+        )[1]
+
     def matches(self, expr: Expr) -> bool:
         return (
             isinstance(expr, AlgebroidBracket)
             and expr.algebroid_name == self._alg.name
             and _split_scalar(expr.u, self._registry)
             is not None
+            and self._licensed()
         )
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -332,10 +386,12 @@ def severa_engine(
     return eng
 
 
-def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+def _normalize(engine, expr: Expr, registry, *, record: bool = False):
+    from jacopy.packages.generalized.bourbaki_structure import (
+        _normalize as _structure_normalize,
+    )
 
-    return _normalized_by(engine, expr, registry)
+    return _structure_normalize(engine, expr, registry, record=record)
 
 
 def delta(alg: Algebroid, U: Expr, V: Expr) -> Expr:
@@ -358,22 +414,24 @@ def _zero_theorem(
     notes,
     label,
 ) -> Tuple[ProofChain, Theorem]:
-    nf = _normalize(engine, diff, registry)
+    # keep the engine steps as the step's children: the rules that
+    # fired — in particular the theorem-citing Leibniz rules — must
+    # reach the theorem's requirements (audit 0B00E1B-FULL M1-4)
+    nf, fired = _normalize(engine, diff, registry, record=True)
     if nf != Integer(0):
         raise ProofFailure(
             f"{name}: {label} FAILS — residual "
             + nf._repr_inner()[:160]
         )
-    chain = ProofChain(
-        [
-            ProofStep(
-                diff,
-                Integer(0),
-                rule=label,
-                justification="engine normal form",
-            )
-        ]
+    step = ProofStep(
+        diff,
+        Integer(0),
+        rule=label,
+        justification="engine normal form",
     )
+    for s in fired:
+        step.add_child(s)
+    chain = ProofChain([step])
     theorem = Theorem(
         name=name,
         statement=statement,

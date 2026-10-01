@@ -470,10 +470,19 @@ class TestReviewProbes:
         (u,) = E.sections("u")
         _, thm = prove_lemma_91(E, u, z, h, registry=reg)
         assert any(a.kind == "textual" and "exactness" in a.name for a in thm.requires)
+        # since the rules-match branch the lemma's proof is its replayed
+        # library chain (no hand-built wrapper), so its DECLARED anchor
+        # morphism is a real requirement: it is citable (no allow_legacy
+        # needed) in an engine that carries that structure, and refused
+        # in a bare engine even with allow_legacy
+        from jacopy.packages.generalized.bourbaki_exact import exact_bourbaki_engine
+        from jacopy.proof.theorems import check_citation
+
+        assert thm.chain_replayed and not thm.legacy
+        assert any(a.kind == "declared" and a.name.startswith("anchor morphism (E)") for a in thm.requires)
+        assert check_citation(thm, exact_bourbaki_engine(E, reg), registry=reg).ok
         res = prove(ExpansionEngine([TheoremDefinition(thm, allow_legacy=True)]), thm.lhs, thm.rhs, registry=reg)
-        assert res.closed and res.theorems_cited
-        assert any(a.kind == "textual" and "exactness ρ∘χ = 0 (8.5)" in a.name for a in res.requires)
-        assert any(a.legacy and "unverified citation" in a.name for a in res.requires)
+        assert not res.closed
 
 
 class TestReviewRound3:

@@ -26,6 +26,39 @@ Matching is structural and order-preserving, it does not reorder
 Sum or Product children. Commutative matching is the job of the
 algorithms layer, which canonicalizes expressions before invoking
 :func:`match`.
+
+Non-child payload and Σ binders (audit 0B00E1B-FULL M1X-6)
+-----------------------------------------------------------
+
+A node's identity is ``type + _key()``; the part of ``_key()`` that
+is not a child is its PAYLOAD (:func:`node_payload`). Matching compares
+the payload after the type; a payload wildcard binds, and
+:func:`substitute` fills it (or raises :class:`PayloadSubstitutionError`).
+
+:class:`~jacopy.core.indexed_sum.IndexedSum` is a BINDER. The contract
+is deliberately NARROW (default reject; no package rule uses Σ
+patterns or SeqWildcards):
+
+* **Σ patterns match only a SAME-NAMED dummy.** The pattern's dummy
+  must be a concrete atom equal to the target's. No α-renaming is
+  done and no fresh names are made. A wildcard dummy ``Σ_{?D}`` is not
+  supported: :func:`match` rejects it, and
+  :class:`~jacopy.algorithms.rewrite.Rule` refuses to be built with
+  one. A differently named but α-equal target is a documented
+  completeness limit, not a match.
+* **Rewrites across a binder boundary are rejected**
+  (:func:`binder_violation`). For each wildcard, every LHS and RHS
+  occurrence is taken with the list of Σ dummies enclosing it. The
+  dummies that its bound VALUE mentions must be enclosed identically
+  at every occurrence, so the value means the same thing everywhere.
+  Otherwise the rule does not fire: a bound term would escape its
+  binder, or a free term would be captured. A value that mentions a
+  dummy enclosed twice (nested same-named binders) is rejected too.
+* A SeqWildcard fills a run of CHILDREN (of a Sum, Product, Wedge, …,
+  wherever matching bound it). In a single position (the root, a
+  single hole, a payload, or a fixed-arity node it does not fit) a
+  sequence binding raises :class:`PayloadSubstitutionError`, so a
+  literal wildcard never reaches a Rule's result.
 """
 
 from __future__ import annotations
@@ -188,6 +221,34 @@ def match(
     return None
 
 
+def wildcard_names(expr: Expr) -> frozenset:
+    """Names of every Wildcard/SeqWildcard in ``expr`` — children and
+    non-child payload alike. Not cached globally: Expr equality is
+    α-canonical for Σ, so equal patterns can differ in their binders
+    (a :class:`~jacopy.algorithms.rewrite.Rule` precomputes per rule)."""
+    out: set = set()
+
+    def walk(e):
+        if isinstance(e, (Wildcard, SeqWildcard)):
+            out.add(e.name)
+            return
+        if e.is_atom:
+            return
+        walk_payload(node_payload(e))
+        for c in e.children:
+            walk(c)
+
+    def walk_payload(pk):
+        if isinstance(pk, Expr):
+            walk(pk)
+        elif type(pk) is tuple:
+            for k in pk:
+                walk_payload(k)
+
+    walk(expr)
+    return frozenset(out)
+
+
 def _match(
     pattern: Expr,
     target: Expr,
@@ -204,7 +265,260 @@ def _match(
     if pattern.is_atom:
         return pattern == target
 
+    from jacopy.core.indexed_sum import IndexedSum
+
+    if isinstance(pattern, IndexedSum):
+        return _match_indexed_sum(pattern, target, bindings, registry)
+    # Non-child identity payload first (audit 0B00E1B-FULL M1X-6): two
+    # nodes of the same class with the same children can still mean
+    # different things (BracketApply's bracket, MultiEval's
+    # alternating flag, d's skew/calculus, a Hodge metric). A payload
+    # field holding a wildcard on the pattern side binds like any other
+    # hole; every other field must agree exactly. (On failure the
+    # caller restores the bindings snapshot: match() discards them,
+    # _match_children_rec restores its own.)
+    if not _match_payload(
+        _pattern_payload(pattern), node_payload(target), bindings, registry
+    ):
+        return False
     return _match_children(pattern.children, target.children, bindings, registry)
+
+
+def _match_indexed_sum(pattern, target, bindings, registry) -> bool:
+    """Σ_d body: only a SAME-NAMED concrete dummy and an equal range
+    match (module docstring); then the bodies match structurally. A
+    wildcard dummy is unsupported and never matches."""
+    from jacopy.core.indexed_sum import _range_key
+
+    if isinstance(pattern.dummy, (Wildcard, SeqWildcard)):
+        return False
+    if pattern.dummy != target.dummy:
+        return False
+    if _range_key(pattern.range_) != _range_key(target.range_):
+        return False
+    return _match(pattern.body, target.body, bindings, registry)
+
+
+def _occurrences(expr: Expr, ctx: Tuple[Expr, ...], out: Dict[str, list]) -> None:
+    """Every wildcard occurrence of ``expr`` with the Σ dummies enclosing
+    it (outermost first), through children and payload."""
+    from jacopy.core.indexed_sum import IndexedSum
+
+    if isinstance(expr, (Wildcard, SeqWildcard)):
+        out.setdefault(expr.name, []).append(ctx)
+        return
+    if expr.is_atom:
+        return
+    if isinstance(expr, IndexedSum):
+        _occurrences(expr.body, ctx + (expr.dummy,), out)
+        return
+    _payload_occurrences(_pattern_payload(expr), ctx, out)
+    for c in expr.children:
+        _occurrences(c, ctx, out)
+
+
+def _payload_occurrences(pk: Any, ctx, out) -> None:
+    if isinstance(pk, Expr):
+        _occurrences(pk, ctx, out)
+    elif type(pk) is tuple:
+        for k in pk:
+            _payload_occurrences(k, ctx, out)
+
+
+def rule_occurrences(lhs: Expr, rhs: Expr) -> Dict[str, list]:
+    """Wildcard name → the Σ-dummy contexts of all its occurrences in
+    ``lhs`` and ``rhs``. Precomputed per :class:`Rule` (never cached by
+    Expr equality, which is α-canonical for Σ)."""
+    out: Dict[str, list] = {}
+    _occurrences(lhs, (), out)
+    _occurrences(rhs, (), out)
+    return out
+
+
+def has_sigma_wildcard_dummy(expr: Expr) -> bool:
+    """True when ``expr`` contains — in children or payload — a Σ whose
+    dummy is a wildcard (not supported by the narrow binder contract)."""
+    from jacopy.core.indexed_sum import IndexedSum
+
+    if isinstance(expr, IndexedSum):
+        if isinstance(expr.dummy, (Wildcard, SeqWildcard)):
+            return True
+        return has_sigma_wildcard_dummy(expr.body)
+    if expr.is_atom:
+        return False
+    if _payload_has(node_payload(expr), has_sigma_wildcard_dummy):
+        return True
+    return any(has_sigma_wildcard_dummy(c) for c in expr.children)
+
+
+def _payload_has(pk: Any, pred) -> bool:
+    if isinstance(pk, Expr):
+        return pred(pk)
+    if type(pk) is tuple:
+        return any(_payload_has(k, pred) for k in pk)
+    return False
+
+
+def binder_violation(
+    lhs: Expr,
+    rhs: Expr,
+    bindings: Bindings,
+    occurrences: Optional[Dict[str, list]] = None,
+) -> Optional[str]:
+    """Why rewriting ``lhs → rhs`` under ``bindings`` would cross a Σ
+    binder boundary (``None`` when it does not): for every wildcard, the
+    dummies its value mentions FREE (:func:`~jacopy.core.indexed_sum.dummy_in`:
+    frame atoms such as ``e_a`` / ``δ^a_b`` included, an inner binder's
+    own occurrences excluded) must be enclosed identically at every
+    occurrence on both sides, and never by nested same-named binders."""
+    from jacopy.core.indexed_sum import dummy_in
+
+    if occurrences is None:
+        occurrences = rule_occurrences(lhs, rhs)
+    for name, ctxs in occurrences.items():
+        value = bindings.get(name)
+        if value is None:
+            continue
+        values = value if isinstance(value, tuple) else (value,)
+        dummies = {d for ctx in ctxs for d in ctx}
+        mentioned = [d for d in dummies if any(dummy_in(v, d) for v in values)]
+        if not mentioned:
+            continue
+        seen = None
+        for ctx in ctxs:
+            enclosed = tuple(d for d in ctx if d in mentioned)
+            if len(set(enclosed)) != len(enclosed):
+                return f"?{name} mentions a dummy of nested same-named binders"
+            if seen is None:
+                seen = frozenset(enclosed)
+            elif frozenset(enclosed) != seen:
+                return (
+                    f"?{name} mentions {', '.join(d._repr_inner() for d in mentioned)}, "
+                    "which a Σ binds at one occurrence and not at another"
+                )
+    return None
+
+
+# --------------------------------------------------------------------- #
+# Non-child payload                                                     #
+# --------------------------------------------------------------------- #
+
+
+class _Dropped:
+    """Placeholder for a child removed from a ``_key()`` payload."""
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:  # pragma: no cover - debug only
+        return "<child>"
+
+
+_CHILD = _Dropped()
+
+
+def node_payload(expr: Expr) -> Any:
+    """The NON-CHILD identity payload of ``expr``.
+
+    ``Expr`` equality is ``type + _key()``; matching walks ``children``.
+    Whatever is in ``_key()`` but is not a child (a bracket object, an
+    ``alternating``/``skew`` flag, a calculus name, a bound dummy, a
+    metric) is the node's payload, and two same-typed nodes with equal
+    children are the SAME node only when their payloads agree.
+
+    Resolution order:
+
+    * a class may define ``_payload_key()`` returning its payload
+      explicitly (extension hook);
+    * :class:`~jacopy.core.indexed_sum.IndexedSum`, whose α-canonical
+      ``_key()`` does not contain its child, is ``(dummy, range-key)``;
+    * otherwise ``_key()`` with every child (by identity) replaced by
+      a placeholder, recursively through tuples, so the remaining
+      leaves are exactly the payload fields.
+    """
+    hook = getattr(type(expr), "_payload_key", None)
+    if hook is not None:
+        return hook(expr)
+    from jacopy.core.indexed_sum import IndexedSum, _range_key
+
+    if isinstance(expr, IndexedSum):
+        return (expr.dummy, _range_key(expr.range_))
+    children = expr.children
+    key = expr._key()
+    stripped, used = _strip_in_order(key, children, 0)
+    if used == len(children):
+        return stripped
+    # _key lists the children in another order: fall back to identity
+    child_ids = {id(c) for c in children}
+    return _strip_by_identity(key, child_ids)
+
+
+def _collapse(items: List[Any]) -> Tuple[Any, ...]:
+    out: List[Any] = []
+    for item in items:
+        if item is _CHILD and out and out[-1] is _CHILD:
+            continue
+        out.append(item)
+    return tuple(out)
+
+
+def _strip_in_order(key: Any, children: Tuple[Expr, ...], i: int):
+    """Strip the children POSITIONALLY: walking the key left to right,
+    a leaf that is the next expected child (by identity) is replaced by
+    the placeholder. An object that is also a payload field (e.g.
+    ``HodgeStar(g, 3, metric=g)``) stays payload past its child slot.
+    Runs of consecutive children collapse to one placeholder (a
+    SeqWildcard absorbs several target children)."""
+    if isinstance(key, Expr):
+        if i < len(children) and key is children[i]:
+            return _CHILD, i + 1
+        return key, i
+    if type(key) is tuple:
+        items: List[Any] = []
+        for k in key:
+            item, i = _strip_in_order(k, children, i)
+            items.append(item)
+        return _collapse(items), i
+    return key, i
+
+
+def _strip_by_identity(key: Any, child_ids: set) -> Any:
+    if isinstance(key, Expr) and id(key) in child_ids:
+        return _CHILD
+    if type(key) is tuple:
+        return _collapse([_strip_by_identity(k, child_ids) for k in key])
+    return key
+
+
+def _pattern_payload(pattern: Expr) -> Any:
+    """:func:`node_payload` of a PATTERN node. Deliberately not cached
+    by Expr equality: ``⋆_{Σ_i ?m}`` and ``⋆_{Σ_j ?m}`` are α-equal, and
+    a shared entry would hand one rule the other's binder."""
+    return node_payload(pattern)
+
+
+def _match_payload(
+    pk: Any,
+    tk: Any,
+    bindings: Bindings,
+    registry: Optional[PropertyRegistry],
+) -> bool:
+    if pk is _CHILD or tk is _CHILD:
+        return pk is tk
+    if isinstance(pk, (Wildcard, SeqWildcard)) or (
+        isinstance(pk, Expr) and isinstance(tk, Expr)
+    ):
+        if not isinstance(tk, Expr):
+            return False
+        return _match(pk, tk, bindings, registry)
+    if type(pk) is tuple and type(tk) is tuple:
+        if len(pk) != len(tk):
+            return False
+        return all(
+            _match_payload(a, b, bindings, registry) for a, b in zip(pk, tk)
+        )
+    if isinstance(tk, Expr) or type(pk) is not type(tk):
+        return False
+    return pk == tk
 
 
 def _match_children(
@@ -314,24 +628,44 @@ def _bind_sequence(
 def substitute(pattern: Expr, bindings: Bindings) -> Expr:
     """Replace every wildcard in ``pattern`` with its binding.
 
-    Unbound wildcards are left in place (they're not errors, a rule's
-    right-hand side may intentionally contain wildcards that don't
-    appear on the left). SeqWildcards must be inside a Sum/Product;
-    using one elsewhere is rejected at the Expr-building level.
+    Unbound wildcards are left in place (a pattern may be instantiated
+    partially; :class:`~jacopy.algorithms.rewrite.Rule` never fires with
+    an unbound right-hand-side wildcard). A sequence binding fills only
+    a Sum/Product child run; in any single position it raises
+    :class:`PayloadSubstitutionError`.
+
+    Wildcards in a node's non-child PAYLOAD (e.g. a Hodge metric —
+    :func:`node_payload`) are filled too (audit
+    0B00E1B-FULL M1X-6 review): :func:`match` binds them, so a rule's
+    right-hand side must be able to use them. A payload wildcard that
+    is unbound, or that sits on a node class without a payload
+    substitution (``_substitute_payload(bindings)`` hook or a built-in
+    handler), raises :class:`PayloadSubstitutionError` — never a
+    silent literal ``?G`` in the result.
     """
-    if isinstance(pattern, Wildcard):
+    return _subst(pattern, bindings)
+
+
+def _subst(pattern: Expr, bindings: Bindings) -> Expr:
+    if isinstance(pattern, (Wildcard, SeqWildcard)):
         bound = bindings.get(pattern.name)
-        if bound is None or isinstance(bound, tuple):
+        if bound is None:
             return pattern
+        if isinstance(bound, tuple):
+            # a sequence fills only a Sum/Product child run
+            raise PayloadSubstitutionError(
+                f"?{pattern.name} is bound to a sequence and cannot fill "
+                "a single position"
+            )
         return bound
-    if isinstance(pattern, SeqWildcard):
-        return pattern
     if pattern.is_atom:
         return pattern
 
     new_children: list[Expr] = []
+    spliced = False
     for child in pattern.children:
         if isinstance(child, SeqWildcard):
+            spliced = True
             bound = bindings.get(child.name)
             if bound is None:
                 new_children.append(child)
@@ -340,11 +674,72 @@ def substitute(pattern: Expr, bindings: Bindings) -> Expr:
             else:
                 new_children.append(bound)
         else:
-            new_children.append(substitute(child, bindings))
+            new_children.append(_subst(child, bindings))
 
     # Rebuild via the same constructor. Smart constructors live on
     # Sum/Product via `.make()`, but we want structural preservation
     # here, not simplification. Direct constructor call via _rebuild
     # so types whose __init__ diverges from children (BracketApply
     # carries its bracket outside children) reconstruct correctly.
-    return pattern._rebuild(tuple(new_children))
+    try:
+        rebuilt = pattern._rebuild(tuple(new_children))
+    except (TypeError, ValueError) as exc:
+        if not spliced:
+            raise
+        # a sequence spliced into a fixed-arity node (a single position)
+        raise PayloadSubstitutionError(
+            f"a sequence binding does not fit {type(pattern).__name__}: {exc}"
+        ) from exc
+    if _payload_has_wildcard(_pattern_payload(pattern)):
+        rebuilt = _substitute_payload(rebuilt, bindings)
+    return rebuilt
+
+
+class PayloadSubstitutionError(ValueError):
+    """A payload wildcard cannot be filled (unbound, or no handler)."""
+
+
+
+
+def has_wildcard(expr: Expr) -> bool:
+    """True when ``expr`` contains a Wildcard/SeqWildcard anywhere —
+    in its children or in a node's non-child payload."""
+    if isinstance(expr, (Wildcard, SeqWildcard)):
+        return True
+    if expr.is_atom:
+        return False
+    if _payload_has_wildcard(node_payload(expr)):
+        return True
+    return any(has_wildcard(c) for c in expr.children)
+
+
+def _payload_has_wildcard(pk: Any) -> bool:
+    if pk is _CHILD:
+        return False
+    if isinstance(pk, Expr):
+        return has_wildcard(pk)
+    if type(pk) is tuple:
+        return any(_payload_has_wildcard(k) for k in pk)
+    return False
+
+
+def _fill(e: Expr, bindings: Bindings) -> Expr:
+    if not wildcard_names(e) <= set(bindings):
+        raise PayloadSubstitutionError(
+            f"unbound payload wildcard in {e._repr_inner()}"
+        )
+    return _subst(e, bindings)
+
+
+def _substitute_payload(node: Expr, bindings: Bindings) -> Expr:
+    hook = getattr(type(node), "_substitute_payload", None)
+    if hook is not None:
+        return hook(node, bindings)
+    from jacopy.core.hodge import HodgeStar
+
+    if isinstance(node, HodgeStar):
+        return HodgeStar(node.arg, node.dim, metric=_fill(node.metric, bindings))
+    raise PayloadSubstitutionError(
+        f"{type(node).__name__} has a wildcard in its payload but no "
+        "payload substitution"
+    )
