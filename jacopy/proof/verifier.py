@@ -23,6 +23,7 @@ from jacopy.brackets.derived import DerivedBracket, VanishingCondition
 from jacopy.core.expr import Expr, Integer
 from jacopy.core.properties import Property, Provenance
 from jacopy.core.registry import PropertyRegistry
+from jacopy.oracle.hook import on_closed, oracle_mode
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import ExpansionEngine
 from jacopy.proof.step import ProofStep
@@ -42,6 +43,7 @@ def show_equal(
     registry: Optional[PropertyRegistry] = None,
     strategy: Optional[Strategy] = None,
     engine: Optional[ExpansionEngine] = None,
+    oracle: Optional[str] = None,
 ) -> ProofChain:
     """Prove ``lhs == rhs`` and return the transcript.
 
@@ -49,10 +51,17 @@ def show_equal(
     expansion engine. Raises
     :class:`jacopy.proof.strategies.ProofFailure` if the chosen
     strategy cannot close the gap, the exception message carries the
-    surviving residual.
+    surviving residual. ``oracle`` overrides ``JACOPY_ORACLE`` for this
+    call (model-oracle falsifier on the closure; default off).
     """
     strat = strategy if strategy is not None else ExpandAndSimplify()
-    return strat.prove(lhs, rhs, registry=registry, engine=engine)
+    with oracle_mode(oracle):
+        chain = strat.prove(lhs, rhs, registry=registry, engine=engine)
+        if not isinstance(strat, ExpandAndSimplify):
+            # ExpandAndSimplify reports its own closure (strategies.py)
+            on_closed(lhs, rhs, registry=registry, source=f"show_equal:{type(strat).__name__}",
+                      engine=engine, chain=chain)
+    return chain
 
 
 def prove_jacobi(

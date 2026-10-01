@@ -29,7 +29,11 @@ from typing import Iterable, Optional
 from jacopy.central.calculus.bracket_calculus import ExteriorDerivative, LieDerivative
 from jacopy.central.objects.form import Form
 from jacopy.central.objects.multivector import PVector
-from jacopy.core.expr import Expr
+from jacopy.central.objects.vector_field import VectorField
+from jacopy.core.expr import Expr, Symbol
+from jacopy.packages.poisson.core import HamiltonianVF, PoissonBracketValue, SharpVF
+from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.nambu import NambuSharpVF
 
 from jacopy.oracle import realize as RZ
 from jacopy.oracle.models.tangent import TangentModel
@@ -69,9 +73,15 @@ def _subexprs(e):
             yield s
 
 
+_STRUCTURE_USERS = (NambuSharpVF, SharpVF, HamiltonianVF, PoissonBracketValue, KoszulBracket)
+
+
 def scan(*exprs):
-    """``(structure names, degree variables, max concrete degree, node count)``."""
-    names, dvars = set(), set()
+    """``(structure bivector names, higher Nambu names, degree variables,
+    max concrete degree, atom names, node count)``. A bivector is a
+    STRUCTURE bivector when a tilde/Lichnerowicz calculus or a Poisson
+    node (sharp, Hamiltonian, bracket) refers to it."""
+    names, nambu, dvars, atoms = set(), set(), set(), set()
     maxdeg, count = 0, 0
     seen = set()
     stack = list(exprs)
@@ -88,6 +98,13 @@ def scan(*exprs):
             n = RZ.calculus_structure(e.calculus_name)
             if n is not None:
                 names.add(n)
+        if isinstance(e, _STRUCTURE_USERS):
+            pi = getattr(e, "pi", None)
+            if isinstance(pi, PVector):
+                k = pi.degree.as_int()
+                (names if k == 2 else nambu).add(pi._repr_inner())
+        if isinstance(e, (Form, PVector, VectorField, Symbol)):
+            atoms.add(e._repr_inner())
         if isinstance(e, (Form, PVector)):
             k = e.degree.as_int()
             if k is None:
@@ -95,7 +112,41 @@ def scan(*exprs):
             else:
                 maxdeg = max(maxdeg, k)
         stack.extend(_subexprs(e))
-    return names, dvars, maxdeg, count
+    return names, nambu, dvars, maxdeg, atoms, count
+
+
+#: Owner classes whose declared axioms the F1 models understand. Any other
+#: owner whose names occur in the equation constrains the atoms in ways
+#: the random model does not reproduce (e.g. a symplectic ω with π = ω⁻¹)
+#: → UNSUPPORTED instead of a false DISAGREE.
+_MODELED_OWNERS = ("PoissonStructure", "NambuPoissonStructure", "Algebroid")
+
+
+def _owner_obstruction(owners, atoms, nambu):
+    """The UNSUPPORTED kind forced by the owners, or ``None``."""
+    if owners is None:
+        return "NambuPoisson[owners unknown]" if nambu else None
+    if isinstance(owners, dict):
+        owners = list(owners.values())
+    for o in owners:
+        cls = type(o).__name__
+        ids = set()
+        for attr in ("pi", "omega"):
+            a = getattr(o, attr, None)
+            if a is not None and hasattr(a, "_repr_inner"):
+                ids.add(a._repr_inner())
+        nm = getattr(o, "name", None)
+        if isinstance(nm, str):
+            ids.add(nm)
+        if not (ids & atoms):
+            continue
+        if cls not in _MODELED_OWNERS:
+            return f"owner[{cls}]"
+        if cls == "NambuPoissonStructure":
+            deg = o.pi.degree.as_int()
+            if deg != 2 and "fundamental-identity" in (getattr(o, "declarations", None) or ()):
+                return "NambuPoisson[fundamental-identity]"
+    return None
 
 
 def _structure_info(owners):
@@ -178,6 +229,51 @@ def poisson_requires(requires=None, chain=None):
 
     ok = visit(getattr(chain, "steps", chain))
     return used if ok else None
+
+
+def _poisson_bivector_owner(o) -> bool:
+    pi = getattr(o, "pi", None)
+    deg = getattr(pi, "degree", None)
+    decl = getattr(o, "declarations", None) or ()
+    return (type(o).__name__ in ("PoissonStructure", "NambuPoissonStructure") and deg is not None
+            and deg.as_int() == 2 and any(k in decl for k in POISSON_KEYS))
+
+
+def unmodeled_assumption(requires=None, chain=None):
+    """The first DECLARED assumption the proof used that the F1 models do
+    not satisfy (anything but a Poisson bivector's declaration), as an
+    UNSUPPORTED kind — a D-model must satisfy every used axiom, else a
+    DISAGREE would be the model's fault. ``None`` when all are modeled."""
+
+    def judge(owner, rule):
+        if owner is not None and _poisson_bivector_owner(owner):
+            return None
+        return f"assumption[{type(owner).__name__ if owner is not None else 'unowned'}]"
+
+    if requires is not None:
+        for a in requires:
+            if getattr(a, "kind", None) == "declared":
+                k = judge(getattr(a, "owner", None), getattr(a, "name", ""))
+                if k:
+                    return k
+        return None
+    if chain is None:
+        return None
+    stack = list(getattr(chain, "steps", chain))
+    while stack:
+        s = stack.pop()
+        if getattr(s, "role", None) == "assumption":
+            k = judge(getattr(s, "owner", None), getattr(s, "rule", ""))
+            if k:
+                return k
+        cited = getattr(s, "cites", None)
+        for a in getattr(cited, "requires", ()) if cited is not None else ():
+            if getattr(a, "kind", None) == "declared":
+                k = judge(getattr(a, "owner", None), getattr(a, "name", ""))
+                if k:
+                    return k
+        stack.extend(getattr(s, "children", ()))
+    return None
 
 
 # --------------------------------------------------------------------- #
@@ -281,10 +377,14 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
     deadline = t0 + timeout
     goal = f"{lhs._repr_inner()} = {rhs._repr_inner()}"
     base = dict(lhs=lhs._repr_inner(), rhs=rhs._repr_inner(), seed=seed, source=source, nodeid=nodeid)
-    names, dvars, maxdeg, count = scan(lhs, rhs)
+    names, nambu, dvars, maxdeg, atoms, count = scan(lhs, rhs)
     if count > MAX_NODES:
         return OracleReport(UNSUPPORTED, unsupported_type="budget[size]", unsupported_path=(),
                             detail=f"> {MAX_NODES} nodes", elapsed=time.monotonic() - t0, **base)
+    obstruction = _owner_obstruction(owners, atoms, nambu) or unmodeled_assumption(requires, chain)
+    if obstruction is not None:
+        return OracleReport(UNSUPPORTED, unsupported_type=obstruction, unsupported_path=(),
+                            detail="a declared structure axiom has no F1 model", elapsed=time.monotonic() - t0, **base)
     info = _structure_info(owners)
     declared = {n for n, ok in (info or {}).items() if ok}
     families = {}

@@ -226,3 +226,33 @@ def test_chain_check_names_first_bad_rule():
     ]
     rep = check_chain(SimpleNamespace(steps=steps), registry=reg)
     assert rep.first_bad_index == 1 and rep.first_bad_rule == "bad-sign"
+
+
+def test_unmodeled_owner_axioms_are_unsupported_not_disagree():
+    from jacopy.packages.poisson.nambu import nambu_structure
+    from jacopy.packages.poisson.symplectic import symplectic_structure
+
+    # ω symplectic with π = ω⁻¹ is a relation the random model lacks
+    S = symplectic_structure("ϖ")
+    rep = ok(Pairing(S.omega if hasattr(S, "omega") else om, X), Integer(0), owners=[S])
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "owner[SymplecticStructure]", str(rep)
+    # a Nambu 3-vector with the fundamental identity declared has no F1 model
+    N = nambu_structure("Λ", p=2, declare=("fundamental-identity",))
+    w2 = Wedge(d(f), d(g))
+    rep = ok(Act(NambuSharpVF(N.pi, w2), h), Integer(0), owners=[N])
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "NambuPoisson[fundamental-identity]"
+    rep = ok(Act(NambuSharpVF(N.pi, w2), h), Integer(0))
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "NambuPoisson[owners unknown]"
+    # without the declaration the generic model is the right one
+    N0 = nambu_structure("Λ", p=2)
+    assert ok(Act(NambuSharpVF(N0.pi, w2), h), Integer(0), owners=[N0]).verdict == "DISAGREE"
+
+
+def test_used_unmodeled_assumption_is_unsupported():
+    # a proof record that used an axiom the models do not satisfy
+    other = SimpleNamespace(kind="declared", owner=SimpleNamespace(name="E"), name="E: Jacobi")
+    l, r = NEGATIVE["Cartan with minus"]
+    rep = ok(l, r, requires=(other,))
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "assumption[SimpleNamespace]"
+    used = (SimpleNamespace(kind="declared", owner=P, name="Poisson"),)
+    assert ok(l, r, owners=[P], requires=used).verdict == "DISAGREE"

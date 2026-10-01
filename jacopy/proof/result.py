@@ -45,6 +45,7 @@ from dataclasses import dataclass, field
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 from jacopy.core.expr import Expr, Integer
+from jacopy.oracle.hook import on_closed
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.step import ProofStep
 
@@ -465,6 +466,8 @@ class ProofResult:
         req = req + tuple(legacy)
         if theorem.generality == "instance":
             req = req + (Assumption("scope", "instance proof — the certificate is not generalized"),)
+        on_closed(theorem.lhs, theorem.rhs, source="from_theorem",
+                  owners=None if theorem.owner is None else [theorem.owner], requires=req)
         return cls(
             goal=goal, status="CLOSED", requires=req, provenance=prov, chain=chain, residual=None,
             budget=Budget(len(chain)), generality=theorem.generality, owner=theorem.owner,
@@ -527,13 +530,16 @@ def prove(
     generality: str = "generic-function",
     owner=None,
     simplify_normal_forms: bool = True,
+    oracle: Optional[str] = None,
 ) -> "ProofResult":
     """Normalize both sides with ``engine`` (optionally followed by the
     algebraic simplifier) and compare. Returns a :class:`ProofResult`:
     ``INVALID`` without running when the goal is ill-typed, ``BUDGET``
     when ``max_steps`` runs out, ``CLOSED`` when the normal forms
     agree, else ``RESIDUAL`` with the surviving difference. The chain
-    runs ``lhs → normal form ← rhs`` (the right side's steps reversed)."""
+    runs ``lhs → normal form ← rhs`` (the right side's steps reversed).
+    ``oracle`` overrides ``JACOPY_ORACLE`` for this call (model-oracle
+    falsifier on CLOSED results; default off, :mod:`jacopy.oracle`)."""
     goal = Goal(lhs, rhs)
     reason = check_goal(lhs, rhs, registry)
     if reason is not None:
@@ -581,7 +587,9 @@ def prove(
         )
     if left == right:
         chain = ProofChain(lsteps + [_reversed_step(s) for s in reversed(rsteps)])
-        return ProofResult.from_chain(chain, goal, status="CLOSED", max_steps=max_steps, generality=generality, owner=owner)
+        result = ProofResult.from_chain(chain, goal, status="CLOSED", max_steps=max_steps, generality=generality, owner=owner)
+        on_closed(lhs, rhs, registry=registry, source="prove", engine=engine, requires=result.requires, mode=oracle)
+        return result
     from jacopy.core.expr import Neg, Sum
 
     diff = Sum(left, Neg(right)) if right != Integer(0) else left

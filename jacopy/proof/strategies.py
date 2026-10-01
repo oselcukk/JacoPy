@@ -28,6 +28,7 @@ from jacopy.brackets.derived import DerivedBracket
 from jacopy.core.expr import Expr, Integer, Neg, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
+from jacopy.oracle.hook import on_closed
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import ExpansionEngine, default_engine
 from jacopy.proof.step import ProofStep
@@ -133,6 +134,7 @@ class ExpandAndSimplify(Strategy):
                     justification="lhs and rhs are syntactically identical",
                 )
             )
+            on_closed(lhs, rhs, registry=registry, source="ExpandAndSimplify:reflexive", engine=eng, chain=chain)
             return chain
 
         obstruction: Expr = Sum(lhs, Neg(rhs))
@@ -183,6 +185,7 @@ class ExpandAndSimplify(Strategy):
                 )
             )
 
+        on_closed(lhs, rhs, registry=registry, source="ExpandAndSimplify", engine=eng, chain=chain)
         return chain
 
 
