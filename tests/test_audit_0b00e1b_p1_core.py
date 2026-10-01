@@ -572,3 +572,29 @@ def test_derived_bracket_grades_like_its_base():
         assert "must be ODD" not in str(exc)
     except ValueError:
         pass
+
+
+def test_inert_bracket_is_retried_after_its_operands_expand():
+    from jacopy.proof.verifier import _expand_all_brackets
+
+    u = Symbol("u")
+
+    class _Outer(GradedBracket):
+        def __init__(self):
+            super().__init__("outer", degree=0)
+
+        def expand(self, a, b, registry=None):
+            # supported only once the left operand is the atom u
+            return Integer(1) if a == u else BracketApply(self, a, b)
+
+    class _Inner(GradedBracket):
+        def __init__(self):
+            super().__init__("inner", degree=0)
+
+        def expand(self, a, b, registry=None):
+            return u
+
+    O, I = _Outer(), _Inner()
+    p, q, r = Symbol("p"), Symbol("q"), Symbol("r")
+    assert _expand_all_brackets(O(I(p, q), r), None) == Integer(1)
+    assert _expand_all_brackets(O(p, r), None) == O(p, r)  # stays inert, terminates

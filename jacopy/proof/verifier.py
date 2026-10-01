@@ -237,7 +237,20 @@ def _expand_all_brackets(
             return _expand_all_brackets(expanded, registry)
         # an INERT bracket (unsupported shape: expand() returns the
         # node itself) — re-walking it never terminated (RecursionError,
-        # audit 0b00e1b K1-3 follow-up); descend into its operands only
+        # audit 0b00e1b K1-3 follow-up). Expand its operands; if they
+        # changed, the rebuilt bracket gets ONE more expansion attempt
+        # (its operands may now have a supported shape). Terminates:
+        # every recursive call is on a strictly expanded operand or on
+        # an expansion result, as in the non-inert case.
+        a = _expand_all_brackets(expr.a, registry)
+        b = _expand_all_brackets(expr.b, registry)
+        if a == expr.a and b == expr.b:
+            return expr
+        rebuilt = BracketApply(expr.bracket, a, b)
+        again = rebuilt.expand(registry)
+        if again != rebuilt:
+            return _expand_all_brackets(again, registry)
+        return rebuilt
     if expr.is_atom:
         return expr
     new_children = tuple(_expand_all_brackets(c, registry) for c in expr.children)
