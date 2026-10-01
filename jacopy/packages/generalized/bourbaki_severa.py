@@ -386,10 +386,12 @@ def severa_engine(
     return eng
 
 
-def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+def _normalize(engine, expr: Expr, registry, *, record: bool = False):
+    from jacopy.packages.generalized.bourbaki_structure import (
+        _normalize as _structure_normalize,
+    )
 
-    return _normalized_by(engine, expr, registry)
+    return _structure_normalize(engine, expr, registry, record=record)
 
 
 def delta(alg: Algebroid, U: Expr, V: Expr) -> Expr:
@@ -412,18 +414,10 @@ def _zero_theorem(
     notes,
     label,
 ) -> Tuple[ProofChain, Theorem]:
-    from jacopy.proof.normalize import normalize
-
-    # record the engine steps (same budget as _normalize) and keep them
-    # as the step's children: the rules that fired — in particular the
-    # theorem-citing Leibniz rules — must reach the theorem's
-    # requirements (audit 0B00E1B-FULL M1-4)
-    run = normalize(engine, diff, registry, rounds=10, max_steps=1024, record=True)
-    if run.stopped_by == "steps":
-        raise RuntimeError(
-            f"ExpansionEngine did not converge within 1024 steps; {run.detail}"
-        )
-    nf = run.expr
+    # keep the engine steps as the step's children: the rules that
+    # fired — in particular the theorem-citing Leibniz rules — must
+    # reach the theorem's requirements (audit 0B00E1B-FULL M1-4)
+    nf, fired = _normalize(engine, diff, registry, record=True)
     if nf != Integer(0):
         raise ProofFailure(
             f"{name}: {label} FAILS — residual "
@@ -435,7 +429,7 @@ def _zero_theorem(
         rule=label,
         justification="engine normal form",
     )
-    for s in run.chain:
+    for s in fired:
         step.add_child(s)
     chain = ProofChain([step])
     theorem = Theorem(

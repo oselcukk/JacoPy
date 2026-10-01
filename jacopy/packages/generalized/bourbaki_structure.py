@@ -395,10 +395,24 @@ def bourbaki_structure_engine(
     return eng
 
 
-def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+def _normalize(engine, expr: Expr, registry, *, record: bool = False):
+    """Engine normal form (the tilde ``_normalized_by`` budget: 10
+    rounds, 1024 steps). With ``record=True`` returns ``(nf, steps)``
+    so a prover can keep the fired rules as children — the citing
+    rules must reach the theorem's requirements (audit 0B00E1B-FULL
+    M1-4)."""
+    if not record:
+        from jacopy.packages.poisson.tilde import _normalized_by
 
-    return _normalized_by(engine, expr, registry)
+        return _normalized_by(engine, expr, registry)
+    from jacopy.proof.normalize import normalize
+
+    run = normalize(engine, expr, registry, rounds=10, max_steps=1024, record=True)
+    if run.stopped_by == "steps":
+        raise RuntimeError(
+            f"ExpansionEngine did not converge within 1024 steps; {run.detail}"
+        )
+    return run.expr, list(run.chain)
 
 
 # ------------------------------------------------------------------ #

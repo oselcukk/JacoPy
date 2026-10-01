@@ -468,10 +468,12 @@ def exact_bourbaki_engine(
     return eng
 
 
-def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+def _normalize(engine, expr: Expr, registry, *, record: bool = False):
+    from jacopy.packages.generalized.bourbaki_structure import (
+        _normalize as _structure_normalize,
+    )
 
-    return _normalized_by(engine, expr, registry)
+    return _structure_normalize(engine, expr, registry, record=record)
 
 
 def _invariance_instance(
@@ -507,18 +509,11 @@ def prove_lemma_91(
     node = Act(
         alg.anchor(alg.bracket(u, ChiSec(z))), h
     )
-    from jacopy.proof.normalize import normalize
-
-    # keep the engine steps (same budget as _normalize): the declared
-    # anchor morphism that kills ρ([u, χz]) must reach the lemma's
-    # requirements — a bare hand-built "axiom" step was a legacy record
-    # (audit 0B00E1B-FULL M1-4, LieZDefinitionRule cites this lemma)
-    run = normalize(engine, node, registry, rounds=10, max_steps=1024, record=True)
-    if run.stopped_by == "steps":
-        raise RuntimeError(
-            f"ExpansionEngine did not converge within 1024 steps; {run.detail}"
-        )
-    nf = run.expr
+    # keep the engine steps: the declared anchor morphism that kills
+    # ρ([u, χz]) must reach the lemma's requirements — a bare hand-built
+    # "axiom" step was a legacy record (audit 0B00E1B-FULL M1-4,
+    # LieZDefinitionRule cites this lemma)
+    nf, fired = _normalize(engine, node, registry, record=True)
     if nf != Integer(0):
         raise ProofFailure(
             "Lemma 9.1: ρ([u, χz])(h) does not vanish — "
@@ -533,7 +528,7 @@ def prove_lemma_91(
         ),
         justification="engine normal form",
     )
-    for s_ in run.chain:
+    for s_ in fired:
         step.add_child(s_)
     chain = ProofChain([step])
     theorem = Theorem(
