@@ -80,7 +80,7 @@
  "jacopy.packages.generalized.bourbaki_exact.DopViaChiDefinition": "definition",
  "jacopy.packages.generalized.bourbaki_exact.Iota99Definition": "definition",
  "jacopy.packages.generalized.bourbaki_exact.IsotropyDeclaration": "assumption",
- "jacopy.packages.generalized.bourbaki_exact.LieZDefinitionRule": "definition",
+ "jacopy.packages.generalized.bourbaki_exact.LieZDefinitionRule": "theorem",
  "jacopy.packages.generalized.bourbaki_exact.SplitAnchorDefinition": "definition",
  "jacopy.packages.generalized.bourbaki_exact.SymPartChiSwapDeclaration": "assumption",
  "jacopy.packages.generalized.bourbaki_precalculus.Axiom914Declaration": "assumption",

@@ -273,3 +273,32 @@ def test_cited_theorem_does_not_touch_the_callers_registry():
     r = prove(ExpansionEngine([DDZeroDefinition(C)]), Act(C.anchor(CourantD("C", k)), k), Integer(0), registry=reg)
     assert r.status == "CLOSED"
     assert dict(reg._props) == before
+
+
+def test_liez_definition_rule_cites_lemma_91():
+    # (9.7) rewrites [φV, χz] → χ(ℒ^Z_V z), i.e. asserts [φV, χz] ∈ im χ
+    # (Lemma 9.1: anchor morphism + ker ρ = im χ). Counter-model
+    # without a morphism anchor: put [φV, χz] := φW, then
+    # ρ([φV, χz]) = W ≠ 0. Before: CLOSED assumption-free on a bare E.
+    from jacopy.packages.generalized.bourbaki_exact import (
+        ChiSec,
+        PhiSec,
+        exact_bourbaki_context,
+        exact_bourbaki_engine,
+    )
+    from jacopy.packages.generalized.bourbaki_precalculus import BD
+
+    reg = PropertyRegistry()
+    h, k = functions("h k", registry=reg)
+    (V,) = vector_fields("V")
+    bare = algebroid("E")
+    lhs = Act(bare.anchor(bare.bracket(PhiSec(V), ChiSec(BD(k)))), h)
+    eng = exact_bourbaki_engine(bare, reg)
+    assert prove(eng, lhs, Integer(0), registry=reg).status == "RESIDUAL"
+    with pytest.raises(ProofFailure):
+        ExpandAndSimplify().prove(lhs, Integer(0), registry=reg, engine=eng)
+    X = exact_bourbaki_context("X")
+    lhs_x = Act(X.anchor(X.bracket(PhiSec(V), ChiSec(BD(k)))), h)
+    r = prove(exact_bourbaki_engine(X, reg), lhs_x, Integer(0), registry=reg)
+    assert r.status == "CLOSED"
+    assert any(kd == "declared" and n.startswith("anchor morphism (X)") for kd, n in _kinds(r))

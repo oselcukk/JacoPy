@@ -54,6 +54,7 @@ from jacopy.central.algebroid.context import (
     algebroid,
 )
 from jacopy.central.tangent.lie_bracket import lie_bracket
+from jacopy.packages.generalized._cited_rule import CitedTheoremMixin
 from jacopy.packages.generalized.bourbaki_precalculus import (
     BD,
     BIota,
@@ -144,18 +145,47 @@ class SplitAnchorDefinition(Definition):
         return Integer(0)
 
 
-class LieZDefinitionRule(Definition):
+class LieZDefinitionRule(CitedTheoremMixin, Definition):
     """(9.7) — the DEFINITION of ``ℒ^Z``:
     ``[φV, χz]_E → χ(ℒ^Z_V z)`` (well-defined by Lemma 9.1);
-    scoped to its algebroid when a name is given (finding 5)."""
+    scoped to its algebroid (finding 5).
+
+    The rewrite asserts ``[φV, χz]_E ∈ im χ``, which is Lemma 9.1
+    (anchor morphism + exactness ``ker ρ = im χ``), not a definition:
+    on an algebroid without a morphism anchor ``ρ([φV, χz]) ≠ 0`` in
+    general and the rewrite would close it to 0. So the rule is a
+    CITATION (audit 0B00E1B-FULL M1-4 pattern): it proves Lemma 9.1 on
+    its own structure (:func:`prove_lemma_91`) and every step cites
+    it, so the lemma's requirements (the declared anchor morphism)
+    flow into the result; without the lemma the rule never fires.
+    Built from a bare algebroid NAME (legacy signature) it cannot
+    prove the lemma and stays inert (default reject)."""
 
     anchor = AlgebroidBracket
 
-    def __init__(
-        self, algebroid_name: Optional[str] = None
-    ) -> None:
-        self._alg = algebroid_name
+    def __init__(self, alg=None) -> None:
+        if isinstance(alg, Algebroid):
+            self._algebroid = alg
+            self._alg = alg.name
+            self.owner = alg
+        else:
+            self._algebroid = None
+            self._alg = alg
         self.name = "(9.7): [φV, χz]_E = χ(ℒ^Z_V z)"
+
+    def _prove_cited(self):
+        if self._algebroid is None:
+            return None
+        from jacopy.packages.generalized._cited_rule import (
+            private_function,
+        )
+        from jacopy.packages.generalized.bourbaki_precalculus import BD
+
+        (k, h), reg = private_function("k h")
+        (u,) = self._algebroid.sections("u")
+        return prove_lemma_91(
+            self._algebroid, u, BD(k), h, registry=reg
+        )[1]
 
     def matches(self, expr: Expr) -> bool:
         return (
@@ -166,6 +196,7 @@ class LieZDefinitionRule(Definition):
                 self._alg is None
                 or expr.algebroid_name == self._alg
             )
+            and self._licensed()
         )
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -354,7 +385,7 @@ def exact_bourbaki_engine(
         SplitAnchorDefinition(alg.name),
         BLieREChiDirectionVanishes(),
         SymPartChiSwapDeclaration(alg.name),
-        LieZDefinitionRule(alg.name),
+        LieZDefinitionRule(alg),
         DopViaChiDefinition(),
         Iota99Definition(),
     ]
@@ -423,26 +454,35 @@ def prove_lemma_91(
     node = Act(
         alg.anchor(alg.bracket(u, ChiSec(z))), h
     )
-    nf = _normalize(engine, node, registry)
+    from jacopy.proof.normalize import normalize
+
+    # keep the engine steps (same budget as _normalize): the declared
+    # anchor morphism that kills ρ([u, χz]) must reach the lemma's
+    # requirements — a bare hand-built "axiom" step was a legacy record
+    # (audit 0B00E1B-FULL M1-4, LieZDefinitionRule cites this lemma)
+    run = normalize(engine, node, registry, rounds=10, max_steps=1024, record=True)
+    if run.stopped_by == "steps":
+        raise RuntimeError(
+            f"ExpansionEngine did not converge within 1024 steps; {run.detail}"
+        )
+    nf = run.expr
     if nf != Integer(0):
         raise ProofFailure(
             "Lemma 9.1: ρ([u, χz])(h) does not vanish — "
             + nf._repr_inner()[:140]
         )
-    chain = ProofChain(
-        [
-            ProofStep(
-                node,
-                Integer(0),
-                rule=(
-                    "anchor morphism + exactness ρχ = 0 kill "
-                    "the anchor of [u, χz]"
-                ),
-                justification="engine normal form",
-                provenance_tag="axiom",
-            )
-        ]
+    step = ProofStep(
+        node,
+        Integer(0),
+        rule=(
+            "anchor morphism + exactness ρχ = 0 kill "
+            "the anchor of [u, χz]"
+        ),
+        justification="engine normal form",
     )
+    for s_ in run.chain:
+        step.add_child(s_)
+    chain = ProofChain([step])
     theorem = Theorem(
         name=f"bourbaki_lemma91_{alg.name}",
         statement=(
