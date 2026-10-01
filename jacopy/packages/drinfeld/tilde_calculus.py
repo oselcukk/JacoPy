@@ -218,29 +218,14 @@ class InteriorAnticommuteDefinition(Definition):
 
 
 def _is_cartan_tm_d(op) -> bool:
-    """Is ``op`` the ``d`` of the TM Cartan calculus? (audit
-    0B00E1B-FULL M3-1/M3-2 family, P1-roadmap lane.)
-
-    The fundamental identity is a statement about the TM Cartan
-    calculus, so its consequences may fire on THAT ``d`` only. DEFAULT
-    REJECT: the ``d`` of any other calculus (an algebroid's ``d_E``, a
-    Koszul / tilde calculus, a derived calculus …) is refused. Uses the
-    central ``belongs_to`` (calculus OBJECT identity) when it exists;
-    otherwise the structural identity ``(name, degree, calculus name,
-    skew)`` of ``CARTAN_TM.d`` — and, once operators carry their owning
-    calculus, that owner must be ``CARTAN_TM`` itself."""
+    """Is ``op`` the ``d`` of the TM Cartan calculus? The fundamental
+    identity is a statement about that calculus only; the shared
+    default-reject scope guard ``belongs_to`` (calculus OBJECT identity,
+    reserved ``Cartan-TM`` name) decides (audit 0B00E1B-FULL M3-1/M3-2)."""
+    from jacopy.central.calculus.bracket_calculus import belongs_to
     from jacopy.central.tangent.exterior import CARTAN_TM
 
-    try:
-        from jacopy.central.calculus.bracket_calculus import belongs_to
-    except ImportError:  # P1-B not merged yet: local equivalent
-        belongs_to = None
-    if belongs_to is not None:
-        return belongs_to(op, CARTAN_TM)
-    if op != CARTAN_TM.d:
-        return False
-    owner = getattr(op, "_calculus", CARTAN_TM)
-    return owner is CARTAN_TM
+    return belongs_to(op, CARTAN_TM)
 
 
 class FISharpPairingSwapDefinition(Definition):

@@ -463,7 +463,11 @@ class TestFISwapScope:
         from jacopy.packages.poisson.nambu import nambu_structure
 
         N = nambu_structure(p=1, declare=("fundamental-identity",))
-        fake = ExteriorDerivative("Cartan-TM", skew=False)
+        # the reserved name cannot even be spoofed by hand (central guard)
+        with pytest.raises(ValueError):
+            ExteriorDerivative("Cartan-TM", skew=False)
+        # an ownerless look-alike under another name is refused too
+        fake = ExteriorDerivative("Cartan-TM'", skew=True)
         assert not self._rule(N).matches(self._node(N, fake))
 
     def test_engine_leaves_the_foreign_d_alone(self):
