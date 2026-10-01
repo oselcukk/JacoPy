@@ -568,7 +568,10 @@ class DerivedBracketStrategy:
                 "bracket (graded antisymmetry + graded Jacobi) — "
                 "the Derived Bracket Theorem does not apply"
             )
-        shifted = bracket.degree_Q + base.degree
+        # parity of Q in the base's SHIFTED grading, from the same
+        # hook as every skew/Jacobi sign (``operand_shift``: SN counts
+        # −1 in the multivector grading, not its recorded degree 0)
+        shifted = bracket.degree_Q + base.operand_shift
         parity = shifted.parity()
         if parity != 1:
             raise ProofFailure(
@@ -597,10 +600,12 @@ class DerivedBracketStrategy:
             # cyclic goal below; mixing conventions let six
             # unshifted checks certify a non-zero unshifted goal
             # (2026-09-08 second re-audit).
-            # (the sign comes from the bracket's own hook,
-            # ``pair_swap_sign``: ε = −(−1)^{s(x)s(y)}, s = |·| + k)
+            # (the CLAIMED sign comes from the bracket's own hook,
+            # ``claimed_swap_sign``: ε = −(−1)^{s(x)s(y)}, s from
+            # ``operand_degree`` — the derived bracket is not asserted
+            # skew, so its rewrite licence ``pair_swap_sign`` declines)
             try:
-                eps = bracket.pair_swap_sign(x, y, registry)
+                eps = bracket.claimed_swap_sign(x, y, registry)
             except ValueError as exc:
                 raise ProofFailure(
                     "DerivedBracketStrategy: cannot certify "

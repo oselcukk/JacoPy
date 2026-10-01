@@ -150,6 +150,21 @@ class DerivedBracket(GradedBracket):
         self._base = base
         self._Q = Q
         self._degree_Q = as_degree(degree_Q)
+        try:
+            q_deg = base.grading_degree(Q, None)
+        except (ValueError, TypeError):
+            q_deg = None
+        if (
+            q_deg is not None
+            and q_deg.as_int() is not None
+            and self._degree_Q.as_int() is not None
+            and q_deg.as_int() != self._degree_Q.as_int()
+        ):
+            raise ValueError(
+                f"DerivedBracket: degree_Q = {self._degree_Q!r} but the "
+                f"generator {Q!r} has degree {q_deg!r} in the base "
+                f"bracket's grading; degree_Q is measured there"
+            )
         self._acting_on = acting_on
         # Cartan ops resolved lazily to avoid import-time cycles, only
         # used when acting_on is set.
@@ -176,6 +191,31 @@ class DerivedBracket(GradedBracket):
     @property
     def base(self) -> GradedBracket:
         return self._base
+
+    # ---- grading hooks (audit 0b00e1b K1-3 family) ----------------- #
+    #
+    # The derived bracket lives on the BASE's module: same grading,
+    # same product. In that grading the base has degree
+    # ``k_b = base.operand_shift`` and ``|[[a,Q],b]| = |a| + |b| + |Q|
+    # + 2·k_b``, so the derived shift is ``|Q| + 2·k_b`` (``degree_Q``
+    # is the generator's degree in the base's grading). For a base
+    # whose grading is the operator grading this equals the recorded
+    # ``degree``; for an SN base (k_b = −1, multivector grading) the
+    # recorded ``degree`` (|Q| + 0) is not the right shift — the
+    # hooks below are.
+
+    def grading_degree(
+        self, x: Expr, registry: Optional[PropertyRegistry] = None
+    ) -> Degree:
+        return self._base.grading_degree(x, registry)
+
+    @property
+    def operand_shift(self) -> Degree:
+        k_b = self._base.operand_shift
+        return self._degree_Q + k_b + k_b
+
+    def module_product(self, b: Expr, c: Expr) -> Expr:
+        return self._base.module_product(b, c)
 
     @property
     def Q(self) -> Expr:

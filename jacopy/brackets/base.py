@@ -195,8 +195,9 @@ class GradedBracket(ABC):
     # bivector). Subclasses override :meth:`grading_degree` /
     # :meth:`operand_degree` / :meth:`module_product`; the three
     # obstruction helpers read their signs only through
-    # :meth:`pair_swap_sign`, :meth:`jacobi_term_sign` and
-    # :meth:`leibniz_term_sign`.
+    # :meth:`claimed_swap_sign`, :meth:`jacobi_term_sign` and
+    # :meth:`leibniz_term_sign`; :meth:`pair_swap_sign` is the rewrite
+    # licence (declines on a bracket not asserted antisymmetric).
 
     def grading_degree(
         self, x: Expr, registry: Optional[PropertyRegistry] = None
@@ -207,19 +208,27 @@ class GradedBracket(ABC):
         degree is undeterminable."""
         return degree_of(x, registry)
 
+    @property
+    def operand_shift(self) -> Degree:
+        """``k`` measured in :meth:`grading_degree`'s grading: the
+        bracket's degree there (default: :attr:`degree`; for SN it is
+        ``−1`` in the multivector grading although :attr:`degree` is
+        recorded in the already-shifted convention)."""
+        return self._degree
+
     def operand_degree(
         self, x: Expr, registry: Optional[PropertyRegistry] = None
     ) -> Degree:
         """``s(x) = |x| + k`` — the SHIFTED degree in which the bracket
         is graded antisymmetric and satisfies graded Jacobi."""
-        return self.grading_degree(x, registry) + self._degree
+        return self.grading_degree(x, registry) + self.operand_shift
 
     def module_product(self, b: Expr, c: Expr) -> Expr:
         """The product the Leibniz axiom distributes over (default:
         :class:`Product`)."""
         return Product(b, c)
 
-    def pair_swap_sign(
+    def claimed_swap_sign(
         self,
         a: Expr,
         b: Expr,
@@ -228,12 +237,11 @@ class GradedBracket(ABC):
         """``ε`` in the graded-antisymmetry CLAIM ``[a, b] = ε·[b, a]``:
         ``ε = −(−1)^{s(a)s(b)}`` with ``s`` = :meth:`operand_degree`.
 
-        This is the sign the axiom states (it is what
-        :meth:`graded_antisymmetry_obstruction` builds), not a
-        certificate that the bracket satisfies it — consult
-        :attr:`is_graded_antisymmetric` / prove the obstruction for
-        that. ``None`` when the parity is symbolic; an undeterminable
-        degree raises :class:`ValueError`.
+        The sign the axiom STATES (what
+        :meth:`graded_antisymmetry_obstruction` builds and a skew check
+        tests), whether or not the bracket satisfies it. ``None`` when
+        the parity is symbolic; an undeterminable degree raises
+        :class:`ValueError`.
         """
         p = (
             self.operand_degree(a, registry)
@@ -242,6 +250,20 @@ class GradedBracket(ABC):
         if p is None:
             return None
         return -1 if p == 0 else 1
+
+    def pair_swap_sign(
+        self,
+        a: Expr,
+        b: Expr,
+        registry: Optional[PropertyRegistry] = None,
+    ) -> Optional[int]:
+        """Sign ``ε`` such that ``[a, b] = ε·[b, a]`` HOLDS — a rewrite
+        licence: :meth:`claimed_swap_sign` for a bracket asserted
+        graded antisymmetric, ``None`` (decline: do not rewrite) for
+        any other bracket or a symbolic parity."""
+        if not self._is_graded_antisymmetric:
+            return None
+        return self.claimed_swap_sign(a, b, registry)
 
     def jacobi_term_sign(
         self,
@@ -308,7 +330,7 @@ class GradedBracket(ABC):
         registry: Optional[PropertyRegistry] = None,
     ) -> Expr:
         """``[a, b] + (−1)^{s(a)s(b)} [b, a]`` (``= [a, b] − ε[b, a]``
-        with ``ε`` = :meth:`pair_swap_sign`).
+        with ``ε`` = :meth:`claimed_swap_sign`).
 
         Claims to be zero exactly when the bracket is graded
         antisymmetric on ``(a, b)`` in its shifted convention
@@ -319,7 +341,7 @@ class GradedBracket(ABC):
         ``[π, π]_SN = 0`` for every bivector (audit 0b00e1b K1-3).
         Undecidable parity raises :class:`ValueError`.
         """
-        eps = self.pair_swap_sign(a, b, registry)
+        eps = self.claimed_swap_sign(a, b, registry)
         if eps is None:
             raise ValueError(
                 f"antisymmetry obstruction parity is symbolic for "

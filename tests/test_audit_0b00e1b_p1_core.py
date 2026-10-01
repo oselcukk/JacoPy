@@ -423,7 +423,8 @@ def test_derived_bracket_skew_sign_comes_from_pair_swap_sign():
         k = br.degree
         for x, y in iproduct(syms, repeat=2):
             old = ((degree_of(x, reg) + k) * (degree_of(y, reg) + k)).parity()
-            assert br.pair_swap_sign(x, y, reg) == (-1 if old == 0 else 1)
+            assert br.claimed_swap_sign(x, y, reg) == (-1 if old == 0 else 1)
+            assert br.pair_swap_sign(x, y, reg) is None  # not asserted skew: decline
 
 
 def test_prove_jacobi_terminates_on_inert_sn_nodes():
@@ -438,3 +439,55 @@ def test_prove_jacobi_terminates_on_inert_sn_nodes():
     assert _expand_all_brackets(inert, reg) == inert
     with pytest.raises(ProofFailure):  # incompleteness, no longer a crash
         prove_jacobi(SN, X, Wedge(X, Y), f, registry=reg, engine=eng)
+
+
+def test_pair_swap_sign_declines_on_a_bracket_not_asserted_skew():
+    class _NotSkew(GradedBracket):
+        def __init__(self):
+            super().__init__("ns", degree=0, is_graded_antisymmetric=False)
+
+        def expand(self, a, b, registry=None):
+            return BracketApply(self, a, b)
+
+    reg = PropertyRegistry()
+    a = Symbol("a")
+    reg.declare(a, Graded(0))
+    br = _NotSkew()
+    assert br.pair_swap_sign(a, a, reg) is None          # no rewrite licence
+    assert br.claimed_swap_sign(a, a, reg) == -1         # the claim itself
+    assert br.graded_antisymmetry_obstruction(a, a, reg) == Sum(br(a, a), br(a, a))
+
+
+def test_derived_bracket_grades_like_its_base():
+    # {a, b}_π = [[a, π]_SN, b]_SN on the multivector module: shift
+    # |π| + 2·(−1) = 0, so on functions the claimed sign is −1 — the
+    # Poisson bracket of functions is antisymmetric (oracle). The old
+    # recorded degree (|π| + 2·0 with operator degrees) was not the
+    # base's grading.
+    from jacopy.brackets.derived import DerivedBracket
+    from jacopy.proof.strategies import DerivedBracketStrategy
+
+    reg = PropertyRegistry()
+    f, g = functions("f g", registry=reg)
+    pi = PVector("pi", degree=2)
+    with pytest.raises(ValueError, match="base bracket's grading"):
+        DerivedBracket(SN, pi, degree_Q=1)
+    br = DerivedBracket(SN, pi, degree_Q=2)
+    assert br.grading_degree(f, reg).as_int() == 0
+    assert br.operand_shift.as_int() == 0
+    assert br.claimed_swap_sign(f, g, reg) == -1
+    assert br.module_product(f, g) == Wedge(f, g)
+    pytest.importorskip("sympy")
+    from jacopy.oracle.check import check_equal
+
+    skew = Sum(br.expand(f, g, reg), br.expand(g, f, reg))
+    sym = Sum(br.expand(f, g, reg), Neg(br.expand(g, f, reg)))
+    assert check_equal(skew, Integer(0), registry=reg, owners=[]).verdict == "AGREE"
+    assert check_equal(sym, Integer(0), registry=reg, owners=[]).verdict == "DISAGREE"
+    # the strategy's odd-generator test reads the same shift: |π| − 1 odd
+    try:
+        DerivedBracketStrategy().prove_jacobi(br, f, g, Symbol("h"), registry=reg)
+    except ProofFailure as exc:
+        assert "must be ODD" not in str(exc)
+    except ValueError:
+        pass

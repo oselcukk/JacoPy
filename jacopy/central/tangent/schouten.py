@@ -127,13 +127,12 @@ class SchoutenBracket(GradedBracket):
             )
         return Degree.const(m)
 
-    def operand_degree(
-        self, x: Expr, registry: Optional[PropertyRegistry] = None
-    ) -> Degree:
-        """The shifted degree ``s(x) = m(x) − 1`` (SN is a degree −1
-        bracket in the multivector grading; its ``degree`` attribute 0
-        is already the shifted one)."""
-        return self.grading_degree(x, registry) - Degree.const(1)
+    @property
+    def operand_shift(self) -> Degree:
+        """``−1``: SN is a degree −1 bracket in the multivector grading
+        (its ``degree`` attribute 0 is already the shifted one), so the
+        shifted degree is ``s(x) = m(x) − 1``."""
+        return Degree.const(-1)
 
     def module_product(self, b: Expr, c: Expr) -> Expr:
         """SN is a derivation of the WEDGE product:
