@@ -14,6 +14,8 @@ from jacopy.core.expr import Expr
 from jacopy.display.ascii import (
     VERBOSITY_MODES,
     chain_to_ascii,
+    references_suffix,
+    source_suffix,
     step_to_ascii,
     to_ascii,
 )
@@ -47,6 +49,7 @@ _STYLE_TAG_THEOREM = "green"
 _STYLE_ARROW = "dim"
 _STYLE_JUSTIFY = "italic dim"
 _STYLE_TITLE = "bold"
+_STYLE_SOURCE = "magenta"
 
 
 def _step_head(step: ProofStep, verbosity: str = "full"):  # pragma: no cover
@@ -56,6 +59,9 @@ def _step_head(step: ProofStep, verbosity: str = "full"):  # pragma: no cover
         t.append(f" ({step.provenance_tag})", style=_STYLE_TAG_AXIOM)
     elif step.provenance_tag == "theorem":
         t.append(f" ({step.provenance_tag})", style=_STYLE_TAG_THEOREM)
+    src = source_suffix(step)
+    if src:
+        t.append(src, style=_STYLE_SOURCE)
     if verbosity == "compact":
         return t
     t.append(" ")
@@ -113,17 +119,27 @@ def render_step(step: ProofStep, *, max_depth: int = 64, verbosity: str = "full"
 
 
 def render_chain(
-    chain: ProofChain, *, max_depth: int = 64, title: bool = True, verbosity: str = "full"
+    chain: ProofChain,
+    *,
+    max_depth: int = 64,
+    title: bool = True,
+    verbosity: str = "full",
+    references: bool = False,
+    styles: bool = True,
 ) -> str:
-    """Render a :class:`ProofChain` as a coloured tree (or ASCII fallback)."""
+    """Render a :class:`ProofChain` as a coloured tree (or ASCII
+    fallback). Each step shows the APA in-text citation of its rule's
+    source; ``references=True`` appends the reference list;
+    ``styles=False`` drops the ANSI colour codes."""
     if not isinstance(chain, ProofChain):
         raise TypeError("render_chain: expected a ProofChain")
     _check_verbosity(verbosity)
     if not HAS_RICH:
-        return chain_to_ascii(chain, max_depth=max_depth, verbosity=verbosity)
+        return chain_to_ascii(chain, max_depth=max_depth, verbosity=verbosity, references=references)
     if len(chain) == 0:  # pragma: no cover
         return "(empty proof chain)"
-    return _render_to_text(_build_chain_tree(chain, max_depth, title, verbosity))  # pragma: no cover
+    text = _render_to_text(_build_chain_tree(chain, max_depth, title, verbosity), styles=styles)  # pragma: no cover
+    return text + (references_suffix(chain) if references else "")  # pragma: no cover
 
 
 def print_expr(expr: Expr, *, console: Optional["Console"] = None) -> None:
