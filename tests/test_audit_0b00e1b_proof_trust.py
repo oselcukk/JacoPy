@@ -517,3 +517,19 @@ class TestReviewRound3:
         thm = Theorem("bogus", "y = 0", y, Integer(0), res.chain).with_structural_requires()
         assert not check_citation(thm, ExpansionEngine(), registry=None).ok
         assert check_citation(thm, ExpansionEngine([Bogus()]), registry=None).ok
+
+    def test_cited_structure_requirements_flow(self):
+        # 4ba1c20: inherit() dropped the cited record's "structure"
+        # requirements (regenerating only those of declared owners)
+        from jacopy.central.algebroid import algebroid
+        from jacopy.central.objects import Bundle
+        from jacopy.proof.result import Assumption, _classify
+
+        E = algebroid("E", Bundle("E"), declare=("lie",))
+        x = Symbol("x")
+        lemma = Theorem("lemma", "x = x", x, x, ProofChain())
+        object.__setattr__(lemma, "requires", (Assumption("structure", "E declaring ['lie']", E),))
+        object.__setattr__(lemma, "requires_verified", True)
+        step = ProofStep(x, x, rule="cite lemma", provenance_tag="theorem", cites=lemma)
+        req, _ = _classify((step,))
+        assert [a for a in req if a.kind == "structure" and a.owner is E]

@@ -212,13 +212,11 @@ def _classify(steps: Iterable[ProofStep], principal=None):
     def inherit(cited):
         # every requirement kind of the cited record flows to the citing
         # proof — "textual" from_axioms entries included (review
-        # 2026-10-01 rules-match); "structure" records are regenerated
-        # below from the inherited declared owners; an unknown kind is
-        # kept as legacy, never dropped
+        # 2026-10-01 rules-match) and "structure" (review r3 #3: also a
+        # structure no inherited declared record names); an unknown kind
+        # is kept as legacy, never dropped
         for a in getattr(cited, "requires", ()) or ():
             kind = getattr(a, "kind", None)
-            if kind == "structure":
-                continue
             if kind in ASSUMPTION_KINDS:
                 bump(assumptions, kind, a.name, a.owner, a.example, a.key)
             else:
@@ -313,6 +311,8 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         if a.kind == "declared" and a.owner is not None and not any(a.owner is o or a.owner == o for o in seen_owners):
             seen_owners.append(a.owner)
     for o in seen_owners:
+        if any(a.kind == "structure" and (a.owner is o or a.owner == o) for a in req):
+            continue  # (already inherited from a cited record)
         decl = getattr(o, "declarations", None)
         text = f"{o!r}" + (f" declaring {sorted(decl)}" if decl is not None else "")
         req.append(Assumption("structure", text, o))
