@@ -410,21 +410,31 @@ def _rational(e, env, path):
     return env.R.const(Q(e.p, e.q))
 
 
+def _declared_constant(e, env) -> bool:
+    """The SAME ℝ-constant as the engine's ``is_real_constant`` (audit
+    0b00e1b M1-1, one contract): an atom of function kind (here a
+    Symbol, or a degree-0 Form / PVector) whose EFFECTIVE registry
+    answer is ``Scalar`` — exact, class or predicate level — with no
+    ``Graded(k ≠ 0)``. Restated from registry data: the oracle imports
+    no engine logic (SPEC §1)."""
+    reg = env.registry
+    if reg is None or reg.peek(e, Scalar) is None:
+        return False
+    g = reg.peek(e, Graded)
+    return g is None or g.degree.as_int() == 0
+
+
 @register(Symbol)
 def _symbol(e, env, path):
-    """Scalar contract (SPEC §7): an EXACTLY ``Scalar``-declared symbol is a
+    """Scalar contract (SPEC §7): a ``Scalar`` symbol (any declaration level) is a
     CONSTANT; a ``Graded(0)`` symbol is a function (``functions(...)``);
     anything else (undeclared, graded ≠ 0) has no model."""
     reg = env.registry
     if reg is None:
         raise Unsupported("Symbol[no-registry]", path)
-    # the SAME ℝ-constant as the engine's is_real_constant (exact
-    # Scalar on the atom, no Graded(k ≠ 0); audit 0b00e1b M1-1) —
-    # restated from the registry data, the oracle imports no engine
-    # logic (SPEC §1): a class/predicate-level Scalar is not a constant
-    g = reg.get(e, Graded)
-    if reg.declared_exact(e, Scalar) and (g is None or g.degree.as_int() == 0):
+    if _declared_constant(e, env):
         return env.model.constant(("Symbol", e.name))
+    g = reg.peek(e, Graded)
     if g is not None:
         if g.degree.as_int() == 0:
             return env.model.function(("Symbol", e.name))
@@ -660,6 +670,8 @@ def _form(e, env, path):
     p = env.degree(e.degree, path)
     if p < 0:
         raise Unsupported("Form[negative degree]", path)
+    if p == 0 and _declared_constant(e, env):
+        return env.model.constant(("Form", e.name))
     if not _is_tm(e):
         return _eform_atom(e, env, p, path)
     return norm(env.model.form(e.name, p), env.R)
@@ -671,6 +683,8 @@ def _pvector(e, env, path):
     p = env.degree(e.degree, path)
     if p < 0:
         raise Unsupported("PVector[negative degree]", path)
+    if p == 0 and _declared_constant(e, env):
+        return env.model.constant(("PVector", e.name))
     return norm(env.model.multivector(e.name, p), env.R)
 
 

@@ -253,13 +253,14 @@ def test_m1_1_a_constant_commutes_even_with_a_noncommuting_operator():
     E = vector_fields("E")[0]
     reg.declare_for_class(type(E), NonCommuting())
     assert sort_product(Product(E, c), reg)[0] == Product(c, E)
-    # a class-level Scalar is NOT a constant: it does not jump operators
+    # a class-level Scalar is a constant too (one contract): it jumps
+    # operators, and the sort key agrees with the swap
     reg2 = PropertyRegistry()
     from jacopy.core.properties import Scalar
 
     reg2.declare_for_class(Symbol, Scalar())
     z = Symbol("z")
-    assert sort_product(Product(E, z), reg2)[0] == Product(E, z)
+    assert sort_product(Product(E, z), reg2)[0] == Product(z, E)
 
 
 def test_m1_1_scalar_constant_commutes_and_is_annihilated_consistently():
@@ -414,34 +415,37 @@ def test_m1_1_poisson_hamiltonian_on_a_scalar_does_not_crash():
     show_equal(Act(P.hamiltonian(f), c), Integer(0), registry=reg, engine=eng)
 
 
-def test_m1_1_only_an_exact_scalar_atom_is_a_constant():
+def test_m1_1_scalar_at_any_level_is_a_constant():
+    # chef decision A/B: ONE meaning — Scalar declared exactly, per class
+    # or per predicate is an ℝ-constant; contradictions are refused at
+    # every level by the effective answers
     from jacopy.algebra.derivation import Act, Derivation
     from jacopy.algorithms.product_rule import product_rule
     from jacopy.central.calculus.scalars import is_real_constant
     from jacopy.core.properties import Scalar, ScalarContractError
 
     D = Derivation("D", degree=1)
-    # class-level Scalar vs an exact Graded(1): refused either order
     reg = PropertyRegistry()
     reg.declare_for_class(Symbol, Scalar())
-    with pytest.raises(ScalarContractError):
+    with pytest.raises(ScalarContractError):      # deliberate contract change
         reg.declare(Symbol("w"), Graded(1))
+    z = Symbol("z")
+    assert is_real_constant(z, reg)
+    assert product_rule(Act(D, z), reg) == Integer(0)
     reg = PropertyRegistry()
     reg.declare(Symbol("w"), Graded(1))
     with pytest.raises(ScalarContractError):
         reg.declare_for_class(Symbol, Scalar())
-    # a predicate-level Scalar cannot be cross-checked: it is simply
-    # not trusted as a constant
+    with pytest.raises(ScalarContractError):
+        reg.declare_for_predicate(lambda e: isinstance(e, Symbol), Scalar())
     reg = PropertyRegistry()
-    w = Symbol("w")
-    reg.declare(w, Graded(1))
     reg.declare_for_predicate(lambda e: isinstance(e, Symbol), Scalar())
-    assert not is_real_constant(w, reg)
-    assert product_rule(Act(D, w), reg) == Act(D, w)
-    # a Scalar on a composite is not a constant atom either
+    with pytest.raises(ScalarContractError):
+        reg.declare(Symbol("w"), Graded(1))
+    assert is_real_constant(Symbol("q"), reg)
+    # a Scalar on a composite is not a constant atom
     c = Symbol("c")
-    reg.declare(c, Scalar())
-    assert is_real_constant(c, reg) and not is_real_constant(Product(c, c), reg)
+    assert not is_real_constant(Product(c, c), reg)
 
 
 def test_m1_1_leibniz_proofs_do_not_accumulate_scalar_reads():
@@ -713,9 +717,10 @@ def test_derived_strategy_message_names_the_base_shift():
         DerivedBracketStrategy().prove_jacobi(br, *syms, registry=reg)
 
 
-def test_oracle_models_only_exact_scalars_as_constants():
+def test_oracle_models_scalars_at_any_level_as_constants():
     pytest.importorskip("sympy")
     from jacopy.algebra.derivation import Act
+    from jacopy.central.objects import forms
     from jacopy.core.properties import Scalar
     from jacopy.oracle.check import check_equal
 
@@ -723,7 +728,101 @@ def test_oracle_models_only_exact_scalars_as_constants():
     reg = PropertyRegistry()
     reg.declare_for_class(Symbol, Scalar())
     z = Symbol("z")
-    assert check_equal(Act(X, z), Integer(0), registry=reg, owners=[]).verdict != "AGREE"
-    reg2 = PropertyRegistry()
-    reg2.declare(z, Scalar())
-    assert check_equal(Act(X, z), Integer(0), registry=reg2, owners=[]).verdict == "AGREE"
+    assert check_equal(Act(X, z), Integer(0), registry=reg, owners=[]).verdict == "AGREE"
+    (h,) = forms("h", degree=0)
+    reg.declare(h, Scalar())
+    assert check_equal(Act(X, h), Integer(0), registry=reg, owners=[]).verdict == "AGREE"
+    (k,) = forms("k", degree=0)
+    assert check_equal(Act(X, k), Integer(0), registry=reg, owners=[]).verdict == "DISAGREE"
+
+
+def test_scalar_facts_travel_with_citations():
+    # chef decision C — probe 1: D(x) = 0 proved with x Scalar must not
+    # be citable where x is a function; probe 2: an operator identity
+    # proved by dropping a "constant" generator c must not be citable
+    # where c is a function
+    from jacopy.algebra.derivation import Act, Derivation
+    from jacopy.core.properties import Scalar
+    from jacopy.proof.expansion import ExpansionEngine
+    from jacopy.proof.result import prove
+    from jacopy.proof.theorems import Theorem, check_citation, TheoremDefinition
+    from jacopy.proof.verifier import prove_operator_equation
+
+    D, x = Derivation("D", degree=0), Symbol("x")
+    src = PropertyRegistry()
+    src.declare(x, Scalar())
+    tgt = PropertyRegistry()
+    tgt.declare(x, Graded(0))
+    r = prove(ExpansionEngine(), Act(D, x), Integer(0), registry=src)
+    assert r.closed
+    thm = Theorem("dx0", "D(x) = 0", Act(D, x), Integer(0), r.chain).with_structural_requires()
+    eng = ExpansionEngine([TheoremDefinition(thm)])
+    assert not check_citation(thm, eng, registry=tgt).ok
+    assert prove(eng, Act(D, x), Integer(0), registry=tgt).status == "RESIDUAL"
+    assert check_citation(thm, eng, registry=src).ok
+
+    # probe 2: D1, D2 agree on f (both 0) — c is dropped as a constant
+    D1, D2 = Derivation("D1", degree=0), Derivation("D2", degree=0)
+    f, c = Symbol("f"), Symbol("c")
+
+    class Alg:
+        generators = (f, c)
+
+    from jacopy.proof.expansion import Definition
+
+    class Kill(Definition):
+        name = "D1(f)=D2(f)=0"
+        anchor = Act
+
+        def matches(self, e):
+            return isinstance(e, Act) and e.op in (D1, D2) and e.arg == f
+
+        def rewrite(self, e):
+            return Integer(0)
+
+    src = PropertyRegistry()
+    src.declare(f, Graded(0))
+    src.declare(c, Scalar())
+    chain = prove_operator_equation(D1, D2, Alg(), registry=src, engine=ExpansionEngine([Kill()]))
+    thm2 = Theorem("d1d2", "D1 = D2", D1, D2, chain).with_structural_requires()
+    assert any(fct.expr == c and fct.prop_cls is Scalar for fct in thm2.registry_facts)
+    tgt = PropertyRegistry()
+    tgt.declare(f, Graded(0))
+    tgt.declare(c, Graded(0))
+    eng2 = ExpansionEngine([Kill(), TheoremDefinition(thm2)])
+    assert not check_citation(thm2, eng2, registry=tgt).ok
+    assert check_citation(thm2, eng2, registry=src).ok
+
+
+def test_derived_bracket_degree_and_undeterminable_generator():
+    # chef decision D/E
+    from jacopy.algebra.derivation import Derivation, degree_of
+    from jacopy.brackets.derived import DerivedBracket
+    from jacopy.central.objects import forms
+    from jacopy.proof.strategies import DerivedBracketStrategy
+
+    reg = PropertyRegistry()
+    f, g = functions("f g", registry=reg)
+    pi = PVector("pi", degree=2)
+    P = DerivedBracket(SN, pi)
+    assert P.degree.as_int() == 0 and degree_of(P(f, g), reg).as_int() == 0
+    K = DerivedBracket(SN, pi, acting_on=Derivation("π♯", degree=0))
+    a, b = forms("alpha beta", degree=1)
+    assert K.degree.as_int() == -1 and degree_of(K(a, b), reg).as_int() == 1
+    # Q's degree needs a registry: symbolic, never a silent 0
+    Q = Symbol("Q")
+
+    class _Comm(GradedBracket):
+        def __init__(self):
+            super().__init__("comm", degree=0, satisfies_graded_jacobi=True)
+
+        def expand(self, a, b, registry=None):
+            return a * b - b * a
+
+    br = DerivedBracket(_Comm(), Q)
+    assert br.degree_Q.as_int() is None
+    syms = [Symbol(n) for n in "ABC"]
+    for s_ in syms:
+        reg.declare(s_, Graded(0))
+    with pytest.raises(ProofFailure, match="must be ODD"):
+        DerivedBracketStrategy().prove_jacobi(br, *syms, registry=reg)
