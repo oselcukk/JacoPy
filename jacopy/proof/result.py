@@ -340,7 +340,7 @@ def _hashable(x):
         return repr(x)
 
 
-def _whole_step(before: Expr, after: Expr, local: ProofStep) -> ProofStep:
+def _whole_step(before: Expr, after: Expr, local: ProofStep, *, at_site: bool = False) -> ProofStep:
     """A whole-expression step carrying the engine's local step (a
     subterm rewrite) as its child; the same rule, tag, owner, role and
     citation, so classification is unchanged."""
@@ -352,13 +352,12 @@ def _whole_step(before: Expr, after: Expr, local: ProofStep) -> ProofStep:
         cites=getattr(local, "cites", None), key=getattr(local, "key", None),
         registry_facts=getattr(local, "registry_facts", ()),
     )
-    # minted only when the local step is and the wrapper IS its
-    # substitution into ``before`` (review 2026-10-01 #3)
-    if is_minted(local):
-        from jacopy.proof.replay import _replace_first
-
-        if _replace_first(before, local.before, local.after) == after:
-            _mint(wrapper)
+    # minted only when the local step is AND the caller's own rewrite
+    # produced ``after`` at the local step's site (``at_site``: the
+    # engine's expand_once / the search's path rewrite) — review
+    # 2026-10-01 #3, r3 #4: no first-occurrence guess, no extra walk
+    if at_site and is_minted(local):
+        _mint(wrapper)
     return wrapper
 
 
@@ -685,6 +684,13 @@ def _tracked_simplify(expr: Expr, registry):
 
 def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simplify_normal_forms, oracle):
 
+    from jacopy.proof.expansion import ExpansionEngine
+
+    # the library engine's expand_once returns the whole expression
+    # rewritten at the step's site; an engine overriding it is not
+    # trusted to (the wrapper is then not minted)
+    engine_rewrites_at_site = getattr(type(engine), "expand_once", None) is ExpansionEngine.expand_once
+
     def run(expr: Expr, cap: int):
         steps: List[ProofStep] = []
         cur = expr
@@ -695,7 +701,7 @@ def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simpl
             # the engine's step is LOCAL (the rewritten subterm); the
             # result's chain is a whole-expression transcript, so wrap it
             # — the local step rides along as the child that names the site
-            steps.append(_whole_step(cur, nxt, step))
+            steps.append(_whole_step(cur, nxt, step, at_site=engine_rewrites_at_site))
             cur = nxt
         else:
             nxt, step = engine.expand_once(cur)

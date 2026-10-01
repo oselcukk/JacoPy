@@ -533,3 +533,14 @@ class TestReviewRound3:
         step = ProofStep(x, x, rule="cite lemma", provenance_tag="theorem", cites=lemma)
         req, _ = _classify((step,))
         assert [a for a in req if a.kind == "structure" and a.owner is E]
+
+    def test_search_move_at_a_later_occurrence_is_minted(self):
+        # cb078f8: _whole_step minted by first-occurrence replay, so the
+        # search's (correct) rewrite of the SECOND a in a·a was unminted
+        from jacopy.proof.search import _definition_moves
+        from jacopy.proof.step import is_minted
+
+        a, b = Symbol("a"), Symbol("b")
+        moves = _definition_moves(ExpansionEngine([ExplicitAssumption(a, b)]), Product(a, a))
+        assert {m[0] for m in moves} == {Product(b, a), Product(a, b)}
+        assert all(is_minted(step) for _, step in moves)
