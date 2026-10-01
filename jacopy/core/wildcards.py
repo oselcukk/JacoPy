@@ -215,9 +215,34 @@ class _MatchBindings(dict):
     def __repr__(self) -> str:
         return repr(_public(self))
 
+    # the private entry never shows through the mapping interface; the
+    # matcher reads it with dict.get and snapshots with dict.copy
+    def __iter__(self):
+        return (k for k in dict.__iter__(self) if k != _SCOPED)
+
+    def __len__(self) -> int:
+        return dict.__len__(self) - (1 if dict.__contains__(self, _SCOPED) else 0)
+
+    def __contains__(self, k) -> bool:
+        return k != _SCOPED and dict.__contains__(self, k)
+
+    def keys(self):
+        return _public(self).keys()
+
+    def items(self):
+        return _public(self).items()
+
+    def values(self):
+        return _public(self).values()
+
+    def copy(self):
+        out = _MatchBindings()
+        dict.update(out, dict.copy(self))
+        return out
+
 
 def _public(d: dict) -> dict:
-    return {k: v for k, v in d.items() if k != _SCOPED}
+    return {k: v for k, v in dict.items(d) if k != _SCOPED}
 
 
 def _mentions(value: Any, atom: Expr) -> bool:
@@ -331,20 +356,43 @@ def _match_indexed_sum(pattern, target, bindings, registry) -> bool:
             body = target.with_dummy(pd).body
         dummy = pd
     dname = pd.name if isinstance(pd, Wildcard) else None
+    key = _binder_key(pd)
     names = wildcard_names(pattern.body)
+    marks = bindings.get(_SCOPED, {})
+
+    def scoped_here(n):
+        # already bound INSIDE another Σ whose dummy is this same atom
+        return any(d == dummy for d, _ in marks.get(n, ()))
+
     for n in names:
-        if n != dname and n in bindings and _mentions(bindings[n], dummy):
+        if (
+            n != dname and n in bindings and _mentions(bindings[n], dummy)
+            and not scoped_here(n)
+        ):
             return False
     before = set(bindings)
     if not _match(pattern.body, body, bindings, registry):
         return False
     scoped = dict(bindings.get(_SCOPED, {}))
     for n in names | ({dname} if dname else set()):
-        if (n not in before or n == dname) and n in bindings and _mentions(bindings[n], dummy):
-            scoped[n] = scoped.get(n, frozenset()) | {dummy}
+        if n not in bindings or not _mentions(bindings[n], dummy):
+            continue
+        if n == dname and n in before and not scoped_here(n):
+            # ?D was bound OUTSIDE to a free atom (lie(?D, Σ_{?D} ?f)):
+            # that occurrence is free, not this binder's
+            continue
+        if n not in before or n == dname or scoped_here(n):
+            scoped[n] = scoped.get(n, frozenset()) | {(dummy, key)}
     if scoped:
         bindings[_SCOPED] = scoped
     return True
+
+
+def _binder_key(pd: Expr):
+    """Identity of a pattern binder: a wildcard dummy by its name (the
+    same ?D on both sides of a rule is the same binder), a concrete one
+    by its atom."""
+    return ("?", pd.name) if isinstance(pd, Wildcard) else ("=", pd)
 
 
 # --------------------------------------------------------------------- #
@@ -504,28 +552,28 @@ def _match_children_rec(
         # Try every length k in 0..remaining; leftmost-shortest first so
         # the match order is predictable and stable.
         for k in range(0, remaining + 1):
-            snapshot = dict(bindings)
+            snapshot = dict.copy(bindings)
             seq = tuple(ts[ti:ti + k])
             if _bind_sequence(p.name, seq, bindings):
                 if _match_children_rec(
                     ps, pi + 1, ts, ti + k, bindings, registry
                 ):
                     return True
-            bindings.clear()
-            bindings.update(snapshot)
+            dict.clear(bindings)
+            dict.update(bindings, snapshot)
         return False
 
     if ti == len(ts):
         return False
 
-    snapshot = dict(bindings)
+    snapshot = dict.copy(bindings)
     if _match(p, ts[ti], bindings, registry):
         if _match_children_rec(
             ps, pi + 1, ts, ti + 1, bindings, registry
         ):
             return True
-    bindings.clear()
-    bindings.update(snapshot)
+    dict.clear(bindings)
+    dict.update(bindings, snapshot)
     return False
 
 
@@ -591,20 +639,21 @@ def substitute(pattern: Expr, bindings: Bindings) -> Expr:
     handler), raises :class:`PayloadSubstitutionError` — never a
     silent literal ``?G`` in the result.
     """
-    return _subst(pattern, bindings, frozenset())
+    return _subst(pattern, bindings, {})
 
 
-def _scoped_ok(name: str, bindings: Bindings, scope: frozenset) -> None:
-    need = bindings.get(_SCOPED, {}).get(name, frozenset())
-    if not need <= scope:
+def _scoped_ok(name: str, bindings: Bindings, scope) -> None:
+    """A value matched inside a Σ may only be placed under a binder that
+    is the SAME binder (key) with the same current dummy atom."""
+    marks = bindings.get(_SCOPED, {}).get(name, frozenset())
+    if marks and not any(scope.get(k) == d for d, k in marks):
         raise BinderEscapeError(
-            f"?{name} mentions the bound dummy "
-            f"{', '.join(d._repr_inner() for d in need - scope)} and would "
-            "be placed outside its binder"
+            f"?{name} mentions a bound dummy and would be placed outside "
+            "its binder"
         )
 
 
-def _subst(pattern: Expr, bindings: Bindings, scope: frozenset) -> Expr:
+def _subst(pattern: Expr, bindings: Bindings, scope: dict) -> Expr:
     if isinstance(pattern, Wildcard):
         bound = bindings.get(pattern.name)
         if bound is None or isinstance(bound, tuple):
@@ -642,7 +691,7 @@ def _subst(pattern: Expr, bindings: Bindings, scope: frozenset) -> Expr:
     # carries its bracket outside children) reconstruct correctly.
     rebuilt = pattern._rebuild(tuple(new_children))
     if _payload_has_wildcard(_pattern_payload(pattern)):
-        rebuilt = _substitute_payload(rebuilt, bindings)
+        rebuilt = _substitute_payload(rebuilt, bindings, scope)
     return rebuilt
 
 
@@ -662,14 +711,17 @@ def _fresh_like(atom: Expr, avoid) -> Expr:
     raise BinderEscapeError("no fresh dummy name")  # pragma: no cover
 
 
-def _subst_indexed_sum(pattern, bindings: Bindings, scope: frozenset) -> Expr:
-    """Capture-avoiding substitution under a Σ binder: when a value
-    that is NOT bound by this Σ (a free term from elsewhere) mentions
-    the binder's dummy, the dummy is renamed to a fresh atom (in the
-    pattern body and in the values scoped to it)."""
+def _subst_indexed_sum(pattern, bindings: Bindings, scope: dict) -> Expr:
+    """Capture-avoiding substitution under a Σ binder. The binder is
+    renamed to a fresh atom when a value placed in its body mentions its
+    dummy WITHOUT being bound by this very binder (a free term, or a
+    term bound by another binder that happens to use the same atom —
+    Σ_i F(i)·Σ_i G(i) → Σ_i Σ_i F(i)G(i) would capture). Values bound
+    by this binder are renamed with it."""
     from jacopy.core.indexed_sum import IndexedSum
 
     pd = pattern.dummy
+    key = _binder_key(pd)
     if isinstance(pd, Wildcard):
         dummy = bindings.get(pd.name)
         if dummy is None or isinstance(dummy, tuple):
@@ -680,40 +732,43 @@ def _subst_indexed_sum(pattern, bindings: Bindings, scope: frozenset) -> Expr:
             )
     else:
         dummy = pd
-    scoped = bindings.get(_SCOPED, {})
-    names = wildcard_names(pattern.body)
-    values = [bindings[n] for n in names if n in bindings and n != getattr(pd, "name", None)]
-    free_clash = [
+    marks = bindings.get(_SCOPED, {})
+    own = getattr(pd, "name", None) if isinstance(pd, Wildcard) else None
+    names = [n for n in wildcard_names(pattern.body) if n in bindings and n != own]
+    clash = [
         n for n in names
-        if n in bindings and n != getattr(pd, "name", None)
-        and dummy not in scoped.get(n, frozenset())
+        if (dummy, key) not in marks.get(n, frozenset())
         and _mentions(bindings[n], dummy)
     ]
     body_pat = pattern.body
-    if free_clash:
+    if clash:
         flat = []
-        for v in values:
+        for n in names:
+            v = bindings[n]
             flat.extend(v if isinstance(v, tuple) else (v,))
         fresh = _fresh_like(dummy, flat + [body_pat])
-        new_b = _MatchBindings(bindings)
-        new_scoped = {}
-        for n, ds in scoped.items():
-            if dummy in ds:
+        new_b = _MatchBindings()
+        dict.update(new_b, dict.copy(bindings))
+        new_marks = {}
+        for n, ms in marks.items():
+            if (dummy, key) in ms:
                 v = bindings.get(n)
                 if isinstance(v, tuple):
                     new_b[n] = tuple(x.substitute_atom(dummy, fresh) for x in v)
                 elif isinstance(v, Expr):
                     new_b[n] = v.substitute_atom(dummy, fresh)
-                ds = (ds - {dummy}) | {fresh}
-            new_scoped[n] = ds
-        if new_scoped:
-            new_b[_SCOPED] = new_scoped
+                ms = (ms - {(dummy, key)}) | {(fresh, key)}
+            new_marks[n] = ms
+        if new_marks:
+            new_b[_SCOPED] = new_marks
         if isinstance(pd, Wildcard):
             new_b[pd.name] = fresh
         else:
             body_pat = body_pat.substitute_atom(pd, fresh)
         bindings, dummy = new_b, fresh
-    body = _subst(body_pat, bindings, scope | {dummy})
+    inner = dict(scope)
+    inner[key] = dummy
+    body = _subst(body_pat, bindings, inner)
     return IndexedSum(dummy, pattern.range_, body)
 
 
@@ -748,15 +803,17 @@ def _payload_has_wildcard(pk: Any) -> bool:
     return False
 
 
-def _fill(e: Expr, bindings: Bindings) -> Expr:
+def _fill(e: Expr, bindings: Bindings, scope=None) -> Expr:
     if not wildcard_names(e) <= set(bindings):
         raise PayloadSubstitutionError(
             f"unbound payload wildcard in {e._repr_inner()}"
         )
-    return substitute(e, bindings)
+    return _subst(e, bindings, scope or {})
 
 
-def _substitute_payload(node: Expr, bindings: Bindings) -> Expr:
+def _substitute_payload(node: Expr, bindings: Bindings, scope=None) -> Expr:
+    # ``scope``: the enclosing Σ binders, so a payload hole under a
+    # binder may use values bound by it (review: was lost)
     hook = getattr(type(node), "_substitute_payload", None)
     if hook is not None:
         return hook(node, bindings)
@@ -764,14 +821,14 @@ def _substitute_payload(node: Expr, bindings: Bindings) -> Expr:
     from jacopy.core.indexed_sum import IndexedSum
 
     if isinstance(node, IndexedSum):
-        dummy = _fill(node.dummy, bindings)
+        dummy = _fill(node.dummy, bindings, scope)
         if not dummy.is_atom:
             raise PayloadSubstitutionError(
                 "an IndexedSum dummy must be bound to an atom"
             )
         return IndexedSum(dummy, node.range_, node.body)
     if isinstance(node, HodgeStar):
-        return HodgeStar(node.arg, node.dim, metric=_fill(node.metric, bindings))
+        return HodgeStar(node.arg, node.dim, metric=_fill(node.metric, bindings, scope))
     raise PayloadSubstitutionError(
         f"{type(node).__name__} has a wildcard in its payload but no "
         "payload substitution"

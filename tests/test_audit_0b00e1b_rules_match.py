@@ -569,3 +569,66 @@ def test_two_sigmas_sharing_a_wildcard_dummy_match_up_to_alpha():
     b = match(pat, t)
     assert b is not None and b["D"] == i and b["B"] == G(i)
     assert substitute(pat, b) == t
+
+
+# --------------------------------------------------------------------- #
+# merge-gate review of 203124b: binder IDENTITY, not atom name           #
+# --------------------------------------------------------------------- #
+
+
+def test_cauchy_product_of_same_named_sums_does_not_capture():
+    # Σ_{?D}?f · Σ_{?E}?g → Σ_{?D}Σ_{?E}(?f·?g) on Σ_i F(i)·Σ_i G(i):
+    # both dummies are i but different binders; Σ_i Σ_i F(i)G(i) would
+    # let the inner Σ capture F's i (n = 2, F = G = id: 9 ≠ 10). At
+    # 203124b: CLOSED (main: RESIDUAL).
+    i, j, F, D, A, B = _sigma_setup()
+    G = lambda x: Act(Derivation("G"), x)  # noqa: E731
+    E, f, g = Wildcard("E"), Wildcard("f"), Wildcard("g")
+    rule = Rule(
+        Product(IndexedSum(D, None, f), IndexedSum(E, None, g)),
+        IndexedSum(D, None, IndexedSum(E, None, Product(f, g))),
+    )
+    t = Product(IndexedSum(i, None, F(i)), IndexedSum(i, None, G(i)))
+    out = rule.try_at(t)
+    assert out == IndexedSum(j, None, IndexedSum(i, None, Product(F(j), G(i))))  # α-equal
+    _closes_wrongly(rule, t, IndexedSum(i, None, IndexedSum(i, None, Product(F(i), G(i)))))
+
+
+def test_wildcard_reused_across_same_named_sums_still_matches():
+    # lie(Σ_i ?f, Σ_i ?f) → 0 on lie(Σ_i F(i), Σ_i F(i)) (a true
+    # antisymmetry instance): main CLOSED; at 203124b falsely RESIDUAL
+    i, j, F, D, A, B = _sigma_setup()
+    br = _CommBracket()
+    f = Wildcard("f")
+    rule = Rule(br(IndexedSum(i, None, f), IndexedSum(i, None, f)), Integer(0))
+    t = br(IndexedSum(i, None, F(i)), IndexedSum(i, None, F(i)))
+    assert match(br(IndexedSum(i, None, f), IndexedSum(i, None, f)), t) == {"f": F(i)}
+    assert prove(ExpansionEngine([_RuleAdapter(rule)]), t, Integer(0)).status == "CLOSED"
+
+
+def test_free_dummy_wildcard_and_payload_under_binder():
+    # ?D bound OUTSIDE to a free atom is not this binder's (false reject
+    # at 203124b), and a payload hole under a Σ keeps the binder scope
+    i, j, F, D, A, B = _sigma_setup()
+    f = Wildcard("f")
+    br = _CommBracket()
+    swap = Rule(br(D, IndexedSum(D, None, f)), br(IndexedSum(D, None, f), D))
+    assert swap.try_at(br(i, IndexedSum(i, None, F(i)))) == br(IndexedSum(i, None, F(i)), i)
+    pat = IndexedSum(D, None, HodgeStar(f, 3, metric=f))
+    t = IndexedSum(i, None, HodgeStar(F(i), 3, metric=F(i)))
+    assert substitute(pat, match(pat, t)) == t
+
+
+def test_match_bindings_hide_the_private_entry():
+    i, j, F, D, A, B = _sigma_setup()
+    b = match(IndexedSum(D, None, Wildcard("f")), IndexedSum(i, None, F(i)))
+    assert sorted(b) == ["D", "f"] and len(b) == 2
+    assert set(b.keys()) == {"D", "f"} and dict(b.items()) == {"D": i, "f": F(i)}
+
+
+def test_sequence_binding_used_as_single_hole_never_fires():
+    # (?*r + x) → ?r: the sequence binding cannot fill a single hole;
+    # the result kept a literal ?r (main too)
+    x = Symbol("x")
+    rule = Rule(Sum(SeqWildcard("r"), x), Wildcard("r"))
+    assert rule.try_at(Sum(Symbol("a"), Symbol("b"), x)) is None
