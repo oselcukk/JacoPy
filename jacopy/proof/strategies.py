@@ -597,19 +597,17 @@ class DerivedBracketStrategy:
             # cyclic goal below; mixing conventions let six
             # unshifted checks certify a non-zero unshifted goal
             # (2026-09-08 second re-audit).
-            k = bracket.degree
+            # (the sign comes from the bracket's own hook,
+            # ``pair_swap_sign``: ε = −(−1)^{s(x)s(y)}, s = |·| + k)
             try:
-                pxy = (
-                    (degree_of(x, registry) + k)
-                    * (degree_of(y, registry) + k)
-                ).parity()
+                eps = bracket.pair_swap_sign(x, y, registry)
             except ValueError as exc:
                 raise ProofFailure(
                     "DerivedBracketStrategy: cannot certify "
                     "skewness — undeterminable degree in pair "
                     f"({x!r}, {y!r}): {exc}"
                 )
-            if pxy is None:
+            if eps is None:
                 raise ProofFailure(
                     "DerivedBracketStrategy: cannot certify "
                     "skewness — symbolic sign parity for pair "
@@ -618,7 +616,7 @@ class DerivedBracketStrategy:
             xy = bracket.expand(x, y, registry)
             yx = bracket.expand(y, x, registry)
             return simplify(
-                Sum(xy, yx if pxy == 0 else Neg(yx)), registry
+                Sum(xy, yx if eps == -1 else Neg(yx)), registry
             )
 
         skew_pairs = [

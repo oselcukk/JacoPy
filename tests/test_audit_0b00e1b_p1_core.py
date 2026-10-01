@@ -396,3 +396,31 @@ def test_m1_1_registry_refuses_contradictory_scalar_declarations():
     reg.declare(Symbol("x"), Graded(0))
     reg.declare(Symbol("y"), Graded(Degree.var("k")))
     reg.declare(Symbol("y"), Scalar())
+
+
+def test_derived_bracket_skew_sign_comes_from_pair_swap_sign():
+    # chef (v): DerivedBracketStrategy._skew_defect reads its sign from
+    # bracket.pair_swap_sign — the same value as the former hand-written
+    # ((|x|+k)(|y|+k)) parity, k = |Q| + 2|base|
+    from jacopy.brackets.derived import DerivedBracket
+    from jacopy.algebra.derivation import degree_of
+
+    class _Comm(GradedBracket):
+        def __init__(self):
+            super().__init__("comm", degree=0)
+
+        def expand(self, a, b, registry=None):
+            return a * b - b * a
+
+    reg = PropertyRegistry()
+    syms = []
+    for d in range(3):
+        s = Symbol(f"g{d}")
+        reg.declare(s, Graded(d))
+        syms.append(s)
+    for dq in (0, 1, 2):
+        br = DerivedBracket(_Comm(), Symbol("Q"), degree_Q=dq)
+        k = br.degree
+        for x, y in iproduct(syms, repeat=2):
+            old = ((degree_of(x, reg) + k) * (degree_of(y, reg) + k)).parity()
+            assert br.pair_swap_sign(x, y, reg) == (-1 if old == 0 else 1)
