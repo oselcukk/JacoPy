@@ -300,3 +300,46 @@ class TestModuloRecordsAssumptions:
         assert res.closed and any("P = (-Q)" in a.name for a in res.declared)
         thm = Theorem("pq0", "P + Q = 0", Sum(P, Q), Integer(0), res.chain).with_structural_requires()
         assert any(a.kind == "declared" and "P = (-Q)" in a.name for a in thm.requires)
+
+
+# --------------------------------------------------------------------- #
+# code-review probes (2026-10-01, high) — each closed wrongly on this    #
+# branch's earlier commits (8b498a2 and before)                         #
+# --------------------------------------------------------------------- #
+
+
+class TestReviewProbes:
+    def _modulo_engine(self):
+        y = Symbol("y")
+        r = prove(ExpansionEngine(), Sum(y, Neg(y)), Integer(0))
+        t = Theorem("ysub", "y - y = 0", Sum(y, Neg(y)), Integer(0), r.chain).with_structural_requires()
+        b, c = Symbol("b"), Symbol("c")
+        return b, c, ExpansionEngine([TheoremDefinition(t, modulo=ExpansionEngine([ExplicitAssumption(b), ExplicitAssumption(c)]))])
+
+    @pytest.mark.parametrize("shape", ["product", "neg"])
+    def test_modulo_citation_at_a_subterm_keeps_its_assumptions(self, shape):
+        # 8b498a2: prove(outer, z·(b+c), 0) closed "assumption-free" with
+        # requires == () and the record was chain_replayed / citable
+        b, c, outer = self._modulo_engine()
+        z = Symbol("z")
+        goal = Product(z, Sum(b, c)) if shape == "product" else Neg(Sum(b, c))
+        res = prove(outer, goal, Integer(0))
+        assert res.closed
+        names = {a.name for a in res.declared}
+        assert {"explicit assumption: b = 0", "explicit assumption: c = 0"} <= names
+        assert "assumption-free" not in res.summary()
+        thm = Theorem("sub", "z(b+c) = 0", goal, Integer(0), res.chain).with_structural_requires()
+        assert {"explicit assumption: b = 0", "explicit assumption: c = 0"} <= {a.name for a in thm.requires if a.kind == "declared"}
+        assert not check_citation(thm, ExpansionEngine(), registry=None).ok   # the assumptions are not registered there
+
+    def test_unreadable_registry_record_is_not_dropped(self):
+        # 8b498a2: _classify deleted a registry record it could not parse
+        from jacopy.proof.result import Assumption, _classify
+
+        x = Symbol("x")
+        fake = Theorem("lemma", "x = x", x, x, ProofChain())
+        object.__setattr__(fake, "requires", (Assumption("registry", "registry declaration: something", key=None),))
+        object.__setattr__(fake, "requires_verified", True)
+        cite_step = ProofStep(x, x, rule="cite lemma", provenance_tag="theorem", cites=fake)
+        req, _ = _classify((cite_step,))
+        assert any(a.legacy and "unverifiable registry requirement" in a.name for a in req)

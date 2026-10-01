@@ -256,8 +256,17 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                 kind = "canonicalization" if any(low.startswith(c) or f" {c}" in low for c in _CANONICAL_RULES) else "engine-step"
                 bump(provenance, kind, s.rule, owner)
             # a whole-expression wrapper carries its local step as the only
-            # child with the same rule: that child is the same event
-            kids = [c for c in s.children if not (len(s.children) == 1 and c.rule == s.rule and c.provenance_tag == tag)]
+            # child: that child is the SAME event (same rule and metadata)
+            # and is not counted twice — but ITS children (a modulo
+            # citation's recorded normalization, a foundational sub-proof)
+            # are always visited: skipping the wrapper's twin must never
+            # drop a sub-step's requirements (review 2026-10-01 #1)
+            kids = []
+            for c in s.children:
+                if len(s.children) == 1 and _same_event(c, s):
+                    kids.extend(c.children)
+                else:
+                    kids.append(c)
             visit(kids)
 
     visit(steps)
@@ -266,11 +275,20 @@ def _classify(steps: Iterable[ProofStep], principal=None):
     # registry records arrived through its requires above
     from jacopy.proof.registry_facts import facts_of, requirement_records, step_facts
 
-    cited_registry = facts_of(
-        [Assumption(k, n, o, c, ex, rk) for (k, n, o, c, ex, rk) in assumptions.values() if k == "registry"]
-    )
+    cited_registry = []
     for key in [k for k in assumptions if k[0] == "registry"]:
-        del assumptions[key]
+        k_, n_, o_, c_, ex_, rk_ = assumptions[key]
+        parsed = facts_of([Assumption(k_, n_, o_, c_, ex_, rk_)])
+        if parsed:
+            cited_registry.extend(parsed)
+            del assumptions[key]
+        else:
+            # a registry record whose facts cannot be read back cannot be
+            # checked at a citation: never dropped silently — legacy
+            # (review 2026-10-01 #5)
+            del assumptions[key]
+            bump(assumptions, "legacy", f"unverifiable registry requirement (no readable facts): {n_}", o_, ex_)
+    cited_registry = tuple(cited_registry)
     req = [Assumption(k, n, o, c, ex, rk) for (k, n, o, c, ex, rk) in assumptions.values()]
     req.extend(requirement_records(tuple(step_facts(steps)) + cited_registry))
     prov = [Provenance(k, n, o, c) for (k, n, o, c, _, _) in provenance.values()]
@@ -284,6 +302,19 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         text = f"{o!r}" + (f" declaring {sorted(decl)}" if decl is not None else "")
         req.append(Assumption("structure", text, o))
     return tuple(req), tuple(prov)
+
+
+def _same_event(child: ProofStep, parent: ProofStep) -> bool:
+    """``child`` is the local twin of the whole-expression wrapper
+    ``parent`` (:func:`_whole_step`): identical rule and metadata."""
+    return (
+        child.rule == parent.rule
+        and child.provenance_tag == parent.provenance_tag
+        and getattr(child, "role", None) == getattr(parent, "role", None)
+        and getattr(child, "key", None) == getattr(parent, "key", None)
+        and getattr(child, "owner", None) is getattr(parent, "owner", None)
+        and getattr(child, "cites", None) is getattr(parent, "cites", None)
+    )
 
 
 def _hashable(x):
