@@ -125,6 +125,7 @@ Uchino, K. (2002). *Remarks on the definition of a Courant algebroid* (arXiv:mat
 - KosmannSchwarzbach2004.secondary says "Çatal-Özer et al. (2025) ref. [90]" — WRONG: TW (2025) ref. [90] is Costa–Petalidou; "Derived brackets" is TW ref. **[67]** (twitss.txt:2780) and DD (2024) ref. **[90]** (drinfeld_double.txt:3376).
 
 ### ROADMAP.md fixes I would make (not edited)
+**Uygulandı (2026-10-01, fix/p1-roadmap; ROADMAP.md ana checkout'ta, yedek `ROADMAP.md.yedek-2026-10-01`):** beşi de uygulandı; `§5.30-5.39` ifadesi tüm geçişlerinde (2036, 2097, 2312, 2346, 2358, K4) `TW Eqs. (5.30)–(5.39)` oldu.
 - :1347 "| `uchino.pdf` | Uchino, math/0204010 …" → keep the file column but cite as "Uchino (2002), arXiv:math/0204010" in prose.
 - :1951 "(1 adım; eq 7.25 p=1 — …)" → "(1 adım; TW (7.25) p=1 — …)"
 - :1952-1953 "PDF 14g): `roytenberg_courant.py` — (5.2) Roytenberg'in" → "yönerge 14g): `roytenberg_courant.py` — TW (5.2) Roytenberg'in"
@@ -184,6 +185,7 @@ Uchino, K. (2002). *Remarks on the definition of a Courant algebroid* (arXiv:mat
 - No rule `name` was changed. No test asserted text that changed.
 
 ### ROADMAP.md fixes (not edited)
+**Uygulandı (2026-10-01, fix/p1-roadmap):** 282-284, 294 ve 1669 (+ O5) uygulandı. "Prop 6.1 / (7.9)" ROADMAP'te geçmiyor — değişiklik yok.
 - ROADMAP.md:282-284 "arXiv:2210.00548'in L1-L3, C1-C2, B1-B4, BC1-BC9 aksiyomlarının + Thm 9.1-9.3 (Ševera sınıflandırması)" → "literatur2.pdf'in kendi (makalede bulunmayan) L/C/B/BC1–BC9 numaralandırması; makalede yalnız Def 9.1 (pre-calculus), Thm 9.1, Thm 9.2, Cor 9.1 var — Theorem 9.3 ve 'Bourbaki calculus' (BC9: d²=0) yok (2210.00548 dipnot 13)".
 - ROADMAP.md:294 "3.F'nin (Bourbaki calculus BC1-BC9) doğrudan hedef listesi" → "3.F'nin (literatur2 BC1–BC9 proje-içi numaralandırması; 2210.00548 Def 9.1 ile yalnız BC4 içeriği örtüşür) hedef listesi".
 - ROADMAP.md:1669 (and any "E6 paper" line) → append "(kimliği belirsiz kaynak; repoda yok; numaralar doğrulanmadı; 2409.11973 numaraları değildir)".
@@ -271,6 +273,7 @@ Uchino, K. (2002). *Remarks on the definition of a Courant algebroid* (arXiv:mat
 8. Smoke check: `chain_sources` of `prove_left_leibniz_from_metric` lists B Def 4.2/4.3 (4.7)/(4.9), MC Def 4.1 (4.1), MC Def 3.1, B (4.11), B Def 4.3 (4.10). APA reference block renders.
 
 ### 4. ROADMAP.md fixes (not in the worktree; list only)
+**Uygulandı (2026-10-01, fix/p1-roadmap):** 370, 730, ADM (3.35) ve (3.44) işaret notları, "MC Prop 3.3" → "MC (3.19) + Proposition 3.3" (766, 1345, 1355) uygulandı. "MC Prop 3.2" ROADMAP'te geçmiyor. "in-repo *.pdf" maddesi uygulanmadı: ROADMAP'teki dosya→makale tablosu bilerek dosya adlıdır ve arXiv numaralarını zaten taşır.
 - ROADMAP:370 "[B Thm 4.1]" (and "Bourbaki §4.1") → "[B Section 4, remark after Definition 4.1, via (4.4)+(4.6)]".
 - ROADMAP:730 "[MC Def 3.2, 3.16, 3.24]" → "[MC Definition 3.2, Eqs. (3.16), (3.24)]".
 - ROADMAP:876-882 (E-Bianchi, ADM Prop 3.7): add "ADM (3.35) prints the (1−𝒫)Λ and [[u,v]^∇,w]^∇ blocks with +; definitions (3.12)/(3.13)/(3.20) give −; code sign is right (point-model counterexample)".
@@ -351,6 +354,7 @@ Uchino, K. (2002). *Remarks on the definition of a Courant algebroid* (arXiv:mat
   TW (7.25) with H; the declaration's master-equation link is name-level. Test `test_twisted_fi_kills_r_twist_h` docstring updated, body untouched.
 
 ### ROADMAP.md fixes (not in worktree — proposals only)
+**Uygulandı (2026-10-01, fix/p1-roadmap):** (5.13)↔Bianchi (1640), 4.51-53 (1695), DD (7.2)-(7.13) (1667), E6 künye notu (1669, O5) ve M4-3 (1739-1740, mekanik kapsam düzeltmesiyle) uygulandı. "(3.11) ⟺ H-twisted FI" ve block_matrix "covers every twist" ifadeleri ROADMAP'te geçmiyor — değişiklik yok.
 - ~1648-1650 "(5.13) H-closure = Bianchi d^∇F=0 — Faz 4 prove_bianchi_second citation'la süite bağlandı" → "(5.13) ↔ Bianchi: yalnız isim düzeyinde atıf (TW §8.3); mekanik bağ yok (V-M4 M4-2)".
 - 1601-1602/1610 "master denklem bağı (3.11) ⟺ H-twisted FI" → "twisted FI = TW (7.25) R′=0 (H'li); (3.11) (1,3) A-sektörü, bağ isimsel (M4-1)".
 - 1693-1694 "(eski not 4.51-53 yanlış hatırlamaymış)" → "TW (4.18)-(4.20) = DD (4.51)-(4.52); ikisi de doğru".

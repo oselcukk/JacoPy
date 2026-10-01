@@ -152,6 +152,19 @@ def derived_algebroid(
     )
 
 
+def derived_is_projected(base: Algebroid, derived: Algebroid) -> bool:
+    """``True`` for ``E^∇̂``, ``False`` for ``E^∇`` (the contexts
+    :func:`derived_algebroid` builds on ``base``); anything else is
+    refused — the bridge a derived context gets must be its own."""
+    for projected in (False, True):
+        if derived == derived_algebroid(base, projected=projected):
+            return projected
+    raise ValueError(
+        f"{derived.name!r} is not a derived context of {base.name!r} "
+        "(use derived_algebroid(base, projected=…))"
+    )
+
+
 def derived_engine(
     base: Algebroid,
     derived: Algebroid,
@@ -163,6 +176,11 @@ def derived_engine(
 ):
     """The base metric-affine engine + the derived context's Cartan
     rules (``IntrinsicD/L`` of ``calc_{E^∇}``) + the two bridges."""
+    if derived_is_projected(base, derived) != (projector is not None):
+        raise ValueError(
+            "derived context and projector disagree: E^∇̂ needs the "
+            "projector, E^∇ must not get one"
+        )
     projectors = (projector,) if projector is not None else ()
     engine = _engine(base, fr, registry, projectors=projectors)
     calc = algebroid_calculus(derived)

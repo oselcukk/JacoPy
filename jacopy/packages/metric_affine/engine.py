@@ -35,7 +35,9 @@ def metric_affine_engine(
     ``(Connection, Frame)`` pairs declaring frame completeness
     (``∇_{e_b}e_c = Σ_s Γ^s_bc e_s`` and ``[e_a,e_b] = Σ_s γ^s_ab e_s``)
     — the package's opt-in declaration mechanism (the tangent analogue
-    of the algebroid declaration system).
+    of the algebroid declaration system); with any decomposition the
+    capture-guarded metric push ``g(Σ_s V_s, Y) → Σ_s g(V_s, Y)`` is
+    registered too.
     """
     from jacopy.central.tangent.engine import tangent_engine
 
@@ -67,6 +69,7 @@ def metric_affine_engine(
         BracketFrameDecompositionDefinition,
         ConnectionFrameDecompositionDefinition,
         IndexedSumOperatorPushDefinition,
+        MetricIndexedSumPushDefinition,
     )
 
     # Declared (opt-in) rules first: precedence follows registration.
@@ -80,6 +83,10 @@ def metric_affine_engine(
         if fr not in seen_frames:
             seen_frames.add(fr)
             engine.register(BracketFrameDecompositionDefinition(fr))
+    if decompositions:
+        # the decomposed frame sums reach metric slots (``g(e_a,
+        # Σ_s Γ e_s)``): finite additivity, capture-guarded
+        engine.register(MetricIndexedSumPushDefinition())
     engine.register(IndexedSumOperatorPushDefinition())
     engine.register(ConnectionDirectionLinearityDefinition(registry))
     engine.register(ConnectionArgumentLeibnizDefinition(registry))

@@ -217,6 +217,17 @@ class InteriorAnticommuteDefinition(Definition):
         return core if sign else Neg(core)
 
 
+def _is_cartan_tm_d(op) -> bool:
+    """Is ``op`` the ``d`` of the TM Cartan calculus? The fundamental
+    identity is a statement about that calculus only; the shared
+    default-reject scope guard ``belongs_to`` (calculus OBJECT identity,
+    reserved ``Cartan-TM`` name) decides (audit 0B00E1B-FULL M3-1/M3-2)."""
+    from jacopy.central.calculus.bracket_calculus import belongs_to
+    from jacopy.central.tangent.exterior import CARTAN_TM
+
+    return belongs_to(op, CARTAN_TM)
+
+
 class FISharpPairingSwapDefinition(Definition):
     """THEOREM-tagged CONSEQUENCE of the declared FI (both
     orientations + Lie antisymmetry):
@@ -224,7 +235,10 @@ class FISharpPairingSwapDefinition(Definition):
         Π( d( ι_{Πa} b ) ) → −Π( d( ι_{Πb} a ) )
 
     applied as a canonical-ordering rewrite (fires when ``repr(a) >
-    repr(b)``; strictly order-reducing, hence terminating).
+    repr(b)``; strictly order-reducing, hence terminating). Scoped to
+    the TM Cartan ``d`` (:func:`_is_cartan_tm_d`): under the ``d`` of
+    any other calculus the rewrite is not a consequence of the FI and
+    does not fire.
 
     Derivation: FI gives [Πa,Πb] = Π[a,b]_Kos for BOTH orderings;
     with [Πb,Πa] = −[Πa,Πb] and the Koszul symmetric part
@@ -258,6 +272,7 @@ class FISharpPairingSwapDefinition(Definition):
         if not (
             isinstance(slot, Act)
             and isinstance(slot.op, ExteriorDerivative)
+            and _is_cartan_tm_d(slot.op)
         ):
             return None
         inner = slot.arg
