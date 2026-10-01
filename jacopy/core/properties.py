@@ -105,10 +105,28 @@ class Property:
 
 @dataclass(frozen=True)
 class Scalar(Property):
-    """Expression is a scalar, it commutes with everything.
+    """Expression is an ℝ-CONSTANT scalar (audit 0b00e1b M1-1 ≡ M1-2).
 
-    Scalars are the neutral case in the Koszul sign rule: swapping a
-    scalar past anything never produces a sign.
+    CONTRACT. ``Scalar`` means a real constant — not a smooth function:
+
+    * it commutes with every ℝ-linear operator, so it swaps freely in a
+      :class:`Product` and never contributes a Koszul sign (the neutral
+      case of the sign rule) — EXCEPT next to a factor declared
+      :class:`NonCommuting`, which takes precedence and never moves;
+    * every certified derivation annihilates it, ``D(c) = 0``
+      (:func:`~jacopy.algorithms.product_rule.product_rule`) — the
+      same fact that makes ``D∘c = c∘D`` (the swap above) true;
+    * it is still a (constant) function: ``kind_of`` reports
+      ``"function"`` and ``is_scalar_function`` holds.
+
+    A symbol that may have a non-zero derivative is a FUNCTION: declare
+    it ``Graded(0)`` (as :func:`~jacopy.central.objects.function.functions`
+    does), never ``Scalar``. Declaring ``Scalar`` on ``x`` and also
+    supplying a rule ``D(x) ≠ 0`` is a contradictory input: the engine
+    may then derive either value (``D(x) = 0`` from this contract or the
+    rule's value) and nothing it closes is meaningful. The registry
+    cannot see engine rules, so this is not checked here; it is the
+    caller's obligation.
     """
 
 

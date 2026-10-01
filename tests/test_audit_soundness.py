@@ -26,7 +26,7 @@ from jacopy.core.expr import Integer, Symbol
 from jacopy.core.hodge import hodge_star
 from jacopy.core.indexed_sum import IndexedSum
 from jacopy.core.multi_eval import MultiEval
-from jacopy.core.properties import Graded, NonCommuting, Scalar
+from jacopy.core.properties import Graded, NonCommuting
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.expansion import Definition, ExpansionEngine
 from jacopy.proof.strategies import AgreementOnGenerators, ProofFailure
@@ -90,7 +90,10 @@ def test_agreement_on_generators_rejects_compositions():
     # generator does not give D² = 0 (D²(x·x) = 2 for D(x) = 1).
     D, x = Derivation("D", degree=0), Symbol("x")
     reg = PropertyRegistry()
-    reg.declare(x, Scalar())
+    # x is a FUNCTION (D(x) = 1 ≠ 0): Graded(0). Declaring it Scalar
+    # (an ℝ-constant, killed by D) contradicted the D(x)=1 rule — audit
+    # 0b00e1b M1-1 ≡ M1-2.
+    reg.declare(x, Graded(0))
     reg.declare(D, NonCommuting())
 
     class DX(Definition):

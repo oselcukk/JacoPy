@@ -128,6 +128,19 @@ def _expand_act(
         # what makes ℝ-homogeneity [c·X, Y] = c·[X, Y] close — the
         # Leibniz split of Y(c·g) leaves a Y(c)·g term that must die.
         return Integer(0)
+    if (
+        registry is not None
+        and _is_certified_derivation(op)
+        and _is_declared_constant(arg, registry)
+    ):
+        # The Scalar CONTRACT (core.properties.Scalar, audit 0b00e1b
+        # M1-1 ≡ M1-2): a Scalar-declared symbol is an ℝ-constant,
+        # so a derivation kills it exactly like a numeral — the same
+        # contract under which sort_product lets it commute past a
+        # derivation (D∘c = c∘D + D(c) = c∘D). Declaring Scalar on a
+        # symbol with a non-zero derivative is a contradiction (use
+        # Graded(0) for a function).
+        return Integer(0)
     if getattr(arg, "is_constant", False) and _is_certified_derivation(op):
         # The is_constant protocol: atoms marking themselves constant
         # (e.g. the Kronecker delta) are likewise annihilated. This is
@@ -210,6 +223,14 @@ def _pull_out(op: Expr, prod: Product, registry, is_coefficient) -> Expr:
         core = rest[0] if len(rest) == 1 else Product(*rest)
         return Product(*coeffs, _expand_act(op, core, registry))
     return Act(op, prod)
+
+
+def _is_declared_constant(arg: Expr, registry: PropertyRegistry) -> bool:
+    """``arg`` is declared :class:`~jacopy.core.properties.Scalar` — an
+    ℝ-constant by contract."""
+    from jacopy.core.properties import Scalar  # noqa: WPS433
+
+    return registry.has(arg, Scalar)
 
 
 def _is_certified_derivation(op: Expr) -> bool:

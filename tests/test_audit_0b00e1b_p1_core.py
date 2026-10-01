@@ -6,6 +6,11 @@
   ``module_product``); Schouten–Nijenhuis grades in the multivector
   grading (``s = m − 1``), and the Leibniz sign carries the bracket
   degree ``k``.
+* M1-1 ≡ M1-2 (G4): the Scalar CONTRACT — ``Scalar`` is an ℝ-constant.
+  NonCommuting beats Scalar in sort_product; a Scalar commutes with a
+  derivation AND is annihilated by it (product_rule ``D(c) = 0``); it
+  is still kind ``function``; AgreementOnGenerators refuses a Scalar
+  generator (the contradictory "D(x) ≠ 0 for a constant x" input).
 
 Every acceptance test builds the wrong target here and shows it fails,
 next to the correct one closing.
@@ -203,3 +208,131 @@ def test_g7_leibniz_sign_uses_shifted_degree_of_a():
     C = _ExteriorSN(f, ey, ex, degree=0)
     assert C.leibniz_term_sign(ey, ex, reg) == -1
     assert C.leibniz_term_sign(f, ex, reg) == 1
+
+
+# --------------------------------------------------------------------- #
+# M1-1 ≡ M1-2 (G4): Scalar = ℝ-constant                                   #
+# --------------------------------------------------------------------- #
+#
+# ℝ[x], D = d/dx: (D∘x)(x) = D(x²) = 2x ≠ x = (x∘D)(x), so D∘x = x∘D is
+# FALSE for a function x; for an ℝ-constant c, D∘c = c∘D + D(c) = c∘D
+# is TRUE. The contract makes the two halves consistent.
+
+
+def _scalar_world():
+    from jacopy.algebra.derivation import Derivation
+    from jacopy.core.properties import NonCommuting, Scalar
+
+    reg = PropertyRegistry()
+    D, x, c = Derivation("D", degree=0), Symbol("x"), Symbol("c")
+    reg.declare(x, Scalar())
+    reg.declare(D, NonCommuting())
+    reg.declare(c, Scalar())
+    (f,) = functions("f", registry=reg)
+    return reg, D, x, c, f
+
+
+def test_m1_1_noncommuting_beats_scalar():
+    from jacopy.algebra.derivation import compose
+    from jacopy.algorithms.sort_product import sort_product
+    from jacopy.proof import show_equal
+    from jacopy.proof.expansion import ExpansionEngine
+    from jacopy.proof.result import prove
+
+    reg, D, x, c, f = _scalar_world()
+    # the audit's own fixture shape: x Scalar, D NonCommuting
+    with pytest.raises(ProofFailure):
+        show_equal(compose(D, x), compose(x, D), registry=reg)
+    assert prove(ExpansionEngine(), compose(D, x), compose(x, D), registry=reg).status == "RESIDUAL"
+    assert sort_product(Product(D, x), reg)[0] == Product(D, x)
+    # NonCommuting declared on the Scalar itself also blocks
+    from jacopy.core.properties import NonCommuting
+
+    E = vector_fields("E")[0]
+    reg.declare(c, NonCommuting())
+    assert sort_product(Product(E, c), reg)[0] == Product(E, c)
+
+
+def test_m1_1_scalar_constant_commutes_and_is_annihilated_consistently():
+    from jacopy.algebra.derivation import Act, Derivation, compose
+    from jacopy.algorithms.product_rule import product_rule
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.central.objects.kind import kind_of
+    from jacopy.proof import show_equal
+
+    reg, _, _, c, f = _scalar_world()
+    D = Derivation("Δ", degree=0)  # no NonCommuting declaration
+    # (b) swap AND D(c) = 0 — the operator identity and its action agree
+    show_equal(compose(D, c), compose(c, D), registry=reg)
+    assert product_rule(Act(D, c), reg) == Integer(0)
+    show_equal(Act(Sum(compose(D, c), Neg(compose(c, D))), f), Integer(0), registry=reg)
+    show_equal(Act(D, Product(c, f)), Product(c, Act(D, f)), registry=reg)
+    X = vector_fields("X")[0]
+    eng = tangent_engine(registry=reg)
+    show_equal(Act(X, c), Integer(0), registry=reg, engine=eng)
+    # a FUNCTION is not killed and does not commute with an operator
+    assert product_rule(Act(D, f), reg) == Act(D, f)
+    with pytest.raises(ProofFailure):
+        show_equal(compose(D, f), compose(f, D), registry=reg)
+    with pytest.raises(ProofFailure):
+        show_equal(Act(D, f), Integer(0), registry=reg)
+    # (c) still a (constant) function
+    assert kind_of(c, reg).kind == "function" and is_scalar_function(c, reg)
+
+
+def test_m1_2_scalar_generator_is_refused():
+    from jacopy.algebra.derivation import Act, Derivation, compose
+    from jacopy.core.properties import Scalar
+    from jacopy.proof.expansion import Definition, ExpansionEngine
+    from jacopy.proof.verifier import prove_operator_equation
+
+    E, y = Derivation("E", degree=0), Symbol("y")
+
+    class EY(Definition):
+        name = "E(y)=y"
+        anchor = Act
+
+        def matches(self, e):
+            return e == Act(E, y)
+
+        def rewrite(self, e):
+            return y
+
+    class Alg:
+        generators = (y,)
+
+    eng = ExpansionEngine([EY()])
+    # Euler operator on ℝ[y]: (E∘y)(y²) = 3y³ ≠ 4y³ = (2y·E)(y²)
+    for decl in (Scalar(), Graded(0)):
+        reg = PropertyRegistry()
+        reg.declare(y, decl)
+        with pytest.raises(ProofFailure):
+            prove_operator_equation(compose(E, y), Product(Integer(2), y, E), Alg(), registry=reg, engine=eng)
+    reg = PropertyRegistry()
+    reg.declare(y, Scalar())
+    with pytest.raises(ProofFailure, match="declared Scalar"):
+        prove_operator_equation(Product(y, E), Product(y, E), Alg(), registry=reg, engine=eng)
+    # a correct operator equation with a Graded(0) generator still closes
+    reg = PropertyRegistry()
+    reg.declare(y, Graded(0))
+    prove_operator_equation(Product(Integer(2), E), Sum(E, E), Alg(), registry=reg, engine=eng)
+
+
+def test_m1_1_scalar_contract_matches_the_model_oracle():
+    pytest.importorskip("sympy")
+    from jacopy.algebra.derivation import Act, compose
+    from jacopy.core.properties import Scalar
+    from jacopy.oracle.check import check_equal
+
+    reg = PropertyRegistry()
+    c = Symbol("c")
+    reg.declare(c, Scalar())
+    (f,) = functions("f", registry=reg)
+    X = vector_fields("X")[0]
+
+    def verdict(lhs, rhs):
+        return check_equal(lhs, rhs, registry=reg, owners=[], samples=2).verdict
+
+    assert verdict(compose(X, c), compose(c, X)) == "AGREE"
+    assert verdict(Act(X, c), Integer(0)) == "AGREE"
+    assert verdict(Act(X, f), Integer(0)) == "DISAGREE"

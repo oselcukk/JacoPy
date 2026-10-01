@@ -354,6 +354,7 @@ def unclassified_factor(
                 location=factor,
                 suggestion=(
                     "declare registry.declare(factor, Graded(degree=...)) "
-                    "or registry.declare(factor, Scalar())"
+                    "(Graded(0) for a function); Scalar() only for an "
+                    "ℝ-constant (derivations annihilate it)"
                 ),
             )

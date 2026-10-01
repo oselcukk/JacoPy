@@ -356,6 +356,24 @@ class AgreementOnGenerators(Strategy):
                     "algebra instead, or supply a derivation-"
                     "certified form)"
                 )
+        # SCALAR CONTRACT (audit 0b00e1b M1-1 ≡ M1-2): a Scalar is an
+        # ℝ-constant, every derivation kills it, so agreement on a
+        # Scalar generator certifies nothing — and a rule giving it a
+        # non-zero derivative contradicts the declaration (the
+        # E∘y = 2y·E closure). Generators are functions: Graded(0).
+        if registry is not None:
+            from jacopy.core.properties import Scalar
+
+            for g in self._algebra.generators:
+                if registry.has(g, Scalar):
+                    raise ProofFailure(
+                        f"AgreementOnGenerators: generator {g!r} is "
+                        "declared Scalar — an ℝ-constant, annihilated "
+                        "by every derivation, so agreement on it "
+                        "certifies nothing (and a non-zero derivative "
+                        "rule on it contradicts the declaration); "
+                        "declare generators Graded(0)"
+                    )
         try:
             deg_lhs = (
                 _operator_degree(lhs, registry) if not lhs_is_zero else None

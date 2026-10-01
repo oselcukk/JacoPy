@@ -10,8 +10,9 @@ caller can inspect it (even when the sign is symbolic like
 ``(-1)^{|α||β|}``).
 
 Every factor must be registered as :class:`Scalar` or :class:`Graded`.
-Scalars sort to the front and contribute no sign, they commute with
-everything in the Koszul rule. Graded factors sort by a stable
+Scalars (ℝ-constants by contract) sort to the front and contribute no
+sign, they commute with everything in the Koszul rule — except a
+factor explicitly declared :class:`NonCommuting`, which never moves. Graded factors sort by a stable
 structural key and contribute ``|a||b|`` per swap. Unclassified factors
 raise :class:`ValueError`; the fix is to declare their grading, not to
 silently paper over the missing information.
@@ -150,8 +151,15 @@ def _swap_behavior(
     The commutativity law between the pair governs whether the swap is
     permitted and, if so, the Koszul exponent it contributes:
 
-    * Either factor carries :class:`Scalar`, free swap, no sign.
-    * Either factor carries :class:`NonCommuting`, swap forbidden.
+    * Either factor carries :class:`NonCommuting`, swap forbidden —
+      checked FIRST: an explicit NonCommuting declaration is never
+      overridden by a Scalar one (audit 0b00e1b M1-1: a Scalar ``x``
+      next to a NonCommuting ``D`` "proved" ``D∘x = x∘D``).
+    * Either factor carries :class:`Scalar` (an ℝ-constant by
+      contract, see :class:`~jacopy.core.properties.Scalar`), free
+      swap, no sign. Next to a derivation this is ``D∘c = c∘D +
+      D(c) = c∘D``, consistent with :func:`product_rule` killing
+      ``D(c)``.
     * Both carry :class:`AntiCommuting`, swap produces a flat ``-1``
       (parity delta ``1``).
     * Both carry :class:`GradedCommutative`, swap produces
@@ -169,10 +177,10 @@ def _swap_behavior(
       multivectors — the implicit Koszul default), swap produces
       ``(-1)^{|a||b|}``.
     """
-    if _is_scalar(a, registry) or _is_scalar(b, registry):
-        return (True, Degree.const(0))
     if registry.has(a, NonCommuting) or registry.has(b, NonCommuting):
         return (False, Degree.const(0))
+    if _is_scalar(a, registry) or _is_scalar(b, registry):
+        return (True, Degree.const(0))
     if registry.has(a, AntiCommuting) and registry.has(b, AntiCommuting):
         return (True, Degree.const(1))
     if registry.has(a, GradedCommutative) and registry.has(b, GradedCommutative):
