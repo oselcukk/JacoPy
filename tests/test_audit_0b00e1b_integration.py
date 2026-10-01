@@ -451,3 +451,41 @@ class TestConnectionFormAlternation:
             assert simplify(
                 Sum(MultiEval(W, X, Y), MultiEval(W, Y, X)), reg
             ) == Integer(0)
+
+
+# --------------------------------------------------------------------- #
+# EndoForm typed with the registry                                     #
+# --------------------------------------------------------------------- #
+
+
+class TestEndoFormRegistryKind:
+    def test_function_argument_through_registry(self):
+        # f a functions() symbol: m̃(f²) is a 0-form. Before: kind
+        # 'unknown' and d(m̃(f²)·α) raised "Degree … not determined".
+        from jacopy.central.calculus.scalars import is_scalar_function
+        from jacopy.central.objects import forms
+        from jacopy.central.objects.endomorphism import EndoForm
+        from jacopy.central.objects.kind import kind_of
+        from jacopy.central.tangent.exterior import d
+        from jacopy.core.expr import Neg, Power
+        from jacopy.core.wedge import Wedge
+
+        reg = PropertyRegistry()
+        (f,) = functions("f", registry=reg)
+        a, b = forms("α β", degree=1)
+        (X,) = vector_fields("X")
+        m = EndoForm("m", Power(f, Integer(2)))
+        assert kind_of(m, reg).kind == "function"
+        assert is_scalar_function(m, reg)
+        assert product_rule(d(Product(m, a)), reg) == Sum(
+            Product(d(m), a), Product(m, d(a))
+        )
+        # m̃(f·α) is a 1-form: d(m̃(fα)∧β) = dm̃(fα)∧β − m̃(fα)∧dβ
+        mf = EndoForm("m", Product(f, a))
+        assert kind_of(mf, reg).degree == a.degree
+        assert product_rule(d(Wedge(mf, b)), reg) == Sum(
+            Wedge(d(mf), b), Neg(Wedge(mf, d(b)))
+        )
+        # unchanged: m̃ of a vector field has no form type
+        assert kind_of(EndoForm("m", X), reg).kind == "unknown"
+        assert not is_scalar_function(EndoForm("m", X), reg)

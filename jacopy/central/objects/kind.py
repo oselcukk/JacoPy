@@ -367,6 +367,18 @@ def _kind_of_impl(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispat
 
     if isinstance(expr, VectorField):
         return Kind("vector", bundle=expr.bundle)
+    from jacopy.central.objects.endomorphism import EndoForm
+
+    if isinstance(expr, EndoForm):
+        # m̃ acts degree-preservingly on FORMS (0-forms included); typed
+        # here WITH the registry — EndoForm.degree has none, so m̃(f²)
+        # for a functions() symbol f was degree-less (integration item 5)
+        inner = kind_of(expr.arg, registry)
+        if inner.kind in ("function", "zero"):
+            return FUNCTION
+        if inner.kind == "form" and isinstance(inner.degree, Degree):
+            return Kind("form", inner.degree, bundle=inner.bundle)
+        return UNKNOWN
     if isinstance(expr, Form):
         if expr.degree == Degree.const(0):
             return FUNCTION  # a 0-form is a function
