@@ -29,10 +29,18 @@ Sweep results (each an ⟹ with an honest-fail partner):
   entering as cited :func:`jacobi_combination_theorem` instances —
   and honest-fails when ``jacobi`` is withheld.
 
-Together with the three CONCRETE instantiations already in the suite
-(standard TM double, Poisson/LWX, Nambu) this closes the abstract
-reading of the main theorem: the double inherits exactly the
-declared subset, mechanically.
+Scope (audit 0b00e1b-FULL M4-3): this is ONLY the tilde-free
+(standard) double — the Z-side bracket and the tilde calculus are zero,
+so the compatibility conditions of the paper's main theorem
+[DD §4, (4.36)-(4.40)] never enter. The general statement "calculus +
+dual calculus + compatibility ⟹ double" is NOT swept here. For the
+concrete instantiations with a non-trivial tilde side: the Poisson /
+Nambu double's symmetric part, right-Leibniz and (FI) anchor morphism
+are proved in :mod:`double` / :mod:`bracket_morphism`; its
+Leibniz-Jacobi is proved only for the FORM component and only via
+the Π-twist (:func:`~jacopy.packages.drinfeld.twist.
+prove_nambu_double_jacobi_via_twist`, FI declared, p = 1 in the SLOW
+suite) — the vector component is open.
 """
 
 from __future__ import annotations

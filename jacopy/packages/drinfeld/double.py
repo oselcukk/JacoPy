@@ -207,6 +207,29 @@ def prove_dorfman_symmetric_part(
     )
 
 
+def bracket_jacobiator(bracket, e1, e2, e3, *, component: int) -> Expr:
+    """One component (``0`` = vector, ``1`` = form) of the
+    Leibniz-Jacobiator
+
+        [e₁,[e₂,e₃]] − [[e₁,e₂],e₃] − [e₂,[e₁,e₃]]
+
+    of a bracket on component pairs (``bracket(U, ω, V, η)`` returns
+    ``(vec, form)``; ``eᵢ = (Uᵢ, ωᵢ)``). One construction shared by
+    every Jacobi theorem, so a cited instance matches its use
+    structurally."""
+
+    def nest(a, b, c):
+        iv, if_ = bracket(*b, *c)
+        return bracket(*a, iv, if_)[component]
+
+    v12, f12 = bracket(*e1, *e2)
+    return Sum(
+        nest(e1, e2, e3),
+        Neg(bracket(v12, f12, *e3)[component]),
+        Neg(nest(e2, e1, e3)),
+    )
+
+
 def prove_dorfman_jacobi_form(
     U: Expr,
     omega: Expr,
@@ -231,17 +254,12 @@ def prove_dorfman_jacobi_form(
     VF-Jacobi instances, ~4 min — keep heavy degrees out of default
     test suites)."""
 
-    def nest(U1, o1, U2, o2, U3, o3):
-        iv, if_ = dorfman_double(U2, o2, U3, o3)
-        return dorfman_double(U1, o1, iv, if_)[1]
-
-    v12, f12 = dorfman_double(U, omega, V, eta)
-    lhs = Sum(
-        nest(U, omega, V, eta, W, mu),
-        Neg(dorfman_double(v12, f12, W, mu)[1]),
-        Neg(nest(V, eta, U, omega, W, mu)),
+    node = _ev(
+        bracket_jacobiator(
+            dorfman_double, (U, omega), (V, eta), (W, mu), component=1
+        ),
+        slots,
     )
-    node = _ev(lhs, slots)
     return prove_with_bracket_identities(
         node,
         Integer(0),
