@@ -73,6 +73,11 @@ class Reference:
     missing: Tuple[str, ...] = ()
     #: the short alias the code base uses in docstrings ("MC", "ADM", …)
     alias: str = ""
+    #: work with no author: the (shortened) title in Title Case that
+    #: APA puts in the author slot of the in-text citation
+    in_text_title: str = ""
+    #: an open question about the identification (shown in the docs)
+    caveat: str = ""
 
     @property
     def has_pdf(self) -> bool:
@@ -231,6 +236,10 @@ BIBLIOGRAPHY = {
             arxiv="math/0312524",
             secondary="Çatal-Özer et al. (2025) ref. [67]; Çatal-Özer et al. (2024) ref. [90] (no local PDF)",
             missing=("issue", "last page", "doi"),
+            caveat=(
+                "AMBIGUOUS: the code cites 'Kosmann-Schwarzbach 1996' (derived "
+                "brackets); no local source lists a 1996 work, only this 2004 one"
+            ),
         ),
         _r(
             key="AsakawaMurakiSasaWatamura2015",
@@ -245,6 +254,7 @@ BIBLIOGRAPHY = {
             arxiv="1408.2649",
             secondary="Çatal-Özer et al. (2024) ref. [56]; Çatal-Özer et al. (2025) ref. [95] (no local PDF)",
             missing=("issue", "doi"),
+            caveat="no local PDF: equation numbers cited from it are unverified",
         ),
         _r(
             key="Severa2017",
@@ -262,11 +272,26 @@ BIBLIOGRAPHY = {
             authors=(),
             year="2026",
             title="Math 595 midterm, Spring 2026",
+            in_text_title="Math 595 Midterm, Spring 2026",
             kind="unpublished",
             description="Unpublished course examination, Gebze Technical University",
             pdf="Math 595 - Midterm Spring 2026 GTU.pdf",
             # the PDF names no author; the institution is from the file name
             missing=("author",),
+        ),
+        _r(
+            key="Math595Guideline",
+            alias="Guideline",
+            authors=(),
+            year="n.d.",
+            # the PDF has no title page, author or date (its metadata title
+            # is a Google Docs template name); title from the file name
+            title="Math 595 – JacoPy",
+            in_text_title="Math 595 – JacoPy",
+            kind="unpublished",
+            description="Unpublished course project guidelines",
+            pdf="Math 595 -JacoPy.pdf",
+            missing=("author", "date", "title (taken from the file name)"),
         ),
     )
 }
@@ -318,14 +343,9 @@ class Citation:
         """``Uchino, 2002`` — the APA author–date part."""
         return f"{_in_text_authors(self.reference)}, {year_label(self.reference)}"
 
-    def in_text_inner(self) -> str:
-        """The citation without parentheses (for grouping)."""
-        s = self.author_year()
-        return f"{s}, {self.locator}" if self.locator else s
-
-    def in_text(self) -> str:
+    def in_text(self, style: str = "plain") -> str:
         """APA parenthetical citation, e.g. ``(Uchino, 2002, Proposition 2.2)``."""
-        return f"({self.in_text_inner()})"
+        return in_text(self, style)
 
     def __str__(self) -> str:
         return self.in_text()
@@ -352,59 +372,140 @@ def as_citations(source) -> Tuple[Citation, ...]:
     return out
 
 
-def in_text(source) -> str:
-    """APA in-text citation of one or several sources: several works in
-    one parenthesis, alphabetical by first author, separated by
-    semicolons — ``(Liu et al., 1997; Uchino, 2002, Section 1, [C5])``."""
+def in_text(source, style: str = "plain") -> str:
+    """APA 7 parenthetical citation of one or several sources.
+
+    * works in one parenthesis, alphabetical by the (accent-folded)
+      author string, separated by semicolons (§8.12);
+    * several locators of one work follow its year; several years of
+      the same authors are joined (``Dereli & Doğan, 2020, Definition
+      3.1, 2023, Proposition 3.7``);
+    * parentheses inside a locator become brackets (§6.9):
+      ``Eq. (3.10)`` → ``Eq. [3.10]``;
+    * a work with no author is cited by its italic Title-Case title.
+
+    ``style``: ``"plain"`` (no markup), ``"markdown"`` or ``"latex"``
+    (escaped text, ``\\textit`` titles)."""
     cits = as_citations(source)
     if not cits:
         return ""
-    # one entry per work; several locators of the same work are listed
-    # after its year: (Dereli & Doğan, 2020, Definition 3.1, Eq. (3.10))
+    it, esc = _fmt(style)
     by_work: dict = {}
     for c in cits:
         locs = by_work.setdefault(c.key, [])
         if c.locator and c.locator not in locs:
             locs.append(c.locator)
-    keys = sorted(by_work, key=lambda k: (_sort_name(BIBLIOGRAPHY[k]), BIBLIOGRAPHY[k].year))
+    groups: dict = {}
+    for k in by_work:
+        groups.setdefault(_in_text_authors(BIBLIOGRAPHY[k]), []).append(k)
     parts = []
-    for k in keys:
-        head = Citation(k).author_year()
-        parts.append(", ".join([head] + by_work[k]))
+    for authors in sorted(groups, key=_fold):
+        keys = sorted(groups[authors], key=lambda k: (year_label(BIBLIOGRAPHY[k]), k))
+        head = it(esc(authors)) if not BIBLIOGRAPHY[keys[0]].authors else esc(authors)
+        bits = [head]
+        for k in keys:
+            bits.append(year_label(BIBLIOGRAPHY[k]))
+            bits.extend(esc(apa_locator(loc)) for loc in by_work[k])
+        parts.append(", ".join(bits))
     return "(" + "; ".join(parts) + ")"
+
+
+def apa_locator(locator: str) -> str:
+    """APA §6.9: inside the citation's parentheses, parentheses become
+    brackets — ``Eq. (3.10)`` → ``Eq. [3.10]``."""
+    return locator.replace("(", "[").replace(")", "]")
 
 
 # --------------------------------------------------------------------- #
 # APA 7 formatting                                                       #
 # --------------------------------------------------------------------- #
 
+_TURKISH_FOLD = str.maketrans({"ı": "i", "İ": "I", "Ç": "C", "ç": "c", "Ş": "S", "ş": "s",
+                               "Ğ": "G", "ğ": "g", "Ö": "O", "ö": "o", "Ü": "U", "ü": "u"})
+
+
+def _fold(text: str) -> str:
+    """Alphabetising key: accents folded to the base letter (Turkish
+    letters explicitly), case-insensitive — ``Çatal-Özer`` sorts as
+    ``catal-ozer``, ``Ševera`` as ``severa``."""
+    import unicodedata
+
+    t = unicodedata.normalize("NFKD", text.translate(_TURKISH_FOLD))
+    return "".join(c for c in t if not unicodedata.combining(c)).casefold()
+
 
 def _sort_name(ref: Reference) -> str:
-    return ref.authors[0][0] if ref.authors else ref.title
+    """APA reference-list order: author family names (then initials), or
+    the title for a work with no author."""
+    import re
+
+    raw = ref.title if not ref.authors else " ".join(f"{fam} {ini}" for fam, ini in ref.authors)
+    # letter by letter, punctuation ignored
+    return re.sub(r"[^\w ]", "", _fold(raw))
 
 
-def _in_text_authors(ref: Reference) -> str:
+def _ref_sort_key(ref: Reference):
+    return (_sort_name(ref), "0" if ref.year == "n.d." else ref.year, _fold(ref.title))
+
+
+def _initials_needed(ref: Reference) -> bool:
+    """APA §8.20: first authors with the same surname but different
+    initials are cited with initials."""
+    if not ref.authors:
+        return False
+    fam, ini = ref.authors[0]
+    return any(r.authors and r.authors[0][0] == fam and r.authors[0][1] != ini
+               for r in BIBLIOGRAPHY.values())
+
+
+def _short_authors(ref: Reference, n: int) -> str:
+    """First ``n`` names then "et al." (all names, with "&", when ``n``
+    reaches the list length)."""
     fam = [a[0] for a in ref.authors]
-    if not fam:  # APA: no author — the (shortened) title takes its place
-        return ref.title
+    if _initials_needed(ref):
+        fam[0] = f"{ref.authors[0][1]} {fam[0]}"
     if len(fam) == 1:
         return fam[0]
     if len(fam) == 2:
         return f"{fam[0]} & {fam[1]}"
-    return f"{fam[0]} et al."
+    if n >= len(fam):
+        return ", ".join(fam[:-1]) + ", & " + fam[-1]
+    if n == 1:
+        return f"{fam[0]} et al."
+    return ", ".join(fam[:n]) + ", et al."
+
+
+def _in_text_authors(ref: Reference) -> str:
+    """The APA in-text author string: one or two names in full, three or
+    more as "First et al." — extended by as many names as it takes to
+    tell apart works of the same year whose author LISTS differ but
+    shorten to the same form (§8.18). No author: the title (§8.14)."""
+    if not ref.authors:
+        return ref.in_text_title or ref.title
+    if len(ref.authors) < 3:
+        return _short_authors(ref, len(ref.authors))
+    rivals = [r for r in BIBLIOGRAPHY.values()
+              if r is not ref and r.year == ref.year and len(r.authors) >= 3
+              and r.authors != ref.authors]
+    n = 1
+    while n < len(ref.authors) and any(
+        _short_authors(r, n) == _short_authors(ref, n) for r in rivals
+    ):
+        n += 1
+    return _short_authors(ref, n)
 
 
 def year_label(ref: Reference) -> str:
-    """The year with an APA ``a``/``b`` suffix when another entry has
-    the same in-text author string and year (ordered by title)."""
+    """The year with an APA ``a``/``b`` suffix — only for works with the
+    IDENTICAL author list and year, lettered by title (§8.19)."""
     same = sorted(
-        (r for r in BIBLIOGRAPHY.values()
-         if r.year == ref.year and _in_text_authors(r) == _in_text_authors(ref)),
-        key=lambda r: r.title.lower(),
+        (r for r in BIBLIOGRAPHY.values() if r.year == ref.year and r.authors == ref.authors),
+        key=lambda r: _fold(r.title),
     )
     if len(same) <= 1:
         return ref.year
-    return ref.year + "abcdefghijklmnopqrstuvwxyz"[same.index(ref)]
+    suffix = "abcdefghijklmnopqrstuvwxyz"[same.index(ref)]
+    return f"{ref.year}-{suffix}" if ref.year == "n.d." else ref.year + suffix
 
 
 def _author_list(ref: Reference) -> str:
@@ -422,6 +523,8 @@ def _fmt(style: str):
         return (lambda s: s), (lambda s: s)
     if style == "markdown":
         return (lambda s: f"*{s}*"), (lambda s: s)
+    if style == "sentinel":  # internal: italics marked by \x01 … \x02
+        return (lambda s: f"\x01{s}\x02"), (lambda s: s)
     if style == "latex":
         from jacopy.display.latex import text_to_latex
 
@@ -519,7 +622,7 @@ def cited_references(citations: Iterable[Citation]) -> Tuple[Reference, ...]:
     """The distinct references behind ``citations``, APA-ordered
     (alphabetical by first author, then year)."""
     refs = {c.key: c.reference for c in citations}
-    return tuple(sorted(refs.values(), key=lambda r: (_sort_name(r), r.year, r.title)))
+    return tuple(sorted(refs.values(), key=_ref_sort_key))
 
 
 def references_block(citations: Iterable[Citation], style: str = "plain") -> str:
@@ -536,16 +639,16 @@ def references_block(citations: Iterable[Citation], style: str = "plain") -> str
 
 
 def _bib_protect(title: str) -> str:
-    """Brace every word carrying a capital (proper nouns: Courant,
-    Leibniz, M-theory …) so biblatex-apa's sentence casing keeps it."""
+    """Brace every word that carries a capital — the first word, the word
+    after a colon and every proper noun (Courant, Lie, Pre-metric-Bourbaki,
+    M-theory, Drinfel’d …) — so biblatex-apa's sentence casing can change
+    none of them."""
     import re
 
-    words = title.split(" ")
     out = []
-    for i, w in enumerate(words):
-        first = i == 0 or (out and out[-1].endswith(":"))
-        if not first and re.search(r"[A-Z]", w):
-            core = w.rstrip(":,.")
+    for w in title.split(" "):
+        if any(c.isupper() for c in w):
+            core = w.rstrip(":,.;")
             w = "{" + core + "}" + w[len(core):]
         out.append(w)
     return " ".join(out)
@@ -560,7 +663,8 @@ def bibtex_entry(key_or_ref) -> str:
     if ref.authors:
         fields.append(("author", " and ".join(f"{fam}, {ini}" if ini else "{" + fam + "}" for fam, ini in ref.authors)))
     fields.append(("title", _bib_protect(ref.title)))
-    fields.append(("date", ref.year))
+    if ref.year != "n.d.":
+        fields.append(("date", ref.year))
     if ref.kind == "article":
         etype = "article"
         fields.append(("journaltitle", ref.journal))

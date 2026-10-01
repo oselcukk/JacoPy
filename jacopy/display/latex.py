@@ -130,9 +130,9 @@ _MULTICHAR_SUB = re.compile(r"_(\w{2,})")
 _COMBINING_TILDE_CHAR = "\u0303"
 _COMBINING_DOT_CHAR = "\u0307"
 _COMBINING_HAT_CHAR = "\u0302"
-_MATH_COMBINING_TILDE_RE = re.compile(rf"(.)({_COMBINING_TILDE_CHAR})")
-_MATH_COMBINING_DOT_RE = re.compile(rf"(.)({_COMBINING_DOT_CHAR})")
-_MATH_COMBINING_HAT_RE = re.compile(rf"(.)({_COMBINING_HAT_CHAR})")
+_MATH_COMBINING_TILDE_RE = re.compile(rf"([^_^{{}}\s\\])({_COMBINING_TILDE_CHAR})")
+_MATH_COMBINING_DOT_RE = re.compile(rf"([^_^{{}}\s\\])({_COMBINING_DOT_CHAR})")
+_MATH_COMBINING_HAT_RE = re.compile(rf"([^_^{{}}\s\\])({_COMBINING_HAT_CHAR})")
 
 
 def _brace_nested_subscripts(name: str) -> str:
@@ -196,7 +196,106 @@ def latex_name(name: str) -> str:
     name = _brace_nested_subscripts(name)
     name = _glyphs(name)
     name = _MULTICHAR_SUB.sub(lambda m: "_{" + m.group(1) + "}", name)
-    return _math_fallback(name)
+    return _fix_scripts(_math_fallback(name))
+
+
+def _take_group(s: str, i: int):
+    """``(group text, end)`` for the brace group opening at ``s[i]``."""
+    depth = 0
+    for j in range(i, len(s)):
+        if s[j] == "\\":
+            continue
+        if s[j] == "{" and (j == 0 or s[j - 1] != "\\"):
+            depth += 1
+        elif s[j] == "}" and s[j - 1] != "\\":
+            depth -= 1
+            if depth == 0:
+                return s[i : j + 1], j + 1
+    return s[i:] + "}" * depth, len(s)
+
+
+def _fix_scripts(s: str) -> str:
+    """Make every sub/superscript well formed (audit review: no input
+    may yield LaTeX that does not compile): a script with no argument
+    gets ``{}``, a script whose argument is itself a script is braced
+    (``x^_{i}`` → ``x^{_{i}}``), a second ``_`` (``^``) on the same base
+    gets an empty base ``{}`` first (``x_{i}_j`` → ``x_{i}{}_j``)."""
+    out: list[str] = []
+    have: set = set()
+    i, n = 0, len(s)
+    while i < n:
+        c = s[i]
+        if c in "_^":
+            if c in have:
+                out.append("{}")
+                have = set()
+            have.add(c)
+            out.append(c)
+            i += 1
+            while i < n and s[i] == " ":
+                i += 1
+            if i >= n:
+                out.append("{}")
+                break
+            if s[i] in "_^":
+                # the argument is a script itself: brace it with its own argument
+                j = i + 1
+                if j < n and s[j] == "{":
+                    grp, j = _take_group(s, j)
+                elif j < n and s[j] == "\\":
+                    m = _CMD_ARG_RE.match(s, j)
+                    grp, j = m.group(0), m.end()
+                elif j < n:
+                    grp, j = s[j], j + 1
+                else:
+                    grp = "{}"
+                out.append("{" + s[i] + _fix_scripts(grp) + "}")
+                i = j
+            elif s[i] == "{":
+                grp, i = _take_group(s, i)
+                out.append("{" + _fix_scripts(grp[1:-1]) + "}")
+            elif s[i] == "\\":
+                # braced: a macro like \\notin is not a valid bare script
+                m = _CMD_ARG_RE.match(s, i)
+                out.append("{" + m.group(0) + "}")
+                i = m.end()
+            elif s[i] == "'":
+                out.append("{'}")
+                i += 1
+            elif s[i] == "}":
+                out.append("{}")
+            else:
+                out.append(s[i])
+                i += 1
+            continue
+        if c == "{":
+            grp, i = _take_group(s, i)
+            out.append("{" + _fix_scripts(grp[1:-1]) + "}")
+            have = set()
+            continue
+        if c == "\\":
+            m = _CMD_ARG_RE.match(s, i)
+            out.append(m.group(0))
+            i = m.end()
+            have = set()
+            continue
+        if c == "'":
+            # a prime IS a superscript: after one, start a new base
+            if "^" in have and not (out and out[-1] == "'"):
+                out.append("{}")
+            out.append(c)
+            have = {"'", "^"}  # a prime is a superscript (x'^2 is not x^{\prime}^2 …)
+            i += 1
+            continue
+        if c != " ":
+            have = set()
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+#: a command with its brace argument(s) (``\\mathcal{L}``, ``\\tfrac{1}{2}``)
+_CMD_ARG_RE = re.compile(r"\\(?:[A-Za-z]+|.)(?:\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*")
 
 
 #: combining marks of PRECOMPOSED letters (NFD) → text-mode accents
@@ -281,6 +380,8 @@ def _math_fallback(text: str) -> str:
         if m is None:
             _warn_unmapped(ch)
             m = r"\text{?}"
+        if m[-1].isalpha():
+            m += " "  # never glue a command to a following letter
         out.append(m)
     return "".join(out)
 
@@ -904,7 +1005,7 @@ def _escape_text(text: str) -> str:
     into ``\\ensuremath{…}`` so a ``\\text{…}`` argument built from a
     rule name or a theorem statement is pdfLaTeX-safe."""
     text = (
-        text.replace("\\", r"\textbackslash{}")
+        text.replace("\\", "\x00")  # placeholder: escaped braces must not hit it
         .replace("_", r"\_")
         .replace("#", r"\#")
         .replace("%", r"\%")
@@ -916,6 +1017,7 @@ def _escape_text(text: str) -> str:
         .replace("~", r"\textasciitilde{}")
         .replace("<", r"\textless{}")
         .replace(">", r"\textgreater{}")
+        .replace("\x00", r"\textbackslash{}")
     )
     text = _COMBINING_TILDE_RE.sub(
         lambda m: f"\\ensuremath{{\\tilde{{{m.group(1)}}}}}", text
@@ -1011,18 +1113,6 @@ def _visible_len(latex: str) -> float:
         script_next = False
         i += 1
     return n
-
-
-def _sum_pieces(expr: Sum) -> list[str]:
-    """The signed summands of ``expr`` as separate breakable pieces."""
-    pieces: list[str] = []
-    for i, child in enumerate(expr.children):
-        if isinstance(child, Neg):
-            inner = to_latex(child.arg, _P_NEG + 1)
-            pieces.append(("- " if i > 0 else "-") + inner)
-        else:
-            pieces.append(("+ " if i > 0 else "") + to_latex(child, _P_SUM + 1))
-    return pieces
 
 
 def _pieces(expr: Expr, width: float) -> list[str]:
@@ -1165,11 +1255,25 @@ def cite_to_latex(source, style: str = "apa") -> str:
     if not cits:
         return ""
     if style == "apa":
-        return text_to_latex(in_text(cits))
-    parts = "".join(
-        (f"[{_bib_postnote(c.locator)}]" if c.locator else "") + f"{{{c.key}}}" for c in cits
-    )
-    return f"\\parencites{parts}"
+        return in_text(cits, "latex")
+    return _parencites(cits)
+
+
+def _parencites(cits) -> str:
+    """ONE ``\\parencites`` group for all works of a source: works in APA
+    order, the locators of one work merged into one postnote."""
+    from jacopy.bibliography import BIBLIOGRAPHY, _ref_sort_key, apa_locator
+
+    by_work: dict = {}
+    for c in cits:
+        locs = by_work.setdefault(c.key, [])
+        if c.locator and c.locator not in locs:
+            locs.append(c.locator)
+    parts = []
+    for k in sorted(by_work, key=lambda k: _ref_sort_key(BIBLIOGRAPHY[k])):
+        note = ", ".join(apa_locator(l) for l in by_work[k])
+        parts.append((f"[{_bib_postnote(note)}]" if note else "") + f"{{{k}}}")
+    return "\\parencites" + "".join(parts)
 
 
 #: line budget of TEXT rows (rule names, citations, justifications),
@@ -1179,20 +1283,33 @@ TEXT_WIDTH = 78
 
 def _cite_rows(ind: str, label: str, source, style: str) -> list[str]:
     """Aligned TEXT rows ``label (Author, year, locator; …)`` wrapped at
-    :data:`TEXT_WIDTH` (APA), or one ``\\parencites`` row per two
-    works (biblatex)."""
+    :data:`TEXT_WIDTH` (APA; an italic no-author title split across rows
+    is closed and reopened), or one ``\\parencites`` row (biblatex)."""
     from jacopy.bibliography import as_citations, in_text
 
     cits = as_citations(source)
     if not cits:
         return []
-    if style == "apa":
-        lines = _wrap_words(f"{label} {in_text(cits)}", TEXT_WIDTH)
-        return [f"&{ind}\\textit{{{_escape_text(line)}}}" for line in lines]
-    rows = []
-    for k in range(0, len(cits), 2):
-        head = f"{label} " if k == 0 else ""
-        rows.append(f"&{ind}\\textit{{{_escape_text(head)}{cite_to_latex(cits[k:k + 2], style)}}}")
+    if style != "apa":
+        return [f"&{ind}\\textit{{{_escape_text(label)} {cite_to_latex(cits, style)}}}"]
+    # \x01 … \x02 mark italic (no-author) titles through wrapping and
+    # escaping; a title split across rows is closed and reopened
+    marked = in_text(cits, "sentinel")
+    rows, open_it = [], False
+    for line in _wrap_words(f"{label} {marked}", TEXT_WIDTH):
+        out = ["\\textit{"] if open_it else []
+        for ch in _escape_text(line):
+            if ch == "\x01":
+                out.append("\\textit{")
+                open_it = True
+            elif ch == "\x02":
+                out.append("}")
+                open_it = False
+            else:
+                out.append(ch)
+        if open_it:
+            out.append("}")
+        rows.append(f"&{ind}\\text{{{''.join(out)}}}")
     return rows
 
 
