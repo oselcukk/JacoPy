@@ -123,28 +123,9 @@ def test_exterior_derivative_skew_and_calculus_distinguish():
     assert match(Act(d_skew, a), Act(d_skew, X)) == {"a": X}
 
 
-def test_indexed_sum_dummy_and_payload_wildcard():
-    # Σ_i ?B against Σ_j f(j): binding B = f(j) under the pattern's
-    # dummy i would rebuild Σ_i f(j) = n·f(j) ≠ Σ_j f(j). The binder is
-    # matched up to α-renaming instead (review of f02fa15: rejecting
-    # every differently-named dummy was a false reject): B = f(i), and
-    # the rebuild Σ_i f(i) is the target.
-    i, j = Symbol("i"), Symbol("j")
-    fj = Act(Derivation("f"), j)
-    target = IndexedSum(j, None, fj)
-    b = match(IndexedSum(i, None, Wildcard("B")), target)
-    assert b == {"B": Act(Derivation("f"), i)}
-    assert substitute(IndexedSum(i, None, Wildcard("B")), b) == target
-    # renaming j → i would capture the free i in Σ_j f(j)·i: refused
-    captured = IndexedSum(j, None, Product(fj, i))
-    assert match(IndexedSum(i, None, Wildcard("B")), captured) is None
-    assert alpha_equal(IndexedSum(i, None, Act(Derivation("f"), i)), target)
-    assert not alpha_equal(IndexedSum(i, None, Act(Derivation("f"), i)), captured)
-    # a WILDCARD in the payload (the bound dummy) binds like any hole
-    got = match(IndexedSum(Wildcard("d"), None, Wildcard("B")), target)
-    assert got == {"d": j, "B": fj}
+def test_payload_wildcard_binds_hodge_metric():
     # Hodge metric is payload, not a child: wildcard binds, a
-    # different concrete metric does not match
+    # different concrete metric (or dim) does not match
     (om,) = forms("om", degree=1)
     g, h = Symbol("g"), Symbol("h")
     assert match(HodgeStar(Wildcard("A"), 3, metric=Wildcard("G")), HodgeStar(om, 3, metric=g)) == {"A": om, "G": g}
@@ -369,12 +350,6 @@ def test_payload_wildcard_is_substituted_not_left_literal():
         substitute(HodgeStar(om, 3, metric=Wildcard("Q")), {})
     bad = Rule(HodgeStar(A, 3, metric=g), HodgeStar(A, 3, metric=Wildcard("Q")))
     assert bad.try_at(HodgeStar(om, 3, metric=g)) is None
-    # IndexedSum dummy hole is filled too
-    j = Symbol("j")
-    fj = Act(Derivation("f"), j)
-    d, B = Wildcard("d"), Wildcard("B")
-    b = match(IndexedSum(d, None, B), IndexedSum(j, None, fj))
-    assert substitute(IndexedSum(d, None, B), b) == IndexedSum(j, None, fj)
 
 
 def test_object_shared_by_child_and_payload_still_matches():
@@ -475,57 +450,11 @@ def test_liez_result_is_citable_in_its_own_engine():
     assert check_citation(t, exact_bourbaki_engine(X, reg)).ok
 
 
-# --------------------------------------------------------------------- #
-# review of cf9cf2c: Σ binder scope in match / substitute                #
-# --------------------------------------------------------------------- #
-
-
-def _sigma_setup():
-    i, j = Symbol("i"), Symbol("j")
-    F = lambda x: Act(Derivation("F"), x)  # noqa: E731
-    return i, j, F, Wildcard("D"), Wildcard("A"), Wildcard("B")
-
-
 def _closes_wrongly(rule, lhs, rhs):
     eng = ExpansionEngine([_RuleAdapter(rule)])
     assert prove(eng, lhs, rhs).status == "RESIDUAL"
     with pytest.raises(ProofFailure):
         ExpandAndSimplify().prove(lhs, rhs, engine=eng)
-
-
-def test_sigma_wildcard_dummy_does_not_capture_a_free_atom():
-    # Σ_D F(D)·i → i·Σ_D F(D) pulls the FREE i out. On Σ_i F(i)·i the i
-    # is bound: Σ_i F(i)·i ≠ i·Σ_j F(j) (n = 2, F = id: 1+4 ≠ 2·3).
-    # At cf9cf2c: CLOSED.
-    i, j, F, D, A, B = _sigma_setup()
-    rule = Rule(IndexedSum(D, None, Product(F(D), i)), Product(i, IndexedSum(D, None, F(D))))
-    _closes_wrongly(rule, IndexedSum(i, None, Product(F(i), i)), Product(i, IndexedSum(j, None, F(j))))
-    # the legitimate pull still works
-    assert rule.try_at(IndexedSum(j, None, Product(F(j), i))) == Product(i, IndexedSum(j, None, F(j)))
-
-
-def test_sigma_substitution_avoids_capture():
-    # A·Σ_D B → Σ_D (A·B) on i·Σ_i F(i): the outer i is free; pushing it
-    # in must rename the binder, not capture: Σ_k (i·F(k)) ≠ Σ_i (i·F(i)).
-    # At cf9cf2c: Σ_i (i·F(i)), CLOSED.
-    i, j, F, D, A, B = _sigma_setup()
-    rule = Rule(Product(A, IndexedSum(D, None, B)), IndexedSum(D, None, Product(A, B)))
-    t = Product(i, IndexedSum(i, None, F(i)))
-    out = rule.try_at(t)
-    assert out is not None and out == IndexedSum(j, None, Product(i, F(j)))  # α-equal
-    _closes_wrongly(rule, t, IndexedSum(i, None, Product(i, F(i))))
-    # no clash: plain push
-    assert rule.try_at(Product(j, IndexedSum(i, None, F(i)))) == IndexedSum(i, None, Product(j, F(i)))
-
-
-def test_sigma_bound_term_does_not_escape_its_binder():
-    # Σ_D (A·B) → A·Σ_D B pulls a constant factor out; on Σ_i F(i)·i the
-    # factor F(i) depends on the bound i: Σ_i F(i)·i ≠ F(i)·Σ_i i.
-    # At cf9cf2c: CLOSED.
-    i, j, F, D, A, B = _sigma_setup()
-    rule = Rule(IndexedSum(D, None, Product(A, B)), Product(A, IndexedSum(D, None, B)))
-    _closes_wrongly(rule, IndexedSum(i, None, Product(F(i), i)), Product(F(i), IndexedSum(i, None, i)))
-    assert rule.try_at(IndexedSum(i, None, Product(j, F(i)))) == Product(j, IndexedSum(i, None, F(i)))
 
 
 def test_rule_with_unbound_rhs_wildcard_never_fires():
@@ -559,166 +488,12 @@ def test_cited_rule_reraises_programming_errors():
             Broken().matches(Symbol("x"))
 
 
-def test_two_sigmas_sharing_a_wildcard_dummy_match_up_to_alpha():
-    # Σ_{?D}?A + Σ_{?D}?B against Σ_i F(i) + Σ_j G(j): the dummies are
-    # bound names, so the pattern matches (review: false reject)
-    i, j, F, D, A, B = _sigma_setup()
-    G = lambda x: Act(Derivation("G"), x)  # noqa: E731
-    pat = Sum(IndexedSum(D, None, A), IndexedSum(D, None, B))
-    t = Sum(IndexedSum(i, None, F(i)), IndexedSum(j, None, G(j)))
-    b = match(pat, t)
-    assert b is not None and b["D"] == i and b["B"] == G(i)
-    assert substitute(pat, b) == t
-
-
-# --------------------------------------------------------------------- #
-# merge-gate review of 203124b: binder IDENTITY, not atom name           #
-# --------------------------------------------------------------------- #
-
-
-def test_cauchy_product_of_same_named_sums_does_not_capture():
-    # Σ_{?D}?f · Σ_{?E}?g → Σ_{?D}Σ_{?E}(?f·?g) on Σ_i F(i)·Σ_i G(i):
-    # both dummies are i but different binders; Σ_i Σ_i F(i)G(i) would
-    # let the inner Σ capture F's i (n = 2, F = G = id: 9 ≠ 10). At
-    # 203124b: CLOSED (main: RESIDUAL).
-    i, j, F, D, A, B = _sigma_setup()
-    G = lambda x: Act(Derivation("G"), x)  # noqa: E731
-    E, f, g = Wildcard("E"), Wildcard("f"), Wildcard("g")
-    rule = Rule(
-        Product(IndexedSum(D, None, f), IndexedSum(E, None, g)),
-        IndexedSum(D, None, IndexedSum(E, None, Product(f, g))),
-    )
-    t = Product(IndexedSum(i, None, F(i)), IndexedSum(i, None, G(i)))
-    out = rule.try_at(t)
-    assert out == IndexedSum(j, None, IndexedSum(i, None, Product(F(j), G(i))))  # α-equal
-    _closes_wrongly(rule, t, IndexedSum(i, None, IndexedSum(i, None, Product(F(i), G(i)))))
-
-
-def test_wildcard_reused_across_same_named_sums_still_matches():
-    # lie(Σ_i ?f, Σ_i ?f) → 0 on lie(Σ_i F(i), Σ_i F(i)) (a true
-    # antisymmetry instance): main CLOSED; at 203124b falsely RESIDUAL
-    i, j, F, D, A, B = _sigma_setup()
-    br = _CommBracket()
-    f = Wildcard("f")
-    rule = Rule(br(IndexedSum(i, None, f), IndexedSum(i, None, f)), Integer(0))
-    t = br(IndexedSum(i, None, F(i)), IndexedSum(i, None, F(i)))
-    assert match(br(IndexedSum(i, None, f), IndexedSum(i, None, f)), t) == {"f": F(i)}
-    assert prove(ExpansionEngine([_RuleAdapter(rule)]), t, Integer(0)).status == "CLOSED"
-
-
-def test_free_dummy_wildcard_and_payload_under_binder():
-    # ?D bound OUTSIDE to a free atom is not this binder's (false reject
-    # at 203124b), and a payload hole under a Σ keeps the binder scope
-    i, j, F, D, A, B = _sigma_setup()
-    f = Wildcard("f")
-    br = _CommBracket()
-    swap = Rule(br(D, IndexedSum(D, None, f)), br(IndexedSum(D, None, f), D))
-    assert swap.try_at(br(i, IndexedSum(i, None, F(i)))) == br(IndexedSum(i, None, F(i)), i)
-    pat = IndexedSum(D, None, HodgeStar(f, 3, metric=f))
-    t = IndexedSum(i, None, HodgeStar(F(i), 3, metric=F(i)))
-    assert substitute(pat, match(pat, t)) == t
-
-
-def test_match_bindings_hide_the_private_entry():
-    i, j, F, D, A, B = _sigma_setup()
-    b = match(IndexedSum(D, None, Wildcard("f")), IndexedSum(i, None, F(i)))
-    assert sorted(b) == ["D", "f"] and len(b) == 2
-    assert set(b.keys()) == {"D", "f"} and dict(b.items()) == {"D": i, "f": F(i)}
-
-
 def test_sequence_binding_used_as_single_hole_never_fires():
     # (?*r + x) → ?r: the sequence binding cannot fill a single hole;
     # the result kept a literal ?r (main too)
     x = Symbol("x")
     rule = Rule(Sum(SeqWildcard("r"), x), Wildcard("r"))
     assert rule.try_at(Sum(Symbol("a"), Symbol("b"), x)) is None
-
-
-# --------------------------------------------------------------------- #
-# merge-gate review of 05b03b1: the binder design (module docstring)     #
-# --------------------------------------------------------------------- #
-
-
-def _sig():
-    i, j, k = Symbol("i"), Symbol("j"), Symbol("k")
-    mk = lambda n: (lambda *x: Act(Derivation(n), x[0] if len(x) == 1 else Product(*x)))  # noqa: E731
-    D, E, K, f, g, h = (Wildcard(n) for n in "DEKfgh")
-    S = lambda d, b: IndexedSum(d, None, b)  # noqa: E731
-    return i, j, k, mk("F"), mk("G"), mk("H"), D, E, K, f, g, h, S
-
-
-def test_marks_survive_backtracking():
-    # Q(Σ_i ?f · ?*r · Z(?h)) → Σ_i ?f · ?*r · Z(?h) (Q = id on this
-    # shape). At 05b03b1 the SeqWildcard backtracking dropped the marks:
-    # the false Q(..) = Σ_j F(i)·a·Z(b) CLOSED, the true one RESIDUAL.
-    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
-    Z = lambda x: Act(Derivation("Z"), x)  # noqa: E731
-    Q = lambda x: Act(Derivation("Q"), x)  # noqa: E731
-    a, b = Symbol("a"), Symbol("b")
-    body = Product(S(i, f), SeqWildcard("r"), Z(h))
-    rule = Rule(Q(body), body)
-    t = Q(Product(S(i, F(i)), a, Z(b)))
-    eng = ExpansionEngine([_RuleAdapter(rule)])
-    assert prove(eng, t, Product(S(i, F(i)), a, Z(b))).status == "CLOSED"
-    _closes_wrongly(rule, t, Product(S(j, F(i)), a, Z(b)))
-    # Σ_D(?f·?g)·?*r·Z(?h) → Σ_D ?f · ?g ·…: ?g = G(i) is bound by Σ
-    lhs = Product(S(D, Product(f, g)), SeqWildcard("r"), Z(h))
-    rhs = Product(S(D, f), g, SeqWildcard("r"), Z(h))
-    t2 = Product(S(i, Product(F(i), G(i))), a, Z(b))
-    _closes_wrongly(Rule(lhs, rhs), t2, Product(S(j, F(i)), G(i), a, Z(b)))
-
-
-def test_every_binder_of_a_value_must_enclose_it():
-    # Σ_{?D}(?f·Σ_{?E}?g) → Σ_{?D}?f · Σ_{?E}?g: on Σ_i(F(i)·Σ_j G(i·j))
-    # ?g depends on BOTH binders; 05b03b1 accepted one matching mark
-    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
-    pull = Rule(S(D, Product(f, S(E, g))), Product(S(D, f), S(E, g)))
-    t = S(i, Product(F(i), S(j, G(i, j))))
-    _closes_wrongly(pull, t, Product(S(i, F(i)), S(j, G(i, j))))
-    assert pull.try_at(S(i, Product(F(i), S(j, G(j))))) == Product(S(i, F(i)), S(j, G(j)))
-    fub = Rule(S(D, Product(f, S(E, g))), S(E, Product(g, S(D, f))))
-    assert fub.try_at(t) is None
-    assert fub.try_at(S(i, Product(F(i), S(j, G(j))))) == S(j, Product(G(j), S(i, F(i))))
-    pullc = Rule(S(i, Product(f, S(j, g))), Product(S(i, f), S(j, g)))
-    assert pullc.try_at(t) is None
-    drop = Rule(S(D, S(E, S(K, g))), S(K, S(E, g)))
-    assert drop.try_at(S(i, S(j, S(k, G(i, j, k))))) is None
-
-
-def test_fresh_name_avoids_unused_binder_dummies():
-    # Σ_{?D}?f·Σ_{?E}?g → Σ_{?D}Σ_{?E}(?f·?g) on
-    # Σ_i(F(i)·Σ_{i_1} H(i)) · Σ_i G(i): the fresh name must avoid the
-    # inner binder dummy i_1 although the body never uses it
-    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
-    i1 = Symbol("i_1")
-    r = Rule(Product(S(D, f), S(E, g)), S(D, S(E, Product(f, g))))
-    t = Product(S(i, Product(F(i), S(i1, H(i)))), S(i, G(i)))
-    good = S(k, S(i, Product(Product(F(k), S(i1, H(k))), G(i))))
-    assert r.try_at(t) == good
-    _closes_wrongly(r, t, S(i1, S(i, Product(Product(F(i1), S(i1, H(i1))), G(i)))))
-
-
-def test_fresh_dummy_wildcard_is_bound_not_free():
-    # Σ_{?D}?f → ?D·Σ_{?D}?f would move the bound dummy out (05b03b1:
-    # ?D counted as bound outside because `before` was taken late)
-    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
-    assert Rule(S(D, f), Product(D, S(D, f))).try_at(S(i, F(i))) is None
-    assert Rule(S(D, Product(D, f)), Product(D, S(D, f))).try_at(S(i, Product(i, F(i)))) is None
-
-
-def test_pattern_caches_are_identity_keyed():
-    # Σ_{?D} and Σ_{?E} patterns are α-EQUAL Exprs; an equality-keyed
-    # cache returned the other pattern's wildcard names
-    from jacopy.core.wildcards import wildcard_names
-
-    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
-    a, b = S(D, Product(f, g)), S(E, Product(f, g))
-    assert a == b
-    assert wildcard_names(b) == {"E", "f", "g"} and wildcard_names(a) == {"D", "f", "g"}
-    r1 = Rule(Product(S(E, f), g), S(E, Product(f, g)))
-    r2 = Rule(Product(S(D, f), g), S(D, Product(f, g)))
-    t = Product(S(i, F(i)), j)
-    assert r1.try_at(t) == r2.try_at(t) == S(i, Product(F(i), j))
 
 
 def test_target_wildcard_with_rhs_name_is_legitimate():
@@ -728,3 +503,115 @@ def test_target_wildcard_with_rhs_name_is_legitimate():
     r = Rule(Z(Wildcard("f")), Wildcard("f"))
     assert r.try_at(Z(Wildcard("f"))) == Wildcard("f")
     assert r.try_at(Z(Wildcard("g"))) == Wildcard("g")
+
+
+# --------------------------------------------------------------------- #
+# Σ binders: the NARROW contract (jacopy.core.wildcards docstring).      #
+# Every false closure found by the earlier review rounds, in its        #
+# concrete-dummy form, plus the documented completeness limits.         #
+# --------------------------------------------------------------------- #
+
+
+def _sx():
+    i, j = Symbol("i"), Symbol("j")
+    mk = lambda n: (lambda *x: Act(Derivation(n), x[0] if len(x) == 1 else Product(*x)))  # noqa: E731
+    S = lambda d, b: IndexedSum(d, None, b)  # noqa: E731
+    return i, j, mk("F"), mk("G"), S, Wildcard("f"), Wildcard("g")
+
+
+def test_sigma_wildcard_dummy_is_unsupported():
+    i, j, F, G, S, f, g = _sx()
+    D = Wildcard("D")
+    assert match(S(D, f), S(i, F(i))) is None
+    with pytest.raises(ValueError):
+        Rule(S(D, f), f)
+    with pytest.raises(ValueError):
+        Rule(f, S(D, f))
+
+
+def test_sigma_matches_only_the_same_named_dummy():
+    # documented completeness limit: Σ_j F(j) is α-equal to Σ_i F(i)
+    # but a Σ_i pattern does not match it
+    i, j, F, G, S, f, g = _sx()
+    assert match(S(i, f), S(i, F(i))) == {"f": F(i)}
+    assert match(S(i, f), S(j, F(j))) is None
+
+
+def test_true_same_named_sigma_proofs_still_close():
+    # lie(Σ_i F(i), Σ_i F(i)) = 0 (antisymmetry instance; CLOSED on main)
+    i, j, F, G, S, f, g = _sx()
+    br = _CommBracket()
+    rule = Rule(br(S(i, f), S(i, f)), Integer(0))
+    t = br(S(i, F(i)), S(i, F(i)))
+    assert prove(ExpansionEngine([_RuleAdapter(rule)]), t, Integer(0)).status == "CLOSED"
+
+
+def test_free_term_is_not_captured_by_a_sigma():
+    # ?g·Σ_i ?f → Σ_i (?g·?f): on i·Σ_i F(i) the outer i is free;
+    # Σ_i (i·F(i)) would capture it. j·Σ_i F(i) is a legitimate push.
+    i, j, F, G, S, f, g = _sx()
+    rule = Rule(Product(g, S(i, f)), S(i, Product(g, f)))
+    _closes_wrongly(rule, Product(i, S(i, F(i))), S(i, Product(i, F(i))))
+    _closes_wrongly(rule, Product(G(i), S(i, F(i))), S(i, Product(F(i), G(i))))
+    assert rule.try_at(Product(j, S(i, F(i)))) == S(i, Product(j, F(i)))
+
+
+def test_bound_term_does_not_escape_its_sigma():
+    i, j, F, G, S, f, g = _sx()
+    pull = Rule(S(i, Product(g, f)), Product(g, S(i, f)))
+    _closes_wrongly(pull, S(i, Product(F(i), i)), Product(F(i), S(i, i)))
+    assert pull.try_at(S(i, Product(j, F(i)))) == Product(j, S(i, F(i)))
+    # a value bound inside reused outside on the LEFT: Σ_i F(i)·F(i)
+    k_rule = Rule(Product(S(i, f), f), S(i, Product(f, f)))
+    _closes_wrongly(k_rule, Product(S(i, F(i)), F(i)), S(i, Product(F(i), F(i))))
+    # a value depending on two binders, moved under one of them only
+    two = Rule(S(i, Product(f, S(j, g))), Product(S(i, f), S(j, g)))
+    t = S(i, Product(F(i), S(j, G(i, j))))
+    _closes_wrongly(two, t, Product(S(i, F(i)), S(j, G(i, j))))
+    assert two.try_at(S(i, Product(F(i), S(j, G(j))))) == Product(S(i, F(i)), S(j, G(j)))
+
+
+def test_nested_same_named_sigmas_are_rejected():
+    # Σ_i ?f · Σ_i ?g → Σ_i Σ_i (?f·?g): the inner Σ_i would capture
+    # F's i (n = 2, F = G = id: 9 ≠ 10)
+    i, j, F, G, S, f, g = _sx()
+    cauchy = Rule(Product(S(i, f), S(i, g)), S(i, S(i, Product(f, g))))
+    _closes_wrongly(cauchy, Product(S(i, F(i)), S(i, G(i))), S(i, S(i, Product(F(i), G(i)))))
+    ok = Rule(Product(S(i, f), S(j, g)), S(i, S(j, Product(f, g))))
+    assert ok.try_at(Product(S(i, F(i)), S(j, G(j)))) == S(i, S(j, Product(F(i), G(j))))
+
+
+def test_binder_check_survives_sequence_backtracking():
+    i, j, F, G, S, f, g = _sx()
+    Z = lambda x: Act(Derivation("Z"), x)  # noqa: E731
+    Q = lambda x: Act(Derivation("Q"), x)  # noqa: E731
+    a, b, h = Symbol("a"), Symbol("b"), Wildcard("h")
+    body = Product(S(i, f), SeqWildcard("r"), Z(h))
+    rule = Rule(Q(body), body)
+    t = Q(Product(S(i, F(i)), a, Z(b)))
+    assert prove(ExpansionEngine([_RuleAdapter(rule)]), t, Product(S(i, F(i)), a, Z(b))).status == "CLOSED"
+    _closes_wrongly(rule, t, Product(S(j, F(i)), a, Z(b)))
+    lhs = Product(S(i, Product(f, g)), SeqWildcard("r"), Z(h))
+    rhs = Product(S(i, f), g, SeqWildcard("r"), Z(h))
+    _closes_wrongly(Rule(lhs, rhs), Product(S(i, Product(F(i), G(i))), a, Z(b)), Product(S(i, F(i)), G(i), a, Z(b)))
+
+
+def test_sequence_binding_never_fills_a_single_position():
+    i, j, F, G, S, f, g = _sx()
+    a, b, x = Symbol("a"), Symbol("b"), Symbol("x")
+    r = SeqWildcard("r")
+    assert Rule(Sum(r, x), r).try_at(Sum(a, b, x)) is None
+    assert Rule(Sum(r, x), S(i, r)).try_at(Sum(a, b, x)) is None
+    assert Rule(Sum(r, x), Product(r, x)).try_at(Sum(a, b, x)) == Product(a, b, x)
+
+
+def test_binder_contexts_are_not_shared_between_alpha_equal_rules():
+    # Σ_i ?f·Σ_i ?g and Σ_i ?f·Σ_j ?g are α-EQUAL Exprs; their binder
+    # contexts differ, so they must not be cached by equality
+    i, j, F, G, S, f, g = _sx()
+    bad = Rule(Product(S(i, f), S(i, g)), S(i, S(i, Product(f, g))))
+    ok = Rule(Product(S(i, f), S(j, g)), S(i, S(j, Product(f, g))))
+    assert bad.lhs == ok.lhs
+    assert bad.try_at(Product(S(i, F(i)), S(i, G(i)))) is None
+    assert ok.try_at(Product(S(i, F(i)), S(j, G(j)))) == S(i, S(j, Product(F(i), G(j))))
+    assert bad.try_at(Product(S(i, F(i)), S(i, G(i)))) is None
