@@ -56,7 +56,7 @@ from jacopy.packages.poisson.koszul import KoszulBracket
 from jacopy.packages.poisson.nambu import NambuSharpVF
 
 from jacopy.oracle import values as V
-from jacopy.oracle.values import Budget, DomainError, FormV, MultiV, OpV, Unsupported, VecV
+from jacopy.oracle.values import Budget, DomainError, EFormV, FormV, MultiV, OpV, SecV, Unsupported, VecV
 
 # --------------------------------------------------------------------- #
 # Registration table                                                     #
@@ -120,7 +120,8 @@ def _calculus_kind(name: str) -> str:
 class Env:
     """One realization run: a model, a registry, a Product reading."""
 
-    def __init__(self, model, *, registry=None, mode: str = "value", deadline: Optional[float] = None) -> None:
+    def __init__(self, model, *, registry=None, mode: str = "value", deadline: Optional[float] = None,
+                 indices: Optional[Dict[str, int]] = None) -> None:
         self.model = model
         self.R = model.R
         self.registry = registry
@@ -128,11 +129,22 @@ class Env:
         self.deadline = deadline
         self.ambiguous: list = []
         self._memo: Dict = {}
+        #: frame-index values: the free labels' assignment of this run,
+        #: overridden by the binders of enclosing IndexedSums
+        self.indices: Dict[str, int] = dict(indices or {})
+        self._labels: Dict = {}
 
     # ---- entry points ------------------------------------------------- #
 
     def value(self, expr, path=()):
-        key = ("v", expr)
+        # index bindings are part of the key — but only those of the labels
+        # occurring free in ``expr``: a dummy-independent subexpression of
+        # a Σ body is evaluated once, not once per index value
+        if self.indices:
+            labs = free_index_labels(expr, self._labels)
+            key = ("v", expr, tuple(sorted((k, v) for k, v in self.indices.items() if k in labs)))
+        else:
+            key = ("v", expr)
         hit = self._memo.get(key)
         if hit is not None:
             return hit
@@ -187,7 +199,7 @@ class Env:
 
 
 def is_scalar(v) -> bool:
-    return not isinstance(v, (VecV, FormV, MultiV, OpV))
+    return not isinstance(v, (VecV, FormV, MultiV, OpV, SecV, EFormV))
 
 
 def is_zero(v) -> bool:
@@ -199,7 +211,8 @@ def is_zero(v) -> bool:
 def kind(v) -> str:
     if is_scalar(v):
         return "function"
-    return {VecV: "vector", FormV: "form", MultiV: "multivector", OpV: "operator"}[type(v)]
+    return {VecV: "vector", FormV: "form", MultiV: "multivector", OpV: "operator", SecV: "section",
+            EFormV: "E-form"}[type(v)]
 
 
 def norm(v, R):
@@ -262,6 +275,10 @@ def scale(c, v, R):
         return MultiV(V.dscale(v.d, c))
     if isinstance(v, OpV):
         return OpV(lambda a, v=v: scale(c, v(a), R), v.degree, f"{c.as_expr()}·{v.label}")
+    if isinstance(v, SecV):
+        return SecV(v.b, V.sec_scale(c, v.c))
+    if isinstance(v, EFormV):
+        return EFormV(v.b, v.deg, lambda args, v=v: c * v.fn(args), alt=v.alt, ctx=v.ctx, label=f"{c.as_expr()}·{v.label}")
     return c * v
 
 
@@ -278,6 +295,8 @@ def add(vals, R, path=()):
         return out
     if all(isinstance(v, VecV) for v in vals):
         return VecV(tuple(sum((v.c[i] for v in vals[1:]), vals[0].c[i]) for i in range(R.n)))
+    if any(isinstance(v, (SecV, EFormV)) for v in vals):
+        return _add_e(vals, R, path)
     has_form = any(isinstance(v, FormV) for v in vals)
     has_multi = any(isinstance(v, (MultiV, VecV)) for v in vals)
     if has_form and has_multi:
@@ -292,9 +311,32 @@ def add(vals, R, path=()):
 # --------------------------------------------------------------------- #
 
 
+def _add_e(vals, R, path):
+    """Sums of sections of one bundle, or of E-forms of one bundle and
+    degree (an inhomogeneous E-form sum has no model value)."""
+    if all(isinstance(v, SecV) for v in vals):
+        if len({v.b for v in vals}) != 1:
+            raise Unsupported("Sum[sections of different bundles]", path)
+        out = vals[0].c
+        for v in vals[1:]:
+            out = V.sec_add(R, out, v.c)
+        return SecV(vals[0].b, out)
+    if all(isinstance(v, EFormV) for v in vals):
+        if len({(v.b, v.deg) for v in vals}) != 1:
+            raise Unsupported("Sum[inhomogeneous E-forms]", path)
+        fns = [v.fn for v in vals]
+        return EFormV(vals[0].b, vals[0].deg, lambda args: sum((f(args) for f in fns[1:]), fns[0](args)),
+                      alt=all(v.alt for v in vals), ctx=vals[0].ctx, label="+".join(v.label for v in vals))
+    raise Unsupported("Sum[" + "+".join(sorted({kind(v) for v in vals})) + "]", path)
+
+
 def to_op(v, R, path=()) -> OpV:
     if isinstance(v, OpV):
         return v
+    if isinstance(v, SecV):
+        # a section of E ≠ TM does not act on functions (only ρ(u) does;
+        # AlgebroidBracket.section_value)
+        raise Unsupported("operator-from-section", path)
     if is_scalar(v):
         return OpV(lambda a, f=v: scale(f, a, R), 0, f"mult({v.as_expr()})")
     if isinstance(v, VecV):
@@ -479,6 +521,8 @@ def _wedge(e, env, path):
     vals = [env.value(c, path + (i,)) for i, c in enumerate(e.children)]
     if any(isinstance(v, OpV) for v in vals):
         raise Unsupported("Wedge[operator]", path)
+    if any(isinstance(v, (EFormV, SecV)) for v in vals):
+        return _e_wedge(vals, env, path)
     has_form = any(isinstance(v, FormV) for v in vals)
     has_multi = any(isinstance(v, (MultiV, VecV)) for v in vals)
     if has_form and has_multi:
@@ -500,6 +544,13 @@ def _pairing(e, env, path):
     b = env.value(e.X, path + (1,))
     if is_zero(a) or is_zero(b):
         return R.zero()
+    if isinstance(a, SecV) and isinstance(b, EFormV):
+        a, b = b, a
+    if isinstance(a, EFormV) or isinstance(b, SecV):
+        # ⟨α, u⟩ = α(u) for an E-1-form and a section of the same bundle
+        if not (isinstance(a, EFormV) and isinstance(b, SecV) and a.b == b.b and a.deg == 1):
+            raise Unsupported(f"Pairing[{kind(a)}, {kind(b)}]", path)
+        return a([b.c])
     if isinstance(a, (VecV, MultiV)) and isinstance(b, FormV):
         a, b = b, a
     alpha = as_oneform(a, R, path)
@@ -512,14 +563,21 @@ def _pairing(e, env, path):
 
 @register(MultiEval)
 def _multi_eval(e, env, path):
+    """``ω(X_1, …, X_p)``. The ``alternating`` flag is a CLAIM about the
+    head (``core/multi_eval.py``), not a different evaluation: both flags
+    evaluate the head multilinearly in the given slot order. A wrong
+    claim (an alternation shortcut on a non-alternating Palais ``d_E``)
+    is then visible as a value mismatch (audit P0-4)."""
     R = env.R
-    if not e.alternating:
-        raise Unsupported("MultiEval[non-alternating]", path)
     head = env.value(e.head, path + (0,))
     args = [env.value(a, path + (i + 1,)) for i, a in enumerate(e.args)]
     if is_zero(head) or any(is_zero(a) for a in args):
         return R.zero()
     p = len(args)
+    if isinstance(head, EFormV):
+        if head.deg != p or e.slot_kind != "vector":
+            raise Unsupported("MultiEval[E-form arity]", path)
+        return head([as_sec(a, head.b, path) for a in args])
     if isinstance(head, FormV):
         if head.degrees() != {p}:
             raise Unsupported("MultiEval[arity]", path)
@@ -578,20 +636,28 @@ def _check_tm(e, path):
         raise Unsupported(f"{type(e).__name__}[bundle≠TM]", path)
 
 
+def _is_tm(e) -> bool:
+    """The symbolic TM (a TM with a fixed dimension is not modeled)."""
+    return getattr(e, "bundle", TM) == TM
+
+
 @register(VectorField)
 def _vector_field(e, env, path):
-    _check_tm(e, path)
     if e.degree.as_int() != 0:
         raise Unsupported("VectorField[graded]", path)
+    if not _is_tm(e):
+        # a section of an algebroid / vector bundle E (context.py)
+        return _section_atom(e, env, path)
     return env.model.vector(("VectorField", e.name))
 
 
 @register(Form)
 def _form(e, env, path):
-    _check_tm(e, path)
     p = env.degree(e.degree, path)
     if p < 0:
         raise Unsupported("Form[negative degree]", path)
+    if not _is_tm(e):
+        return _eform_atom(e, env, p, path)
     return norm(env.model.form(e.name, p), env.R)
 
 
@@ -710,6 +776,9 @@ def _exterior_derivative(e, env, path):
             return norm(MultiV(V.tilde_d(R, pi, as_multi(a, R, path))), R)
 
         return OpV(dt, 1, "d̃")
+    alg = algebroid_of_calculus(calc)
+    if alg is not None:
+        return _e_exterior_derivative(alg, env, path)
     raise Unsupported(f"ExteriorDerivative[{_calculus_kind(calc)}]", path)
 
 
@@ -742,13 +811,19 @@ def _lie_derivative(e, env, path):
             return norm(MultiV(V.tilde_lie(R, pi, alpha, as_multi(a, R, path))), R)
 
         return OpV(Lt, 0, "L̃_α")
+    alg = algebroid_of_calculus(calc)
+    if alg is not None:
+        return _e_lie_derivative(alg, e, env, path)
     raise Unsupported(f"LieDerivative[{_calculus_kind(calc)}]", path)
 
 
 @register(Interior)
 def _interior(e, env, path):
     R = env.R
-    X = as_vec(env.value(e.vector, path + ("X",)), R, path)
+    Xv = env.value(e.vector, path + ("X",))
+    if isinstance(Xv, SecV):
+        return _e_interior(Xv, env, path)
+    X = as_vec(Xv, R, path)
 
     def i(a):
         if is_scalar(a):
@@ -758,6 +833,56 @@ def _interior(e, env, path):
         raise DomainError(f"ι_X[on {kind(a)}]", path)
 
     return OpV(i, -1, "ι_X")
+
+
+def algebroid_of_calculus(name: str) -> Optional[str]:
+    """``Cartan-<E>`` (central/algebroid/calculus.py) → ``E``."""
+    if name != CARTAN_TM_NAME and name.startswith("Cartan-"):
+        return name[len("Cartan-"):]
+    return None
+
+
+# the algebroid / frame realizers register themselves on import; their
+# helpers are looked up at CALL time (no circular-import order issue)
+def _e(name):
+    from jacopy.oracle import realize_e
+
+    return getattr(realize_e, name)
+
+
+def _e_exterior_derivative(*a):
+    return _e("_e_exterior_derivative")(*a)
+
+
+def _e_interior(*a):
+    return _e("_e_interior")(*a)
+
+
+def _e_lie_derivative(*a):
+    return _e("_e_lie_derivative")(*a)
+
+
+def _e_wedge(*a):
+    return _e("_e_wedge")(*a)
+
+
+def _eform_atom(*a):
+    return _e("_eform_atom")(*a)
+
+
+def _section_atom(*a):
+    return _e("_section_atom")(*a)
+
+
+def as_sec(*a):
+    return _e("as_sec")(*a)
+
+
+def free_index_labels(*a):
+    return _e("free_index_labels")(*a)
+
+
+from jacopy.oracle import realize_e as _realize_e  # noqa: E402,F401
 
 
 @register(TildeInterior)

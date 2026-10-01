@@ -498,3 +498,123 @@ def nambu_sharp(R: Ring, Pi: Dict, omega: Dict, p: int) -> Tuple[sp.Poly, ...]:
             if not v.is_zero:
                 out[k] = out[k] + c * v
     return tuple(out)
+
+
+# --------------------------------------------------------------------- #
+# Algebroid values (F2): sections of E and (ordered) E-forms             #
+# --------------------------------------------------------------------- #
+
+
+class SecV:
+    """A section of a bundle ``E ≠ TM``: ``r`` component polys in the
+    model's constant frame of ``E = R^n × R^r``. ``b`` is the bundle key
+    (sections of different bundles never mix)."""
+
+    __slots__ = ("b", "c")
+
+    def __init__(self, b, c: Sequence[sp.Poly]) -> None:
+        self.b = b
+        self.c = tuple(c)
+
+    def is_zero(self) -> bool:
+        return all(x.is_zero for x in self.c)
+
+    def __repr__(self) -> str:
+        return f"Sec[{self.b}](" + ", ".join(str(x.as_expr()) for x in self.c) + ")"
+
+
+class EFormV:
+    """An E-p-form (p ≥ 1) as an ORDERED ℝ-multilinear map on sections,
+    evaluated LAZILY on concrete sections: ``fn(list of r-tuples) -> poly``.
+
+    Laziness is the point: for a non-skew / non-right-Leibniz bracket the
+    Palais expression ``d_E ω`` is neither alternating nor C∞-linear in
+    its first slot (bracket_calculus.py M2-1/M2-2), so it is not a tensor
+    and must be evaluated on the actual arguments, never on a basis.
+    ``alt`` records whether the map is alternating (atoms; d_E of an
+    alternating form for a verified-skew bracket). ``ctx`` (the model)
+    supplies the random test sections used by :meth:`is_zero`."""
+
+    __slots__ = ("b", "deg", "fn", "alt", "ctx", "label")
+
+    def __init__(self, b, deg: int, fn: Callable, *, alt: bool, ctx, label: str = "") -> None:
+        self.b = b
+        self.deg = deg
+        self.fn = _memo_fn(fn)
+        self.alt = alt
+        self.ctx = ctx
+        self.label = label
+
+    def __call__(self, args) -> sp.Poly:
+        if len(args) != self.deg:
+            raise Unsupported("E-form[arity]", (), f"{len(args)} arguments for degree {self.deg}")
+        return self.fn(list(args))
+
+    def is_zero(self) -> bool:
+        """Zero on the model's random test tuples (exact polynomial
+        arithmetic; a falsifier: nonzero is certain, zero is "not refuted")."""
+        return all(self.fn(list(t)).is_zero for t in self.ctx.test_tuples(self.b, self.deg))
+
+    def __repr__(self) -> str:
+        vals = []
+        for t in self.ctx.test_tuples(self.b, self.deg)[:1]:
+            vals.append(str(self.fn(list(t)).as_expr()))
+        return f"EForm[{self.b}, deg {self.deg}]({self.label}; on test sections: {', '.join(vals)})"
+
+
+def _memo_fn(fn):
+    """Cache an E-form's values per argument tuple: the same evaluation is
+    requested repeatedly (zero tests, displays, nested Palais terms)."""
+    if getattr(fn, "_oracle_memo", False):
+        return fn
+    cache: Dict = {}
+
+    def wrapped(args):
+        key = tuple(tuple(a) for a in args)
+        hit = cache.get(key)
+        if hit is None:
+            hit = cache[key] = fn(args)
+        return hit
+
+    wrapped._oracle_memo = True
+    return wrapped
+
+
+def sec_add(R: Ring, a: Sequence[sp.Poly], b: Sequence[sp.Poly]) -> Tuple[sp.Poly, ...]:
+    return tuple(x + y for x, y in zip(a, b))
+
+
+def sec_scale(c: sp.Poly, a: Sequence[sp.Poly]) -> Tuple[sp.Poly, ...]:
+    return tuple(c * x for x in a)
+
+
+def alt_eval(R: Ring, comps: Dict, args) -> sp.Poly:
+    """An alternating E-form given by its components on increasing frame
+    index tuples, evaluated in the determinant convention (no 1/p!) —
+    the E version of :func:`det_eval`."""
+    return det_eval(R, comps, args)
+
+
+def shuffles(p: int, q: int):
+    """``(sign, first p positions, last q positions)`` of the
+    (p, q)-shuffles of ``range(p + q)``."""
+    for first in combinations(range(p + q), p):
+        rest = tuple(i for i in range(p + q) if i not in first)
+        yield perm_sign(first + rest), first, rest
+
+
+def e_wedge(a_fn, p: int, b_fn, q: int):
+    """``(α∧β)(X_1…X_{p+q}) = Σ_{(p,q)-shuffles σ} sgn σ α(X_σ…)β(X_σ…)`` —
+    the determinant convention of ``core/wedge.py``
+    (``(α∧β)(U,V) = α(U)β(V) − α(V)β(U)``) for alternating α, β."""
+
+    def fn(args):
+        out = None
+        for s, first, rest in shuffles(p, q):
+            term = a_fn([args[i] for i in first]) * b_fn([args[i] for i in rest])
+            if s < 0:
+                term = -term
+            out = term if out is None else out + term
+        return out
+
+    return fn

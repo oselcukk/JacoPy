@@ -187,9 +187,13 @@ def test_unsupported_is_never_silent():
     from jacopy.central.objects.vector_field import VectorField
 
     u = VectorField("u", bundle=Bundle("E"))
+    # F2: a section of E ≠ TM is modeled, but it does not act on functions
+    # (only ρ(u) does); without owner information its bundle is unknown
     rep = ok(Act(u, f), Integer(0))
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "owners-unknown"
+    rep = ok(Act(u, f), Integer(0), owners=[])
     assert rep.verdict == "UNSUPPORTED"
-    assert rep.unsupported_type == "VectorField[bundle≠TM]" and rep.unsupported_path == ("lhs", 0)
+    assert rep.unsupported_type == "operator-from-section" and rep.unsupported_path == ("lhs", 0)
     q = Symbol("q")  # undeclared symbol: no model semantics
     rep = ok(Act(X, q), Integer(0))
     assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "Symbol[undeclared]"

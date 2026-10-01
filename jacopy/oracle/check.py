@@ -52,8 +52,10 @@ from jacopy.packages.poisson.core import HamiltonianVF, PoissonBracketValue, Sha
 from jacopy.packages.poisson.koszul import KoszulBracket
 from jacopy.packages.poisson.nambu import NambuSharpVF
 
+from jacopy.central.algebroid.context import CoboundaryForm
 from jacopy.oracle import realize as RZ
-from jacopy.oracle.models.tangent import TangentModel
+from jacopy.oracle import select as SEL
+from jacopy.oracle.models.algebroid import POOL, AlgebroidModel, build_structure
 from jacopy.oracle.report import (
     AGREE,
     AMBIGUOUS,
@@ -283,6 +285,12 @@ def unmodeled_assumption(requires=None, chain=None):
     def judge(owner, rule):
         if owner is not None and _poisson_bivector_owner(owner):
             return None
+        if owner is not None and SEL.is_algebroid(owner):
+            # F2: the hierarchy axioms are modeled (select.py); any other
+            # algebroid-owned assumption (package rules citing
+            # bourbaki/courant theorems, projectors) is not
+            ax = SEL.axiom_of_rule(rule or "")
+            return None if ax is not None else f"assumption[Algebroid:{(rule or '?').split(' (')[0][:40]}]"
         return f"assumption[{type(owner).__name__ if owner is not None else 'unowned'}]"
 
     if requires is not None:
@@ -425,20 +433,29 @@ def _op_lower(e, ub) -> int:
     return 0
 
 
-def max_exterior_degree(exprs, assign) -> int:
+def _tm_object(e) -> bool:
+    b = getattr(e, "bundle", None)
+    return b is None or (getattr(b, "is_tangent", False) and b.dim is None)
+
+
+def max_exterior_degree(exprs, assign, tm_only: bool = False) -> int:
     """Upper bound of the exterior / multivector degree of EVERY subnode
     (operator results included: ``d`` raises by one). The model dimension
     must exceed it, else a nonzero object of that degree vanishes
-    identically and wrong identities pass."""
+    identically and wrong identities pass. ``tm_only``: E-forms (bundle
+    ≠ TM) and algebroid ``d_E`` count 0 — the bound for ``n = dim M``
+    (the rank ``r`` of ``E`` takes the full bound)."""
     memo = {}
 
     def ub(e):
         key = id(e)
         if key in memo:
             return memo[key]
-        if isinstance(e, (Form, PVector)):
+        if tm_only and isinstance(e, Form) and not _tm_object(e):
+            v = 0
+        elif isinstance(e, (Form, PVector)):
             v = _deg_value(e.degree, assign) or 0
-        elif isinstance(e, _VECTORISH) or isinstance(e, KoszulBracket):
+        elif isinstance(e, _VECTORISH) or isinstance(e, (KoszulBracket, CoboundaryForm)):
             v = 1
         elif isinstance(e, Wedge):
             v = sum(ub(c) for c in e.children)
@@ -451,7 +468,10 @@ def max_exterior_degree(exprs, assign) -> int:
         elif isinstance(e, Neg):
             v = ub(e.arg)
         elif isinstance(e, Act):
-            v = ub(e.arg) + _op_raise(e.op)
+            raise_ = _op_raise(e.op)
+            if tm_only and isinstance(e.op, ExteriorDerivative) and RZ.algebroid_of_calculus(e.op.calculus_name):
+                raise_ = 0
+            v = ub(e.arg) + raise_
         elif isinstance(e, PartialEval):
             v = e.n_open
         elif isinstance(e, BracketApply):
@@ -480,8 +500,8 @@ def _model_seed(base_seed: int, goal: str, index: int) -> int:
     return int(h[:16], 16)
 
 
-def _evaluate(lhs, rhs, model, registry, mode, deadline):
-    env = RZ.Env(model, registry=registry, mode=mode, deadline=deadline)
+def _evaluate(lhs, rhs, model, registry, mode, deadline, indices=None):
+    env = RZ.Env(model, registry=registry, mode=mode, deadline=deadline, indices=indices)
     lv = env.value(lhs, ("lhs",))
     rv = env.value(rhs, ("rhs",))
     eq = values_equal(lv, rv, model)
@@ -508,11 +528,42 @@ def _degree_assignments(dvars, lowering: int = 0):
     return [dict(zip(names, c)) for c in combos]
 
 
-def _run(lhs, rhs, *, registry, families, samples, base_seed, dvars, lowering, deadline, goal, label=""):
-    """Evaluate in every (degree assignment × sample). Returns
-    ``(witnesses, models, value_reading_holds, operator_reading_holds)``;
-    raises Unsupported/Budget. Where a model has no Product ambiguity
-    the operator reading IS the value reading."""
+def _make_model(n, seed, s, *, families, assign, label, plan, fams, need):
+    """A model of ``R^n`` with the algebroid structures ``fams``
+    (``{name: (family, r)}``, structures drawn from the seed pool and
+    self-checked) and the plan's other bundles."""
+    structures, bundles, anchors = {}, {}, {}
+    if plan is not None:
+        for name, (fam, r) in fams.items():
+            info = plan.algebroids[name]
+            structures[name] = build_structure(fam, n, r, seed % POOL)
+            bundles[info["bundle"]] = (r, name)
+            anchors[name] = info["anchor"]
+        for b, name in plan.bundles.items():
+            if b not in bundles:
+                bundles[b] = (getattr(b, "dim", None) or max(3, need), None)
+    return AlgebroidModel(n, seed, bivectors=families, degrees=assign, label=label, sample=s,
+                          structures=structures, bundles=bundles, anchors=anchors)
+
+
+def _index_dims(plan, model):
+    dims = {}
+    for lab, b in (plan.free_labels if plan is not None else {}).items():
+        if b is None or (getattr(b, "is_tangent", False) and b.dim is None):
+            dims[lab] = model.n
+        else:
+            dims[lab] = model.rank(b)
+    return dims
+
+
+def _run(lhs, rhs, *, registry, families, samples, base_seed, dvars, lowering, deadline, goal, label="",
+         plan=None, override=None):
+    """Evaluate in every (degree assignment × model spec × free-index
+    assignment). Returns ``(witnesses, models, value_reading_holds,
+    operator_reading_holds)``; raises Unsupported/Budget. Where a model
+    has no Product ambiguity the operator reading IS the value reading.
+    With algebroids, the number of models is at least the size of the
+    family cover (select.py)."""
     witnesses, models, skipped = [], [], []
     v_all = o_all = True
     idx = 0
@@ -525,21 +576,32 @@ def _run(lhs, rhs, *, registry, families, samples, base_seed, dvars, lowering, d
             skipped.append((assign, need))
             continue
         n = max(3, need)
-        for s in range(samples):
+        if plan is not None:
+            # E-degrees bound the rank r (select.py), not n = dim M
+            n = max(3, max_exterior_degree((lhs, rhs), assign, tm_only=True) + 1)
+        if plan is not None and plan.algebroids:
+            specs = plan.model_specs(n, need, samples, override)
+        else:
+            specs = [(n, {})] * samples
+        for s, (nm, fams) in enumerate(specs):
             seed = _model_seed(base_seed, goal, idx)
             idx += 1
-            model = TangentModel(n, seed, bivectors=families, degrees=assign, label=label, sample=s)
-            eq, lv, rv, amb = _evaluate(lhs, rhs, model, registry, "value", deadline)
-            models.append(model.describe())
-            witnesses.append(Witness(model.describe(), "value", _show(lv), _show(rv), eq))
-            eq_op = eq
-            if amb:  # same model (its atom cache), the other Product reading
-                eq_op, lv2, rv2, _ = _evaluate(lhs, rhs, model, registry, "operator", deadline)
-                witnesses.append(Witness(model.describe(), "operator", _show(lv2), _show(rv2), eq_op))
-            v_all = v_all and eq
-            o_all = o_all and eq_op
-            if not v_all and not o_all:
-                return witnesses, models, False, False  # refuted: stop early
+            model = _make_model(nm, seed, s, families=families, assign=assign, label=label, plan=plan,
+                                fams=fams, need=need)
+            dims = _index_dims(plan, model)
+            for ia in SEL.index_assignments(plan.free_labels if plan is not None else {}, dims, seed):
+                eq, lv, rv, amb = _evaluate(lhs, rhs, model, registry, "value", deadline, ia)
+                desc = model.describe() + (f" indices {ia}" if ia else "")
+                models.append(desc)
+                witnesses.append(Witness(desc, "value", _show(lv), _show(rv), eq))
+                eq_op = eq
+                if amb:  # same model (its atom cache), the other Product reading
+                    eq_op, lv2, rv2, _ = _evaluate(lhs, rhs, model, registry, "operator", deadline, ia)
+                    witnesses.append(Witness(desc, "operator", _show(lv2), _show(rv2), eq_op))
+                v_all = v_all and eq
+                o_all = o_all and eq_op
+                if not v_all and not o_all:
+                    return witnesses, models, False, False  # refuted: stop early
     if skipped and (v_all or o_all):
         raise Unsupported("dimension", (), f"{len(skipped)} assignment(s) need up to R^{max(k for _, k in skipped)} > R^{MAX_DIM}")
     return witnesses, models, v_all, o_all
@@ -578,6 +640,14 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
         return OracleReport(UNSUPPORTED, unsupported_type="owners-unknown", unsupported_path=(),
                             detail=f"structure bivector(s) {sorted(names)} without owner information",
                             elapsed=time.monotonic() - t0, **base)
+    try:
+        need0 = max(max_exterior_degree((lhs, rhs), a) + 1 for a in _degree_assignments(dvars, lowering))
+        plan = SEL.plan_algebroids(lhs, rhs, owners, requires, chain, min(need0, MAX_DIM))
+    except Unsupported as exc:
+        return OracleReport(UNSUPPORTED, unsupported_type=exc.kind, unsupported_path=exc.path, detail=exc.detail,
+                            elapsed=time.monotonic() - t0, **base)
+    if not plan.active:
+        plan = None
     declared = {n for n, ok in (info or {}).items() if ok}
     families = {}
     for n in names | declared:
@@ -587,7 +657,8 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
         rng = degree_range(lowering)
         k = len(rng) ** len(dvars)
         assign_txt = [f"{v}∈{{{rng[0]}..{rng[-1]}}}" for v in sorted(dvars)] + [f"full product, {k} assignment(s)"]
-    run = dict(registry=registry, families=families, samples=samples, dvars=dvars, lowering=lowering, goal=goal)
+    run = dict(registry=registry, families=families, samples=samples, dvars=dvars, lowering=lowering, goal=goal,
+               plan=plan)
     try:
         witnesses, models, v_all, o_all = _run(lhs, rhs, base_seed=seed, deadline=deadline, **run)
     except Unsupported as exc:
@@ -615,7 +686,27 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
         return OracleReport(AMBIGUOUS, detail=f"only the {survivor} reading of a Product survives every model",
                             elapsed=time.monotonic() - t0, **common, **base)
     # ASSUMPTION_LEAK: declared-but-unused Poisson structures
-    unchecked = []
+    unchecked = list(plan.notes) if plan is not None else []
+    if plan is not None and plan.algebroids:
+        counters, alg_unchecked = SEL.leak_counter_plans(plan, min(need0, MAX_DIM))
+        unchecked.extend(alg_unchecked)
+        for name, fam, hit in counters:
+            try:
+                w3, m3, v3, o3 = _run(lhs, rhs, base_seed=seed + 7, deadline=deadline,
+                                      label=f"counter-model {name}:{fam[0]}",
+                                      **dict(run, samples=1, override={name: [fam]}))
+            except Budget:
+                return _leak_budget(base, t0, timeout, f"{name} ({fam[0]})", common)
+            except Unsupported as exc:
+                unchecked.append(f"{name} ({fam[0]}): counter-model {type(exc).__name__} {getattr(exc, 'kind', '')}".strip())
+                continue
+            if not (v3 and o3):
+                return OracleReport(ASSUMPTION_LEAK, leak_structure=f"{name}: {', '.join(hit)}",
+                                    detail=(f"holds only under the axiom(s) {hit} of {name}, which the proof "
+                                            f"record does not use (counter-model {fam[0]})"),
+                                    elapsed=time.monotonic() - t0, samples=len(models) + len(m3),
+                                    models=models + m3, degree_assignments=assign_txt,
+                                    witnesses=witnesses + w3, **base)
     present = declared & (names | atoms)  # also a plain PVector π ([π,π]_SN, π(df,dg))
     used = poisson_requires(requires, chain)
     if used is None and present:
@@ -627,9 +718,11 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
             fam = dict(families)
             fam[n] = "counter"
             try:
-                w3, m3, v3, o3 = _run(lhs, rhs, base_seed=seed + 7, deadline=time.monotonic() + timeout,
+                w3, m3, v3, o3 = _run(lhs, rhs, base_seed=seed + 7, deadline=deadline,
                                       label="counter-model", **dict(run, families=fam, samples=1))
-            except (Unsupported, Budget) as exc:
+            except Budget:
+                return _leak_budget(base, t0, timeout, n, common)
+            except Unsupported as exc:
                 unchecked.append(f"{n}: counter-model {type(exc).__name__} {getattr(exc, 'kind', '')}".strip())
                 continue
             if not (v3 and o3):
@@ -640,6 +733,16 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
                                     witnesses=witnesses + w3, **base)
     return OracleReport(AGREE, elapsed=time.monotonic() - t0, leak_unchecked="; ".join(unchecked) or None,
                         **common, **base)
+
+
+def _leak_budget(base, t0, timeout, what, common):
+    """The ASSUMPTION_LEAK counter-models share the check's deadline; when
+    it runs out the D-models agreed but the leak check is incomplete —
+    reported as UNSUPPORTED(budget[leak-check]), never a plain AGREE."""
+    return OracleReport(UNSUPPORTED, unsupported_type="budget[leak-check]", unsupported_path=(),
+                        detail=(f"sides agree in {common['samples']} D-model(s), but the assumption-leak "
+                                f"counter-model for {what} exceeded the {timeout}s budget"),
+                        elapsed=time.monotonic() - t0, **base)
 
 
 def check_chain(chain, **kw) -> ChainReport:
