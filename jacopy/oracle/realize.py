@@ -412,15 +412,19 @@ def _rational(e, env, path):
 
 @register(Symbol)
 def _symbol(e, env, path):
-    """Scalar contract (SPEC §7): a ``Scalar``-declared symbol is a
+    """Scalar contract (SPEC §7): an EXACTLY ``Scalar``-declared symbol is a
     CONSTANT; a ``Graded(0)`` symbol is a function (``functions(...)``);
     anything else (undeclared, graded ≠ 0) has no model."""
     reg = env.registry
     if reg is None:
         raise Unsupported("Symbol[no-registry]", path)
-    if reg.has(e, Scalar):
-        return env.model.constant(("Symbol", e.name))
+    # the SAME ℝ-constant as the engine's is_real_constant (exact
+    # Scalar on the atom, no Graded(k ≠ 0); audit 0b00e1b M1-1) —
+    # restated from the registry data, the oracle imports no engine
+    # logic (SPEC §1): a class/predicate-level Scalar is not a constant
     g = reg.get(e, Graded)
+    if reg.declared_exact(e, Scalar) and (g is None or g.degree.as_int() == 0):
+        return env.model.constant(("Symbol", e.name))
     if g is not None:
         if g.degree.as_int() == 0:
             return env.model.function(("Symbol", e.name))

@@ -232,26 +232,34 @@ def _scalar_world():
     return reg, D, x, c, f
 
 
-def test_m1_1_noncommuting_beats_scalar():
+def test_m1_1_a_constant_commutes_even_with_a_noncommuting_operator():
+    # chef contract correction: Scalar = ℝ-constant, which commutes with
+    # every ℝ-linear operator — NonCommuting included (main's behaviour,
+    # now under the exact-Scalar definition)
     from jacopy.algebra.derivation import compose
     from jacopy.algorithms.sort_product import sort_product
-    from jacopy.proof import show_equal
-    from jacopy.proof.expansion import ExpansionEngine
-    from jacopy.proof.result import prove
-
-    reg, D, x, c, f = _scalar_world()
-    # the audit's own fixture shape: x Scalar, D NonCommuting
-    with pytest.raises(ProofFailure):
-        show_equal(compose(D, x), compose(x, D), registry=reg)
-    assert prove(ExpansionEngine(), compose(D, x), compose(x, D), registry=reg).status == "RESIDUAL"
-    assert sort_product(Product(D, x), reg)[0] == Product(D, x)
-    # a class-level NonCommuting still beats an exact Scalar (the
-    # exact same-expression combination is refused by the registry)
     from jacopy.core.properties import NonCommuting
+    from jacopy.proof import show_equal
 
+    reg, D, x, c, f = _scalar_world()  # D NonCommuting, x and c Scalar
+    show_equal(compose(D, x), compose(x, D), registry=reg)
+    assert simplify(Sum(Product(D, c), Neg(Product(c, D))), reg) == Integer(0)
+    assert sort_product(Product(D, Integer(2)), reg)[0] == Product(Integer(2), D)
+    # a FUNCTION does not commute with the NonCommuting operator
+    with pytest.raises(ProofFailure):
+        show_equal(compose(D, f), compose(f, D), registry=reg)
+    assert sort_product(Product(D, f), reg)[0] == Product(D, f)
+    # a class-level NonCommuting does not stop a constant either
     E = vector_fields("E")[0]
     reg.declare_for_class(type(E), NonCommuting())
-    assert sort_product(Product(E, c), reg)[0] == Product(E, c)
+    assert sort_product(Product(E, c), reg)[0] == Product(c, E)
+    # a class-level Scalar is NOT a constant: it does not jump operators
+    reg2 = PropertyRegistry()
+    from jacopy.core.properties import Scalar
+
+    reg2.declare_for_class(Symbol, Scalar())
+    z = Symbol("z")
+    assert sort_product(Product(E, z), reg2)[0] == Product(E, z)
 
 
 def test_m1_1_scalar_constant_commutes_and_is_annihilated_consistently():
@@ -317,6 +325,20 @@ def test_m1_2_scalar_generator_is_refused():
     reg = PropertyRegistry()
     reg.declare(y, Graded(0))
     prove_operator_equation(Product(Integer(2), E), Sum(E, E), Alg(), registry=reg, engine=eng)
+    # review: one constant generator does not sink the proof — it is
+    # left out of the certificate, the function generator carries it
+    t = Symbol("t")
+
+    class Alg2:
+        generators = (y, t)
+
+    reg.declare(t, Scalar())
+    chain = prove_operator_equation(Product(Integer(2), E), Sum(E, E), Alg2(), registry=reg, engine=eng)
+    top = list(chain)[0]
+    assert "omitted" in top.justification and len(top.children) == 1
+    # the wrong Euler identity still fails on the function generator
+    with pytest.raises(ProofFailure):
+        prove_operator_equation(compose(E, y), Product(Integer(2), y, E), Alg2(), registry=reg, engine=eng)
 
 
 def test_m1_1_scalar_contract_matches_the_model_oracle():
@@ -439,13 +461,13 @@ def test_m1_1_leibniz_proofs_do_not_accumulate_scalar_reads():
 
     pr = sys.modules["jacopy.algorithms.product_rule"]
 
-    saved = pr._is_real_constant
-    pr._is_real_constant = lambda arg, registry: False  # contract check off
+    saved = pr._annihilates
+    pr._annihilates = lambda op, arg, registry: False  # contract check off
     try:
         with track_reads() as base:
             product_rule(expr, reg)
     finally:
-        pr._is_real_constant = saved
+        pr._annihilates = saved
     # the contract check adds no (negative) Scalar reads of its own
     assert len(log) == len(base)
     c = Symbol("c")
@@ -598,3 +620,110 @@ def test_inert_bracket_is_retried_after_its_operands_expand():
     p, q, r = Symbol("p"), Symbol("q"), Symbol("r")
     assert _expand_all_brackets(O(I(p, q), r), None) == Integer(1)
     assert _expand_all_brackets(O(p, r), None) == O(p, r)  # stays inert, terminates
+
+
+def test_m1_1_registry_check_uses_the_effective_answers():
+    # review: an exact declaration overrides a class-level one of the
+    # same type — main accepted this, and it is consistent
+    from jacopy.core.properties import Scalar, ScalarContractError
+
+    reg = PropertyRegistry()
+    reg.declare_for_class(Symbol, Graded(1))
+    c = Symbol("c")
+    reg.declare(c, Graded(0))
+    reg.declare(c, Scalar())
+    reg2 = PropertyRegistry()
+    d = Symbol("d")
+    reg2.declare(d, Graded(0))
+    reg2.declare(d, Scalar())
+    reg2.declare_for_class(Symbol, Graded(1))  # d's exact Graded(0) wins
+    with pytest.raises(ScalarContractError):
+        reg2.declare(Symbol("e"), Scalar())     # effective Graded(1)
+
+
+def test_derived_bracket_derives_degree_q_and_grades_koszul_mode():
+    from jacopy.algebra.derivation import Act, Derivation
+    from jacopy.brackets.derived import DerivedBracket, derived_bracket
+    from jacopy.central.objects import forms
+
+    pi = PVector("pi", degree=2)
+    assert DerivedBracket(SN, pi).degree_Q.as_int() == 2       # derived, no error
+    assert derived_bracket(SN, pi).degree_Q.as_int() == 2
+    assert DerivedBracket(SN, pi, degree_Q=2).degree_Q.as_int() == 2
+    with pytest.raises(ValueError):
+        DerivedBracket(SN, pi, degree_Q=1)                        # explicit contradiction
+    K = DerivedBracket(SN, pi, acting_on=Derivation("π♯", degree=0))
+    reg = PropertyRegistry()
+    a, b, c = forms("alpha beta gamma", degree=1)
+    # Koszul bracket on Ω(M): form grading, degree −1 → s = 0 on 1-forms
+    assert K.operand_shift.as_int() == -1
+    assert K.claimed_swap_sign(a, b, reg) == -1
+    assert [K.jacobi_term_sign(*t, reg) for t in ((a, b, c), (b, c, a), (c, a, b))] == [1, 1, 1]
+    assert K.module_product(a, b) == Wedge(a, b)
+
+
+def test_koszul_signs_agree_with_the_model_oracle():
+    pytest.importorskip("sympy")
+    from jacopy.algebra.derivation import Derivation, Act
+    from jacopy.brackets.derived import DerivedBracket
+    from jacopy.central.objects import forms
+    from jacopy.central.tangent.exterior import CARTAN_TM, d
+    from jacopy.core.pairing import Pairing
+    from jacopy.oracle.check import check_equal
+    from jacopy.packages.poisson.core import SharpVF, poisson_structure
+
+    P = poisson_structure("π", declare=("poisson",))
+    pi = P.pi
+    K = DerivedBracket(SN, pi, acting_on=Derivation("π♯", degree=0))
+    reg = PropertyRegistry()
+    a, b, c = forms("alpha beta gamma", degree=1)
+
+    def kz(x, y):  # the formula K emits, the anchor realised as π♯
+        rx, ry = SharpVF(pi, x), SharpVF(pi, y)
+        return Sum(Act(CARTAN_TM.lie(rx), y), Neg(Act(CARTAN_TM.lie(ry), x)), Neg(d(Pairing(y, rx))))
+
+    def verdict(e):
+        return check_equal(e, Integer(0), registry=reg, owners=[P]).verdict
+
+    eps = K.claimed_swap_sign(a, b, reg)
+    assert verdict(Sum(kz(a, b), kz(b, a) if eps == -1 else Neg(kz(b, a)))) == "AGREE"
+    assert verdict(Sum(kz(a, b), Neg(kz(b, a)) if eps == -1 else kz(b, a))) == "DISAGREE"
+    terms = (kz(a, kz(b, c)), kz(b, kz(c, a)), kz(c, kz(a, b)))
+    signs = [K.jacobi_term_sign(*t, reg) for t in ((a, b, c), (b, c, a), (c, a, b))]
+    assert verdict(Sum(*[t if s == 1 else Neg(t) for t, s in zip(terms, signs)])) == "AGREE"
+
+
+def test_derived_strategy_message_names_the_base_shift():
+    from jacopy.brackets.derived import DerivedBracket
+    from jacopy.proof.strategies import DerivedBracketStrategy
+
+    class _Comm(GradedBracket):
+        def __init__(self):
+            super().__init__("comm", degree=0)
+
+        def expand(self, a, b, registry=None):
+            return a * b - b * a
+
+    reg = PropertyRegistry()
+    syms = [Symbol(n) for n in "ABC"]
+    for x in syms:
+        reg.declare(x, Graded(0))
+    br = DerivedBracket(_Comm(), Symbol("Q"), degree_Q=0)
+    with pytest.raises(ProofFailure, match="k_base = 0"):
+        DerivedBracketStrategy().prove_jacobi(br, *syms, registry=reg)
+
+
+def test_oracle_models_only_exact_scalars_as_constants():
+    pytest.importorskip("sympy")
+    from jacopy.algebra.derivation import Act
+    from jacopy.core.properties import Scalar
+    from jacopy.oracle.check import check_equal
+
+    X = vector_fields("X")[0]
+    reg = PropertyRegistry()
+    reg.declare_for_class(Symbol, Scalar())
+    z = Symbol("z")
+    assert check_equal(Act(X, z), Integer(0), registry=reg, owners=[]).verdict != "AGREE"
+    reg2 = PropertyRegistry()
+    reg2.declare(z, Scalar())
+    assert check_equal(Act(X, z), Integer(0), registry=reg2, owners=[]).verdict == "AGREE"
