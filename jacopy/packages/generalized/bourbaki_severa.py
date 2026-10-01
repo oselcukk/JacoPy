@@ -127,7 +127,9 @@ class RightLeibnizTheoremRule(CitedTheoremMixin, Definition):
     prove_right_leibniz_from_r_invariance`), so every step records
     ``cites`` and the theorem's requirements — the declared (7.8)
     invariance of ``alg`` and the structure — flow into the result.
-    If (7.2) cannot be proved on ``alg`` the rule never fires."""
+    The rule fires only on a structure DECLARING ``bourbaki-invariance``
+    (Def 7.1), so the "(7.8) declared" requirement is backed by the
+    structure; if (7.2) cannot be proved on ``alg`` it never fires."""
 
     anchor = AlgebroidBracket
 
@@ -144,6 +146,10 @@ class RightLeibnizTheoremRule(CitedTheoremMixin, Definition):
         )
 
     def _prove_cited(self):
+        # (7.2) is proved FROM the (7.8) invariance: the structure must
+        # declare it (pre-metric-Bourbaki Def 7.1), else no citation
+        if not self._alg.declares("bourbaki-invariance"):
+            return None
         from jacopy.packages.generalized.bourbaki_structure import (
             prove_right_leibniz_from_r_invariance,
         )
@@ -208,6 +214,9 @@ class LeftLeibnizTheoremRule(CitedTheoremMixin, Definition):
         )
 
     def _prove_cited(self):
+        # rests on (7.2), hence on the declared (7.8) invariance
+        if not self._alg.declares("bourbaki-invariance"):
+            return None
         from jacopy.packages.generalized.bourbaki_structure import (
             prove_left_leibniz_bourbaki,
         )

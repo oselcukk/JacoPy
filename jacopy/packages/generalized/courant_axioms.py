@@ -389,7 +389,11 @@ class DPairingUnfoldDefinition(CitedTheoremMixin, Definition):
         )
 
     def _prove_cited(self):
-        if not self._alg.declares("antisymmetric"):
+        # Prop 2.2 assumes [C5] on the LWX (skew) data: both declared
+        if not (
+            self._alg.declares("antisymmetric")
+            and self._alg.declares("courant-invariance")
+        ):
             return None
         (f,), reg = private_function("f")
         x, y = self._alg.sections("x y")
@@ -450,6 +454,7 @@ class DDZeroDefinition(CitedTheoremMixin, Definition):
         if not (
             self._alg.declares("anchor-morphism")
             and self._alg.declares("antisymmetric")
+            and self._alg.declares("courant-invariance")
         ):
             return None
         return _dd_zero_theorem(self._alg)
@@ -592,9 +597,12 @@ def courant_context(name: str = "E") -> Algebroid:
     [C2], definitionally symmetric non-degenerate pairing. [C3],
     [C4], [C1] and the D-formula are deliberately ABSENT — the first
     three of these are what Phase 7.A proves or declares separately.
+    [C5] is part of the data and is DECLARED (``courant-invariance``):
+    the Prop 2.2 / [C4] citing rules fire only where it is.
     """
     return algebroid(
-        name, declare=("anchor-morphism", "antisymmetric")
+        name,
+        declare=("anchor-morphism", "antisymmetric", "courant-invariance"),
     )
 
 

@@ -158,6 +158,11 @@ class LieZDefinitionRule(CitedTheoremMixin, Definition):
     its own structure (:func:`prove_lemma_91`) and every step cites
     it, so the lemma's requirements (the declared anchor morphism)
     flow into the result; without the lemma the rule never fires.
+    Lemma 9.1 only gives ρ([φV, χz]) = 0: membership in im χ also needs
+    exactness ker ρ = im χ (8.5). The rule therefore fires only on a
+    structure declaring ``anchor-morphism`` and ``exact``, and the cited
+    record carries the exactness as an explicit declared requirement
+    (:func:`_liez_well_defined_theorem`).
     Built from a bare algebroid NAME (legacy signature) it cannot
     prove the lemma and stays inert (default reject)."""
 
@@ -174,18 +179,12 @@ class LieZDefinitionRule(CitedTheoremMixin, Definition):
         self.name = "(9.7): [φV, χz]_E = χ(ℒ^Z_V z)"
 
     def _prove_cited(self):
-        if self._algebroid is None:
+        alg = self._algebroid
+        if alg is None or not (
+            alg.declares("anchor-morphism") and alg.declares("exact")
+        ):
             return None
-        from jacopy.packages.generalized._cited_rule import (
-            private_function,
-        )
-        from jacopy.packages.generalized.bourbaki_precalculus import BD
-
-        (k, h), reg = private_function("k h")
-        (u,) = self._algebroid.sections("u")
-        return prove_lemma_91(
-            self._algebroid, u, BD(k), h, registry=reg
-        )[1]
+        return _liez_well_defined_theorem(alg)
 
     def matches(self, expr: Expr) -> bool:
         return (
@@ -201,6 +200,55 @@ class LieZDefinitionRule(CitedTheoremMixin, Definition):
 
     def rewrite(self, expr: Expr) -> Expr:
         return ChiSec(BLieZ(expr.u.U, expr.v.z))
+
+
+def _liez_well_defined_theorem(alg: Algebroid) -> Theorem:
+    """The record cited by :class:`LieZDefinitionRule`: ``[φV, χz]_E ∈
+    im χ`` = Lemma 9.1 (``ρ([u, χz]) = 0``, proved on ``alg``) + the
+    declared exactness ``ker ρ = im χ`` (8.5), as a keyed assumption
+    step owned by ``alg``."""
+    from jacopy.packages.generalized._cited_rule import private_function
+    from jacopy.packages.generalized.bourbaki_precalculus import BD
+
+    (k, h), reg = private_function("k h")
+    (u,) = alg.sections("u")
+    z = BD(k)
+    _, lemma = prove_lemma_91(alg, u, z, h, registry=reg)
+    node = alg.bracket(u, ChiSec(z))
+    anch = Act(alg.anchor(node), h)
+    chain = ProofChain(
+        [
+            ProofStep(
+                anch, Integer(0),
+                rule=f"cite {lemma.name}: ρ([u, χz]) = 0",
+                justification="Lemma 9.1",
+                provenance_tag="theorem", role="theorem", cites=lemma,
+                owner=alg,
+            ),
+            ProofStep(
+                node, node,
+                rule=(
+                    f"exactness (8.5) ({alg.name}): ker ρ = im χ, so "
+                    "[u, χz] ∈ im χ"
+                ),
+                justification="declared exactness of the structure",
+                provenance_tag="axiom", role="assumption", owner=alg,
+                key=("AlgebroidDeclaration", alg.name, "exact"),
+            ),
+        ]
+    )
+    return Theorem(
+        name=f"bourbaki_liez_well_defined_{alg.name}",
+        statement=(
+            f"[u, χz] ∈ im χ on {alg.name} (Lemma 9.1 + exactness "
+            "(8.5)) — (9.7) defines ℒ^Z"
+        ),
+        lhs=anch,
+        rhs=Integer(0),
+        proof=chain,
+        generality="generic-function",
+        notes="pre-metric-bourbaki.pdf Lemma 9.1, (8.5), (9.7)",
+    ).with_structural_requires()
 
 
 class SymPartChiSwapDeclaration(Definition):
@@ -366,8 +414,13 @@ class BLieREChiDirectionVanishes(Definition):
 def exact_bourbaki_context(name: str = "E") -> Algebroid:
     """The exact pre-metric-Bourbaki data: an anchored E with the
     ``anchor-morphism`` declaration (pre-Bourbaki level — needed by
-    Lemma 9.1 and (9.12))."""
-    return algebroid(name, declare=("anchor-morphism",))
+    Lemma 9.1 and (9.12)), the R-valued invariance (7.8)
+    (``bourbaki-invariance``, Def 7.1) and the exactness of (8.5)
+    (``exact``, Def 8.1). Right-Leibniz is NOT declared: it is the
+    proven (7.2)."""
+    return algebroid(
+        name, declare=("anchor-morphism", "bourbaki-invariance", "exact")
+    )
 
 
 def exact_bourbaki_engine(

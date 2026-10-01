@@ -171,22 +171,29 @@ def test_alpha_equal_respects_expr_type_k1_12():
 # --------------------------------------------------------------------- #
 
 
-def test_right_leibniz_rule_on_bare_algebroid_carries_its_hypothesis():
+def test_right_leibniz_rule_needs_the_declared_invariance():
     # counter-model without (7.8): [u,v] := 0, ρ = id ⇒ [u, f·v] = 0
-    # but f[u,v] + ρ(u)(f)v = u(f)·v ≠ 0 — the equality is NOT
-    # assumption-free; it holds under the (7.8) invariance it cites
+    # but f[u,v] + ρ(u)(f)v = u(f)·v ≠ 0. At 3a38eb2 the rule fired on
+    # the bare E and reported "(7.8) declared" although E declares
+    # nothing; now (7.8) must be DECLARED by the structure (Def 7.1).
     from jacopy.packages.generalized.bourbaki_severa import severa_engine
 
     reg = PropertyRegistry()
     (f,) = functions("f", registry=reg)
-    E = algebroid("E")
-    u, v = E.sections("u v")
-    lhs = E.bracket(u, Product(f, v))
-    rhs = Sum(Product(f, E.bracket(u, v)), Product(Act(E.anchor(u), f), v))
-    r = prove(severa_engine(E, reg), lhs, rhs, registry=reg)
-    assert r.status == "CLOSED"
-    assert r.requires, "must not read assumption-free"
-    assert any(k == "declared" and n.startswith("(7.8) invariance (E)") for k, n in _kinds(r))
+    for E, closes in ((algebroid("E"), False), (algebroid("E2", declare=("bourbaki-invariance",)), True)):
+        u, v = E.sections("u v")
+        lhs = E.bracket(u, Product(f, v))
+        rhs = Sum(Product(f, E.bracket(u, v)), Product(Act(E.anchor(u), f), v))
+        eng = severa_engine(E, reg)
+        r = prove(eng, lhs, rhs, registry=reg)
+        if not closes:
+            assert r.status == "RESIDUAL"
+            with pytest.raises(ProofFailure):
+                ExpandAndSimplify().prove(lhs, rhs, registry=reg, engine=eng)
+            continue
+        assert r.status == "CLOSED"
+        assert any(k == "declared" and n.startswith(f"(7.8) invariance ({E.name})") for k, n in _kinds(r))
+        assert any(k == "structure" and "bourbaki-invariance" in n for k, n in _kinds(r))
 
 
 def test_dd_zero_and_pairing_unfold_need_the_courant_data():
@@ -213,6 +220,17 @@ def test_dd_zero_and_pairing_unfold_need_the_courant_data():
     plhs = A.metric(CourantD("A", f), u)
     prhs = Product(Rational(1, 2), Act(A.anchor(u), f))
     assert prove(ExpansionEngine([DPairingUnfoldDefinition(A)]), plhs, prhs, registry=reg).status == "RESIDUAL"
+
+    # skew + [C2] but [C5] NOT declared: no citation (review of 3a38eb2)
+    B = algebroid("B", declare=("anchor-morphism", "antisymmetric"))
+    (yb,) = B.sections("y")
+    assert prove(ExpansionEngine([DDZeroDefinition(B)]), Act(B.anchor(CourantD("B", k)), k), Integer(0), registry=reg).status == "RESIDUAL"
+    assert prove(
+        ExpansionEngine([DPairingUnfoldDefinition(B)]),
+        B.metric(CourantD("B", f), yb),
+        Product(Rational(1, 2), Act(B.anchor(yb), f)),
+        registry=reg,
+    ).status == "RESIDUAL"
 
     # on the LWX data the citations close, carrying [C2] and [C5]
     C = courant_context("C")
@@ -312,6 +330,13 @@ def test_liez_definition_rule_cites_lemma_91():
     r = prove(exact_bourbaki_engine(X, reg), lhs_x, Integer(0), registry=reg)
     assert r.status == "CLOSED"
     assert any(kd == "declared" and n.startswith("anchor morphism (X)") for kd, n in _kinds(r))
+    # Lemma 9.1 gives only ρ([φV, χz]) = 0; im χ also needs exactness
+    # ker ρ = im χ (8.5): declared, and carried as a requirement (review
+    # of 3a38eb2: it was implicit)
+    assert any(kd == "declared" and n.startswith("exactness (8.5) (X)") for kd, n in _kinds(r))
+    P = algebroid("P", declare=("anchor-morphism",))
+    lhs_p = Act(P.anchor(P.bracket(PhiSec(V), ChiSec(BD(k)))), h)
+    assert prove(exact_bourbaki_engine(P, reg), lhs_p, Integer(0), registry=reg).status == "RESIDUAL"
 
 
 # --------------------------------------------------------------------- #
