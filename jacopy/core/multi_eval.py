@@ -52,7 +52,6 @@ A separate helper :func:`validate_arity` exposes the check on demand.
 
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import Any, Optional, Tuple
 
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum, Zero
@@ -213,32 +212,50 @@ class MultiEval(Expr):
 def admits_alternation(head: Expr) -> bool:
     """May ``head`` be evaluated as an ALTERNATING multilinear map?
 
-    DEFAULT REJECT (audit 0B00E1B-FULL M2-1 + code review): only an
+    DEFAULT REJECT (audit 0B00E1B-FULL M2-1 + code reviews): only an
     explicitly certified head is alternating —
 
-    * an atom declaring ``alternating_values = True`` (forms,
-      multivectors, vector fields as 1-vectors), or any atom whose
-      ``degree`` is the constant 0 or 1 (a single slot: 1-forms such
-      as coframes/connection forms), or a plain ``Symbol``/number
-      (a scalar coefficient);
-    * scalars: ``Pairing``/``MultiEval`` values, ``Integer``/
-      ``Rational``, and a degree-0 derivation acting on a scalar;
-    * ``Act(op, arg)`` whose operator declares ``alternating_values``
-      ``True`` or ``"inherit"`` with a certified ``arg`` (interior
-      products, Lie derivatives, the ``d`` of a SKEW calculus); the
-      ``d`` of a non-skew calculus declares ``False``
-      (``dα(u,u) = −α([u,u])``);
-    * ``Sum``/``Neg``/``Product``/``Wedge`` when EVERY child is.
+    * an atom whose CLASS declares ``alternating_values = True``
+      (forms, multivectors, vector fields as 1-vectors) — never by
+      degree alone (``g♭`` has degree 1 but two slots) and never a
+      plain ``Symbol`` (it may stand for any tensor);
+    * ``Integer(0)`` (the zero map);
+    * ``Act(op, arg)`` whose operator declares ``"inherit"`` (interior
+      products, Lie derivatives, the ``d`` of a SKEW calculus) with a
+      certified or scalar ``arg``; the ``d`` of a non-skew calculus
+      declares ``False`` (``dα(u,u) = −α([u,u])``);
+    * ``Sum``/``Neg``/``Wedge`` when every child is certified;
+      ``Product`` when every factor is certified or a scalar
+      coefficient (number, plain symbol, pairing/evaluation value,
+      degree-0 derivation of a scalar) and at least one is certified.
 
-    Anything else — tensors, operators that do not take part in the
-    protocol, unknown nodes — is evaluated plain-multilinearly."""
-    try:
-        return _admits_cached(head)
-    except TypeError:  # unhashable exotic node: decide uncached
-        return _admits(head)
+    Anything else — tensors, scalars used as heads, operators outside
+    the protocol, unknown nodes — is evaluated plain-multilinearly.
+    The per-node cost is a class-attribute lookup; no tree cache."""
+    from jacopy.core.wedge import Wedge
+
+    if isinstance(head, Integer):
+        return head == Integer(0)
+    if isinstance(head, (Sum, Neg, Wedge)):
+        return all(admits_alternation(c) for c in head.children)
+    if isinstance(head, Product):
+        certified = [admits_alternation(c) for c in head.children]
+        return any(certified) and all(
+            ok or _is_scalar(c) for ok, c in zip(certified, head.children)
+        )
+    op = getattr(head, "op", None)
+    arg = getattr(head, "arg", None)
+    if op is not None and isinstance(arg, Expr):
+        if getattr(op, "alternating_values", False) == "inherit":
+            return _is_scalar(arg) or admits_alternation(arg)
+        return False
+    if head.is_atom:
+        return getattr(type(head), "alternating_values", False) is True
+    return False
 
 
 def _is_scalar(h: Expr) -> bool:
+    """A scalar COEFFICIENT (never a head of ≥ 2 slots on its own)."""
     from jacopy.core.expr import Rational, Symbol
     from jacopy.core.pairing import Pairing
 
@@ -246,6 +263,10 @@ def _is_scalar(h: Expr) -> bool:
         return True
     if type(h) is Symbol:
         return True
+    if isinstance(h, Neg):
+        return _is_scalar(h.arg)
+    if isinstance(h, (Sum, Product)):
+        return all(_is_scalar(c) for c in h.children)
     op = getattr(h, "op", None)
     arg = getattr(h, "arg", None)
     if op is not None and isinstance(arg, Expr):
@@ -255,36 +276,6 @@ def _is_scalar(h: Expr) -> bool:
             arg
         )
     return False
-
-
-def _admits(head: Expr) -> bool:
-    from jacopy.core.wedge import Wedge
-
-    if _is_scalar(head):
-        return True
-    if isinstance(head, (Sum, Neg, Product, Wedge)):
-        return all(admits_alternation(c) for c in head.children)
-    op = getattr(head, "op", None)
-    arg = getattr(head, "arg", None)
-    if op is not None and isinstance(arg, Expr):
-        flag = getattr(op, "alternating_values", False)
-        if flag == "inherit":
-            return admits_alternation(arg)
-        return flag is True
-    if head.is_atom:
-        if getattr(type(head), "alternating_values", False) is True:
-            return True
-        from jacopy.core.symbolic_degree import Degree
-
-        deg = getattr(head, "degree", None)
-        return isinstance(deg, Degree) and deg in (
-            Degree.const(0),
-            Degree.const(1),
-        )
-    return False
-
-
-_admits_cached = lru_cache(maxsize=8192)(_admits)
 
 
 def multi_eval(

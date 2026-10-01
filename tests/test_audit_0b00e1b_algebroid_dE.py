@@ -543,3 +543,52 @@ class TestIndexedSumLinearityOrder:
         # an operator middle factor: nothing to pull
         z = IS(s, fr, Product(c_s, E.anchor(w), B))
         assert not rule.matches(z)
+
+
+# --------------------------------------------------------------------- #
+# Second code review (2026-10-01): certification by type only           #
+# All three CLOSED on base 0b00e1b and on c2feac2.                       #
+# --------------------------------------------------------------------- #
+
+
+class TestCertificationByTypeOnly:
+    def test_plain_symbol_head_is_not_alternating(self):
+        # A plain Symbol may name any bilinear map T; T(a,a) = 0 and
+        # (T∧m)(a,a) = 0 are not consequences of anything.
+        from jacopy.core.expr import Symbol
+        from jacopy.core.wedge import Wedge
+
+        reg = PropertyRegistry()
+        C = algebroid("Lsy", Bundle("Lsy"), declare=("leibniz",))
+        (a,) = C.sections("a")
+        (m,) = forms("m", degree=1, bundle=C.bundle)
+        T = Symbol("T")
+        eng = algebroid_engine(C, registry=reg)
+        for node in (MultiEval(T, a, a), MultiEval(Wedge(T, m), a, a)):
+            assert not node.alternating
+            with pytest.raises(ProofFailure):
+                _prove(node, Integer(0), reg, eng)
+
+    def test_flat_degree_one_is_not_single_slot(self):
+        # g♭ has degree 1 but is evaluated on two vectors:
+        # g♭(X,X) = g(X,X) ≠ 0 — certification is by type, not degree.
+        from jacopy.central.objects.metric import metric
+        from jacopy.central.objects.musical import Flat
+        from jacopy.central.tangent.engine import tangent_engine
+
+        reg = PropertyRegistry()
+        (X,) = vector_fields("X")
+        node = MultiEval(Flat(metric("g")), X, X)
+        assert not node.alternating
+        with pytest.raises(ProofFailure):
+            _prove(node, Integer(0), reg, tangent_engine(registry=reg))
+
+    def test_certified_heads_still_alternate(self):
+        from jacopy.core.wedge import Wedge
+
+        (a, b) = forms("a b", degree=1)
+        (X,) = vector_fields("X")
+        (f,) = functions("f", registry=PropertyRegistry())
+        assert MultiEval(Wedge(a, b), X, X).alternating
+        assert MultiEval(Product(f, Wedge(a, b)), X, X).alternating
+        assert not MultiEval(Product(f, f), X, X).alternating
