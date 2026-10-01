@@ -561,3 +561,39 @@ class TestReviewRound3:
             end_reads(inner)
             end_reads(base)
         assert not any(l is inner or l is outer or l is base for l in _READS.stack)
+
+    def test_failed_inner_candidates_do_not_leak_reads(self):
+        # 3f38370: every read went to EVERY open log, so the reads of a
+        # nested engine's candidate that did NOT fire became requirements
+        # of the outer step (a spurious "x has no Scalar declared" → a
+        # wrong refusal where x is Scalar)
+        from jacopy.proof.expansion import Definition
+
+        reg = PropertyRegistry()
+        a, b, x = Symbol("a"), Symbol("b"), Symbol("x")
+
+        class Peek(Definition):            # consults the registry, never fires
+            name = "peek"
+
+            def matches(self, expr):
+                reg.get(x, Scalar)
+                return False
+
+            def rewrite(self, expr):       # pragma: no cover
+                return expr
+
+        inner = ExpansionEngine([Peek(), ExplicitAssumption(a, b)])
+
+        class Outer(Definition):
+            name = "outer: normalize by the inner engine"
+
+            def matches(self, expr):
+                return expr == a and inner.expand(expr)[0] == b
+
+            def rewrite(self, expr):
+                return b
+
+        with registry_context(reg):
+            _, step = ExpansionEngine([Outer()]).expand_once(a)
+        assert step is not None
+        assert not any(f.expr == x for f in step.registry_facts)

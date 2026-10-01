@@ -417,15 +417,19 @@ class ExpansionEngine:
         from jacopy.proof.registry_facts import facts_from_log
 
         log = begin_reads()
+        kept: list = []
         try:
             for _, d in candidates:
                 start = len(log)
                 if d.matches(expr):
                     after = d.rewrite(expr)
-                    return d, after, facts_from_log(log[start:])
+                    kept = log[start:]
+                    return d, after, facts_from_log(kept)
             return None
         finally:
-            end_reads(log)
+            # only the FIRED rule's reads reach an enclosing log; the
+            # candidates that did not fire assumed nothing (r3 #6)
+            end_reads(log, keep=kept)
 
     def _build_step(self, expr: Expr, after: Expr, d: Definition) -> ProofStep:
         """Create the :class:`ProofStep` for a fired rewrite, with mode-dependent children."""

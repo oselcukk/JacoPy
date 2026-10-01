@@ -67,34 +67,38 @@ def begin_reads() -> list:
     return log
 
 
-def end_reads(log: list) -> None:
-    """Close the log opened by :func:`begin_reads`."""
+def end_reads(log: list, keep=None) -> None:
+    """Close the log opened by :func:`begin_reads` and hand the reads
+    that COUNT — ``keep`` (default: the whole log) — to the enclosing
+    log. A read is appended only to the innermost open log; a consumer
+    that discards part of its log (the engine drops the reads of the
+    candidate rules that did not fire) keeps them out of every outer
+    log too (review 2026-10-01 r3 #6)."""
     stack = _READS.stack
     if stack and stack[-1] is log:
         stack.pop()
-        return
-    # mismatched nesting: remove THIS log by identity (list.remove
-    # compares by value — an equal, e.g. empty, outer log would go)
-    for i in range(len(stack) - 1, -1, -1):
-        if stack[i] is log:
-            del stack[i]
-            return
+    else:
+        # mismatched nesting: remove THIS log by identity (list.remove
+        # compares by value — an equal, e.g. empty, outer log would go)
+        for i in range(len(stack) - 1, -1, -1):
+            if stack[i] is log:
+                del stack[i]
+                break
+    if stack:
+        stack[-1].extend(log if keep is None else keep)
 
 
 @contextmanager
 def track_reads():
     """Record every :meth:`PropertyRegistry.get` answer given inside the
-    block (on this thread, any registry); yields the log list. Nested
-    blocks each see the reads made while they are open."""
-    stack = getattr(_READS, "stack", None)
-    if stack is None:
-        stack = _READS.stack = []
-    log: list = []
-    stack.append(log)
+    block (on this thread, any registry); yields the log list. On exit
+    the block's reads are handed to the enclosing log, so nested blocks
+    are seen by the outer ones."""
+    log = begin_reads()
     try:
         yield log
     finally:
-        stack.pop()
+        end_reads(log)
 
 Predicate = Callable[[Expr], bool]
 
@@ -251,8 +255,7 @@ class PropertyRegistry:
         visible = self._filter(prop)
         stack = getattr(_READS, "stack", None)
         if stack:
-            for log in stack:
-                log.append((expr, prop_cls, visible))
+            stack[-1].append((expr, prop_cls, visible))
         return visible  # type: ignore[return-value]
 
     def has(self, expr: Expr, prop_cls: Type[Property]) -> bool:
