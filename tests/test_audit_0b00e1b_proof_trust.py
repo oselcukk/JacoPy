@@ -493,3 +493,27 @@ class TestReviewRound3:
         moved = OwnerScope().transfer(thm, E3)
         assert [a.name for a in moved.requires] == ["from_axioms: something", "hand claim"]
         assert moved.requires[0].owner is E3 and not moved.requires_verified
+
+    def test_user_definition_class_is_an_assumption(self):
+        # 15e6032: class Bogus(Definition) rewriting y → 0 inherited role
+        # "definition": prove CLOSED "assumption-free", record chain_replayed
+        from jacopy.proof.expansion import Definition, effective_role
+
+        y = Symbol("y")
+
+        class Bogus(Definition):
+            name = "bogus: y = 0"
+
+            def matches(self, expr):
+                return expr == y
+
+            def rewrite(self, expr):
+                return Integer(0)
+
+        assert effective_role(Bogus()) == "assumption"
+        res = prove(ExpansionEngine([Bogus()]), y, Integer(0))
+        assert res.closed and "assumption-free" not in res.summary()
+        assert [a.name for a in res.declared] == ["bogus: y = 0"]
+        thm = Theorem("bogus", "y = 0", y, Integer(0), res.chain).with_structural_requires()
+        assert not check_citation(thm, ExpansionEngine(), registry=None).ok
+        assert check_citation(thm, ExpansionEngine([Bogus()]), registry=None).ok

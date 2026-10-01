@@ -430,7 +430,9 @@ def check_citation(theorem: Theorem, engine, *, allow_legacy: bool = False, regi
         reasons.extend(_registry_reasons(theorem, registry))
     owners = dict(getattr(engine, "owners", {}) or {})
     rules = tuple(getattr(engine, "definitions", ()) or ())
-    keys = {getattr(r, "key", None) for r in rules if getattr(r, "role", None) == "assumption"}
+    from jacopy.proof.expansion import effective_role
+
+    keys = {getattr(r, "key", None) for r in rules if effective_role(r) == "assumption"}
     for a in theorem.requires:
         kind = getattr(a, "kind", None)
         if kind not in ("declared", "structure"):

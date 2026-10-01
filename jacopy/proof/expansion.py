@@ -238,8 +238,28 @@ D_SQUARED_CLASSIFICATIONS = ("axiom", "theorem")
 MODES = ("efficient", "foundational")
 
 
+def is_library_rule(d) -> bool:
+    """True when ``d``'s class is one of the package's own rule classes
+    (``jacopy.*`` — the reviewed role inventory, ``tests/test_rule_roles.py``)."""
+    mod = getattr(type(d), "__module__", "") or ""
+    return mod == "jacopy" or mod.startswith("jacopy.")
+
+
+def effective_role(d) -> Optional[str]:
+    """The role a rule's steps are classified under (review 2026-10-01
+    r3 #2). A library rule keeps its reviewed role; a rule class defined
+    OUTSIDE the package is the caller's own claim — whatever ``role`` it
+    declares (the base default ``"definition"`` included) its rewrites
+    are an ``"assumption"``: visible in every result's requirements,
+    never a silent definitional unfolding. (Threat model as in
+    :mod:`jacopy.proof.step`: ordinary use of the public API cannot pass
+    a rule off as a definition; deliberately spoofing ``__module__`` is
+    code inside the trust boundary.)"""
+    return getattr(d, "role", None) if is_library_rule(d) else "assumption"
+
+
 def _step_role(d: Definition, tag: str) -> str:
-    role = getattr(d, "role", None)
+    role = effective_role(d)
     if role == "assumption":
         return "assumption"
     if getattr(d, "unverified", False):
