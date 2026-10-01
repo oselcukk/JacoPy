@@ -161,7 +161,7 @@ class LieZDefinitionRule(CitedTheoremMixin, Definition):
     Lemma 9.1 only gives ρ([φV, χz]) = 0: membership in im χ also needs
     exactness ker ρ = im χ (8.5). The rule therefore fires only on a
     structure declaring ``anchor-morphism`` and ``exact``, and the cited
-    record carries the exactness as an explicit declared requirement
+    record carries the exactness as an explicit requirement
     (:func:`_liez_well_defined_theorem`).
     Built from a bare algebroid NAME (legacy signature) it cannot
     prove the lemma and stays inert (default reject)."""
@@ -202,75 +202,31 @@ class LieZDefinitionRule(CitedTheoremMixin, Definition):
         return ChiSec(BLieZ(expr.u.U, expr.v.z))
 
 
-class ExactnessDeclaration(Definition):
-    """The DECLARED exactness (8.5) of an exact (pre-)Bourbaki
-    structure: ``0 → Z → E → TM → 0`` exact, i.e. ``ker ρ = im χ``.
-
-    It carries no rewrite (it never matches): it is the LICENSING RULE
-    of the ``exact`` declaration flag, registered by
-    :func:`exact_bourbaki_engine` exactly when the structure declares
-    ``exact``, so a requirement "exactness (8.5)" is a declared rule of
-    the citing engine and :func:`~jacopy.proof.theorems.check_citation`
-    can verify it (audit 0B00E1B-FULL M1-4 review)."""
-
-    role = "assumption"
-
-    anchor = ChiSec
-
-    def __init__(self, alg: Algebroid) -> None:
-        self._alg = alg
-        self.owner = alg
-        self.name = f"exactness (8.5) ({alg.name}): ker ρ = im χ"
-
-    def matches(self, expr: Expr) -> bool:
-        return False
-
-    def rewrite(self, expr: Expr) -> Expr:  # pragma: no cover - never matches
-        return expr
-
-
 def _liez_well_defined_theorem(alg: Algebroid) -> Theorem:
-    """The record cited by :class:`LieZDefinitionRule`: ``[φV, χz]_E ∈
-    im χ`` = Lemma 9.1 (``ρ([u, χz]) = 0``, proved on ``alg``) + the
-    declared exactness ``ker ρ = im χ`` (8.5), as a keyed assumption
-    step owned by ``alg``."""
+    """The record cited by :class:`LieZDefinitionRule`: ``[u, χz]_E ∈
+    im χ`` = Lemma 9.1 (``ρ([u, χz]) = 0``, its replayed library chain,
+    proved on ``alg``) + the exactness ``ker ρ = im χ`` (8.5) of the
+    structure, an explicit requirement of the record (the rule fires
+    only when ``alg`` declares ``exact``)."""
     from jacopy.packages.generalized._cited_rule import private_function
     from jacopy.packages.generalized.bourbaki_precalculus import BD
 
     (k, h), reg = private_function("k h")
     (u,) = alg.sections("u")
-    z = BD(k)
-    _, lemma = prove_lemma_91(alg, u, z, h, registry=reg)
-    node = alg.bracket(u, ChiSec(z))
-    anch = Act(alg.anchor(node), h)
-    chain = ProofChain(
-        [
-            ProofStep(
-                anch, Integer(0),
-                rule=f"cite {lemma.name}: ρ([u, χz]) = 0",
-                justification="Lemma 9.1",
-                provenance_tag="theorem", role="theorem", cites=lemma,
-                owner=alg,
-            ),
-            ProofStep(
-                node, node,
-                rule=ExactnessDeclaration(alg).name,
-                justification="declared exactness of the structure",
-                provenance_tag="axiom", role="assumption", owner=alg,
-                key=ExactnessDeclaration(alg).key,
-            ),
-        ]
-    )
+    _, lemma = prove_lemma_91(alg, u, BD(k), h, registry=reg)
     return Theorem(
         name=f"bourbaki_liez_well_defined_{alg.name}",
         statement=(
             f"[u, χz] ∈ im χ on {alg.name} (Lemma 9.1 + exactness "
             "(8.5)) — (9.7) defines ℒ^Z"
         ),
-        lhs=anch,
-        rhs=Integer(0),
-        proof=chain,
+        lhs=lemma.lhs,
+        rhs=lemma.rhs,
+        proof=lemma.proof,
         generality="generic-function",
+        from_axioms=lemma.from_axioms + (
+            f"exactness (8.5) ({alg.name}, declared): ker ρ = im χ",
+        ),
         notes="pre-metric-bourbaki.pdf Lemma 9.1, (8.5), (9.7)",
     ).with_structural_requires()
 
@@ -468,8 +424,6 @@ def exact_bourbaki_engine(
     ]
     if isotropic:
         rules.append(IsotropyDeclaration())
-    if alg.declares("exact"):
-        rules.append(ExactnessDeclaration(alg))
     eng = ExpansionEngine(rules)
     from jacopy.packages.generalized.bourbaki_precalculus import (
         BDFirstOrderDefinition,
@@ -535,28 +489,17 @@ def prove_lemma_91(
     node = Act(
         alg.anchor(alg.bracket(u, ChiSec(z))), h
     )
-    # keep the engine steps: the declared anchor morphism that kills
-    # ρ([u, χz]) must reach the lemma's requirements — a bare hand-built
-    # "axiom" step was a legacy record (audit 0B00E1B-FULL M1-4,
-    # LieZDefinitionRule cites this lemma)
+    # the proof IS the library normalization chain (minted steps that
+    # replay ρ([u, χz])(h) → 0): no hand-built wrapper step, so the record
+    # replays and the declared anchor morphism reaches its requirements
+    # (audit 0B00E1B-FULL M1-4; LieZDefinitionRule cites this lemma)
     nf, fired = _normalize(engine, node, registry, record=True)
     if nf != Integer(0):
         raise ProofFailure(
             "Lemma 9.1: ρ([u, χz])(h) does not vanish — "
             + nf._repr_inner()[:140]
         )
-    step = ProofStep(
-        node,
-        Integer(0),
-        rule=(
-            "anchor morphism + exactness ρχ = 0 kill "
-            "the anchor of [u, χz]"
-        ),
-        justification="engine normal form",
-    )
-    for s_ in fired:
-        step.add_child(s_)
-    chain = ProofChain([step])
+    chain = ProofChain(list(fired))
     theorem = Theorem(
         name=f"bourbaki_lemma91_{alg.name}",
         statement=(

@@ -490,35 +490,31 @@ class DDZeroDefinition(CitedTheoremMixin, Definition):
 
 def _dd_zero_theorem(alg: Algebroid) -> Theorem:
     """The record cited by :class:`DDZeroDefinition`:
-    ``(Da, Db) = ½ρ(Db)(a) = 0`` — Prop 2.2 at the section ``Db``,
-    then Prop 2.1(ii) (``ρ∘D = 0``) probed on ``a``. Both cited
-    theorems are proved on ``alg`` (generic symbols, private
-    registry); the record's requirements are theirs, transitively."""
+    ``(Da, Db) = ½ρ(Db)(a) = 0``: Prop 2.2 proved at the section ``Db``,
+    then Prop 2.1(ii) (``ρ∘D = 0``) probed on ``a``. Both are proved on
+    ``alg`` (generic symbols, private registry). The record's chain is
+    the courant engine's own normalization citing them (minted steps,
+    no hand-built claim). Its requirements are theirs, transitively —
+    including their ``unreplayed`` markers: the Uchino provers are
+    two-leg narrative chains (strip by non-degeneracy) that do not
+    replay mechanically."""
+    from jacopy.proof.normalize import normalize
+
     (a, b, h), reg = private_function("a b h")
     x, y = alg.sections("x y")
-    _, t22 = prove_d_pairing_formula(alg, x, y, a, registry=reg)
-    _, t21 = prove_anchor_annihilates_d(alg, x, y, b, h, registry=reg)
     Da, Db = CourantD(alg.name, a), CourantD(alg.name, b)
+    _, t22 = prove_d_pairing_formula(alg, x, Db, a, registry=reg)
+    _, t21 = prove_anchor_annihilates_d(alg, x, y, b, a, registry=reg)
     lhs = alg.metric(Da, Db)
-    mid = Product(Rational(1, 2), Act(alg.anchor(Db), a))
-    chain = ProofChain(
-        [
-            ProofStep(
-                lhs, mid,
-                rule=f"cite {t22.name}: (Da, y) = ½ρ(y)(a) at y = Db",
-                justification="Prop 2.2 instance",
-                provenance_tag="theorem", role="theorem", cites=t22,
-                owner=alg,
-            ),
-            ProofStep(
-                mid, Integer(0),
-                rule=f"cite {t21.name}: ρ(Db) = 0, probed on a",
-                justification="Prop 2.1(ii) instance",
-                provenance_tag="theorem", role="theorem", cites=t21,
-                owner=alg,
-            ),
-        ]
+    run = normalize(
+        courant_engine(alg, reg, theorems=(t22, t21)), lhs, reg,
+        rounds=10, max_steps=1024, record=True,
     )
+    if run.expr != Integer(0):
+        raise ProofFailure(
+            "(Da, Db) = 0: the cited Prop 2.2 / 2.1(ii) did not close — "
+            + run.expr._repr_inner()[:120]
+        )
     return Theorem(
         name=f"uchino_dd_zero_{alg.name}",
         statement=(
@@ -527,7 +523,7 @@ def _dd_zero_theorem(alg: Algebroid) -> Theorem:
         ),
         lhs=lhs,
         rhs=Integer(0),
-        proof=chain,
+        proof=ProofChain(list(run.chain)),
         generality="generic-function",
         notes="uchino.pdf Prop 2.1(ii), Prop 2.2",
     ).with_structural_requires()

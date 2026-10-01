@@ -79,7 +79,6 @@
  "jacopy.packages.generalized.bourbaki_exact.BLieREChiDirectionVanishes": "definition",
  "jacopy.packages.generalized.bourbaki_exact.DopViaChiDefinition": "definition",
  "jacopy.packages.generalized.bourbaki_exact.Iota99Definition": "definition",
- "jacopy.packages.generalized.bourbaki_exact.ExactnessDeclaration": "assumption",
  "jacopy.packages.generalized.bourbaki_exact.IsotropyDeclaration": "assumption",
  "jacopy.packages.generalized.bourbaki_exact.LieZDefinitionRule": "theorem",
  "jacopy.packages.generalized.bourbaki_exact.SplitAnchorDefinition": "definition",
