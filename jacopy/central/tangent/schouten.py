@@ -100,6 +100,46 @@ class SchoutenBracket(GradedBracket):
             )
         return Degree.const(m_a + m_b - 1)
 
+    # ---- grading hooks (audit 0b00e1b K1-3) ------------------------ #
+    #
+    # The inherited obstruction helpers take every sign from these
+    # hooks. With the operator-grading default a vector field counts
+    # 0 and a bivector 2, so ``graded_antisymmetry_obstruction(π, π)``
+    # was ``[π,π] + [π,π]`` — a claim that EVERY bivector is Poisson.
+    # Sign convention, derived from the definition above (base cases
+    # + wedge-Leibniz) and agreeing with the literature
+    # ``[P, Q] = −(−1)^{(p−1)(q−1)} [Q, P]`` (and with
+    # :class:`SNOrientationDefinition`):
+    #   (1,0)  [X,f] = X(f) = −[f,X]               s(X)s(f) = 0·(−1) even
+    #   (2,1)  [X∧Y,Z] = X∧[Y,Z] + [X,Z]∧Y = −[Z,X∧Y]       1·0 even
+    #   (2,0)  [X∧Y,f] = X·Y(f) − X(f)·Y = +[f,X∧Y]        1·(−1) odd
+    #   (2,2)  [π,π] = +[π,π] — no constraint                1·1 odd
+
+    def grading_degree(
+        self, x: Expr, registry: Optional[PropertyRegistry] = None
+    ) -> Degree:
+        """The multivector degree ``m(x)`` (raises when undeterminable)."""
+        m = multivector_degree(x, registry)
+        if m is None:
+            raise ValueError(
+                f"SN bracket: multivector degree of {x!r} is not "
+                "determinable"
+            )
+        return Degree.const(m)
+
+    def operand_degree(
+        self, x: Expr, registry: Optional[PropertyRegistry] = None
+    ) -> Degree:
+        """The shifted degree ``s(x) = m(x) − 1`` (SN is a degree −1
+        bracket in the multivector grading; its ``degree`` attribute 0
+        is already the shifted one)."""
+        return self.grading_degree(x, registry) - Degree.const(1)
+
+    def module_product(self, b: Expr, c: Expr) -> Expr:
+        """SN is a derivation of the WEDGE product:
+        ``[a, b∧c] = [a,b]∧c + (−1)^{s(a)m(b)} b∧[a,c]``."""
+        return Wedge(b, c)
+
 
 #: The singleton SN bracket.
 SN = SchoutenBracket()
