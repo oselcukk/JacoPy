@@ -424,3 +424,17 @@ def test_derived_bracket_skew_sign_comes_from_pair_swap_sign():
         for x, y in iproduct(syms, repeat=2):
             old = ((degree_of(x, reg) + k) * (degree_of(y, reg) + k)).parity()
             assert br.pair_swap_sign(x, y, reg) == (-1 if old == 0 else 1)
+
+
+def test_prove_jacobi_terminates_on_inert_sn_nodes():
+    # [X∧Y, f] expands to a Product (X·Y(f) − X(f)·Y) whose SN bracket
+    # with X stays inert; _expand_all_brackets re-walked the unchanged
+    # node forever (RecursionError). Now: an honest verdict.
+    from jacopy.proof.verifier import _expand_all_brackets, prove_jacobi
+
+    reg, X, Y, Z, W, f, eng = _tm()
+    inert = SN(X, Product(f, Y))
+    assert SN.expand(X, Product(f, Y), reg) == inert
+    assert _expand_all_brackets(inert, reg) == inert
+    with pytest.raises(ProofFailure):  # incompleteness, no longer a crash
+        prove_jacobi(SN, X, Wedge(X, Y), f, registry=reg, engine=eng)

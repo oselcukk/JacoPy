@@ -233,7 +233,11 @@ def _expand_all_brackets(
     """
     if isinstance(expr, BracketApply):
         expanded = expr.expand(registry)
-        return _expand_all_brackets(expanded, registry)
+        if expanded != expr:
+            return _expand_all_brackets(expanded, registry)
+        # an INERT bracket (unsupported shape: expand() returns the
+        # node itself) — re-walking it never terminated (RecursionError,
+        # audit 0b00e1b K1-3 follow-up); descend into its operands only
     if expr.is_atom:
         return expr
     new_children = tuple(_expand_all_brackets(c, registry) for c in expr.children)
