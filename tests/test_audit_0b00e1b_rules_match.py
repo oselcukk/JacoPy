@@ -526,3 +526,13 @@ def test_sigma_bound_term_does_not_escape_its_binder():
     rule = Rule(IndexedSum(D, None, Product(A, B)), Product(A, IndexedSum(D, None, B)))
     _closes_wrongly(rule, IndexedSum(i, None, Product(F(i), i)), Product(F(i), IndexedSum(i, None, i)))
     assert rule.try_at(IndexedSum(i, None, Product(j, F(i)))) == Product(j, IndexedSum(i, None, F(i)))
+
+
+def test_rule_with_unbound_rhs_wildcard_never_fires():
+    # review of 0939bfe: the old guard only refused when the TARGET had
+    # no wildcard; a target carrying an unrelated wildcard let ?Q leak
+    (om,) = forms("om", degree=1)
+    A, Q = Wildcard("A"), Wildcard("Q")
+    rule = Rule(Product(A, Symbol("c")), Product(Q, A))
+    assert rule.try_at(Product(om, Symbol("c"))) is None
+    assert rule.try_at(Product(Wildcard("Z"), Symbol("c"))) is None

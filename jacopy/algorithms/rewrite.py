@@ -27,7 +27,7 @@ from jacopy.core.registry import PropertyRegistry
 from jacopy.core.wildcards import (
     Bindings,
     PayloadSubstitutionError,
-    has_wildcard,
+    wildcard_names,
     match,
     substitute,
 )
@@ -85,16 +85,17 @@ class Rule:
             return None
         if self.guard is not None and not self.guard(bindings, registry):
             return None
-        # a rewrite whose result still carries a wildcard (unbound on
-        # the left, or a payload hole that cannot be filled) does not
-        # fire (audit 0B00E1B-FULL M1X-6 review: ⋆_{?G} left literal)
+        # a right-hand-side wildcard the match did not bind would be
+        # left literal: the rule does not fire, whatever the target
+        # contains (audit 0B00E1B-FULL M1X-6 review); nor does it when a
+        # payload hole cannot be filled or a bound term would escape
+        # its Σ binder
+        if not wildcard_names(self.rhs) <= set(bindings):
+            return None
         try:
-            out = substitute(self.rhs, bindings)
+            return substitute(self.rhs, bindings)
         except PayloadSubstitutionError:
             return None
-        if has_wildcard(out) and not has_wildcard(expr):
-            return None
-        return out
 
 
 # --------------------------------------------------------------------- #
