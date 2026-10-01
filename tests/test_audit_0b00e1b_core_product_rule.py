@@ -812,3 +812,43 @@ def test_review3_commutator_on_function_is_a_function():
 
     reg, f, g, h, X, Y, Z, W, alpha, Commutator = _review3()
     assert is_scalar_function(Act(Commutator(X, Y), f), reg)
+
+
+def test_review3_operator_valued_indexed_sum_is_not_a_multiplier():
+    # Σ_s ⟨e^s, v⟩·ρ(e_s) is the anchor ρ(v) — a VECTOR FIELD, not a
+    # scalar: Σ(g) = Σ·g and Σ(h·g) = h·Σ(g) are false. base (0b00e1b)
+    # CLOSED both through degree_of(IndexedSum) = degree of the body = 0;
+    # since P0-2 the multiplier needs the kind_of "function" certificate
+    # and kind_of grades an IndexedSum by its body (here: a vector).
+    from jacopy.central.algebroid import algebroid
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.central.objects import Bundle, functions
+    from jacopy.central.objects.frame import Frame, FrameIndex
+    from jacopy.central.tangent.lie_bracket import (
+        ScalarActAsMultiplicationDefinition,
+    )
+    from jacopy.core.expr import Product
+    from jacopy.core.indexed_sum import IndexedSum
+    from jacopy.core.pairing import Pairing
+    from jacopy.core.registry import PropertyRegistry
+    from jacopy.packages.metric_affine.torsion_curvature import _engine
+    from jacopy.proof.strategies import ExpandAndSimplify
+
+    reg = PropertyRegistry()
+    g, h = functions("g h", registry=reg)
+    E = algebroid("Eix", Bundle("Eix"), declare=("lie",))
+    (v,) = E.sections("v")
+    fr = Frame("e", bundle=E.bundle)
+    s = FrameIndex("s")
+    sig = IndexedSum(
+        s, fr, Product(Pairing(fr.dual().field("s"), v), E.anchor(fr.field("s")))
+    )
+    assert not is_scalar_function(sig, reg)
+    assert not ScalarActAsMultiplicationDefinition(reg).matches(Act(sig, g))
+    for eng in (_engine(reg), None):
+        for lhs, rhs in (
+            (Act(sig, g), Product(sig, g)),
+            (Act(sig, Product(h, g)), Product(h, Act(sig, g))),
+        ):
+            with pytest.raises(ProofFailure):
+                ExpandAndSimplify().prove(lhs, rhs, registry=reg, engine=eng)
