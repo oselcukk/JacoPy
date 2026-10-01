@@ -245,9 +245,9 @@ def _is_derivation_expr(
     A Product with two or more derivation factors is a COMPOSITION —
     not a derivation — and is rejected; so is anything unrecognized
     (soundness over completeness)."""
-    from jacopy.core.expr import Product, Rational
-    from jacopy.core.properties import Scalar
+    from jacopy.core.expr import Product
     from jacopy.algebra.derivation import Derivation
+    from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433 - cycle
 
     if isinstance(expr, Derivation):
         return getattr(expr, "leibniz", True) is not False
@@ -261,10 +261,7 @@ def _is_derivation_expr(
     if isinstance(expr, Product):
         derivations = 0
         for c in expr.children:
-            if isinstance(c, (Integer, Rational)) or (
-                registry is not None
-                and registry.has(c, Scalar)
-            ):
+            if is_real_constant(c, registry):
                 continue
             if _is_derivation_expr(c, registry):
                 derivations += 1
@@ -356,24 +353,6 @@ class AgreementOnGenerators(Strategy):
                     "algebra instead, or supply a derivation-"
                     "certified form)"
                 )
-        # SCALAR CONTRACT (audit 0b00e1b M1-1 ≡ M1-2): a Scalar is an
-        # ℝ-constant, every derivation kills it, so agreement on a
-        # Scalar generator certifies nothing — and a rule giving it a
-        # non-zero derivative contradicts the declaration (the
-        # E∘y = 2y·E closure). Generators are functions: Graded(0).
-        if registry is not None:
-            from jacopy.core.properties import Scalar
-
-            for g in self._algebra.generators:
-                if registry.has(g, Scalar):
-                    raise ProofFailure(
-                        f"AgreementOnGenerators: generator {g!r} is "
-                        "declared Scalar — an ℝ-constant, annihilated "
-                        "by every derivation, so agreement on it "
-                        "certifies nothing (and a non-zero derivative "
-                        "rule on it contradicts the declaration); "
-                        "declare generators Graded(0)"
-                    )
         try:
             deg_lhs = (
                 _operator_degree(lhs, registry) if not lhs_is_zero else None
@@ -397,6 +376,22 @@ class AgreementOnGenerators(Strategy):
             raise ProofFailure(
                 "Algebra has no generators, cannot apply agreement strategy"
             )
+        # SCALAR CONTRACT (audit 0b00e1b M1-1 ≡ M1-2): an ℝ-constant
+        # generator (numeral or exact Scalar atom) is annihilated by
+        # every derivation and lies in the ground field — agreement on
+        # it is automatic and certifies nothing, so it is dropped from
+        # the certificate; the remaining generators must carry it.
+        from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433 - central imports this module
+
+        constant = [g for g in generators if is_real_constant(g, registry)]
+        generators = tuple(g for g in generators if not is_real_constant(g, registry))
+        if not generators:
+            raise ProofFailure(
+                "AgreementOnGenerators: every generator is an ℝ-constant "
+                f"({', '.join(g._repr_inner() for g in constant)} declared "
+                "Scalar) — derivations vanish on them, agreement there "
+                "certifies nothing; declare function generators Graded(0)"
+            )
 
         parent = _mint(ProofStep(
             lhs,
@@ -406,6 +401,12 @@ class AgreementOnGenerators(Strategy):
             justification=(
                 f"both of degree {deg_for_step}; agree on "
                 f"{len(generators)} generator(s)"
+                + (
+                    f" (ℝ-constant generator(s) "
+                    f"{', '.join(g._repr_inner() for g in constant)} "
+                    "omitted: annihilated by every derivation)"
+                    if constant else ""
+                )
             ),
         ))
 
@@ -576,9 +577,10 @@ class DerivedBracketStrategy:
         if parity != 1:
             raise ProofFailure(
                 "DerivedBracketStrategy: the generator must be ODD "
-                "in the shifted grading — parity(|Q| + |base|) = "
+                "in the shifted grading — parity(|Q| + k_base) = "
                 f"{parity!r} for |Q| = {bracket.degree_Q!r}, "
-                f"|base| = {base.degree!r}; with an even shifted "
+                f"k_base = {base.operand_shift!r} (the base's degree "
+                "in its own grading); with an even shifted "
                 "generator [Q,Q] = 0 is vacuous and Jacobi does "
                 "not follow"
             )
