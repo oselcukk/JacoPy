@@ -130,11 +130,13 @@ def _expand_act(
         return Integer(0)
     if (
         registry is not None
+        and arg.is_atom
         and _is_certified_derivation(op)
-        and _is_declared_constant(arg, registry)
+        and _is_real_constant(arg, registry)
     ):
         # The Scalar CONTRACT (core.properties.Scalar, audit 0b00e1b
-        # M1-1 ≡ M1-2): a Scalar-declared symbol is an ℝ-constant,
+        # M1-1 ≡ M1-2): an EXACTLY Scalar-declared atom
+        # (scalars.is_real_constant) is an ℝ-constant,
         # so a derivation kills it exactly like a numeral — the same
         # contract under which sort_product lets it commute past a
         # derivation (D∘c = c∘D + D(c) = c∘D). Declaring Scalar on a
@@ -225,12 +227,10 @@ def _pull_out(op: Expr, prod: Product, registry, is_coefficient) -> Expr:
     return Act(op, prod)
 
 
-def _is_declared_constant(arg: Expr, registry: PropertyRegistry) -> bool:
-    """``arg`` is declared :class:`~jacopy.core.properties.Scalar` — an
-    ℝ-constant by contract."""
-    from jacopy.core.properties import Scalar  # noqa: WPS433
+def _is_real_constant(arg: Expr, registry: PropertyRegistry) -> bool:
+    from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
 
-    return registry.has(arg, Scalar)
+    return is_real_constant(arg, registry)
 
 
 def _is_certified_derivation(op: Expr) -> bool:

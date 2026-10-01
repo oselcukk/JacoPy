@@ -102,16 +102,17 @@ def track_reads():
 Predicate = Callable[[Expr], bool]
 
 
-def _check_scalar_contract(expr: Expr, prop: Property, present) -> None:
+def _refuse_scalar_contradiction(expr, prop: Property, present) -> None:
     """Refuse an exact declaration that contradicts the Scalar contract
     (:class:`~jacopy.core.properties.Scalar` = ℝ-constant, audit 0b00e1b
     M1-1): a constant has degree 0, so ``Graded(k)`` with ``k`` a
     non-zero constant contradicts it; and a constant commutes with every
-    ℝ-linear operator, so ``NonCommuting`` contradicts it too. Only
-    the same exact expression is checked (class / predicate sources may
-    still meet an exact Scalar; there ``NonCommuting`` takes precedence
-    in ``sort_product``). A symbolic degree is not provably non-zero
-    and is accepted."""
+    ℝ-linear operator, so ``NonCommuting`` contradicts it too. Exact and
+    class-level declarations are cross-checked; a predicate cannot be
+    enumerated (there ``NonCommuting`` takes precedence in
+    ``sort_product``, and only an EXACT Scalar is ever treated as a
+    constant — :func:`~jacopy.central.calculus.scalars.is_real_constant`).
+    A symbolic degree is not provably non-zero and is accepted."""
     from jacopy.core.properties import (
         Graded,
         NonCommuting,
@@ -188,7 +189,13 @@ class PropertyRegistry:
             raise ValueError(
                 f"{type(prop).__name__} already declared on {expr!r}"
             )
-        _check_scalar_contract(expr, prop, bucket.values())
+        _refuse_scalar_contradiction(expr, prop, bucket.values())
+        # across sources: a class-level declaration on the instance's
+        # type that contradicts this exact one (M1-1 review)
+        for cls in type(expr).__mro__:
+            _refuse_scalar_contradiction(
+                expr, prop, self._by_class.get(cls, {}).values()
+            )
         bucket[type(prop)] = prop
 
     def retract(
@@ -222,6 +229,15 @@ class PropertyRegistry:
                 f"{type(prop).__name__} already declared for class "
                 f"{cls.__name__}"
             )
+        # the Scalar contract across sources (M1-1 review): this class's
+        # declarations, its bases' and subclasses', and exact
+        # declarations on its instances
+        for other_cls, other in self._by_class.items():
+            if issubclass(other_cls, cls) or issubclass(cls, other_cls):
+                _refuse_scalar_contradiction(cls, prop, other.values())
+        for e, props in self._props.items():
+            if isinstance(e, cls):
+                _refuse_scalar_contradiction(e, prop, props.values())
         bucket[type(prop)] = prop
 
     def retract_for_class(
@@ -299,6 +315,18 @@ class PropertyRegistry:
 
     def has(self, expr: Expr, prop_cls: Type[Property]) -> bool:
         return self.get(expr, prop_cls) is not None
+
+    def declared_exact(self, expr: Expr, prop_cls: Type[Property]) -> bool:
+        """Is a visible ``prop_cls`` declared on EXACTLY ``expr`` (no
+        class / predicate fallback)? NOT recorded as a read: a caller
+        whose result depends on a positive answer re-queries with
+        :meth:`get` so that answer becomes a hypothesis (negative
+        pre-filter answers do not pile up as requirements)."""
+        try:
+            prop = self._props.get(expr, {}).get(prop_cls)
+        except TypeError:  # unhashable
+            return False
+        return self._filter(prop) is not None
 
     def all_for(self, expr: Expr) -> Iterator[Property]:
         """Yield every property visible for ``expr`` (after filters).

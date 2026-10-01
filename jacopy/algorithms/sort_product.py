@@ -98,6 +98,15 @@ def _is_scalar(factor: Expr, registry: PropertyRegistry) -> bool:
     return registry.has(factor, Scalar)
 
 
+def _is_real_constant(factor: Expr, registry: PropertyRegistry) -> bool:
+    """The Scalar contract's ℝ-constant (numeral or EXACT Scalar atom,
+    :func:`~jacopy.central.calculus.scalars.is_real_constant`): the only
+    factors that swap past ANYTHING (operators included)."""
+    from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
+
+    return is_real_constant(factor, registry)
+
+
 def _degree_of(factor: Expr, registry: PropertyRegistry) -> Degree:
     """Return the grading of ``factor``, or raise if unclassified.
 
@@ -179,7 +188,7 @@ def _swap_behavior(
     """
     if registry.has(a, NonCommuting) or registry.has(b, NonCommuting):
         return (False, Degree.const(0))
-    if _is_scalar(a, registry) or _is_scalar(b, registry):
+    if _is_real_constant(a, registry) or _is_real_constant(b, registry):
         return (True, Degree.const(0))
     if registry.has(a, AntiCommuting) and registry.has(b, AntiCommuting):
         return (True, Degree.const(1))

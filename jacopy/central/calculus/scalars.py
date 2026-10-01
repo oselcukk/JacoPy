@@ -35,3 +35,37 @@ def is_scalar_function(
     from jacopy.central.objects.kind import kind_of  # noqa: WPS433 - central objects sit above this module
 
     return kind_of(expr, registry).kind in ("function", "zero")
+
+
+def is_real_constant(
+    expr: Expr, registry: Optional[PropertyRegistry] = None
+) -> bool:
+    """THE ℝ-constant test of the Scalar contract (audit 0b00e1b M1-1;
+    one definition for product_rule's ``D(c) = 0``, the engine's
+    contract step and sort_product's free swap).
+
+    ``True`` for a numeral, or for an ATOM carrying an EXACT
+    :class:`~jacopy.core.properties.Scalar` declaration whose kind is
+    ``function`` and that has no ``Graded(k ≠ 0)``. Class / predicate
+    Scalar declarations are NOT trusted (``declare_for_class(Symbol,
+    Scalar())`` must not make a 1-form ``w`` constant). The exact
+    pre-filter is not recorded as a registry read; a positive answer is
+    re-queried so "``c`` is Scalar" becomes the step's hypothesis.
+    """
+    from jacopy.core.expr import Integer, Rational
+
+    if isinstance(expr, (Integer, Rational)):
+        return True
+    if registry is None or not expr.is_atom:
+        return False
+    from jacopy.core.properties import Graded, Scalar
+
+    if not registry.declared_exact(expr, Scalar):
+        return False
+    registry.get(expr, Scalar)  # record the hypothesis
+    graded = registry.get(expr, Graded)
+    if graded is not None and graded.degree.as_int() != 0:
+        return False
+    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
+
+    return kind_of(expr, registry).kind == "function"
