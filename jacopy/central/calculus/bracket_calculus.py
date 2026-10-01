@@ -68,14 +68,25 @@ class ExteriorDerivative(Derivation):
     distinct operators even if displayed similarly.
     """
 
-    __slots__ = ("_calculus_name", "_skew")
+    __slots__ = ("_calculus_name", "_skew", "_calculus")
 
     def __init__(
-        self, calculus_name: str, *, name: str = "d", skew: bool = False
+        self,
+        calculus_name: str,
+        *,
+        name: str = "d",
+        skew: bool = False,
+        calculus: Optional["BracketCalculus"] = None,
     ) -> None:
+        _check_owner(calculus_name, calculus)
         super().__init__(name, degree=1)
         self._calculus_name = calculus_name
         self._skew = bool(skew)
+        # the owning calculus — NOT part of the structural identity;
+        # carried so scope guards can match the operator by the
+        # calculus OBJECT, not by its display/name (audit 0B00E1B-FULL
+        # M3-1, see :func:`belongs_to`)
+        self._calculus = calculus
 
     @property
     def calculus_name(self) -> str:
@@ -137,6 +148,7 @@ class LieDerivative(Derivation):
         display = (
             name if name is not None else f"{op_name}_{X._repr_inner()}"
         )
+        _check_owner(calculus_name, calculus)
         super().__init__(display, degree=0)
         self._calculus_name = calculus_name
         self._vector = X
@@ -222,6 +234,119 @@ def _is_certified_form(expr: Expr, registry=None) -> bool:
     return isinstance(deg, int) and deg >= 1 and admits_alternation(expr)
 
 
+#: Calculus names owned by a canonical library instance. Operator
+#: identity (``_key``) is name-based, so a second calculus carrying
+#: one of these names would build operators EQUAL to the canonical
+#: ones and inherit every rule scoped to them (audit 0B00E1B-FULL
+#: M3-1/M3-2: a foreign ``d``/``L`` firing ``dω = 0`` or the Nambu FI).
+#: Maps the name to the module that defines the canonical instance
+#: and the attribute holding it.
+_RESERVED_NAMES = {
+    "Cartan-TM": ("jacopy.central.tangent.exterior", "CARTAN_TM"),
+}
+
+
+def _guard_reserved_name(name: str) -> None:
+    """Refuse a reserved calculus name once its canonical instance
+    exists. The canonical module is imported first, so the guard
+    holds whichever is constructed first; while that module is being
+    initialized (the canonical construction itself) the attribute is
+    still unset and the construction is allowed."""
+    spec = _RESERVED_NAMES.get(name)
+    if spec is None:
+        return
+    import importlib
+
+    module = importlib.import_module(spec[0])
+    if getattr(module, spec[1], None) is not None:
+        raise ValueError(
+            f"BracketCalculus name {name!r} is reserved for "
+            f"{spec[0]}.{spec[1]}; choose a distinct calculus name"
+        )
+
+
+def _canonical(name: str):
+    """The canonical instance of a reserved calculus name (``None`` for
+    an unreserved name, or while the canonical module is still being
+    initialized — the canonical construction itself)."""
+    spec = _RESERVED_NAMES.get(name)
+    if spec is None:
+        return None
+    import importlib
+
+    return getattr(importlib.import_module(spec[0]), spec[1], None)
+
+
+def _rebuild_reserved(name: str) -> "BracketCalculus":
+    """Unpickling a reserved calculus yields THE canonical instance."""
+    canon = _canonical(name)
+    if canon is None:
+        raise ValueError(f"no canonical calculus for {name!r}")
+    return canon
+
+
+def _rebuild_calculus(name, anchor, bracket, d_name, lie_name, form_degree,
+                      section_test, skew, right_leibniz) -> "BracketCalculus":
+    return BracketCalculus(
+        name, anchor=anchor, bracket=bracket, d_name=d_name,
+        lie_name=lie_name, form_degree=form_degree,
+        section_test=section_test, skew=skew, right_leibniz=right_leibniz,
+    )
+
+
+def _check_owner(calculus_name: str, calculus) -> None:
+    """Operator construction contract (audit 0B00E1B-FULL M3-1 root):
+    an owner, when given, is a :class:`BracketCalculus` carrying the
+    operator's calculus name; an operator with a RESERVED calculus name
+    is built only by the canonical instance (the name itself is
+    reserved for it, :func:`_guard_reserved_name`). Operator identity is
+    name-based, so an ownerless or look-alike-owned
+    ``ExteriorDerivative("Cartan-TM")`` would compare equal to the TM
+    ``d`` and inherit every rule scoped to it."""
+    if calculus is not None and not isinstance(calculus, BracketCalculus):
+        raise TypeError("an operator's owner must be a BracketCalculus")
+    if calculus is not None and calculus.name != calculus_name:
+        raise ValueError(
+            f"operator calculus name {calculus_name!r} differs from its "
+            f"owning calculus {calculus.name!r}"
+        )
+    if calculus_name in _RESERVED_NAMES:
+        canon = _canonical(calculus_name)
+        if calculus is None or (canon is not None and calculus is not canon):
+            raise ValueError(
+                f"calculus name {calculus_name!r} is reserved: its operators "
+                "are built only by the canonical calculus (use CARTAN_TM.d / "
+                "CARTAN_TM.lie(X))"
+            )
+
+
+def belongs_to(op: Any, calculus: "BracketCalculus") -> bool:
+    """Is ``op`` the ``d`` or an ``L_X`` of ``calculus``? THE shared
+    owner test of every calculus-scoped rule (audit 0B00E1B-FULL
+    M3-1/M3-2: ``dω = 0``, the Nambu FI, ``d² = 0``, the intrinsic
+    ``d``/``L`` …).
+
+    * a RESERVED calculus (``Cartan-TM``): the operator's owner must be
+      the canonical instance, by object identity (copies and pickles of
+      a calculus resolve to it), and ``calculus`` must be it too;
+    * any other calculus: the calculus name (operator identity is
+      name-based; same-named calculi are the same calculus).
+
+    For a reserved calculus a ``d`` must moreover BE its ``d``; an
+    unreserved calculus matches its ``d`` by name across bare/declared
+    copies (the algebroid layer's skew-declared copy, audit M2-1)."""
+    if not isinstance(op, (ExteriorDerivative, LieDerivative)):
+        return False
+    if op.calculus_name != calculus.name:
+        return False
+    if calculus.name in _RESERVED_NAMES:
+        canon = _canonical(calculus.name)
+        if canon is None or calculus is not canon or op._calculus is not canon:
+            return False
+        return not isinstance(op, ExteriorDerivative) or op == canon.d
+    return True
+
+
 class BracketCalculus:
     """An ``(anchor, bracket)`` pair with its derived operators.
 
@@ -289,6 +414,7 @@ class BracketCalculus:
         silent axioms, audit 0B00E1B-FULL M2-1/M2-2)."""
         if not isinstance(name, str) or not name:
             raise ValueError("BracketCalculus name must be a non-empty str")
+        _guard_reserved_name(name)
         if not callable(anchor) or not callable(bracket):
             raise TypeError("anchor and bracket must be callables")
         self._name = name
@@ -298,7 +424,9 @@ class BracketCalculus:
             raise TypeError("skew and right_leibniz must be bools")
         self._skew = skew
         self._right_leibniz = right_leibniz
-        self._d = ExteriorDerivative(name, name=d_name, skew=skew)
+        self._d = ExteriorDerivative(
+            name, name=d_name, skew=skew, calculus=self
+        )
         self._lie_name = lie_name
         self._form_degree = form_degree
         self._section_test = section_test
@@ -385,6 +513,24 @@ class BracketCalculus:
 
     def __repr__(self) -> str:
         return f"BracketCalculus({self._name!r})"
+
+    # A calculus is immutable: copies are the calculus itself, and a
+    # reserved calculus unpickles to its canonical instance (its owner
+    # identity survives; no lambda is pickled for it).
+    def __copy__(self) -> "BracketCalculus":
+        return self
+
+    def __deepcopy__(self, memo) -> "BracketCalculus":
+        return self
+
+    def __reduce__(self):
+        if self._name in _RESERVED_NAMES:
+            return (_rebuild_reserved, (self._name,))
+        return (_rebuild_calculus, (
+            self._name, self._anchor, self._bracket, self._d.name,
+            self._lie_name, self._form_degree, self._section_test,
+            self._skew, self._right_leibniz,
+        ))
 
 
 def _slot_ok(
@@ -473,7 +619,7 @@ class IntrinsicDDefinition(Definition):
         return (
             isinstance(head, Act)
             and isinstance(head.op, ExteriorDerivative)
-            and head.op.calculus_name == self._calc.name
+            and belongs_to(head.op, self._calc)
         )
 
     def _degree_of_arg(self, omega: Expr) -> Optional[int]:
@@ -584,7 +730,7 @@ class IntrinsicLDefinition(Definition):
         return (
             isinstance(head, Act)
             and isinstance(head.op, LieDerivative)
-            and head.op.calculus_name == self._calc.name
+            and belongs_to(head.op, self._calc)
         )
 
     def _is_section(self, expr: Expr) -> bool:
@@ -605,7 +751,7 @@ class IntrinsicLDefinition(Definition):
         from jacopy.central.calculus.scalars import is_scalar_function
 
         if isinstance(expr, Act) and isinstance(expr.op, LieDerivative):
-            if expr.op.calculus_name != self._calc.name:
+            if not belongs_to(expr.op, self._calc):
                 return False
             if is_scalar_function(expr.arg, self._registry) or (
                 self._is_section(expr.arg)

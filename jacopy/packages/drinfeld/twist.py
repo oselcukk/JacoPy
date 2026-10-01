@@ -153,7 +153,7 @@ class MagicFormulaDefinition(Definition):
         if not (
             isinstance(expr, Act)
             and isinstance(expr.op, LieDerivative)
-            and expr.op.calculus_name == CARTAN_TM.name
+            and __import__("jacopy.central.calculus.bracket_calculus", fromlist=["belongs_to"]).belongs_to(expr.op, CARTAN_TM)
         ):
             return False
         arg = expr.arg
