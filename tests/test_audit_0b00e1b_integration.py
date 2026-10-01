@@ -608,3 +608,96 @@ class TestDefectOperatorTangency:
         assert img == MappedSection("Ψ", A.bracket(u, v), tangent=True)
         img_bare = PredatorExpansionDefinition(A).rewrite(bare).children[0]
         assert img_bare == MappedSection("Ψ", A.bracket(u, v))
+
+
+class TestSectionValuedRoot:
+    """Review item 7 (root of 3, 4, 5): one structural predicate,
+    ``is_section_valued``, says when an expression is a value in a
+    bundle other than TM. Such a value acts on functions only through
+    the anchor. On ec63751 AND 1d75405 every case below was typed /
+    split as a vector field."""
+
+    def _setup(self):
+        reg = PropertyRegistry()
+        f, g, h = functions("f g h", registry=reg)
+        A = algebroid("Asr", Bundle("Asr"))
+        u, v, w = A.sections("u v w")
+        (X,) = vector_fields("X")
+        return reg, f, g, h, A, u, v, w, X
+
+    def test_wrapped_bracket_is_not_a_function_operator(self):
+        # item 4: Neg/Sum/h·/commutator of [u,v]_E acting on f was
+        # typed 'function'
+        from jacopy.algebra.commutator import Commutator
+        from jacopy.central.calculus.scalars import is_scalar_function
+        from jacopy.central.objects.kind import is_section_valued, kind_of
+        from jacopy.core.expr import Neg
+
+        reg, f, g, h, A, u, v, w, X = self._setup()
+        b = A.bracket(u, v)
+        for op in (Neg(b), Sum(b, w), Product(h, b), Commutator(b, w)):
+            assert is_section_valued(op)
+            assert kind_of(Act(op, f), reg).kind == "unknown"
+            assert not is_scalar_function(Act(op, f), reg)
+        # TM controls unchanged
+        (Y,) = vector_fields("Y")
+        for op in (Neg(X), Sum(X, Y), Product(h, X), Commutator(X, Y)):
+            assert not is_section_valued(op)
+            assert kind_of(Act(op, f), reg).kind == "function"
+
+    def test_lie_bracket_vf_of_sections_is_not_a_derivation(self):
+        # item 3: [u,v]_VF of E-sections (or with [u,v]_E inside) was
+        # Leibniz-split and annihilated constants
+        from jacopy.algebra.lie_bracket_vf import LieBracketVF
+        from jacopy.central.objects import forms
+
+        reg, f, g, h, A, u, v, w, X = self._setup()
+        (al,) = forms("αl", degree=1)
+        for br in (LieBracketVF(u, v), LieBracketVF(A.bracket(u, v), X), LieBracketVF(al, X)):
+            assert product_rule(Act(br, Product(f, g)), reg) == Act(br, Product(f, g))
+            assert product_rule(Act(br, Integer(3)), reg) == Act(br, Integer(3))
+        (Y,) = vector_fields("Y")
+        tm = LieBracketVF(X, Y)
+        assert product_rule(Act(tm, Integer(3)), reg) == Integer(0)
+        assert product_rule(Act(tm, Product(f, g)), reg) == Sum(
+            Product(Act(tm, f), g), Product(f, Act(tm, g))
+        )
+        # the anchored images are TM vector fields again
+        anc = LieBracketVF(A.anchor(u), A.anchor(v))
+        assert product_rule(Act(anc, Integer(3)), reg) == Integer(0)
+
+    def test_e_section_acts_only_through_the_anchor(self):
+        # item 5: Act(u, f·g) for u ∈ ΓE split and Act(u, f) was a
+        # function; the convention u(f) := ρ(u)(f) goes through A.anchor
+        from jacopy.central.objects.kind import kind_of
+
+        reg, f, g, h, A, u, v, w, X = self._setup()
+        assert u.section_value and not X.section_value
+        assert product_rule(Act(u, Product(f, g)), reg) == Act(u, Product(f, g))
+        assert kind_of(Act(u, f), reg).kind == "unknown"
+        rho = A.anchor(u)
+        assert kind_of(Act(rho, f), reg).kind == "function"
+        assert product_rule(Act(rho, Product(f, g)), reg) == Sum(
+            Product(Act(rho, f), g), Product(f, Act(rho, g))
+        )
+
+    def test_interior_needs_matching_bundle(self):
+        # ι_{[u,v]_E} α and ι_u α for a TM 2-form α were typed 1-forms
+        from jacopy.central.objects import forms
+        from jacopy.central.objects.interior import Interior
+        from jacopy.central.objects.kind import kind_of
+
+        reg, f, g, h, A, u, v, w, X = self._setup()
+        (al,) = forms("αT", degree=2)
+        (aE,) = forms("αE", degree=2, bundle=A.bundle)
+        for vec in (A.bracket(u, v), u):
+            assert kind_of(Act(Interior(vec), al), reg).kind == "unknown"
+        assert kind_of(Act(Interior(u), aE), reg) == Kind_form1(A.bundle)
+        assert kind_of(Act(Interior(A.bracket(u, v)), aE), reg) == Kind_form1(A.bundle)
+        assert kind_of(Act(Interior(X), al), reg).kind == "form"
+
+
+def Kind_form1(bundle):
+    from jacopy.central.objects.kind import Kind
+
+    return Kind("form", 1, bundle=bundle)

@@ -44,7 +44,7 @@ from typing import Any, Optional, Tuple
 from jacopy.algebra.derivation import Act, Derivation
 from jacopy.core.expr import Expr
 from jacopy.core.symbolic_degree import DegreeLike
-from jacopy.central.objects.bundle import Bundle, TM
+from jacopy.central.objects.bundle import Bundle, TM, TangentBundle
 
 
 class VectorField(Derivation):
@@ -89,6 +89,14 @@ class VectorField(Derivation):
     @property
     def bundle(self) -> Bundle:
         return self._bundle
+
+    @property
+    def section_value(self) -> bool:
+        """A section of a bundle other than TM acts on functions only
+        through the anchor (``u(f) := ρ(u)(f)`` is spelled with
+        ``A.anchor`` / ``A.act``): it is a VALUE, not a derivation
+        (audit 0b00e1b integration review, item 5)."""
+        return not isinstance(self._bundle, TangentBundle)
 
     @property
     def wedge_degree(self):

@@ -189,6 +189,35 @@ class kind_cache:  # noqa: N801 - used as a context manager
         _ACTIVE_MEMO = self._prev
 
 
+def is_section_valued(expr: Expr) -> bool:
+    """Is ``expr`` (structurally, no registry needed) a VALUE in a
+    bundle other than TM — an atom declaring ``section_value`` (an
+    E-section, ``[u,v]_E``, ``J_E``, ``g⁻¹ω``, …), or a ``Neg``/``Sum``/
+    ``Product``/``Commutator``/indexed sum built from one? Such an
+    expression acts on functions only through the anchor, so it is
+    never a derivation of C∞(M) and ``Act`` on it is untyped (audit
+    0b00e1b integration review, item 7). Operator slots are NOT entered:
+    ``ρ(u)`` is a TM vector field although ``u`` is an E-section."""
+    from jacopy.algebra.commutator import Commutator
+    from jacopy.core.indexed_sum import IndexedSum
+
+    if getattr(expr, "section_value", False) is True:
+        return True
+    if isinstance(expr, (Neg, Sum, Product)):
+        return any(is_section_valued(c) for c in expr.children)
+    if isinstance(expr, Commutator):
+        return is_section_valued(expr.a) or is_section_valued(expr.b)
+    if isinstance(expr, IndexedSum):
+        return is_section_valued(expr.body)
+    return False
+
+
+def _is_tangent_bundle(bundle) -> bool:
+    from jacopy.central.objects.bundle import TangentBundle
+
+    return isinstance(bundle, TangentBundle)
+
+
 def has_vector_content(expr: Expr, registry=None) -> bool:
     """Does ``expr`` contain a vector / multivector anywhere (children
     AND operator slots — ``ι_Λ`` keeps ``Λ`` in a slot)? Only then do
@@ -643,11 +672,21 @@ def _kind_of_act(expr, registry) -> Kind:
         # vector X (p = 1); ι of a bivector / function / composition /
         # undeclared symbol is not typed here (ι_Λ dh would be the
         # VECTOR Λ♯dh in the other contraction convention) — unknown.
-        if kind_of(op.vector, registry).kind != "vector":
+        vk = kind_of(op.vector, registry)
+        if vk.kind != "vector":
             return UNKNOWN
         if inner.kind == "function":
             return ZERO
         if inner.kind == "form" and not is_unknown(inner.degree):
+            # the vector must be a section of the form's bundle: an
+            # E-section (or [u,v]_E) does not contract a TM form
+            if vk.bundle is not None and inner.bundle is not None:
+                if vk.bundle != inner.bundle:
+                    return UNKNOWN
+            elif is_section_valued(op.vector) and (
+                inner.bundle is None or _is_tangent_bundle(inner.bundle)
+            ):
+                return UNKNOWN
             return _form_or_lower(inner.degree - 1, inner.bundle)
         return UNKNOWN
     if isinstance(op, MultivectorInterior):
@@ -682,15 +721,20 @@ def _kind_of_act(expr, registry) -> Kind:
         # function it gives a function; m(X) applied to a vector Y is a
         # composition, not typed
         return FUNCTION if inner.kind == "function" else UNKNOWN
+    if is_section_valued(op):
+        # a section VALUE of a non-tangent bundle (an E-section,
+        # [u,v]_E, J_E, g⁻¹ω, and Neg/Sum/h·/commutators of them) does
+        # not act on functions: Act on it is untyped
+        return UNKNOWN
     if not isinstance(op, Derivation) and inner.kind == "function":
         # a vector-valued operator node ([X,Y] = XY − YX of two vector
-        # fields, Λ♯(dh), …) acting on a function is a function
-        if kind_of(op, registry).kind == "vector":
+        # fields, Λ♯(dh), …) acting on a function is a function — only
+        # when the vector is (or may be) TANGENT
+        ok = kind_of(op, registry)
+        if ok.kind == "vector" and (
+            ok.bundle is None or _is_tangent_bundle(ok.bundle)
+        ):
             return FUNCTION
-    if getattr(op, "section_value", False):
-        # a section VALUE of a non-tangent bundle ([u,v]_E, J_E, g⁻¹ω,
-        # …) does not act on functions: Act on it is untyped
-        return UNKNOWN
     if isinstance(op, Derivation):
         lift = getattr(op, "wedge_degree", None)
         if isinstance(lift, Degree) and lift == Degree.const(1):
@@ -712,6 +756,7 @@ __all__ = [
     "kind_of",
     "kind_cache",
     "has_vector_content",
+    "is_section_valued",
     "wedge_factor_degree",
     "UNKNOWN",
     "ZERO",
