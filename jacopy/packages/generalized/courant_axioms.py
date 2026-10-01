@@ -75,6 +75,10 @@ class CourantD(Derivation):
     Prop 2.1-2.2), never a defining rule.
     """
 
+    # Not a derivation: D(f) is a section of E; its only law is (L) in f, not Leibniz on an operand.
+    leibniz = False
+    section_value = True
+
     __slots__ = ("_algebroid_name", "_function")
 
     def __init__(

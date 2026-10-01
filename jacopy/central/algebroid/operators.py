@@ -48,7 +48,7 @@ class MappedSection(Derivation):
     :class:`~jacopy.central.algebroid.context.AnchoredVF` (the anchor
     is the special case ``Φ = ρ: E → TM``)."""
 
-    __slots__ = ("_map_name", "_section")
+    __slots__ = ("_map_name", "_section", "_tangent")
 
     def __init__(
         self,
@@ -56,6 +56,7 @@ class MappedSection(Derivation):
         section: Expr,
         *,
         name: Optional[str] = None,
+        tangent: bool = False,
     ) -> None:
         if not isinstance(section, Expr):
             raise TypeError("MappedSection requires an Expr section")
@@ -67,6 +68,22 @@ class MappedSection(Derivation):
         super().__init__(display, degree=0)
         self._map_name = map_name
         self._section = section
+        self._tangent = bool(tangent)
+
+    # A derivation only when Φ targets TM (Φ(u) is then a vector
+    # field); otherwise Φ(u) is a section of the target bundle, not an
+    # operator on functions (audit 0b00e1b; default reject).
+    @property
+    def leibniz(self):
+        return None if self._tangent else False
+
+    @property
+    def section_value(self) -> bool:
+        return not self._tangent
+
+    @property
+    def tangent(self) -> bool:
+        return self._tangent
 
     @property
     def map_name(self) -> str:
@@ -85,7 +102,7 @@ class MappedSection(Derivation):
         return (self._section,)
 
     def with_slots(self, section: Expr) -> "MappedSection":
-        return MappedSection(self._map_name, section)
+        return MappedSection(self._map_name, section, tangent=self._tangent)
 
     def substitute_atom(self, dummy: Expr, target: Expr) -> Expr:
         """Slot-walking substitution (Phase 4.E.2)."""
@@ -94,10 +111,15 @@ class MappedSection(Derivation):
         new_section = self._section.substitute_atom(dummy, target)
         if new_section is self._section:
             return self
-        return MappedSection(self._map_name, new_section)
+        return MappedSection(
+            self._map_name, new_section, tangent=self._tangent
+        )
 
     def _key(self) -> Any:
-        return (self._name, self._degree, self._map_name, self._section)
+        return (
+            self._name, self._degree, self._map_name, self._section,
+            self._tangent,
+        )
 
 
 class SectionMap:
@@ -136,7 +158,7 @@ class SectionMap:
         """``Φ(u)`` — the opaque mapped section."""
         if not isinstance(u, Expr):
             raise TypeError("SectionMap expects an Expr section")
-        return MappedSection(self._name, u)
+        return MappedSection(self._name, u, tangent=self.targets_tangent)
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -192,7 +214,7 @@ class MappedSectionLinearityDefinition(Definition):
         sec = expr.section
 
         def phi(s: Expr) -> Expr:
-            return MappedSection(m, s)
+            return MappedSection(m, s, tangent=expr.tangent)
 
         if sec == Integer(0):
             return Integer(0)
@@ -207,6 +229,10 @@ class MappedSectionLinearityDefinition(Definition):
 class Jacobiator(Derivation):
     """``J^E(u, v, w)`` — the Leibniz-Jacobi defect, itself a section
     of ``E`` (degree-0 atom acting through the anchor only)."""
+
+    # Not a derivation: J(u,v,w) is a section of E, acting on functions only through ρ.
+    leibniz = False
+    section_value = True
 
     __slots__ = ("_algebroid_name", "_u", "_v", "_w")
 
@@ -310,6 +336,10 @@ class JacobiatorExpansionDefinition(Definition):
 class Derivator(Derivation):
     """``D^E_Φ(u, v)`` — the bracket-derivation defect of a
     ``C^∞``-linear ``Φ: E → E`` (item 10f), itself a section of E."""
+
+    # Not a derivation: D_Φ(u,v) is a section of E (Φ: E → E), not an operator on functions.
+    leibniz = False
+    section_value = True
 
     __slots__ = ("_algebroid_name", "_map_name", "_u", "_v")
 
@@ -423,6 +453,7 @@ class Predator(Derivation):
     Lie-morphism defect of ``Φ: E → TM`` (item 10g). ``Φ = ρ`` gives
     the pre-Leibniz defect: ``P^E_ρ ≡ 0 ⟺ anchor-morphism``."""
 
+    # A derivation: Φ: E → TM (checked by predator()), so P_Φ(u,v) is a vector field.
     __slots__ = ("_algebroid_name", "_map_name", "_u", "_v")
 
     def __init__(
@@ -536,7 +567,8 @@ class PredatorExpansionDefinition(Definition):
             image = self._alg.anchor
         else:
             def image(s: Expr) -> Expr:
-                return MappedSection(m, s)
+                # Φ: E → TM (predator contract): the images are vector fields
+                return MappedSection(m, s, tangent=True)
         return Sum(
             image(self._alg.bracket(u, v)),
             Neg(LieBracketVF(image(u), image(v))),

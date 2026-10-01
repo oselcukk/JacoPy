@@ -206,3 +206,161 @@ class TestZeroBracketIdentityAnchor:
             [IntrinsicLDefinition(calc, reg), ActExpansionDefinition(reg)]
         )
         assert _prove(Act(calc.lie(e), Product(x, e)), Integer(0), reg, eng).steps
+
+
+# --------------------------------------------------------------------- #
+# Non-derivation Derivation subclasses (section-valued atoms)           #
+# --------------------------------------------------------------------- #
+
+
+def _section_values():
+    """Atoms that subclass Derivation only for slot plumbing: VALUES in
+    a bundle other than TM. ``Act(value, ·)`` is undefined — before,
+    the generic product rule split e.g. ``[u,v]_E(f·g)`` into
+    ``[u,v]_E(f)·g + f·[u,v]_E(g)`` and zeroed ``[u,v]_E(3)``."""
+    from jacopy.central.algebroid.context import LocalityOperator, MetricSharp
+    from jacopy.central.algebroid.operators import (
+        Derivator,
+        Jacobiator,
+        MappedSection,
+        section_map,
+    )
+    from jacopy.packages.generalized.bourbaki_exact import ChiSec, PhiSec
+    from jacopy.packages.generalized.bourbaki_precalculus import (
+        BD,
+        BIota,
+        BLieR,
+        BLieZ,
+        BSymbol,
+    )
+    from jacopy.packages.generalized.bourbaki_structure import (
+        BDop,
+        BLieRE,
+        BMetric,
+        BSymbolL,
+    )
+    from jacopy.packages.generalized.courant_axioms import CourantD
+    from jacopy.packages.generalized.general_twist import PsiInvSec, PsiSec
+    from jacopy.packages.metric_affine.torsion_curvature import (
+        Curvature,
+        Torsion,
+    )
+
+    reg = PropertyRegistry()
+    f, g = functions("f g", registry=reg)
+    A = algebroid("Asv", Bundle("Asv"))
+    u, v, w = A.sections("u v w")
+    X, Y = vector_fields("X Y")
+    E = Bundle("Asv")
+    vals = {
+        "AlgebroidBracket": A.bracket(u, v),
+        "MetricSharp": MetricSharp("Asv", A.D(f)),
+        "LocalityOperator": LocalityOperator("Asv", A.D(f), u, v),
+        "MappedSection": MappedSection("Φ", u),
+        "MappedSection(E→E)": section_map("Ψ", E, E)(u),
+        "Jacobiator": Jacobiator("Asv", u, v, w),
+        "Derivator": Derivator("Asv", "Φ", u, v),
+        "CourantD": CourantD("Asv", f),
+        "BIota": BIota(X, u),
+        "BD": BD(u),
+        "BSymbol": BSymbol(f, u),
+        "BLieR": BLieR(X, u),
+        "BLieZ": BLieZ(X, u),
+        "BMetric": BMetric(u, v),
+        "BDop": BDop(u),
+        "BSymbolL": BSymbolL(f, u),
+        "BLieRE": BLieRE(u, v),
+        "PhiSec": PhiSec(X),
+        "ChiSec": ChiSec(u),
+        "PsiSec": PsiSec(u),
+        "PsiInvSec": PsiInvSec(u),
+        "Torsion(E)": Torsion("∇", X, Y, bundle=E),
+        "Curvature(E)": Curvature("∇", X, Y, u, bundle=E),
+    }
+    return reg, f, g, X, A, vals
+
+
+def _vector_fields():
+    """Derivation subclasses that ARE vector fields (Leibniz on C∞(M))."""
+    from jacopy.central.algebroid.operators import Predator, section_map
+    from jacopy.central.objects.bundle import TM
+    from jacopy.packages.metric_affine.torsion_curvature import (
+        Curvature,
+        Torsion,
+    )
+
+    reg = PropertyRegistry()
+    f, g = functions("f g", registry=reg)
+    A = algebroid("Avf", Bundle("Avf"))
+    u, v = A.sections("u v")
+    X, Y, Z = vector_fields("X Y Z")
+    return reg, f, g, {
+        "AnchoredVF": A.anchor(u),
+        "Predator": Predator("Avf", "Φ", u, v),
+        "MappedSection(E→TM)": section_map("Φ", A.bundle, TM)(u),
+        "Torsion(TM)": Torsion("∇", X, Y),
+        "Curvature(TM)": Curvature("∇", X, Y, Z),
+    }
+
+
+class TestSectionValuedAtomsAreNotDerivations:
+    def test_product_rule_leaves_act_inert(self):
+        reg, f, g, X, A, vals = _section_values()
+        for name, op in vals.items():
+            for arg in (Product(f, g), Product(f, X)):
+                assert product_rule(Act(op, arg), reg) == Act(op, arg), name
+            # no D(c) = 0 annihilation either
+            assert product_rule(Act(op, Integer(3)), reg) == Act(op, Integer(3)), name
+            assert ActExpansionDefinition(reg).matches(Act(op, Product(f, g))) is False
+
+    def test_leibniz_split_does_not_close(self):
+        # [u,v]_E(f·g) = [u,v]_E(f)·g + f·[u,v]_E(g) CLOSED before
+        # (engine=None and algebroid_engine).
+        reg, f, g, X, A, vals = _section_values()
+        for name in ("AlgebroidBracket", "Jacobiator", "MetricSharp"):
+            op = vals[name]
+            lhs = Act(op, Product(f, g))
+            rhs = Sum(Product(Act(op, f), g), Product(f, Act(op, g)))
+            for eng in (None, algebroid_engine(A, registry=reg)):
+                with pytest.raises(ProofFailure):
+                    _prove(lhs, rhs, reg, eng)
+
+    def test_markers_survive_slot_rewrites(self):
+        from jacopy.central.algebroid.operators import (
+            MappedSection,
+            MappedSectionLinearityDefinition,
+        )
+
+        reg, f, g, X, A, vals = _section_values()
+        (u,) = A.sections("u")
+        for name, op in vals.items():
+            new = op.with_slots(*op.rewritable_slots)
+            assert new.leibniz is False and new.section_value, name
+        # the TM flag of a mapped section is identity and survives
+        # its linearity rule
+        tm = MappedSection("Φ", Product(f, u), tangent=True)
+        assert tm != MappedSection("Φ", Product(f, u))
+        out = MappedSectionLinearityDefinition(reg).rewrite(tm)
+        assert out == Product(f, MappedSection("Φ", u, tangent=True))
+
+    def test_vector_fields_still_split(self):
+        reg, f, g, ops = _vector_fields()
+        for name, op in ops.items():
+            assert product_rule(Act(op, Product(f, g)), reg) == Sum(
+                Product(Act(op, f), g), Product(f, Act(op, g))
+            ), name
+            assert product_rule(Act(op, Integer(3)), reg) == Integer(0), name
+
+    def test_act_on_section_value_is_untyped(self):
+        # kind_of (the one type source): ρ(u)(f) is a function, but
+        # [u,v]_E(f) is undefined — before it was typed 'function' and
+        # so certified as a scalar coefficient.
+        from jacopy.central.calculus.scalars import is_scalar_function
+        from jacopy.central.objects.kind import kind_of
+
+        reg, f, g, X, A, vals = _section_values()
+        for name, op in vals.items():
+            assert kind_of(Act(op, f), reg).kind != "function", name
+            assert not is_scalar_function(Act(op, f), reg), name
+        (u,) = A.sections("u")
+        assert is_scalar_function(Act(A.anchor(u), f), reg)

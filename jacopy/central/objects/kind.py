@@ -676,6 +676,10 @@ def _kind_of_act(expr, registry) -> Kind:
         # fields, Λ♯(dh), …) acting on a function is a function
         if kind_of(op, registry).kind == "vector":
             return FUNCTION
+    if getattr(op, "section_value", False):
+        # a section VALUE of a non-tangent bundle ([u,v]_E, J_E, g⁻¹ω,
+        # …) does not act on functions: Act on it is untyped
+        return UNKNOWN
     if isinstance(op, Derivation):
         lift = getattr(op, "wedge_degree", None)
         if isinstance(lift, Degree) and lift == Degree.const(1):

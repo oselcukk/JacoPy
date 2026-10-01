@@ -33,7 +33,7 @@ from jacopy.core.symbolic_degree import Degree
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import Definition
 from jacopy.proof.strategies import ExpandAndSimplify
-from jacopy.central.objects.bundle import Bundle, TM
+from jacopy.central.objects.bundle import Bundle, TM, TangentBundle
 from jacopy.central.objects.connection import Connection
 from jacopy.central.tangent.lie_bracket import lie_bracket
 
@@ -66,6 +66,17 @@ class Torsion(Derivation):
         self._bundle = bundle if bundle is not None else TM
         self._X = X
         self._Y = Y
+
+    # A derivation only on TM (then the value is a vector field); for a
+    # connection on another bundle it is a section, not an operator on
+    # functions (audit 0b00e1b; default reject).
+    @property
+    def leibniz(self):
+        return None if isinstance(self._bundle, TangentBundle) else False
+
+    @property
+    def section_value(self) -> bool:
+        return not isinstance(self._bundle, TangentBundle)
 
     @property
     def connection_name(self) -> str:
@@ -136,6 +147,17 @@ class Curvature(Derivation):
         self._X = X
         self._Y = Y
         self._Z = Z
+
+    # A derivation only on TM (then the value is a vector field); for a
+    # connection on another bundle it is a section, not an operator on
+    # functions (audit 0b00e1b; default reject).
+    @property
+    def leibniz(self):
+        return None if isinstance(self._bundle, TangentBundle) else False
+
+    @property
+    def section_value(self) -> bool:
+        return not isinstance(self._bundle, TangentBundle)
 
     @property
     def connection_name(self) -> str:

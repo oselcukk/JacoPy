@@ -29,7 +29,9 @@ operator may take the decision itself through the PROTOCOL
 unexpanded (e.g. a Lie-derivative model that is not Leibniz in that
 slot), ``True`` splits; a :class:`Derivation` without the method
 behaves as ``True``. ``leibniz = False`` operators are C∞-linear
-(scalars pull out). A certified scalar function in operator position
+(scalars pull out); ``leibniz = False`` together with
+``section_value = True`` marks a section-valued atom that is a
+:class:`Derivation` only for slot plumbing — its ``Act`` stays inert. A certified scalar function in operator position
 multiplies; every other operator is only ℝ-linear (sums, signs and
 numeric factors pass through). :class:`~jacopy.central.calculus.bracket_calculus.ActExpansionDefinition`
 delegates here, so the engine rule follows the same protocol.
@@ -234,7 +236,9 @@ def _product_mode(op: Expr, arg: Expr, registry) -> str:
     """How ``op`` acts on the product ``arg`` (a Product or Wedge):
 
     * ``"cinf-linear"`` — ``op.leibniz is False`` (C∞-linear, not a
-      derivation: scalars pull out, no split);
+      derivation: scalars pull out, no split); ``"blocked"`` instead
+      when the atom also declares ``section_value = True`` (a value,
+      not an operator: ``Act`` on it is undefined);
     * the operator PROTOCOL ``op.splits_over_product(arg, registry)``
       when the operator defines it: ``True`` → ``"leibniz"``,
       ``False`` → ``"blocked"`` (the Act stays inert — e.g. a
@@ -245,6 +249,12 @@ def _product_mode(op: Expr, arg: Expr, registry) -> str:
     * ``"linear"`` otherwise (numeric factors pull out only).
     """
     if getattr(op, "leibniz", None) is False:
+        if getattr(op, "section_value", False):
+            # a section-VALUED atom (bracket, Jacobiator, g⁻¹ω, …)
+            # that subclasses Derivation only for slot plumbing:
+            # Act(value, ·) has no meaning, so neither Leibniz nor a
+            # C∞ pull-out applies — inert (default reject).
+            return "blocked"
         return "cinf-linear"
     hook = getattr(op, "splits_over_product", None)
     if callable(hook):
