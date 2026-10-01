@@ -27,6 +27,7 @@ from jacopy.algorithms.simplify import simplify
 from jacopy.brackets.derived import DerivedBracket
 from jacopy.core.expr import Expr, Integer, Neg, Sum
 from jacopy.core.registry import PropertyRegistry
+from jacopy.proof.registry_facts import in_registry_context
 from jacopy.core.symbolic_degree import Degree
 from jacopy.oracle.hook import on_closed
 from jacopy.proof.chain import ProofChain
@@ -112,6 +113,7 @@ class ExpandAndSimplify(Strategy):
 
     name = "ExpandAndSimplify"
 
+    @in_registry_context
     def prove(
         self,
         lhs: Expr,
@@ -318,6 +320,7 @@ class AgreementOnGenerators(Strategy):
         self._algebra = algebra
         self._sub = sub_strategy if sub_strategy is not None else ExpandAndSimplify()
 
+    @in_registry_context
     def prove(
         self,
         lhs: Expr,
@@ -380,6 +383,7 @@ class AgreementOnGenerators(Strategy):
         parent = ProofStep(
             lhs,
             rhs,
+            key=("strategy", "agreement-on-generators"),
             rule=self.name,
             justification=(
                 f"both of degree {deg_for_step}; agree on "
@@ -408,6 +412,7 @@ class AgreementOnGenerators(Strategy):
                 lhs_on_g,
                 rhs_on_g,
                 rule="check-on-generator",
+                key=("strategy", "check-on-generator"),
                 justification=f"generator g = {g._repr_inner()}",
             )
             for s in sub_chain:
@@ -454,6 +459,7 @@ class UnrollToFoundations(Strategy):
     def inner(self) -> Strategy:
         return self._inner
 
+    @in_registry_context
     def prove(
         self,
         lhs: Expr,
@@ -503,6 +509,7 @@ class DerivedBracketStrategy:
 
     name = "DerivedBracketStrategy"
 
+    @in_registry_context
     def prove_jacobi(
         self,
         bracket: DerivedBracket,
@@ -628,7 +635,12 @@ class DerivedBracketStrategy:
 
         obstruction_raw = bracket.jacobi_obstruction_raw()
         obstruction = bracket.jacobi_obstruction(registry)
-        reduced = simplify(obstruction, registry)
+        from jacopy.core.registry import track_reads
+        from jacopy.proof.registry_facts import facts_from_log
+
+        with track_reads() as _log:
+            reduced = simplify(obstruction, registry)
+        simplify_facts = facts_from_log(_log)
 
         chain = ProofChain()
         # Step 1: apply the derived bracket theorem, the triple Jacobi
@@ -655,6 +667,7 @@ class DerivedBracketStrategy:
                     obstruction_raw,
                     obstruction,
                     rule="base-bracket-expand",
+                    key=("strategy", "base-bracket-expand"),
                     justification=(
                         f"apply {bracket.base.name} definition to [Q, Q]"
                     ),
@@ -668,6 +681,8 @@ class DerivedBracketStrategy:
                     reduced,
                     rule="simplify",
                     justification="canonical-form pipeline",
+                    key=("pass", "simplify"),
+                    registry_facts=simplify_facts,
                 )
             )
 
@@ -714,6 +729,7 @@ class PortfolioStrategy(Strategy):
     def strategies(self):
         return tuple(self._strategies)
 
+    @in_registry_context
     def prove(
         self,
         lhs: Expr,

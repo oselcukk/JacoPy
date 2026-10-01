@@ -36,6 +36,7 @@ type.
 
 from __future__ import annotations
 
+import threading
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import Callable, Iterable, Iterator, List, Optional, Set, Tuple, Type, TypeVar
@@ -44,6 +45,31 @@ from jacopy.core.expr import Expr
 from jacopy.core.properties import Property, Provenance
 
 P = TypeVar("P", bound=Property)
+
+#: Read tracking (audit 0b00e1b-FULL P0-3 / M1X-2): a proof step's
+#: validity can depend on registry ANSWERS (``x`` is Scalar, ``p`` has
+#: no Graded declaration …). :meth:`PropertyRegistry.get` is the single
+#: query choke point; while a :func:`track_reads` block is open on this
+#: thread, every answer is appended to the block's log as
+#: ``(expr, property class, visible property or None)``. Off by
+#: default: one attribute lookup per query.
+_READS = threading.local()
+
+
+@contextmanager
+def track_reads():
+    """Record every :meth:`PropertyRegistry.get` answer given inside the
+    block (on this thread, any registry); yields the log list. Nested
+    blocks each see the reads made while they are open."""
+    stack = getattr(_READS, "stack", None)
+    if stack is None:
+        stack = _READS.stack = []
+    log: list = []
+    stack.append(log)
+    try:
+        yield log
+    finally:
+        stack.pop()
 
 Predicate = Callable[[Expr], bool]
 
@@ -197,7 +223,12 @@ class PropertyRegistry:
                 if isinstance(p, prop_cls) and pred(expr):
                     prop = p
                     break
-        return self._filter(prop)  # type: ignore[return-value]
+        visible = self._filter(prop)
+        stack = getattr(_READS, "stack", None)
+        if stack:
+            for log in stack:
+                log.append((expr, prop_cls, visible))
+        return visible  # type: ignore[return-value]
 
     def has(self, expr: Expr, prop_cls: Type[Property]) -> bool:
         return self.get(expr, prop_cls) is not None

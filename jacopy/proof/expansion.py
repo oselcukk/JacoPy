@@ -440,8 +440,20 @@ class ExpansionEngine:
                         return expr.with_slots(*new_slots), step
         d = self._match(expr)
         if d is not None:
-            after = d.rewrite(expr)
-            return after, self._build_step(expr, after, d)
+            # the registry answers the FIRED rule consulted (its match
+            # decision and its rewrite) are hypotheses of the step (audit
+            # 0b00e1b-FULL P0-3); matches is re-run under the recorder —
+            # it is a predicate of the node, the rewrite consumes it
+            from jacopy.core.registry import track_reads
+            from jacopy.proof.registry_facts import facts_from_log
+
+            with track_reads() as log:
+                d.matches(expr)
+                after = d.rewrite(expr)
+            step = self._build_step(expr, after, d)
+            if log:
+                step._registry_facts = facts_from_log(log)
+            return after, step
         return expr, None
 
     # -- driver ---------------------------------------------------------- #

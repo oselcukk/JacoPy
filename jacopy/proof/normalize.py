@@ -168,15 +168,29 @@ def normalize(
         else:
             raise TypeError("passes must be names or callables")
 
+    from jacopy.proof.registry_facts import registry_context
+
+    with registry_context(registry):
+        return _normalize(engine, expr, registry, rounds, max_steps, fns, inner_rounds, record, stop_when)
+
+
+def _normalize(engine, expr, registry, rounds, max_steps, fns, inner_rounds, record, stop_when) -> NormalForm:
     chain: List[ProofStep] = []
     total_steps = 0
     cur = expr
 
     def apply(name, fn, before):
-        after = fn(before, registry)
-        if record and after != before:
+        if not record:
+            return fn(before, registry)
+        from jacopy.core.registry import track_reads
+        from jacopy.proof.registry_facts import facts_from_log
+
+        with track_reads() as log:
+            after = fn(before, registry)
+        if after != before:
             rule, why = PASS_RULES.get(name, (name, "normalization pass"))
-            chain.append(ProofStep(before, after, rule=rule, justification=why))
+            chain.append(ProofStep(before, after, rule=rule, justification=why,
+                                   key=("pass", rule), registry_facts=facts_from_log(log)))
         return after
 
     def done(stopped_by, used_rounds, detail=""):

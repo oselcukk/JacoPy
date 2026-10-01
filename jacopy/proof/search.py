@@ -48,6 +48,7 @@ from jacopy.algorithms.product_rule import product_rule
 from jacopy.algorithms.simplify import simplify
 from jacopy.core.expr import Expr, Integer, Neg, Sum
 from jacopy.core.registry import PropertyRegistry
+from jacopy.proof.registry_facts import in_registry_context
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import ExpansionEngine, default_engine
 from jacopy.proof.step import ProofStep
@@ -121,17 +122,22 @@ def _definition_moves(
                 visit(c, path + (i,))
         d = engine._match(sub)
         if d is not None:
-            after_sub = d.rewrite(sub)
+            # the engine's own step record (owner, role, citation, key,
+            # registry facts — audit 0b00e1b-FULL P0-3 / K2-3) for the
+            # local rewrite, carried as the child of the whole step
+            from jacopy.core.registry import track_reads
+            from jacopy.proof.registry_facts import facts_from_log
+
+            with track_reads() as log:
+                d.matches(sub)
+                after_sub = d.rewrite(sub)
+            local = engine._build_step(sub, after_sub, d)
+            if log:
+                local._registry_facts = facts_from_log(log)
             after_root = _rewrite_at(root, path, after_sub)
-            tag = "theorem" if d.is_theorem else "axiom"
-            step = ProofStep(
-                root,
-                after_root,
-                rule=d.name,
-                justification=f"apply {tag}: {d.name}",
-                provenance_tag=tag,
-            )
-            moves.append((after_root, step))
+            from jacopy.proof.result import _whole_step
+
+            moves.append((after_root, _whole_step(root, after_root, local)))
 
     visit(root, ())
     return moves
@@ -141,8 +147,12 @@ def _sweep_moves(
     root: Expr, registry: Optional[PropertyRegistry]
 ) -> List[Tuple[Expr, ProofStep]]:
     """The two composite moves: one Leibniz sweep, one simplify sweep."""
+    from jacopy.core.registry import track_reads
+    from jacopy.proof.registry_facts import facts_from_log
+
     moves: List[Tuple[Expr, ProofStep]] = []
-    pr = product_rule(root, registry)
+    with track_reads() as log:
+        pr = product_rule(root, registry)
     if pr != root:
         moves.append(
             (
@@ -152,10 +162,13 @@ def _sweep_moves(
                     pr,
                     rule="product-rule",
                     justification="graded Leibniz + linearity",
+                    key=("pass", "product-rule"),
+                    registry_facts=facts_from_log(log),
                 ),
             )
         )
-    sp = simplify(root, registry)
+    with track_reads() as log:
+        sp = simplify(root, registry)
     if sp != root:
         moves.append(
             (
@@ -165,6 +178,8 @@ def _sweep_moves(
                     sp,
                     rule="simplify",
                     justification="canonical-form pipeline",
+                    key=("pass", "simplify"),
+                    registry_facts=facts_from_log(log),
                 ),
             )
         )
@@ -253,6 +268,7 @@ class SearchStrategy(Strategy):
 
     # ---- driver ----------------------------------------------------- #
 
+    @in_registry_context
     def prove(
         self,
         lhs: Expr,

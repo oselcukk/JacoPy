@@ -50,7 +50,7 @@ from jacopy.proof.chain import ProofChain
 from jacopy.proof.step import ProofStep
 
 STATUSES = ("CLOSED", "RESIDUAL", "BUDGET", "INVALID")
-ASSUMPTION_KINDS = ("declared", "structure", "scope", "legacy", "textual")
+ASSUMPTION_KINDS = ("declared", "structure", "scope", "legacy", "textual", "registry")
 PROVENANCE_KINDS = ("theorem", "definition", "canonicalization", "engine-step", "computation")
 
 _CANONICAL_RULES = ("simplify", "canonicalize", "normalize", "collect", "sort", "flatten", "distribute")
@@ -232,7 +232,7 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                         bump(assumptions, "legacy", f"unverified citation: theorem {cited.name}", getattr(cited, "owner", None), s.before)
                     else:
                         for a in cited.requires:
-                            if a.kind in ("declared", "legacy", "scope"):
+                            if a.kind in ("declared", "legacy", "scope", "registry"):
                                 bump(assumptions, a.kind, a.name, a.owner, a.example, a.key)
                 elif getattr(s, "key", None) is None and not s.children:
                     # a HAND-BUILT theorem claim with neither the cited object
@@ -261,7 +261,18 @@ def _classify(steps: Iterable[ProofStep], principal=None):
             visit(kids)
 
     visit(steps)
+    # registry answers the steps relied on (audit 0b00e1b-FULL P0-3):
+    # recorded on the steps by their producers; a cited theorem's own
+    # registry records arrived through its requires above
+    from jacopy.proof.registry_facts import facts_of, requirement_records, step_facts
+
+    cited_registry = facts_of(
+        [Assumption(k, n, o, c, ex, rk) for (k, n, o, c, ex, rk) in assumptions.values() if k == "registry"]
+    )
+    for key in [k for k in assumptions if k[0] == "registry"]:
+        del assumptions[key]
     req = [Assumption(k, n, o, c, ex, rk) for (k, n, o, c, ex, rk) in assumptions.values()]
+    req.extend(requirement_records(tuple(step_facts(steps)) + cited_registry))
     prov = [Provenance(k, n, o, c) for (k, n, o, c, _, _) in provenance.values()]
     # the structures behind the declared axioms are assumptions too
     seen_owners: list = []
@@ -293,6 +304,7 @@ def _whole_step(before: Expr, after: Expr, local: ProofStep) -> ProofStep:
         before, after, rule=local.rule, justification=local.justification, children=[local],
         provenance_tag=local.provenance_tag, owner=local.owner, role=getattr(local, "role", None),
         cites=getattr(local, "cites", None), key=getattr(local, "key", None),
+        registry_facts=getattr(local, "registry_facts", ()),
     )
 
 
@@ -304,6 +316,7 @@ def _reversed_step(s: ProofStep) -> ProofStep:
         s.after, s.before, rule=s.rule, justification=(s.justification + " (reversed)").strip(),
         children=list(s.children), provenance_tag=s.provenance_tag, owner=s.owner, role=getattr(s, "role", None),
         cites=getattr(s, "cites", None), key=getattr(s, "key", None),
+        registry_facts=getattr(s, "registry_facts", ()),
     )
 
 
@@ -552,6 +565,26 @@ def prove(
     reason = check_goal(lhs, rhs, registry)
     if reason is not None:
         return ProofResult.invalid(goal, reason, generality=generality, owner=owner)
+    # the citing registry context (audit 0b00e1b-FULL P0-3): a cited
+    # theorem's registry requirements are checked against ``registry``
+    from jacopy.proof.registry_facts import registry_context
+
+    with registry_context(registry):
+        return _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simplify_normal_forms, oracle)
+
+
+def _tracked_simplify(expr: Expr, registry):
+    """``simplify(expr, registry)`` and the registry facts it consulted."""
+    from jacopy.algorithms.simplify import simplify
+    from jacopy.core.registry import track_reads
+    from jacopy.proof.registry_facts import facts_from_log
+
+    with track_reads() as log:
+        out = simplify(expr, registry)
+    return out, facts_from_log(log)
+
+
+def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simplify_normal_forms, oracle):
 
     def run(expr: Expr, cap: int):
         steps: List[ProofStep] = []
@@ -570,11 +603,10 @@ def prove(
             if step is not None:
                 return cur, steps, True
         if simplify_normal_forms:
-            from jacopy.algorithms.simplify import simplify
-
-            simplified = simplify(cur, registry)
+            simplified, facts = _tracked_simplify(cur, registry)
             if simplified != cur:
-                steps.append(ProofStep(cur, simplified, rule="simplify", justification="canonical form"))
+                steps.append(ProofStep(cur, simplified, rule="simplify", justification="canonical form",
+                                       key=("pass", "simplify"), registry_facts=facts))
                 cur = simplified
         return cur, steps, False
 
@@ -601,15 +633,16 @@ def prove(
     from jacopy.core.expr import Neg, Sum
 
     diff = Sum(left, Neg(right)) if right != Integer(0) else left
+    facts = ()
     if simplify_normal_forms:
-        from jacopy.algorithms.simplify import simplify
-
-        diff = simplify(diff, registry)
+        diff, facts = _tracked_simplify(diff, registry)
     steps = list(lsteps)
     if diff != left:
         # the right-hand side's normalization is attached to the residual
         # step so its assumptions and citations count (audit dc44f79 F1)
-        steps.append(ProofStep(left, diff, rule="residual: lhs − rhs", justification="normal forms differ; the difference is the residual", children=list(rsteps)))
+        steps.append(ProofStep(left, diff, rule="residual: lhs − rhs", justification="normal forms differ; the difference is the residual",
+                               key=("pass", "residual"),
+                               children=list(rsteps), registry_facts=facts))
         rside = ()
     else:
         rside = tuple(rsteps)

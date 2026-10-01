@@ -38,6 +38,7 @@ class ProofStep:
         "_role",
         "_cites",
         "_key",
+        "_registry_facts",
     )
 
     #: Recognised provenance tags. ``None`` means the step carries no
@@ -65,6 +66,7 @@ class ProofStep:
         role: Optional[str] = None,
         cites=None,
         key=None,
+        registry_facts=(),
     ) -> None:
         if not isinstance(before, Expr):
             raise TypeError("ProofStep.before must be an Expr")
@@ -95,6 +97,10 @@ class ProofStep:
         # the structural key of the licensing rule (Definition.key); an
         # assumption step without one cannot be located in another engine
         self._key = key
+        # the registry answers the step's producer consulted (audit
+        # 0b00e1b-FULL P0-3): ``RegistryFact`` records; a theorem whose
+        # steps carry them is citable only where the registry agrees
+        self._registry_facts = tuple(registry_facts or ())
         self._children: List[ProofStep] = []
         if children:
             for ch in children:
@@ -155,6 +161,13 @@ class ProofStep:
         """Structural key of the rule that fired (``Definition.key``);
         ``None`` for a hand-built step."""
         return self._key
+
+    @property
+    def registry_facts(self) -> tuple:
+        """The registry answers (:class:`~jacopy.proof.registry_facts.RegistryFact`)
+        this step's computation consulted; ``()`` when it consulted none
+        or its producer does not record them."""
+        return self._registry_facts
 
     def add_child(self, step: "ProofStep") -> None:
         """Nest ``step`` under this one as a sub-proof."""

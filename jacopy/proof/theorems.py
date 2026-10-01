@@ -161,6 +161,14 @@ class Theorem:
 
         return dataclasses.replace(self, requires=structural_requires(self), requires_verified=True)
 
+    @property
+    def registry_facts(self) -> tuple:
+        """The registry answers the proof relied on (audit 0b00e1b-FULL
+        P0-3): a citation must happen in a registry that agrees."""
+        from jacopy.proof.registry_facts import facts_of
+
+        return facts_of(self.requires)
+
     def unverified_reasons(self) -> Tuple[str, ...]:
         if not self.requires_verified:
             return ("requirements were never derived structurally (pre-3b record); "
@@ -292,7 +300,14 @@ class CitationCheck:
         return "citable" if self.ok else "not citable: " + "; ".join(self.reasons)
 
 
-def check_citation(theorem: Theorem, engine, *, allow_legacy: bool = False) -> CitationCheck:
+#: ``check_citation(registry=…)`` sentinels: use the current proof
+#: registry context / skip the registry requirements (the engine-bound
+#: verdict; the registry part is checked per proof at match time).
+REGISTRY_FROM_CONTEXT = object()
+REGISTRY_SKIP = object()
+
+
+def check_citation(theorem: Theorem, engine, *, allow_legacy: bool = False, registry=REGISTRY_FROM_CONTEXT) -> CitationCheck:
     """Compare the theorem's STRUCTURAL requirements with the engine's
     structures and declared rules.
 
@@ -305,7 +320,12 @@ def check_citation(theorem: Theorem, engine, *, allow_legacy: bool = False) -> C
     * a requirement without an owner (a structure-free declared rule)
       must be present as a registered assumption rule of the same name;
     * requirements are already transitive (``with_structural_requires``
-      folds cited theorems' requirements in)."""
+      folds cited theorems' requirements in);
+    * every ``registry`` requirement (a registry answer the proof relied
+      on, audit 0b00e1b-FULL P0-3) must be answered the same way by the
+      citing ``registry`` — by default the current proof context
+      (:func:`jacopy.proof.registry_facts.registry_context`); when no
+      context is known a registry-dependent theorem is NOT citable."""
     from jacopy.proof.ownership import is_substructure, owner_name
 
     reasons = []
@@ -317,6 +337,8 @@ def check_citation(theorem: Theorem, engine, *, allow_legacy: bool = False) -> C
             f"({'; '.join(theorem.unverified_reasons())}); pass allow_legacy=True to cite "
             "it explicitly — the result will carry the 'unverified citation' marker"
         )
+    if registry is not REGISTRY_SKIP:
+        reasons.extend(_registry_reasons(theorem, registry))
     owners = dict(getattr(engine, "owners", {}) or {})
     rules = tuple(getattr(engine, "definitions", ()) or ())
     keys = {getattr(r, "key", None) for r in rules if getattr(r, "role", None) == "assumption"}
@@ -354,6 +376,38 @@ def check_citation(theorem: Theorem, engine, *, allow_legacy: bool = False) -> C
                 )
                 missing.append(a)
     return CitationCheck(ok=not reasons, reasons=tuple(reasons), legacy=legacy, missing=tuple(missing))
+
+
+def _registry_reasons(theorem: Theorem, registry=REGISTRY_FROM_CONTEXT) -> Tuple[str, ...]:
+    """Why the citing registry does not satisfy the theorem's registry
+    requirements (``()`` when it does)."""
+    from jacopy.proof.registry_facts import answer, current_context, unmet
+
+    facts = theorem.registry_facts
+    if not facts:
+        return ()
+    if registry is REGISTRY_FROM_CONTEXT:
+        ctx = current_context()
+        if ctx is None:
+            shown = "; ".join(f.describe() for f in facts[:3])
+            return (
+                f"theorem {theorem.name!r} depends on registry declarations ({shown}"
+                + (f"; … {len(facts)} in all" if len(facts) > 3 else "")
+                + ") but the citing registry is unknown — cite it under prove/normalize/a strategy "
+                "with registry=…, or check_citation(..., registry=…)",
+            )
+        registry = ctx[0]
+    bad = unmet(facts, registry)
+    if not bad:
+        return ()
+    out = []
+    for f in bad[:5]:
+        here = answer(registry, f)
+        now = "nothing declared" if here is None else f"{here[0].__name__}{dict(here[1]) or ''}"
+        out.append(f"registry declaration missing: the proof relied on {f.describe()}; the citing registry has {now}")
+    if len(bad) > 5:
+        out.append(f"… {len(bad)} registry requirements unmet in all")
+    return tuple(out)
 
 
 # --------------------------------------------------------------------- #
@@ -453,7 +507,7 @@ class TheoremDefinition(Definition):
         key = (getattr(engine, "version", None), tuple((n, id(o)) for n, o in owners.items()))
         if self._check is not None and key == self._checked_against:
             return self._check
-        self._check = check_citation(self._theorem, engine, allow_legacy=self._allow_legacy)
+        self._check = check_citation(self._theorem, engine, allow_legacy=self._allow_legacy, registry=REGISTRY_SKIP)
         self._checked_against = key
         report = getattr(engine, "assembly_report", None)
         if report is not None:
@@ -498,11 +552,15 @@ class TheoremDefinition(Definition):
             return False
         if not self.citable:
             return False  # requirements not met here, or a legacy record without the opt-in
-        if expr == self._source():
-            return True
-        if self._matches_sum_subset(expr):
-            return True
-        return self._matches_modulo(expr)
+        if not (expr == self._source() or self._matches_sum_subset(expr) or self._matches_modulo(expr)):
+            return False
+        # the registry requirements are checked per PROOF against the
+        # citing registry context (audit 0b00e1b-FULL P0-3): a theorem
+        # proved with ``x`` Scalar does not fire where ``x`` is not
+        if _registry_reasons(self._theorem):
+            self._modulo_cache = None
+            return False
+        return True
 
     @staticmethod
     def _term_count(expr: Expr) -> int:

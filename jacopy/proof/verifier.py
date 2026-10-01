@@ -105,7 +105,11 @@ def prove_jacobi(
     # / :class:`Product` / atom shapes. Once Faz 7 adds a bracket-aware
     # definition to :class:`ExpansionEngine`, this pre-pass can move
     # into the engine and drop from the verifier layer.
-    flattened = _expand_all_brackets(obstruction, registry)
+    from jacopy.core.registry import track_reads
+    from jacopy.proof.registry_facts import facts_from_log
+
+    with track_reads() as _log:
+        flattened = _expand_all_brackets(obstruction, registry)
     chain = ProofChain()
     if flattened != obstruction:
         chain.append(
@@ -113,6 +117,8 @@ def prove_jacobi(
                 obstruction,
                 flattened,
                 rule="bracket-expand",
+                key=("strategy", "bracket-expand"),
+                registry_facts=facts_from_log(_log),
                 justification="expand bracket nodes by definition",
             )
         )
