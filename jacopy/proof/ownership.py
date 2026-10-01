@@ -263,10 +263,14 @@ class OwnerScope:
         if note:
             stamp += f": {note}"
         notes = (theorem.notes + "\n" if theorem.notes else "") + stamp
-        moved = dataclasses.replace(theorem, owner=to, notes=notes, requires=(), requires_verified=False)
-        # the requirements are re-derived under the new owner (they name
-        # it); a record that was never derived stays underived
-        return moved.with_structural_requires() if theorem.requires_verified else moved
+        if theorem.requires_verified:
+            # derived requirements are re-derived under the new owner
+            moved = dataclasses.replace(theorem, owner=to, notes=notes, requires=(), requires_verified=False)
+            return moved.with_structural_requires()
+        # an underived record keeps its explicit requirements (never
+        # dropped), the old owner re-pointed to the new one
+        kept = tuple(dataclasses.replace(a, owner=to) if a.owner is old else a for a in theorem.requires)
+        return dataclasses.replace(theorem, owner=to, notes=notes, requires=kept)
 
     def __repr__(self) -> str:
         return f"OwnerScope({sorted(self._bound)})"

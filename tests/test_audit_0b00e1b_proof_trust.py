@@ -474,3 +474,22 @@ class TestReviewProbes:
         assert res.closed and res.theorems_cited
         assert any(a.kind == "textual" and "exactness ρ∘χ = 0 (8.5)" in a.name for a in res.requires)
         assert any(a.legacy and "unverified citation" in a.name for a in res.requires)
+
+
+class TestReviewRound3:
+    def test_transfer_keeps_an_underived_records_requirements(self):
+        # 4435c08: OwnerScope.transfer set requires=() on a record whose
+        # requires were never derived — its explicit requirements vanished
+        from jacopy.central.algebroid import algebroid
+        from jacopy.central.objects import Bundle
+        from jacopy.proof.ownership import OwnerScope
+        from jacopy.proof.result import Assumption
+
+        E1 = algebroid("E", Bundle("E"), declare=("lie",))
+        E3 = E1.with_declarations("metric-invariance")
+        x = Symbol("x")
+        req = (Assumption("textual", "from_axioms: something", E1), Assumption("legacy", "hand claim"))
+        thm = Theorem("t", "x = 0", x, Integer(0), ProofChain(), owner=E1, requires=req)
+        moved = OwnerScope().transfer(thm, E3)
+        assert [a.name for a in moved.requires] == ["from_axioms: something", "hand claim"]
+        assert moved.requires[0].owner is E3 and not moved.requires_verified
