@@ -26,11 +26,47 @@ Matching is structural and order-preserving, it does not reorder
 Sum or Product children. Commutative matching is the job of the
 algorithms layer, which canonicalizes expressions before invoking
 :func:`match`.
+
+Non-child payload and Σ binders (audit 0B00E1B-FULL M1X-6)
+-----------------------------------------------------------
+
+A node's identity is ``type + _key()``; the part of ``_key()`` that
+is not a child is its PAYLOAD (:func:`node_payload`). Matching compares
+the payload after the type; a payload wildcard binds, and
+:func:`substitute` fills it (or raises :class:`PayloadSubstitutionError`).
+
+:class:`~jacopy.core.indexed_sum.IndexedSum` is a BINDER, handled by
+one consistent design (default reject: a binding whose scope cannot be
+established never fires):
+
+* **Binder identity.** A pattern binder is identified by its KEY: a
+  wildcard dummy ``?D`` by its name (the same ``?D`` on both sides of
+  a rule is the same binder), a concrete dummy by its atom. Matching
+  is up to α: the target binder is renamed to the pattern's dummy (or
+  ``?D`` binds the target dummy). A rename that would capture is
+  refused.
+* **Marks.** A wildcard bound INSIDE a binder to a value that mentions
+  the binder's dummy gets the mark ``(dummy atom, binder key)``. Marks
+  live in ``bindings.scoped`` (an attribute, not a dict entry). They
+  are snapshotted and restored together with the bindings whenever
+  matching backtracks. A wildcard bound OUTSIDE (unmarked) whose value
+  mentions the dummy cannot be reused inside. A ``?D`` that was already
+  bound outside to a free atom is not marked.
+* **Placement.** :func:`substitute` tracks the enclosing RHS binders as
+  ``key → current atom``. A marked value may be placed only where
+  EVERY one of its marks is in scope; otherwise
+  :class:`BinderEscapeError` is raised, and a Rule does not fire.
+* **Fresh names.** Under an RHS binder, a value that mentions the
+  binder's dummy without carrying that binder's mark (a free term, or
+  one bound by another binder with the same atom) forces an α-rename
+  of the binder. The fresh atom avoids EVERY atom and EVERY binder
+  dummy of the values, the pattern body and the enclosing scope, so the
+  renaming (``substitute_atom``) cannot capture. Values marked by this
+  binder are renamed with it.
 """
 
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from jacopy.core.expr import Atom, Expr
@@ -189,60 +225,34 @@ def match(
     return None
 
 
-#: Private bindings entry: wildcard name → the Σ dummies its value
-#: mentions BOUND (the wildcard matched inside the binder). substitute()
-#: refuses to place such a value outside a binder of that dummy.
-_SCOPED = "\x00scoped"
-
-
 class _MatchBindings(dict):
-    """The bindings dict returned by :func:`match`. It compares and
-    prints like its public entries; the private ``_SCOPED`` entry
-    (binder bookkeeping) is restored by the same snapshots as the
-    bindings themselves."""
+    """The bindings dict returned by :func:`match`: a plain mapping of
+    the public bindings, plus the Σ binder MARKS in ``.scoped``
+    (wildcard name → frozenset of ``(dummy atom, binder key)``). The
+    marks are not dict entries; :func:`_snapshot` / :func:`_restore`
+    carry them through backtracking explicitly."""
 
-    def __eq__(self, other):
-        if isinstance(other, dict):
-            return _public(self) == _public(other)
-        return NotImplemented
+    __slots__ = ("scoped",)
 
-    def __ne__(self, other):
-        eq = self.__eq__(other)
-        return eq if eq is NotImplemented else not eq
-
-    __hash__ = None
-
-    def __repr__(self) -> str:
-        return repr(_public(self))
-
-    # the private entry never shows through the mapping interface; the
-    # matcher reads it with dict.get and snapshots with dict.copy
-    def __iter__(self):
-        return (k for k in dict.__iter__(self) if k != _SCOPED)
-
-    def __len__(self) -> int:
-        return dict.__len__(self) - (1 if dict.__contains__(self, _SCOPED) else 0)
-
-    def __contains__(self, k) -> bool:
-        return k != _SCOPED and dict.__contains__(self, k)
-
-    def keys(self):
-        return _public(self).keys()
-
-    def items(self):
-        return _public(self).items()
-
-    def values(self):
-        return _public(self).values()
-
-    def copy(self):
-        out = _MatchBindings()
-        dict.update(out, dict.copy(self))
-        return out
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.scoped = {}
 
 
-def _public(d: dict) -> dict:
-    return {k: v for k, v in dict.items(d) if k != _SCOPED}
+def _marks(bindings) -> dict:
+    return getattr(bindings, "scoped", None) or {}
+
+
+def _snapshot(bindings):
+    return dict.copy(bindings), dict(_marks(bindings))
+
+
+def _restore(bindings, snap) -> None:
+    entries, marks = snap
+    dict.clear(bindings)
+    dict.update(bindings, entries)
+    if isinstance(bindings, _MatchBindings):
+        bindings.scoped = marks
 
 
 def _mentions(value: Any, atom: Expr) -> bool:
@@ -253,8 +263,27 @@ def _mentions(value: Any, atom: Expr) -> bool:
     return isinstance(value, Expr) and contains(value, atom)
 
 
-@lru_cache(maxsize=4096)
-def wildcard_names(expr: Expr) -> frozenset:
+class _IdentityCache:
+    """Memo keyed by OBJECT identity (the entry keeps the object alive,
+    so an id is never reused while cached). Expr equality is α-canonical
+    for Σ — ``Σ_{?D} ?f == Σ_{?E} ?f`` — so an equality-keyed cache would
+    confuse different patterns."""
+
+    def __init__(self, fn, maxsize: int = 4096) -> None:
+        self._fn, self._max, self._memo = fn, maxsize, {}
+
+    def __call__(self, obj):
+        hit = self._memo.get(id(obj))
+        if hit is not None and hit[0] is obj:
+            return hit[1]
+        val = self._fn(obj)
+        if len(self._memo) >= self._max:
+            self._memo.clear()
+        self._memo[id(obj)] = (obj, val)
+        return val
+
+
+def _wildcard_names(expr: Expr) -> frozenset:
     """Names of every Wildcard/SeqWildcard in ``expr`` — children and
     non-child payload alike (cached: called on rule patterns)."""
     out: set = set()
@@ -278,6 +307,11 @@ def wildcard_names(expr: Expr) -> frozenset:
 
     walk(expr)
     return frozenset(out)
+
+
+#: names of every Wildcard/SeqWildcard in ``expr`` — children and
+#: payload alike (identity-cached: called on rule patterns)
+wildcard_names = _IdentityCache(_wildcard_names)
 
 
 def _match(
@@ -316,18 +350,8 @@ def _match(
 
 
 def _match_indexed_sum(pattern, target, bindings, registry) -> bool:
-    """Σ_d body is a BINDER: compare the range, then match the bodies
-    up to α-renaming — the target is renamed to the pattern's dummy (a
-    wildcard dummy binds the target's). Capture is refused both ways:
-
-    * a concrete pattern dummy may not capture a free occurrence in the
-      target body, and a WILDCARD dummy's target dummy may not coincide
-      with a concrete (free) atom of the pattern body;
-    * a wildcard bound OUTSIDE whose value mentions the dummy cannot be
-      reused inside (the free and the bound occurrence are different);
-    * a wildcard bound INSIDE whose value mentions the dummy is marked
-      scoped, and :func:`substitute` never places it outside a binder
-      of that dummy (no binder escape)."""
+    """Σ_d body as a BINDER (see the module docstring): equal ranges,
+    bodies matched up to α, capture refused, inside bindings marked."""
     from jacopy.core.indexed_sum import _range_key
     from jacopy.core.traverse import contains
 
@@ -335,17 +359,20 @@ def _match_indexed_sum(pattern, target, bindings, registry) -> bool:
         return False
     pd, td = pattern.dummy, target.dummy
     body = target.body
-    prior = bindings.get(pd.name) if isinstance(pd, Wildcard) else None
+    dname = pd.name if isinstance(pd, Wildcard) else None
+    before = set(dict.keys(bindings))  # taken BEFORE ?D is bound
+    marks = _marks(bindings)
+    prior = dict.get(bindings, dname) if dname else None
     if isinstance(prior, Expr) and prior.is_atom and prior != td:
-        # the same ?D already names another Σ's dummy: α-rename this
-        # target binder to it (two Σ_{?D} need not share a dummy name)
+        # ?D already names another binder's dummy (or a free atom):
+        # α-rename this target binder to it, never capturing
         if contains(body, prior) or contains(pattern.body, prior):
             return False
         body = target.with_dummy(prior).body
         dummy = prior
-    elif isinstance(pd, Wildcard):
+    elif dname is not None:
         if contains(pattern.body, td):
-            return False
+            return False  # the pattern's FREE atom would be captured
         if not _bind_wildcard(pd, td, bindings, registry):
             return False
         dummy = td
@@ -355,36 +382,32 @@ def _match_indexed_sum(pattern, target, bindings, registry) -> bool:
                 return False
             body = target.with_dummy(pd).body
         dummy = pd
-    dname = pd.name if isinstance(pd, Wildcard) else None
     key = _binder_key(pd)
     names = wildcard_names(pattern.body)
-    marks = bindings.get(_SCOPED, {})
 
-    def scoped_here(n):
-        # already bound INSIDE another Σ whose dummy is this same atom
+    def marked_here(n):
         return any(d == dummy for d, _ in marks.get(n, ()))
 
     for n in names:
         if (
-            n != dname and n in bindings and _mentions(bindings[n], dummy)
-            and not scoped_here(n)
+            n != dname and n in before
+            and _mentions(dict.get(bindings, n), dummy)
+            and not marked_here(n)
         ):
-            return False
-    before = set(bindings)
+            return False  # a free outside value reused inside the binder
     if not _match(pattern.body, body, bindings, registry):
         return False
-    scoped = dict(bindings.get(_SCOPED, {}))
-    for n in names | ({dname} if dname else set()):
-        if n not in bindings or not _mentions(bindings[n], dummy):
+    new_marks = dict(_marks(bindings))
+    for n in set(names) | ({dname} if dname else set()):
+        if n not in bindings or not _mentions(dict.get(bindings, n), dummy):
             continue
-        if n == dname and n in before and not scoped_here(n):
-            # ?D was bound OUTSIDE to a free atom (lie(?D, Σ_{?D} ?f)):
-            # that occurrence is free, not this binder's
-            continue
-        if n not in before or n == dname or scoped_here(n):
-            scoped[n] = scoped.get(n, frozenset()) | {(dummy, key)}
-    if scoped:
-        bindings[_SCOPED] = scoped
+        if n in before and not marked_here(n):
+            continue  # bound outside to a free term (incl. a free ?D)
+        new_marks[n] = new_marks.get(n, frozenset()) | {(dummy, key)}
+    if isinstance(bindings, _MatchBindings):
+        bindings.scoped = new_marks
+    elif new_marks:
+        return False  # no place to keep the marks: default reject
     return True
 
 
@@ -485,11 +508,8 @@ def _strip_by_identity(key: Any, child_ids: set) -> Any:
     return key
 
 
-@lru_cache(maxsize=4096)
-def _pattern_payload(pattern: Expr) -> Any:
-    """Cached :func:`node_payload` for the PATTERN side (patterns are
-    reused across many targets)."""
-    return node_payload(pattern)
+#: identity-cached :func:`node_payload` for the PATTERN side
+_pattern_payload = _IdentityCache(node_payload)
 
 
 def _match_payload(
@@ -552,28 +572,26 @@ def _match_children_rec(
         # Try every length k in 0..remaining; leftmost-shortest first so
         # the match order is predictable and stable.
         for k in range(0, remaining + 1):
-            snapshot = dict.copy(bindings)
+            snapshot = _snapshot(bindings)
             seq = tuple(ts[ti:ti + k])
             if _bind_sequence(p.name, seq, bindings):
                 if _match_children_rec(
                     ps, pi + 1, ts, ti + k, bindings, registry
                 ):
                     return True
-            dict.clear(bindings)
-            dict.update(bindings, snapshot)
+            _restore(bindings, snapshot)
         return False
 
     if ti == len(ts):
         return False
 
-    snapshot = dict.copy(bindings)
+    snapshot = _snapshot(bindings)
     if _match(p, ts[ti], bindings, registry):
         if _match_children_rec(
             ps, pi + 1, ts, ti + 1, bindings, registry
         ):
             return True
-    dict.clear(bindings)
-    dict.update(bindings, snapshot)
+    _restore(bindings, snapshot)
     return False
 
 
@@ -643,21 +661,26 @@ def substitute(pattern: Expr, bindings: Bindings) -> Expr:
 
 
 def _scoped_ok(name: str, bindings: Bindings, scope) -> None:
-    """A value matched inside a Σ may only be placed under a binder that
-    is the SAME binder (key) with the same current dummy atom."""
-    marks = bindings.get(_SCOPED, {}).get(name, frozenset())
-    if marks and not any(scope.get(k) == d for d, k in marks):
-        raise BinderEscapeError(
-            f"?{name} mentions a bound dummy and would be placed outside "
-            "its binder"
-        )
+    """A marked value may be placed only where EVERY mark — every
+    binder whose dummy it mentions — is in scope with its current atom."""
+    for d, k in _marks(bindings).get(name, ()):
+        if scope.get(k) != d:
+            raise BinderEscapeError(
+                f"?{name} mentions the dummy {d._repr_inner()} of a binder "
+                "that does not enclose its new position"
+            )
 
 
 def _subst(pattern: Expr, bindings: Bindings, scope: dict) -> Expr:
     if isinstance(pattern, Wildcard):
         bound = bindings.get(pattern.name)
-        if bound is None or isinstance(bound, tuple):
+        if bound is None:
             return pattern
+        if isinstance(bound, tuple):
+            raise PayloadSubstitutionError(
+                f"?{pattern.name} is bound to a sequence and cannot fill "
+                "a single hole"
+            )
         _scoped_ok(pattern.name, bindings, scope)
         return bound
     if isinstance(pattern, SeqWildcard):
@@ -695,29 +718,39 @@ def _subst(pattern: Expr, bindings: Bindings, scope: dict) -> Expr:
     return rebuilt
 
 
-def _fresh_like(atom: Expr, avoid) -> Expr:
-    from jacopy.core.traverse import contains
+def _atoms_and_dummies(e: Expr, out: set) -> None:
+    """Every atom of ``e`` (children and slots) and every Σ dummy, used
+    or not — the fresh-name avoidance set."""
+    from jacopy.core.indexed_sum import IndexedSum
+    from jacopy.core.traverse import iter_nodes
 
+    for node in iter_nodes(e):
+        if isinstance(node, IndexedSum):
+            out.add(node.dummy)
+        elif node.is_atom:
+            out.add(node)
+
+
+def _fresh_like(atom: Expr, avoid: set) -> Expr:
+    names = {getattr(a, "name", None) or a._repr_inner() for a in avoid}
     cls = type(atom)
     base = getattr(atom, "name", None) or atom._repr_inner()
-    for n in range(1, 1000):
+    for n in range(1, 10000):
         name = f"{base}_{n}"
+        if name in names:
+            continue
         try:
             cand = cls(name, "bound")
         except TypeError:
             cand = cls(name)
-        if not any(contains(e, cand) for e in avoid):
+        if cand not in avoid:
             return cand
     raise BinderEscapeError("no fresh dummy name")  # pragma: no cover
 
 
 def _subst_indexed_sum(pattern, bindings: Bindings, scope: dict) -> Expr:
-    """Capture-avoiding substitution under a Σ binder. The binder is
-    renamed to a fresh atom when a value placed in its body mentions its
-    dummy WITHOUT being bound by this very binder (a free term, or a
-    term bound by another binder that happens to use the same atom —
-    Σ_i F(i)·Σ_i G(i) → Σ_i Σ_i F(i)G(i) would capture). Values bound
-    by this binder are renamed with it."""
+    """Capture-avoiding substitution under one RHS binder (module
+    docstring: placement + fresh names)."""
     from jacopy.core.indexed_sum import IndexedSum
 
     pd = pattern.dummy
@@ -730,10 +763,10 @@ def _subst_indexed_sum(pattern, bindings: Bindings, scope: dict) -> Expr:
             raise PayloadSubstitutionError(
                 "an IndexedSum dummy must be bound to an atom"
             )
+        own = pd.name
     else:
-        dummy = pd
-    marks = bindings.get(_SCOPED, {})
-    own = getattr(pd, "name", None) if isinstance(pd, Wildcard) else None
+        dummy, own = pd, None
+    marks = _marks(bindings)
     names = [n for n in wildcard_names(pattern.body) if n in bindings and n != own]
     clash = [
         n for n in names
@@ -742,27 +775,28 @@ def _subst_indexed_sum(pattern, bindings: Bindings, scope: dict) -> Expr:
     ]
     body_pat = pattern.body
     if clash:
-        flat = []
+        avoid: set = set(scope.values()) | {dummy}
+        _atoms_and_dummies(body_pat, avoid)
         for n in names:
             v = bindings[n]
-            flat.extend(v if isinstance(v, tuple) else (v,))
-        fresh = _fresh_like(dummy, flat + [body_pat])
+            for x in (v if isinstance(v, tuple) else (v,)):
+                _atoms_and_dummies(x, avoid)
+        fresh = _fresh_like(dummy, avoid)
         new_b = _MatchBindings()
         dict.update(new_b, dict.copy(bindings))
-        new_marks = {}
+        moved = {}
         for n, ms in marks.items():
             if (dummy, key) in ms:
-                v = bindings.get(n)
+                v = dict.get(bindings, n)
                 if isinstance(v, tuple):
                     new_b[n] = tuple(x.substitute_atom(dummy, fresh) for x in v)
                 elif isinstance(v, Expr):
                     new_b[n] = v.substitute_atom(dummy, fresh)
                 ms = (ms - {(dummy, key)}) | {(fresh, key)}
-            new_marks[n] = ms
-        if new_marks:
-            new_b[_SCOPED] = new_marks
-        if isinstance(pd, Wildcard):
-            new_b[pd.name] = fresh
+            moved[n] = ms
+        new_b.scoped = moved
+        if own is not None:
+            new_b[own] = fresh
         else:
             body_pat = body_pat.substitute_atom(pd, fresh)
         bindings, dummy = new_b, fresh
