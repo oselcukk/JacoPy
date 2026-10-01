@@ -190,7 +190,7 @@ class ExplicitAssumption(Definition):
 
 class ScalarConstantContract(Definition):
     """``D(c) = 0`` for a certified derivation ``D`` and an ℝ-constant
-    ``c`` (an EXACT Scalar atom, :func:`~jacopy.central.calculus.scalars.is_real_constant`)
+    ``c`` (a Scalar atom, :func:`~jacopy.central.calculus.scalars.is_real_constant`)
     — the Scalar contract (audit 0b00e1b M1-1, chef decision). Built
     into every engine and consulted BEFORE the registered rules, so no
     rule ever sees ``Act(D, c)``: a user rule giving a Scalar a non-zero

@@ -41,25 +41,28 @@ def is_scalar_function(
 def is_real_constant(
     expr: Expr, registry: Optional[PropertyRegistry] = None
 ) -> bool:
-    """THE ℝ-constant test of the Scalar contract (audit 0b00e1b M1-1;
-    one definition for product_rule's ``D(c) = 0``, the engine's
-    contract step and sort_product's free swap).
+    """THE ℝ-constant test of the Scalar contract (audit 0b00e1b M1-1,
+    chef decision: ONE meaning). Used by product_rule's ``D(c) = 0``,
+    the engine's contract step, sort_product, AgreementOnGenerators; the
+    oracle restates it from registry data.
 
-    ``True`` for a numeral, or for an ATOM carrying an EXACT
-    :class:`~jacopy.core.properties.Scalar` declaration whose kind is
-    ``function`` and that has no ``Graded(k ≠ 0)``. Class / predicate
-    Scalar declarations are NOT trusted (``declare_for_class(Symbol,
-    Scalar())`` must not make a 1-form ``w`` constant). The exact
-    pre-filter is not recorded as a registry read; a positive answer is
-    re-queried so "``c`` is Scalar" becomes the step's hypothesis.
+    ``True`` for a numeral, or for an ATOM whose EFFECTIVE registry
+    answer is :class:`~jacopy.core.properties.Scalar` — declared at any
+    level (exact, class, predicate) — whose kind is ``function`` and
+    that has no ``Graded(k ≠ 0)`` (the registry refuses that
+    combination anyway). The pre-filter is not recorded
+    (:meth:`~jacopy.core.registry.PropertyRegistry.peek`); a positive
+    answer re-queries ``Scalar`` and ``Graded`` with ``get`` so both
+    facts become the hypotheses of the step that relies on them — a
+    citation then only works where the same facts hold.
     """
     if isinstance(expr, (Integer, Rational)):
         return True
     if registry is None or not expr.is_atom:
         return False
-    if not registry.declared_exact(expr, Scalar):
+    if registry.peek(expr, Scalar) is None:
         return False
-    registry.get(expr, Scalar)  # record the hypothesis
+    registry.get(expr, Scalar)  # record the hypotheses
     graded = registry.get(expr, Graded)
     if graded is not None and graded.degree.as_int() != 0:
         return False

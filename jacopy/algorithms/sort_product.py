@@ -99,7 +99,8 @@ def _is_scalar(factor: Expr, registry: PropertyRegistry) -> bool:
 
 
 def _is_real_constant(factor: Expr, registry: PropertyRegistry) -> bool:
-    """The Scalar contract's ℝ-constant (numeral or EXACT Scalar atom,
+    """The Scalar contract's ℝ-constant (numeral or an atom whose
+    effective answer is Scalar,
     :func:`~jacopy.central.calculus.scalars.is_real_constant`): the only
     factors that swap past ANYTHING (operators included)."""
     from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
@@ -140,16 +141,22 @@ def _degree_of(factor: Expr, registry: PropertyRegistry) -> Degree:
         ) from None
 
 
-def _factor_key(factor: Expr, registry: PropertyRegistry) -> Tuple[int, str]:
-    """Ordering key: scalars first (bucket 0), others by repr."""
-    bucket = 0 if _is_scalar(factor, registry) else 1
-    return (bucket, repr(factor))
+def _factor_key(
+    factor: Expr, registry: PropertyRegistry, constants=None
+) -> Tuple[int, str]:
+    """Ordering key: ℝ-constants first (bucket 0, the SAME predicate as
+    the free swap — :func:`_is_real_constant`), others by repr."""
+    if constants is None:
+        const = _is_real_constant(factor, registry)
+    else:
+        const = factor in constants
+    return (0 if const else 1, repr(factor))
 
 
 def _should_swap(
-    a: Expr, b: Expr, registry: PropertyRegistry
+    a: Expr, b: Expr, registry: PropertyRegistry, constants=None
 ) -> bool:
-    return _factor_key(a, registry) > _factor_key(b, registry)
+    return _factor_key(a, registry, constants) > _factor_key(b, registry, constants)
 
 
 def _swap_behavior(
@@ -160,8 +167,8 @@ def _swap_behavior(
     The commutativity law between the pair governs whether the swap is
     permitted and, if so, the Koszul exponent it contributes:
 
-    * Either factor is an ℝ-CONSTANT (a numeral or an exact Scalar
-      atom, :func:`~jacopy.central.calculus.scalars.is_real_constant`),
+    * Either factor is an ℝ-CONSTANT (a numeral or a Scalar atom,
+      :func:`~jacopy.central.calculus.scalars.is_real_constant`),
       free swap, no sign — checked FIRST: a constant commutes with
       every ℝ-linear operator, also a :class:`NonCommuting` one (chef
       contract decision: Scalar = ℝ-constant; ``D∘c = c∘D + D(c) =
@@ -312,7 +319,7 @@ def sort_product(
     for i in range(n):
         for j in range(n - 1 - i):
             a, b = factors[j], factors[j + 1]
-            if not _should_swap(a, b, registry):
+            if not _should_swap(a, b, registry, constants):
                 continue
             can_swap, delta = _swap_behavior(a, b, registry, constants)
             if not can_swap:

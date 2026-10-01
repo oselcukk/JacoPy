@@ -130,7 +130,7 @@ def _expand_act(
         return Integer(0)
     if registry is not None and arg.is_atom and _annihilates(op, arg, registry):
         # The Scalar CONTRACT (core.properties.Scalar, audit 0b00e1b
-        # M1-1 ≡ M1-2): an EXACTLY Scalar-declared atom
+        # M1-1 ≡ M1-2): a Scalar-declared atom
         # (scalars.is_real_constant) is an ℝ-constant,
         # so a derivation kills it exactly like a numeral — the same
         # contract under which sort_product lets it commute past a
