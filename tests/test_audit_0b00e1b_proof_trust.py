@@ -727,3 +727,24 @@ class TestProofTrust2:
         assert res.closed and any(r.legacy for r in res.requires)
         good = _definition_moves(ExpansionEngine([ExplicitAssumption(a, b)]), Product(a, x))
         assert all(is_minted(s) for _, s in good)
+
+    def test_own_structure_record_is_kept_beside_an_inherited_one(self):
+        # main 75acc5a: an inherited structure record of the SAME owner
+        # suppressed the citing proof's own record — its declaration list
+        # (here the declared axiom actually used) was missing
+        from jacopy.central.algebroid import algebroid
+        from jacopy.central.objects import Bundle
+        from jacopy.proof.result import Assumption, _classify
+
+        E = algebroid("E", Bundle("E"), declare=("lie",))
+        x, y = Symbol("x"), Symbol("y")
+        lemma = Theorem("lemma", "x = x", x, x, ProofChain())
+        object.__setattr__(lemma, "requires", (Assumption("structure", "E (older record) declaring []", E),))
+        object.__setattr__(lemma, "requires_verified", True)
+        cite_step = ProofStep(x, x, rule="cite lemma", provenance_tag="theorem", cites=lemma)
+        axiom = ProofStep(y, Integer(0), rule="E axiom", provenance_tag="axiom", role="assumption", owner=E, key=("k",))
+        req, _ = _classify((cite_step, axiom))
+        names = sorted(a.name for a in req if a.kind == "structure")
+        assert len(names) == 2 and any("'jacobi'" in n for n in names)
+        req2, _ = _classify((axiom, axiom))                       # exact duplicates still collapse
+        assert len([a for a in req2 if a.kind == "structure"]) == 1

@@ -317,10 +317,14 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         if a.kind == "declared" and a.owner is not None and not any(a.owner is o or a.owner == o for o in seen_owners):
             seen_owners.append(a.owner)
     for o in seen_owners:
-        if any(a.kind == "structure" and (a.owner is o or a.owner == o) for a in req):
-            continue  # (already inherited from a cited record)
         decl = getattr(o, "declarations", None)
         text = f"{o!r}" + (f" declaring {sorted(decl)}" if decl is not None else "")
+        # the proof's OWN structure record is always produced; only an
+        # exact duplicate (same text, same owner) of an inherited one is
+        # dropped (proof-trust-2 #5: an inherited record of the same
+        # owner with other declarations no longer suppresses it)
+        if any(a.kind == "structure" and a.name == text and a.owner is o for a in req):
+            continue
         req.append(Assumption("structure", text, o))
     return tuple(req), tuple(prov)
 
