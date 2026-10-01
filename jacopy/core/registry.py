@@ -102,44 +102,33 @@ def track_reads():
 Predicate = Callable[[Expr], bool]
 
 
-def _refuse_scalar_contradiction(expr, prop: Property, present) -> None:
-    """Refuse an exact declaration that contradicts the Scalar contract
-    (:class:`~jacopy.core.properties.Scalar` = ℝ-constant, audit 0b00e1b
-    M1-1): a constant has degree 0, so ``Graded(k)`` with ``k`` a
-    non-zero constant contradicts it; and a constant commutes with every
-    ℝ-linear operator, so ``NonCommuting`` contradicts it too. Exact and
-    class-level declarations are cross-checked; a predicate cannot be
-    enumerated (there ``NonCommuting`` takes precedence in
-    ``sort_product``, and only an EXACT Scalar is ever treated as a
-    constant — :func:`~jacopy.central.calculus.scalars.is_real_constant`).
-    A symbolic degree is not provably non-zero and is accepted."""
-    from jacopy.core.properties import (
-        Graded,
-        NonCommuting,
-        Scalar,
-        ScalarContractError,
-    )
+def _refuse_scalar_contradiction(where, scalar, graded, noncomm) -> None:
+    """Refuse an EFFECTIVE property combination that contradicts the
+    Scalar contract (:class:`~jacopy.core.properties.Scalar` =
+    ℝ-constant, audit 0b00e1b M1-1): a constant has degree 0, so
+    ``Graded(k)`` with ``k`` a non-zero constant contradicts it, and a
+    declared ``NonCommuting`` contradicts "commutes with every
+    operator". The arguments are what :meth:`PropertyRegistry.get`
+    WOULD answer after the declaration (an exact declaration overrides
+    a class-level one of the same type). A symbolic degree is not
+    provably non-zero and is accepted."""
+    from jacopy.core.properties import ScalarContractError
 
-    def clash(a: Property, b: Property) -> bool:
-        if isinstance(a, Scalar):
-            a, b = b, a
-        if not isinstance(b, Scalar):
-            return False
-        if isinstance(a, NonCommuting):
-            return True
-        if isinstance(a, Graded):
-            k = a.degree.as_int()
-            return k is not None and k != 0
-        return False
-
-    for other in present:
-        if clash(prop, other):
-            raise ScalarContractError(
-                f"{type(prop).__name__} on {expr!r} contradicts its "
-                f"{type(other).__name__} declaration: Scalar means an "
-                "ℝ-constant (degree 0, commutes with every operator); "
-                "declare a function Graded(0) instead of Scalar"
-            )
+    if scalar is None:
+        return
+    clash = None
+    if noncomm is not None:
+        clash = noncomm
+    elif graded is not None:
+        k = graded.degree.as_int()
+        if k is not None and k != 0:
+            clash = graded
+    if clash is not None:
+        raise ScalarContractError(
+            f"{where!r}: Scalar contradicts {clash!r} — Scalar means an "
+            "ℝ-constant (degree 0, commutes with every operator); "
+            "declare a function Graded(0) instead of Scalar"
+        )
 
 
 class PropertyRegistry:
@@ -189,14 +178,50 @@ class PropertyRegistry:
             raise ValueError(
                 f"{type(prop).__name__} already declared on {expr!r}"
             )
-        _refuse_scalar_contradiction(expr, prop, bucket.values())
-        # across sources: a class-level declaration on the instance's
-        # type that contradicts this exact one (M1-1 review)
-        for cls in type(expr).__mro__:
-            _refuse_scalar_contradiction(
-                expr, prop, self._by_class.get(cls, {}).values()
-            )
+        if self._contract_relevant(prop):
+            self._check_contract(expr, exact=(expr, prop))
         bucket[type(prop)] = prop
+
+    # ---- Scalar contract (M1-1) --------------------------------------- #
+
+    @staticmethod
+    def _contract_relevant(prop: Property) -> bool:
+        from jacopy.core.properties import Graded, NonCommuting, Scalar
+
+        return isinstance(prop, (Scalar, Graded, NonCommuting))
+
+    def _effective(self, expr, prop_cls, mro, exact=None, klass=None):
+        """What :meth:`get` would answer (untracked, predicates
+        included when ``expr`` is given) with the pending ``exact``
+        ``(expr, prop)`` / ``klass`` ``(cls, prop)`` declaration."""
+        if expr is not None:
+            if exact is not None and exact[0] == expr and type(exact[1]) is prop_cls:
+                return self._filter(exact[1])
+            prop = self._props.get(expr, {}).get(prop_cls)
+            if prop is not None:
+                return self._filter(prop)
+        for c in mro:
+            if klass is not None and klass[0] is c and type(klass[1]) is prop_cls:
+                return self._filter(klass[1])
+            prop = self._by_class.get(c, {}).get(prop_cls)
+            if prop is not None:
+                return self._filter(prop)
+        if expr is not None:
+            for pred, p in self._by_predicate:
+                if isinstance(p, prop_cls) and pred(expr):
+                    return self._filter(p)
+        return None
+
+    def _check_contract(self, expr, *, mro=None, exact=None, klass=None) -> None:
+        from jacopy.core.properties import Graded, NonCommuting, Scalar
+
+        if mro is None:
+            mro = type(expr).__mro__
+        look = lambda pc: self._effective(expr, pc, mro, exact, klass)  # noqa: E731
+        _refuse_scalar_contradiction(
+            expr if expr is not None else mro[0].__name__,
+            look(Scalar), look(Graded), look(NonCommuting),
+        )
 
     def retract(
         self, expr: Expr, prop_cls: Type[Property]
@@ -229,15 +254,17 @@ class PropertyRegistry:
                 f"{type(prop).__name__} already declared for class "
                 f"{cls.__name__}"
             )
-        # the Scalar contract across sources (M1-1 review): this class's
-        # declarations, its bases' and subclasses', and exact
-        # declarations on its instances
-        for other_cls, other in self._by_class.items():
-            if issubclass(other_cls, cls) or issubclass(cls, other_cls):
-                _refuse_scalar_contradiction(cls, prop, other.values())
-        for e, props in self._props.items():
-            if isinstance(e, cls):
-                _refuse_scalar_contradiction(e, prop, props.values())
+        if self._contract_relevant(prop):
+            # the EFFECTIVE answers after this declaration (M1-1
+            # review): for an instance of cls or of any registered
+            # subclass with no exact override, and for every existing
+            # exact-declared instance (its exact entries win)
+            pending = (cls, prop)
+            for sub in [cls] + [c for c in self._by_class if issubclass(c, cls)]:
+                self._check_contract(None, mro=sub.__mro__, klass=pending)
+            for e in list(self._props):
+                if isinstance(e, cls):
+                    self._check_contract(e, klass=pending)
         bucket[type(prop)] = prop
 
     def retract_for_class(
