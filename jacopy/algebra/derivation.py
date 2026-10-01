@@ -133,6 +133,8 @@ def degree_of(
       the same ``Product`` node).
     * :class:`Neg`, same as its argument; negation is a scalar sign.
     * :class:`Act`, ``|D(x)| = |D| + |x|``.
+    * :class:`~jacopy.algebra.commutator.Commutator`,
+      ``|[A, B]| = |A| + |B|``.
     * :class:`jacopy.brackets.base.BracketApply`,
       ``|[a, b]| = |a| + |b| + bracket.degree``. Resolved via a late
       import so the algebra layer does not depend on the brackets
@@ -184,14 +186,18 @@ def degree_of(
     # layer otherwise has no wedge dependency.
     from jacopy.core.wedge import Wedge  # noqa: WPS433
     if isinstance(expr, Wedge):
+        # Exterior grading: each child by its EXTERIOR degree (the
+        # ``wedge_degree`` lift of vector fields, kind_of's degree of
+        # forms / multivectors / [X,Y], certified operator shifts),
+        # so X ∧ Y is the bivector it is (degree 2, not 0). A child
+        # carrying vectors without a certified exterior type raises —
+        # its operator degree is the wrong grading here (audit 0b00e1b
+        # review: Wedge([X,Y], Z) used to get 0 + 1).
+        from jacopy.central.objects.kind import wedge_factor_degree  # noqa: WPS433 - layering: kind_of lives in central
+
         total = Degree.const(0)
         for c in expr.children:
-            # The Wedge lift: children exposing a ``wedge_degree``
-            # (vector fields, their brackets) contribute their
-            # multivector degree instead of their operator degree, so
-            # X ∧ Y is the bivector it is (degree 2, not 0).
-            lift = getattr(c, "wedge_degree", None)
-            total = total + (lift if isinstance(lift, Degree) else degree_of(c, registry))
+            total = total + wedge_factor_degree(c, registry)
         return total
     # Indexed sum: a finite sum of same-degree terms — the degree is
     # the body's (Phase 4.D.2; the bound index does not grade).
@@ -222,6 +228,12 @@ def degree_of(
         return degree_of(expr.op, registry) + degree_of(
             expr.arg, registry
         )
+    # Graded commutator [A, B] = AB − (−1)^{|A||B|} BA: both terms have
+    # degree |A| + |B| (audit 0b00e1b code review: the commutator of two
+    # derivations is a derivation, and its Leibniz split needs this).
+    from jacopy.algebra.commutator import Commutator  # noqa: WPS433
+    if isinstance(expr, Commutator):
+        return degree_of(expr.a, registry) + degree_of(expr.b, registry)
     # Brackets are a higher layer; resolve via late import to avoid
     # an algebra → brackets cycle.
     from jacopy.brackets.base import BracketApply  # noqa: WPS433

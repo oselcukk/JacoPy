@@ -90,7 +90,7 @@ def factor_common(expr: Expr) -> Expr:
     return Sum.make(*new_terms)
 
 
-def collect_pairings(expr: Expr) -> Expr:
+def collect_pairings(expr: Expr, registry=None) -> Expr:
     """Collect evaluations sharing a head: ``Σ sᵢ⟨α, Vᵢ⟩ → ⟨α, Σ sᵢVᵢ⟩``
     and ``Σ sᵢ η(Y…, Vᵢ) → η(Y…, Σ sᵢVᵢ)`` (last slot).
 
@@ -103,13 +103,28 @@ def collect_pairings(expr: Expr) -> Expr:
     sort, compound (bracket) slots land last, so the varying slot is
     the last one. Like :func:`factor_common` it runs in simplify's
     *final phase* with a smaller-or-zero acceptance criterion.
+
+    A coefficient ``s`` is folded into the slot ONLY when it is a
+    certified C∞ scalar function
+    (:func:`~jacopy.central.calculus.scalars.is_scalar_function` with
+    ``registry``): bilinearity is ``C∞(M)``-linearity. A vector field
+    or other operator factor is not a coefficient — ``⟨α,U⟩·A`` is the
+    vector field ``⟨α,U⟩A``, and moving ``A`` into the slot built the
+    non-vector ``A∘U`` (audit 0b00e1b K1-1 ≡ M1X-5). Without a registry
+    only self-certifying scalars qualify (numerals, evaluations,
+    degree-0 non-derivation atoms); declared symbols need the registry.
+    A certified scalar commutes with the (scalar-valued) evaluation, so
+    it may stand on either side. The certificate is by TYPE, not degree
+    (``ι_X α``, ``f²`` fold; the degree-0 vector ``Λ♯(dh)`` or ``m̃(X)``
+    does not).
     """
+    from jacopy.central.calculus.scalars import is_scalar_function
     from jacopy.core.multi_eval import MultiEval
     from jacopy.core.pairing import Pairing
 
     if expr.is_atom:
         return expr
-    new_children = tuple(collect_pairings(c) for c in expr.children)
+    new_children = tuple(collect_pairings(c, registry) for c in expr.children)
     rebuilt = expr._rebuild(new_children)
     if not isinstance(rebuilt, Sum):
         return rebuilt
@@ -143,7 +158,9 @@ def collect_pairings(expr: Expr) -> Expr:
                 for c in core.children
                 if not isinstance(c, (Pairing, MultiEval))
             ]
-            if len(evals) == 1:
+            if len(evals) == 1 and all(
+                is_scalar_function(c, registry) for c in rest
+            ):
                 coeffs = tuple(rest)
                 core = evals[0]
         if isinstance(core, Pairing):

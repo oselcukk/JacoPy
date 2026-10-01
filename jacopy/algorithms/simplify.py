@@ -97,7 +97,10 @@ def simplify(
     # docstring). Both run in the reverse direction of ``distribute``,
     # so they only keep their result under the smaller-or-zero
     # acceptance criterion.
-    for pass_fn in (factor_common, collect_pairings):
+    for pass_fn in (
+        factor_common,
+        lambda e: collect_pairings(e, registry),
+    ):
         for _ in range(8):
             candidate = pass_fn(current)
             if candidate == current:

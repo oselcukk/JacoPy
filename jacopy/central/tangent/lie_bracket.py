@@ -35,11 +35,10 @@ from __future__ import annotations
 
 from typing import Optional, Tuple
 
-from jacopy.algebra.derivation import Act, Derivation, degree_of
+from jacopy.algebra.derivation import Act, Derivation
 from jacopy.algebra.lie_bracket_vf import LieBracketVF
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
-from jacopy.core.symbolic_degree import Degree
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import Definition
 from jacopy.proof.strategies import ExpandAndSimplify
@@ -102,11 +101,13 @@ class ScalarActAsMultiplicationDefinition(Definition):
     scalars into compositions: ``(f·V)(g)`` unfolds to ``f(V(g))``
     under the composition pass, and this rule finishes the job as
     plain multiplication ``f·V(g)``. It only fires when the operator
-    is *not* a derivation and its degree is determinably 0 (via the
-    supplied registry) — genuine operators are untouched.
+    is *not* a derivation and is a certified scalar function
+    (:func:`~jacopy.central.calculus.scalars.is_scalar_function`, via
+    the supplied registry) — a degree-0 operator such as ``Λ♯(dh)`` is
+    a vector field, not a multiplier, and is left untouched.
     """
 
-    name = "scalar action: s(x) = s*x  (s a degree-0 scalar)"
+    name = "scalar action: s(x) = s*x  (s a certified C∞ scalar)"
     anchor = Act
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
@@ -125,10 +126,13 @@ class ScalarActAsMultiplicationDefinition(Definition):
             # Derivations act; Sum/Product/Neg operator heads are
             # handled by ActOverSumOp / product_rule composition.
             return False
-        try:
-            return degree_of(op, self._registry) == Degree.const(0)
-        except ValueError:
-            return False
+        # Degree 0 is not enough (audit 0b00e1b P0-2, M1-3): Λ♯(dh)
+        # from the public Sharp has degree 0 but is a vector field, not
+        # a multiplier. Only a certified C∞ scalar acts by
+        # multiplication.
+        from jacopy.central.calculus.scalars import is_scalar_function
+
+        return is_scalar_function(op, self._registry)
 
     def rewrite(self, expr: Expr) -> Expr:
         return Product(expr.op, expr.arg)

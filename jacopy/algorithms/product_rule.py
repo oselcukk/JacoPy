@@ -17,6 +17,23 @@ undetermined factor raises :class:`ValueError`: the modelling gap is
 something the user needs to fix, not something we should silently paper
 over with a zero-degree assumption.
 
+Who is split (default-reject; audit 0b00e1b P0-2 and its code
+review): the graded Leibniz rule is applied only to a certified
+derivation — a :class:`Derivation` not marked ``leibniz = False``, an
+operator declaring ``leibniz = True``, or a commutator of two such. An
+operator may take the decision itself through the PROTOCOL
+
+    ``op.splits_over_product(arg, registry) -> bool``
+
+(``arg`` the Product/Wedge operand): ``False`` keeps ``Act(op, arg)``
+unexpanded (e.g. a Lie-derivative model that is not Leibniz in that
+slot), ``True`` splits; a :class:`Derivation` without the method
+behaves as ``True``. ``leibniz = False`` operators are C∞-linear
+(scalars pull out). A certified scalar function in operator position
+multiplies; every other operator is only ℝ-linear (sums, signs and
+numeric factors pass through). :class:`~jacopy.central.calculus.bracket_calculus.ActExpansionDefinition`
+delegates here, so the engine rule follows the same protocol.
+
 The pass is bottom-up and inert on nodes that aren't :class:`Act` at
 their head: inner structure inside the argument is expanded first, so
 ``D(E(a*b))`` first expands the inner ``E`` Leibniz then the outer
@@ -102,13 +119,13 @@ def _expand_act(
         # later passes that would otherwise stall waiting for an engine
         # rewrite that never fires on this surviving shape.
         return Integer(0)
-    if isinstance(arg, (Integer, Rational)) and isinstance(op, Derivation):
+    if isinstance(arg, (Integer, Rational)) and _is_certified_derivation(op):
         # Derivations annihilate numeric constants: D(1) = D(1·1) =
         # 2·D(1) forces D(1) = 0, and linearity gives D(c) = 0. This is
         # what makes ℝ-homogeneity [c·X, Y] = c·[X, Y] close — the
         # Leibniz split of Y(c·g) leaves a Y(c)·g term that must die.
         return Integer(0)
-    if getattr(arg, "is_constant", False) and isinstance(op, Derivation):
+    if getattr(arg, "is_constant", False) and _is_certified_derivation(op):
         # The is_constant protocol: atoms marking themselves constant
         # (e.g. the Kronecker delta) are likewise annihilated. This is
         # what closes frame identities like de^c(e_a, e_b) = -γ^c_ab,
@@ -119,16 +136,18 @@ def _expand_act(
         for d in reversed(op.children):
             result = _expand_act(d, result, registry)
         return result
-    if not isinstance(op, Derivation):
-        # A degree-0 non-derivation "operator" is a scalar coefficient
-        # (compositions like f·X put scalars in operator position): it
+    from jacopy.central.calculus.scalars import is_scalar_function
+
+    if not isinstance(op, Derivation) and is_scalar_function(op, registry):
+        # A CERTIFIED scalar function in operator position is a
+        # coefficient (compositions like f·X put scalars there): it
         # acts by multiplication, NEVER by Leibniz — splitting s(ab)
-        # into s(a)b + a·s(b) double-counts to 2s·ab.
-        try:
-            if degree_of(op, registry) == Degree.const(0):
-                return Product(op, arg)
-        except ValueError:
-            pass
+        # into s(a)b + a·s(b) double-counts to 2s·ab. "Degree 0" alone
+        # is NOT that certificate (audit 0b00e1b P0-2, M1-3): Λ♯(dh)
+        # from the public Sharp has degree −1+1 = 0 but is a vector
+        # field.
+        return Product(op, arg)
+    # Every operator in Act position is additive (ℝ-linear).
     if isinstance(arg, Sum):
         return Sum.make(
             *(_expand_act(op, c, registry) for c in arg.children)
@@ -136,63 +155,156 @@ def _expand_act(
     if isinstance(arg, Neg):
         inner = _expand_act(op, arg.arg, registry)
         return Neg(inner)
-    if isinstance(arg, Product):
-        if getattr(op, "leibniz", True) is False:
-            # LINEAR-ONLY operator (e.g. the multivector interior
-            # ι_P for p ≥ 2 — a COMPOSITION of derivations, not a
-            # derivation): scalar factors pull out, no Leibniz
-            # split (6.H.2 soundness catch, 2026-09-07).
-            from jacopy.central.calculus.scalars import (
-                is_scalar_function,
-            )
-
-            scalars = [
-                c
-                for c in arg.children
-                if is_scalar_function(c, registry)
-            ]
-            rest = [
-                c
-                for c in arg.children
-                if not is_scalar_function(c, registry)
-            ]
-            if scalars and rest:
-                core = (
-                    rest[0]
-                    if len(rest) == 1
-                    else Product(*rest)
-                )
-                return Product(
-                    *scalars, _expand_act(op, core, registry)
-                )
-            return Act(op, arg)
-        return _expand_leibniz(op, arg, registry)
     from jacopy.core.wedge import Wedge as _Wedge
 
-    if isinstance(arg, _Wedge):
-        if getattr(op, "leibniz", True) is False:
-            # the LINEAR-ONLY guard applies to the wedge path too:
-            # ι_P (p ≥ 2) over α∧β is NOT a graded Leibniz split
-            # (2026-09-09 catch: the Product branch was guarded, the
-            # Wedge branch was not — ι_{Π₃}(η₂∧dω₂) was being split).
-            return Act(op, arg)
-        # Graded Leibniz over the WEDGE product (the wedge is the
-        # graded product of forms — Phase 5.E.4):
-        # D(α∧β) = D(α)∧β + (−1)^{|D||α|} α∧D(β) + …
-        return _expand_wedge_leibniz(op, arg, registry)
+    if isinstance(arg, (Product, _Wedge)):
+        mode = _product_mode(op, arg, registry)
+        if mode == "leibniz":
+            try:
+                if isinstance(arg, Product):
+                    return _expand_leibniz(op, arg, registry)
+                # Graded Leibniz over the WEDGE product (the wedge is
+                # the graded product of forms — Phase 5.E.4):
+                # D(α∧β) = D(α)∧β + (−1)^{|D||α|} α∧D(β) + …
+                return _expand_wedge_leibniz(op, arg, registry)
+            except ValueError:
+                if isinstance(op, Derivation):
+                    raise  # documented contract for derivation atoms
+                # a certified composite (commutator) with a symbolic
+                # sign parity: leave it inert rather than raise from
+                # inside an engine rule's matches()
+                return Act(op, arg)
+        if mode == "cinf-linear" and isinstance(arg, Product):
+            # LINEAR-ONLY C∞-linear operator (e.g. the multivector
+            # interior ι_P for p ≥ 2 — a COMPOSITION of derivations,
+            # not a derivation): scalar factors pull out, no Leibniz
+            # split (6.H.2 soundness catch, 2026-09-07). Over a Wedge
+            # it stays inert (2026-09-09 catch).
+            return _pull_out(op, arg, registry, is_scalar_function)
+        if mode == "linear" and isinstance(arg, Product):
+            # uncertified operator: ℝ-linearity only — NUMERIC factors
+            # pull out (X_h(2·a) = 2·X_h(a)), functions do not.
+            return _pull_out(
+                op, arg, registry,
+                lambda c, _r: isinstance(c, (Integer, Rational)),
+            )
+        # "blocked" (the operator declined via splits_over_product),
+        # or a Wedge under a non-Leibniz operator: inert.
+        return Act(op, arg)
     # Atom or other compound (Power, Act, Commutator, ...): leave inert.
     return Act(op, arg)
+
+
+def _pull_out(op: Expr, prod: Product, registry, is_coefficient) -> Expr:
+    """``op(c₁⋯c_k·r) → c₁⋯c_k·op(r)`` for the factors accepted by
+    ``is_coefficient`` (requires at least one coefficient and one
+    remaining factor; otherwise inert). One classification pass."""
+    coeffs: List[Expr] = []
+    rest: List[Expr] = []
+    for c in prod.children:
+        (coeffs if is_coefficient(c, registry) else rest).append(c)
+    if coeffs and rest:
+        core = rest[0] if len(rest) == 1 else Product(*rest)
+        return Product(*coeffs, _expand_act(op, core, registry))
+    return Act(op, prod)
+
+
+def _is_certified_derivation(op: Expr) -> bool:
+    """Leibniz certificate, DEFAULT-REJECT: a :class:`Derivation` not
+    marked ``leibniz = False``; any operator declaring
+    ``leibniz = True`` explicitly; a :class:`Commutator` of two
+    certified derivations (the graded commutator of graded
+    derivations is one). Nothing else — a public ``Sharp``/Hodge
+    star, a ``Graded(k)`` symbol, an arbitrary operator — is split."""
+    from jacopy.algebra.commutator import Commutator
+
+    marker = getattr(op, "leibniz", None)
+    if isinstance(op, Derivation):
+        return marker is not False
+    if marker is True:
+        return True
+    if isinstance(op, Commutator):
+        return _is_certified_derivation(op.a) and _is_certified_derivation(
+            op.b
+        )
+    return False
+
+
+def _product_mode(op: Expr, arg: Expr, registry) -> str:
+    """How ``op`` acts on the product ``arg`` (a Product or Wedge):
+
+    * ``"cinf-linear"`` — ``op.leibniz is False`` (C∞-linear, not a
+      derivation: scalars pull out, no split);
+    * the operator PROTOCOL ``op.splits_over_product(arg, registry)``
+      when the operator defines it: ``True`` → ``"leibniz"``,
+      ``False`` → ``"blocked"`` (the Act stays inert — e.g. a
+      Lie-derivative model that is not Leibniz in that slot);
+    * ``"leibniz"`` for a certified derivation
+      (:func:`_is_certified_derivation`; the protocol's default for a
+      :class:`Derivation` is ``True``, the pre-protocol behaviour);
+    * ``"linear"`` otherwise (numeric factors pull out only).
+    """
+    if getattr(op, "leibniz", None) is False:
+        return "cinf-linear"
+    hook = getattr(op, "splits_over_product", None)
+    if callable(hook):
+        return "leibniz" if hook(arg, registry) else "blocked"
+    if _is_certified_derivation(op):
+        if not isinstance(op, Derivation):
+            # a certified composite (commutator of derivations) splits
+            # only when its degree is determinable and when NEITHER
+            # component vetoes the split through the protocol —
+            # otherwise stay linear instead of raising from inside an
+            # engine match
+            from jacopy.algebra.commutator import Commutator
+
+            if isinstance(op, Commutator):
+                for comp in (op.a, op.b):
+                    if _product_mode(comp, arg, registry) != "leibniz":
+                        return "linear"
+            try:
+                degree_of(op, registry)
+            except ValueError:
+                return "linear"
+        return "leibniz"
+    return "linear"
 
 
 def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
     """``D(a₁∧…∧a_n) → Σ_i sign_i · a₁∧…∧D(a_i)∧…∧a_n`` with
     ``sign_i = (−1)^{|D|·(|a₁|+…+|a_{i−1}|)}`` — the Wedge twin of
-    :func:`_expand_leibniz`."""
+    :func:`_expand_leibniz`.
+
+    WHICH degree ``|a_j|``: the Wedge is the graded product of the
+    exterior algebra (forms, or multivectors), so the sign is computed
+    in the EXTERIOR grading — the one :func:`degree_of` already uses
+    for the Wedge node itself (the ``wedge_degree`` lift). A vector
+    field is a 1-vector there (``|X| = 1``) even though its OPERATOR
+    degree (as a derivation of functions) is 0; reading the operator
+    degree made ``d̃(X∧Y)`` expand to ``d̃X∧Y + X∧d̃Y`` instead of the
+    correct ``d̃X∧Y − X∧d̃Y`` (audit 0b00e1b P0-1: K1-2 ≡ M1X-1). See
+    :func:`_wedge_factor_degree`. ``|D|`` is the operator's own degree
+    (``degree_of(op)``): for the operators that act on a wedge algebra
+    that IS their shift in the exterior grading (``d``, ``d̃``: +1;
+    ``ι``, ``ι̃_ω``: −1; ``ℒ``: 0).
+
+    A factor whose exterior degree is not determinable (a mixed sum
+    ``X + u``, a composition ``X∘Y``, an unknown operator) has no
+    well-defined sign: the node is left INERT — never graded by the
+    operator degree (default-reject)."""
     from jacopy.core.wedge import Wedge as _Wedge
 
     factors = tuple(wedge.children)
     deg_op = degree_of(op, registry)
     deg_op_is_zero = deg_op == Degree.const(0)
+    degrees: List[Degree] = []
+    if not deg_op_is_zero:
+        try:
+            degrees = [
+                _wedge_factor_degree(f, registry) for f in factors[:-1]
+            ]
+        except ValueError:
+            return Act(op, wedge)
     running = Degree.const(0)
     terms: List[Expr] = []
     for i, fac in enumerate(factors):
@@ -217,8 +329,110 @@ def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
             term = Neg(term)
         terms.append(term)
         if not deg_op_is_zero and i + 1 < len(factors):
-            running = running + _factor_degree(fac, registry)
+            running = running + degrees[i]
     return Sum.make(*terms)
+
+
+def _wedge_factor_degree(fac: Expr, registry) -> Degree:
+    """Exterior degree of a wedge factor / the sole non-scalar factor
+    of a scalar product — the shared rule
+    :func:`jacopy.central.objects.kind.wedge_factor_degree` (also used
+    by ``degree_of`` of a Wedge). Raises :class:`ValueError` when not
+    determinable; never falls back to the operator degree of a
+    vector-carrying factor."""
+    from jacopy.central.objects.kind import wedge_factor_degree  # noqa: WPS433
+
+    return wedge_factor_degree(fac, registry)
+
+
+# --- factor classification (one pass per product) --------------------- #
+
+_SCALAR, _FORM, _MULTI, _OTHER = "scalar", "form", "multi", "other"
+
+
+def _classify(c: Expr, registry) -> Tuple[str, Optional[Degree]]:
+    """``(class, exterior degree or None)`` of a product factor, from
+    the one type source :func:`~jacopy.central.objects.kind.kind_of`:
+    ``scalar`` (function / zero), ``form``, ``multi`` (vector /
+    multivector — where a Product would read as a composition), or
+    ``other`` (unknown, operator, tensor, mismatch)."""
+    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
+
+    k = kind_of(c, registry)
+    if k.kind in ("function", "zero"):
+        return _SCALAR, Degree.const(0)
+    deg = k.degree if isinstance(k.degree, Degree) else None
+    if k.kind == "form" and deg is not None:
+        return _FORM, deg
+    if k.kind in ("vector", "multivector") and deg is not None:
+        return _MULTI, deg
+    if isinstance(getattr(c, "wedge_degree", None), Degree):
+        return _MULTI, c.wedge_degree
+    return _OTHER, None
+
+
+def _has_multivector_content(c: Expr, registry) -> bool:
+    from jacopy.central.objects.kind import has_vector_content  # noqa: WPS433
+
+    return has_vector_content(c, registry)
+
+
+def _product_degrees(
+    factors: Tuple[Expr, ...], classes, registry
+) -> Optional[List[Degree]]:
+    """Leibniz degrees ``|a_1|, …, |a_{n−1}|`` of a Product, from ONE
+    source, or ``None`` when no sound grading exists (the caller then
+    distributes a Sum factor or leaves the node inert):
+
+    * scalars count 0; forms their degree (their Product is their
+      wedge); a vector / multivector its exterior degree — but only as
+      the SOLE non-scalar factor (``s·X`` is the module product ``X∧s``;
+      ``X·Y`` is a composition: ``None``);
+    * an untyped factor: without vector/multivector content both
+      gradings agree and :func:`degree_of` is used (abstract graded
+      algebras, operator products — raises when undetermined, as
+      before); with such content, the structural exterior degree
+      (:func:`_wedge_factor_degree`, e.g. ``d̃X``) when it is the sole
+      non-scalar factor, else ``None`` — never the operator degree.
+    """
+    geometric = sum(1 for cls, _ in classes if cls != _SCALAR)
+    out: List[Degree] = []
+    for fac, (cls, deg) in zip(factors[:-1], classes[:-1]):
+        if cls in (_SCALAR, _FORM):
+            out.append(deg)
+        elif cls == _MULTI:
+            if geometric > 1:
+                return None
+            out.append(deg)
+        elif not _has_multivector_content(fac, registry):
+            out.append(_factor_degree(fac, registry))
+        elif geometric == 1:
+            try:
+                out.append(_wedge_factor_degree(fac, registry))
+            except ValueError:
+                return None
+        else:
+            return None
+    return out
+
+
+def _distribute_sum_factor(
+    op: Expr, prod: Product, registry
+) -> Optional[Expr]:
+    """ℝ-bilinearity fallback: ``D(a·(b+c)·e) = D(a·b·e) + D(a·c·e)``
+    for the first Sum factor (every Act operator is additive and the
+    product is multilinear), so a sum of pieces with different
+    gradings expands piecewise instead of stalling — consistently with
+    the already-split right-hand side."""
+    for i, c in enumerate(prod.children):
+        if isinstance(c, Sum):
+            pieces = []
+            for t in c.children:
+                kids = list(prod.children)
+                kids[i] = t
+                pieces.append(_expand_act(op, Product(*kids), registry))
+            return Sum.make(*pieces)
+    return None
 
 
 def _expand_leibniz(
@@ -226,11 +440,14 @@ def _expand_leibniz(
 ) -> Expr:
     """``D(a1*...*an) → Σ_i sign_i * a1*...*D(a_i)*...*an``.
 
-    ``sign_i = (−1)^{|D| * (|a1|+...+|a_{i−1}|)}``. Undecidable sign
-    parity raises, the caller needs to narrow down the degrees. Scalar
-    factors (degree 0) contribute nothing to the running sign, so
-    symbolic-degree factors only cause trouble when they actually
-    precede a splitting point.
+    ``sign_i = (−1)^{|D| * (|a1|+...+|a_{i−1}|)}``, the degrees from
+    :func:`_product_degrees` (one source with the Wedge path: the
+    exterior grading wherever a vector/multivector is involved).
+    Without a sound grading a Sum factor is distributed
+    (:func:`_distribute_sum_factor`), otherwise the node stays inert.
+    Undecidable sign parity raises. When ``D`` turns a scalar into a
+    second (multi)vector next to the existing one, that term is
+    rebuilt as their wedge (``d̃(X·u) = d̃X·u − X∧d̃u``).
     """
     factors: Tuple[Expr, ...] = prod.children
     if not factors:
@@ -244,6 +461,22 @@ def _expand_leibniz(
     # for ordinary (ungraded) derivations and spares the caller from
     # declaring a grading for operand factors that don't have one.
     deg_op_is_zero = deg_op == Degree.const(0)
+
+    from jacopy.central.objects.kind import kind_cache  # noqa: WPS433
+
+    with kind_cache(registry):
+        classes = [_classify(c, registry) for c in factors]
+        found = (
+            None
+            if deg_op_is_zero
+            else _product_degrees(factors, classes, registry)
+        )
+    degrees: List[Degree] = []
+    if not deg_op_is_zero:
+        if found is None:
+            distributed = _distribute_sum_factor(op, prod, registry)
+            return distributed if distributed is not None else Act(op, prod)
+        degrees = found
 
     running = Degree.const(0)  # |a_1| + ... + |a_{i-1}|
     terms: List[Expr] = []
@@ -265,15 +498,42 @@ def _expand_leibniz(
         # distribute in the same pass instead of stranding
         # ``D(2)``/``D(a+b)`` nodes into the simplify pipeline.
         new_factors[i] = _expand_act(op, fac, registry)
-        # (running-degree bookkeeping uses _factor_degree below)
-        term: Expr = Product(*new_factors) if len(new_factors) > 1 else new_factors[0]
+        term = _leibniz_term(new_factors, i, classes, registry)
         if parity == 1:
             term = Neg(term)
         terms.append(term)
         if not deg_op_is_zero and i + 1 < len(factors):
-            running = running + _factor_degree(fac, registry)
+            running = running + degrees[i]
 
     return Sum.make(*terms)
+
+
+def _leibniz_term(
+    new_factors: List[Expr], i: int, classes, registry
+) -> Expr:
+    """Rebuild one Leibniz term. When the product had at most one
+    non-scalar factor and ``D(a_i)`` created a second one next to a
+    vector/multivector (``X·d̃u``), the product of the two is their
+    WEDGE (``X∧d̃u``, order kept, scalars in front) — a Product there
+    would read as a composition. A Product of forms stays a Product
+    (the library's accepted transient wedge spelling). Only the new
+    factor is reclassified."""
+    from jacopy.core.wedge import Wedge as _Wedge
+
+    if len(new_factors) == 1:
+        return new_factors[0]
+    cls = list(classes)
+    cls[i] = _classify(new_factors[i], registry)
+    geometric = [j for j, (c, _) in enumerate(cls) if c != _SCALAR]
+    if len(geometric) <= 1 or not any(
+        cls[j][0] == _MULTI for j in geometric
+    ):
+        return Product(*new_factors)
+    if sum(1 for c, _ in classes if c != _SCALAR) > 1:
+        return Product(*new_factors)  # was already a multi-factor product
+    scalars = [new_factors[j] for j, (c, _) in enumerate(cls) if c == _SCALAR]
+    w = _Wedge(*(new_factors[j] for j in geometric))
+    return Product(*scalars, w) if scalars else w
 
 
 def _factor_degree(fac: Expr, registry) -> Degree:
