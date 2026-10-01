@@ -198,48 +198,6 @@ class NonMetricityFormEvaluationDefinition(Definition):
         )
 
 
-class MetricIndexedSumPushDefinition(Definition):
-    """``g(Σ_s V_s, Y) = Σ_s g(V_s, Y)`` (either slot) — additivity of
-    the metric over a FINITE indexed sum (capture-guarded: the sum is
-    α-renamed first when the other slot mentions its bound index)."""
-
-    name = "metric over indexed sum: g(Σ_s V_s, Y) = Σ_s g(V_s, Y) (both slots)"
-    anchor = MetricValue
-    source = cite("DereliDogan2020", "Section 2, definition of metric-affine geometries")
-
-    def matches(self, expr: Expr) -> bool:
-        from jacopy.core.indexed_sum import IndexedSum
-
-        return isinstance(expr, MetricValue) and any(
-            isinstance(s, IndexedSum) for s in (expr.X, expr.Y)
-        )
-
-    def rewrite(self, expr: Expr) -> Expr:
-        from jacopy.core.indexed_sum import IndexedSum
-        from jacopy.central.calculus.indexed_rules import (
-            contains_index,
-            fresh_bound_name,
-        )
-        from jacopy.central.objects.frame import FrameIndex
-
-        first = isinstance(expr.X, IndexedSum)
-        inner, other = (expr.X, expr.Y) if first else (expr.Y, expr.X)
-        if contains_index(other, inner.dummy._repr_inner()):
-            fresh = fresh_bound_name(inner.body, other)
-            renamed = inner.with_dummy(FrameIndex(fresh))
-            return (
-                expr.with_slots(renamed, other)
-                if first
-                else expr.with_slots(other, renamed)
-            )
-        body = (
-            expr.with_slots(inner.body, other)
-            if first
-            else expr.with_slots(other, inner.body)
-        )
-        return IndexedSum(inner.dummy, inner.range_, body)
-
-
 def _engine(registry, conn, g, fr, *, decomposed: bool = False):
     from jacopy.packages.metric_affine.engine import metric_affine_engine
     from jacopy.packages.metric_affine.frame_components import (
@@ -252,7 +210,6 @@ def _engine(registry, conn, g, fr, *, decomposed: bool = False):
     )
     engine.register(NonMetricityFormEvaluationDefinition(conn, g, fr))
     engine.register(ConnectionFormEvaluationDefinition(conn, fr))
-    engine.register(MetricIndexedSumPushDefinition())
     return engine
 
 
@@ -314,9 +271,11 @@ def nonmetricity_form_component_formula(
     from jacopy.core.indexed_sum import IndexedSum
     from jacopy.central.objects.frame import FrameIndex
     from jacopy.packages.metric_affine.frame_components import (
+        check_bound_index,
         connection_coefficient,
     )
 
+    check_bound_index(bound, a, b, c)
     g = as_metric_context(g)
     ea, eb, ec, es = (fr.field(i) for i in (a, b, c, bound))
     dummy = FrameIndex(bound)
@@ -345,15 +304,6 @@ def nonmetricity_form_component_formula(
     )
 
 
-def _check_bound(bound, *labels):
-    for label in labels:
-        if _index_str(label) == bound:
-            raise ValueError(
-                f"bound index {bound!r} collides with a free index; "
-                "pass a different `bound` name"
-            )
-
-
 def prove_nonmetricity_form_components(
     conn: Connection,
     g: Metric,
@@ -368,7 +318,6 @@ def prove_nonmetricity_form_components(
     """``Q_ab(e_c) = e_c(g_ab) − Σ_s Γ^s_ca g_sb − Σ_s Γ^s_cb g_as``
     [ADM (2.5), (2.13)] — needs the frame-decomposition declaration
     for ``(∇, frame)``."""
-    _check_bound(bound, a, b, c)
     return ExpandAndSimplify().prove(
         Pairing(nonmetricity_form(conn, g, fr, a, b), fr.field(c)),
         nonmetricity_form_component_formula(
@@ -398,10 +347,11 @@ def prove_nonmetricity_form_cartan(
     from jacopy.core.indexed_sum import IndexedSum
     from jacopy.central.objects.frame import FrameIndex
     from jacopy.packages.metric_affine.frame_components import (
+        check_bound_index,
         connection_form,
     )
 
-    _check_bound(bound, a, b, c)
+    check_bound_index(bound, a, b, c)
     gname = as_metric_context(g).name
     ea, eb, ec, es = (fr.field(i) for i in (a, b, c, bound))
     dummy = FrameIndex(bound)

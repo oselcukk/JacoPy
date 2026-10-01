@@ -1368,8 +1368,11 @@ def prove_nambu_double_jacobi_via_twist(
 
     citing = ExpansionEngine()
     for rule in (
-        TheoremDefinition(bridge, allow_legacy=bool(bridge.unreplayed_reasons())),
-        TheoremDefinition(dorfman, allow_legacy=bool(dorfman.unreplayed_reasons())),
+        # the bridge is cited strictly (it must replay); the Dorfman
+        # Jacobi explicitly: its repair-loop bracket identities are the
+        # documented unreplayed records (see the docstring)
+        TheoremDefinition(bridge),
+        TheoremDefinition(dorfman, allow_legacy=True),
     ):
         citing.register(rule)
     # the bridge's declared requirements (the FI rules of N) must be

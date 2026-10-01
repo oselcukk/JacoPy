@@ -181,7 +181,7 @@ class TestECartanSecond:
                 registry=reg,
                 engine=e_cartan_engine(
                     E, derived, nabla, fr, registry=reg,
-                    projector=P, projected_bracket=False, decomposed=True,
+                    projector=P, decomposed=True,
                 ),
             )
 
@@ -312,7 +312,7 @@ class TestNonMetricityForms:
             nonmetricity_form(e_connection(E), metric(), Frame("e", bundle=E.bundle), "a", "b")
 
     def test_metric_sum_push_is_capture_guarded(self, tm):
-        from jacopy.packages.metric_affine.nonmetricity_forms import (
+        from jacopy.packages.metric_affine.decomposition import (
             MetricIndexedSumPushDefinition,
         )
 
@@ -490,3 +490,82 @@ class TestFISwapScope:
             "FI consequence" in getattr(s, "rule", "") for s in steps
         )
         assert any(isinstance(r, FISharpPairingSwapDefinition) for r in eng.definitions)
+
+
+# --------------------------------------------------------------------- #
+# Gate 2026-10-01: derived context ↔ bridge consistency, bound guards    #
+# --------------------------------------------------------------------- #
+
+
+class TestDerivedContextConsistency:
+    """A mismatched (derived context, bracket bridge) pair used to
+    CLOSE wrong statements (R̂ = d_{E^∇}ω + ω∧ω, T = d_{E^∇̂}e + ω∧e):
+    the bridge is now derived from the context itself."""
+
+    def test_wrong_d_in_second_equation_fails_even_with_projector(self, alg):
+        from jacopy.packages.metric_affine.e_cartan import (
+            e_cartan_engine,
+            e_cartan_second_sides,
+        )
+
+        reg, E, nabla, fr, P = alg
+        lhs, rhs, derived = e_cartan_second_sides(
+            E, nabla, fr, P, "a", "b", "c", "d", projected_d=False
+        )
+        assert derived.name.endswith("∇")
+        with pytest.raises(ProofFailure):
+            ExpandAndSimplify().prove(
+                lhs, rhs, registry=reg,
+                engine=e_cartan_engine(E, derived, nabla, fr, registry=reg, projector=P, decomposed=True),
+            )
+
+    def test_projected_context_needs_its_projector(self, alg):
+        from jacopy.packages.metric_affine.derived import derived_algebroid
+        from jacopy.packages.metric_affine.e_cartan import e_cartan_engine
+
+        reg, E, nabla, fr, _ = alg
+        with pytest.raises(ValueError):
+            e_cartan_engine(E, derived_algebroid(E, projected=True), nabla, fr, registry=reg)
+
+    def test_foreign_context_refused(self, alg):
+        from jacopy.packages.metric_affine.e_cartan import e_cartan_engine
+
+        reg, E, nabla, fr, P = alg
+        other = algebroid("X", Bundle("E"))
+        with pytest.raises(ValueError):
+            e_cartan_engine(E, other, nabla, fr, registry=reg, projector=P)
+
+    def test_derived_engine_refuses_mismatch(self, alg):
+        from jacopy.packages.metric_affine.derived import (
+            derived_algebroid,
+            derived_engine,
+        )
+
+        reg, E, nabla, fr, P = alg
+        with pytest.raises(ValueError):
+            derived_engine(E, derived_algebroid(E), nabla, fr, registry=reg, projector=P)
+        with pytest.raises(ValueError):
+            derived_engine(E, derived_algebroid(E, projected=True), nabla, fr, registry=reg)
+
+
+def test_component_formula_guards_the_bound_index(tm):
+    from jacopy.packages.metric_affine.nonmetricity_forms import (
+        nonmetricity_form_component_formula,
+    )
+
+    reg, f, X, nabla, g, fr = tm
+    with pytest.raises(ValueError):
+        nonmetricity_form_component_formula(nabla, g, fr, "s", "b", "c")
+
+
+def test_metric_push_registered_with_decompositions():
+    from jacopy.packages.metric_affine.decomposition import (
+        MetricIndexedSumPushDefinition,
+    )
+    from jacopy.packages.metric_affine.engine import metric_affine_engine
+
+    nabla, fr = connection(), Frame("e")
+    with_dec = metric_affine_engine(decompositions=((nabla, fr),))
+    plain = metric_affine_engine()
+    assert any(isinstance(r, MetricIndexedSumPushDefinition) for r in with_dec.definitions)
+    assert not any(isinstance(r, MetricIndexedSumPushDefinition) for r in plain.definitions)

@@ -20,9 +20,10 @@ the indexed layer): linear operators commute with the finite sum —
     D(Σ_s t_s)        → Σ_s D(t_s)          (operator argument),
     ∇_{Σ_s V_s} T     → Σ_s ∇_{V_s} T       (connection direction),
     ⟨α, Σ_s V_s⟩      → Σ_s ⟨α, V_s⟩        (pairing argument slot),
-    (metric slots ``g(Σ_s V_s, W)`` are NOT pushed here; the
-    non-metricity-form engine registers its own capture-guarded
-    :class:`~jacopy.packages.metric_affine.nonmetricity_forms.MetricIndexedSumPushDefinition`).
+    g(Σ_s V_s, W)     → Σ_s g(V_s, W)       (metric slots,
+                                            :class:`MetricIndexedSumPushDefinition`,
+                                            registered with the frame
+                                            decompositions).
 
 All pushes are capture-guarded (the other operand must be free of the
 bound index).
@@ -43,6 +44,7 @@ from jacopy.central.calculus.indexed_rules import contains_index
 from jacopy.central.objects.connection import Connection, CovariantOp
 from jacopy.central.objects.frame import Frame, FrameField, FrameIndex
 from jacopy.central.tangent.anholonomy import AnholonomyCoefficient
+from jacopy.packages.metric_affine.metric import MetricValue
 from jacopy.packages.metric_affine.frame_components import (
     ConnectionCoefficient,
 )
@@ -269,3 +271,45 @@ class IndexedSumOperatorPushDefinition(Definition):
                 expr.arg,
             ),
         )
+
+
+class MetricIndexedSumPushDefinition(Definition):
+    """``g(Σ_s V_s, Y) = Σ_s g(V_s, Y)`` (either slot) — additivity of
+    the metric over a FINITE indexed sum (capture-guarded: the sum is
+    α-renamed first when the other slot mentions its bound index)."""
+
+    name = "metric over indexed sum: g(Σ_s V_s, Y) = Σ_s g(V_s, Y) (both slots)"
+    anchor = MetricValue
+    source = cite("DereliDogan2020", "Section 2, definition of metric-affine geometries")
+
+    def matches(self, expr: Expr) -> bool:
+        from jacopy.core.indexed_sum import IndexedSum
+
+        return isinstance(expr, MetricValue) and any(
+            isinstance(s, IndexedSum) for s in (expr.X, expr.Y)
+        )
+
+    def rewrite(self, expr: Expr) -> Expr:
+        from jacopy.core.indexed_sum import IndexedSum
+        from jacopy.central.calculus.indexed_rules import (
+            contains_index,
+            fresh_bound_name,
+        )
+        from jacopy.central.objects.frame import FrameIndex
+
+        first = isinstance(expr.X, IndexedSum)
+        inner, other = (expr.X, expr.Y) if first else (expr.Y, expr.X)
+        if contains_index(other, inner.dummy._repr_inner()):
+            fresh = fresh_bound_name(inner.body, other)
+            renamed = inner.with_dummy(FrameIndex(fresh))
+            return (
+                expr.with_slots(renamed, other)
+                if first
+                else expr.with_slots(other, renamed)
+            )
+        body = (
+            expr.with_slots(inner.body, other)
+            if first
+            else expr.with_slots(other, inner.body)
+        )
+        return IndexedSum(inner.dummy, inner.range_, body)

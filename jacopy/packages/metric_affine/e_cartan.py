@@ -61,18 +61,20 @@ from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.strategies import ExpandAndSimplify
 from jacopy.central.objects.connection import Connection
-from jacopy.central.objects.frame import Frame, IndexLike, _index_str
+from jacopy.central.objects.frame import Frame, IndexLike
 from jacopy.central.algebroid.context import Algebroid
 from jacopy.central.algebroid.locality import LocalityProjector
 from jacopy.packages.metric_affine.derived import (
     d_derived,
     derived_algebroid,
+    derived_is_projected,
 )
 from jacopy.packages.metric_affine.frame_components import (
     ConnectionFormEvaluationDefinition,
     FrameConnectionCoefficientDefinition,
     FramePairingScalarDefinition,
     FramePairingSplitDefinition,
+    check_bound_index,
     connection_form,
 )
 from jacopy.packages.metric_affine.modified import (
@@ -92,18 +94,19 @@ def e_cartan_engine(
     *,
     registry: Optional[PropertyRegistry] = None,
     projector: Optional[LocalityProjector] = None,
-    projected_bracket: Optional[bool] = None,
     decomposed: bool = False,
 ):
     """The derived-algebroid engine plus the frame layer of the Cartan
     equations.
 
-    ``projector`` registers the base projector's rules; the derived
-    bracket bridges to ``[·,·] − Λ̂`` when ``projected_bracket`` (default:
-    ``projector is not None``) and to ``[·,·] − Λ`` otherwise — kept
-    separate so the "wrong derivative" honest-fail tests can pair a
-    projected curvature with the UNPROJECTED ``d(∇)``. ``decomposed``
-    registers the opt-in frame-decomposition declaration."""
+    ``projector`` registers the base projector's rules. The derived
+    bracket's bridge is DERIVED from ``derived`` itself: ``E^∇̂`` bridges
+    to ``[·,·] − Λ̂`` (needs ``projector``), ``E^∇`` to ``[·,·] − Λ``; any
+    other context is refused (a mismatched pair would let ``d_{E^∇}``
+    compute with ``Λ̂`` — gate 2026-10-01). A projected curvature may
+    still be paired with the unprojected ``E^∇`` (``projector`` given):
+    the "wrong derivative" honest-fail tests. ``decomposed`` registers
+    the opt-in frame-decomposition declaration."""
     from jacopy.central.calculus import (
         IntrinsicDDefinition,
         IntrinsicLDefinition,
@@ -120,10 +123,9 @@ def e_cartan_engine(
     )
     from jacopy.packages.metric_affine.modified import _engine
 
-    if projected_bracket is None:
-        projected_bracket = projector is not None
+    projected_bracket = derived_is_projected(base, derived)
     if projected_bracket and projector is None:
-        raise ValueError("a projected bracket needs the projector")
+        raise ValueError("the projected derived context E^∇̂ needs the projector")
     engine = _engine(
         base, fr, registry,
         projectors=(projector,) if projector is not None else (),
@@ -147,15 +149,6 @@ def e_cartan_engine(
     engine.register(FrameConnectionCoefficientDefinition())
     engine.register(FramePairingScalarDefinition(registry))
     return engine
-
-
-def _check_bound(bound: str, *labels) -> None:
-    for label in labels:
-        if _index_str(label) == bound:
-            raise ValueError(
-                f"bound index {bound!r} collides with a free index; "
-                "pass a different `bound` name"
-            )
 
 
 def _ev(expr: Expr, u: Expr, v: Expr) -> MultiEval:
@@ -182,7 +175,7 @@ def e_cartan_first_sides(
     from jacopy.core.wedge import Wedge
     from jacopy.central.objects.frame import FrameIndex
 
-    _check_bound(bound, a, b, c)
+    check_bound_index(bound, a, b, c)
     derived = derived_algebroid(base, projected=projected_d)
     e_up = fr.dual().field(a)
     eb, ec = fr.field(b), fr.field(c)
@@ -246,7 +239,7 @@ def e_cartan_second_sides(
     from jacopy.core.wedge import Wedge
     from jacopy.central.objects.frame import FrameIndex
 
-    _check_bound(bound, a, b, c, d)
+    check_bound_index(bound, a, b, c, d)
     derived = derived_algebroid(base, projected=projected_d)
     ec, ed = fr.field(c), fr.field(d)
     lhs = Pairing(
