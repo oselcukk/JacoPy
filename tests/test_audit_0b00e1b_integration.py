@@ -420,3 +420,34 @@ class TestMetricAffineIndexedSumRegistry:
         lhs = E.anchor(IS(s, fr, Product(c_s, h, fr.field("s"))))
         rhs = Product(h, E.anchor(IS(s, fr, Product(c_s, fr.field("s")))))
         assert _prove(lhs, rhs, reg, _engine(E, fr, reg)).steps
+
+
+# --------------------------------------------------------------------- #
+# ConnectionForm: alternation certificate                              #
+# --------------------------------------------------------------------- #
+
+
+class TestConnectionFormAlternation:
+    def test_wedge_of_connection_forms_is_alternating(self):
+        # ω^a_b is a 1-form, so (ω^a_b ∧ ω^b_c)(X,Y) + (…)(Y,X) = 0.
+        # Before: admits_alternation False (no certificate) → the sum
+        # stayed unsimplified (completeness).
+        from jacopy.algorithms.simplify import simplify
+        from jacopy.core.multi_eval import MultiEval, admits_alternation
+        from jacopy.core.wedge import Wedge
+        from jacopy.central.objects import forms
+        from jacopy.packages.metric_affine.frame_components import (
+            ConnectionForm,
+        )
+
+        reg = PropertyRegistry()
+        X, Y = vector_fields("X Y")
+        (th,) = forms("θ", degree=1)
+        w1 = ConnectionForm("∇", "e", "a", "b")
+        w2 = ConnectionForm("∇", "e", "b", "c")
+        assert admits_alternation(w1)
+        for W in (Wedge(w1, w2), Wedge(w1, th)):
+            assert admits_alternation(W)
+            assert simplify(
+                Sum(MultiEval(W, X, Y), MultiEval(W, Y, X)), reg
+            ) == Integer(0)
