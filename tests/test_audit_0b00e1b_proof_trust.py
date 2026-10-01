@@ -562,41 +562,50 @@ class TestReviewRound3:
             end_reads(base)
         assert not any(l is inner or l is outer or l is base for l in _READS.stack)
 
-    def test_failed_inner_candidates_do_not_leak_reads(self):
-        # 3f38370: every read went to EVERY open log, so the reads of a
-        # nested engine's candidate that did NOT fire became requirements
-        # of the outer step (a spurious "x has no Scalar declared" → a
-        # wrong refusal where x is Scalar)
+    def test_inner_engine_reads_reach_the_enclosing_decision(self):
+        # main 75acc5a: only the FIRED inner candidate's reads reached the
+        # enclosing log, so an outer rule whose decision depends on an inner
+        # rule NOT firing (x not Scalar) recorded no registry fact: the
+        # theorem a = b proved where x is Graded(0) was cited CLOSED where
+        # x is Scalar (there Outer itself does not fire)
         from jacopy.proof.expansion import Definition
+        from jacopy.proof.registry_facts import current_context
 
-        reg = PropertyRegistry()
-        a, b, x = Symbol("a"), Symbol("b"), Symbol("x")
+        a, b, c, x = Symbol("a"), Symbol("b"), Symbol("c"), Symbol("x")
 
-        class Peek(Definition):            # consults the registry, never fires
-            name = "peek"
+        class GuardIfScalar(Definition):   # fires (a → c) only when x is Scalar
+            name = "guard"
 
             def matches(self, expr):
-                reg.get(x, Scalar)
-                return False
+                return expr == a and current_context()[0].get(x, Scalar) is not None
 
-            def rewrite(self, expr):       # pragma: no cover
-                return expr
+            def rewrite(self, expr):
+                return c
 
-        inner = ExpansionEngine([Peek(), ExplicitAssumption(a, b)])
+        inner = ExpansionEngine([GuardIfScalar(), ExplicitAssumption(b, c)])
 
         class Outer(Definition):
-            name = "outer: normalize by the inner engine"
+            name = "outer: a = b when a is inner-normal"
 
             def matches(self, expr):
-                return expr == a and inner.expand(expr)[0] == b
+                return expr == a and inner.expand(expr)[0] == a
 
             def rewrite(self, expr):
                 return b
 
-        with registry_context(reg):
-            _, step = ExpansionEngine([Outer()]).expand_once(a)
-        assert step is not None
-        assert not any(f.expr == x for f in step.registry_facts)
+        R1, R2 = PropertyRegistry(), PropertyRegistry()
+        R1.declare(x, Graded(0))
+        R2.declare(x, Scalar())
+        res = prove(ExpansionEngine([Outer()]), a, b, registry=R1)
+        assert res.closed
+        thm = Theorem("t", "a = b", a, b, res.chain).with_structural_requires()
+        assert any(f.expr == x and f.prop_cls is Scalar and not f.declared for f in thm.registry_facts)
+        assert not check_citation(thm, ExpansionEngine([Outer()]), registry=R2).ok
+        assert prove(ExpansionEngine([Outer(), TheoremDefinition(thm)]), a, b, registry=R2).status == "RESIDUAL"
+        # a fired inner step's OWN facts are its rule's slice only
+        with registry_context(R1):
+            _, (st,) = ExpansionEngine([GuardIfScalar(), ExplicitAssumption(b, c)]).expand(b)
+        assert not any(f.expr == x for f in st.registry_facts)
 
     def test_subclasses_cannot_impersonate_minted_steps_or_theorems(self):
         # 2270a83: is_minted used WeakSet membership (__eq__/__hash__), and
