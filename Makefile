@@ -12,7 +12,7 @@ PYTHON ?= python3
 VENV   := .venv
 VBIN   := $(VENV)/bin
 
-.PHONY: setup test notebooks clean kernel deps test-wheel
+.PHONY: setup test test-oracle notebooks clean kernel deps test-wheel
 
 # One-shot dev environment.
 setup: $(VENV)/.installed kernel
@@ -35,6 +35,10 @@ kernel: $(VENV)/.installed
 
 test: $(VENV)/.installed
 	$(VBIN)/python -m pytest tests/ -q
+
+# Model oracle (jacopy.oracle) on every closed equation; report in .oracle/.
+test-oracle: $(VENV)/.installed
+	$(VBIN)/python -m pytest tests/ -q --oracle=warn --oracle-report=.oracle/report.json
 
 notebooks: $(VENV)/.installed
 	$(VBIN)/python scripts/run_notebooks.py

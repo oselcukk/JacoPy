@@ -43,6 +43,7 @@ from __future__ import annotations
 from collections import deque
 from typing import Callable, Dict, List, Optional, Tuple
 
+from jacopy.oracle.hook import on_closed
 from jacopy.algorithms.product_rule import product_rule
 from jacopy.algorithms.simplify import simplify
 from jacopy.core.expr import Expr, Integer, Neg, Sum
@@ -325,6 +326,7 @@ class SearchStrategy(Strategy):
             self.last_stats["chosen_length"] = len(best)
             chain = ProofChain()
             chain.extend(best)
+            on_closed(lhs, rhs, registry=registry, source="SearchStrategy", engine=eng, chain=chain)
             return chain
 
         if exhausted:
@@ -333,6 +335,7 @@ class SearchStrategy(Strategy):
                 self.last_stats["engine"] = "beam"
                 self.last_stats["chosen_length"] = len(beam_chain.steps)
                 self.last_solutions = [list(beam_chain.steps)]
+                on_closed(lhs, rhs, registry=registry, source="SearchStrategy:beam", engine=eng, chain=beam_chain)
                 return beam_chain
 
         raise ProofFailure(

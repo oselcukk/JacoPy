@@ -32,6 +32,7 @@ from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.multi_eval import MultiEval
 from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
+from jacopy.oracle.hook import on_closed
 from jacopy.research.block_matrix import BlockMatrix
 from jacopy.research.sections import (
     GeneralizedSection,
@@ -275,6 +276,9 @@ class AxiomSuite:
         nf = normalize(engine, node, self.registry, rounds=12, max_steps=self.expand_max_steps)
         if nf.stopped_by == "steps":
             raise RuntimeError(f"ExpansionEngine did not converge within {self.expand_max_steps} steps; {nf.detail}")
+        if nf.expr == Integer(0):
+            # a CLOSED component: model-oracle falsifier (default off)
+            on_closed(node, Integer(0), registry=self.registry, source="axiom_suite", engine=engine)
         return nf.expr
 
     # ---- fresh evaluation symbols ---------------------------------- #

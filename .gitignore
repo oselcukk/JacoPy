@@ -36,3 +36,4 @@ examples/*_output.txt
 # Course material, papers and dev-only planning — never published
 *.pdf
 ROADMAP.md
+.oracle/

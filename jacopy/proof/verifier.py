@@ -23,8 +23,9 @@ from jacopy.brackets.derived import DerivedBracket, VanishingCondition
 from jacopy.core.expr import Expr, Integer
 from jacopy.core.properties import Property, Provenance
 from jacopy.core.registry import PropertyRegistry
+from jacopy.oracle.hook import on_closed, oracle_mode
 from jacopy.proof.chain import ProofChain
-from jacopy.proof.expansion import ExpansionEngine
+from jacopy.proof.expansion import ExpansionEngine, default_engine
 from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import (
     AgreementOnGenerators,
@@ -42,6 +43,7 @@ def show_equal(
     registry: Optional[PropertyRegistry] = None,
     strategy: Optional[Strategy] = None,
     engine: Optional[ExpansionEngine] = None,
+    oracle: Optional[str] = None,
 ) -> ProofChain:
     """Prove ``lhs == rhs`` and return the transcript.
 
@@ -49,10 +51,17 @@ def show_equal(
     expansion engine. Raises
     :class:`jacopy.proof.strategies.ProofFailure` if the chosen
     strategy cannot close the gap, the exception message carries the
-    surviving residual.
+    surviving residual. ``oracle`` overrides ``JACOPY_ORACLE`` for this
+    call (model-oracle falsifier on the closure; default off).
     """
     strat = strategy if strategy is not None else ExpandAndSimplify()
-    return strat.prove(lhs, rhs, registry=registry, engine=engine)
+    with oracle_mode(oracle):
+        chain = strat.prove(lhs, rhs, registry=registry, engine=engine)
+        # (an inner ExpandAndSimplify closure of the same equation is
+        # deduplicated by the hook)
+        on_closed(lhs, rhs, registry=registry, source=f"show_equal:{type(strat).__name__}",
+                  engine=engine, engine_factory=default_engine, chain=chain)
+    return chain
 
 
 def prove_jacobi(
@@ -165,7 +174,10 @@ def prove_equivalence(
         lhs_flat = _expand_all_brackets(lhs, registry)
         rhs_flat = _expand_all_brackets(rhs, registry)
         strat = strategy if strategy is not None else ExpandAndSimplify()
-        return strat.prove(lhs_flat, rhs_flat, registry=registry, engine=engine)
+        chain = strat.prove(lhs_flat, rhs_flat, registry=registry, engine=engine)
+        on_closed(lhs, rhs, registry=registry, source="prove_equivalence:brackets", engine=engine,
+                  engine_factory=default_engine, chain=chain)
+        return chain
 
     if isinstance(stmt1, VanishingCondition) and isinstance(stmt2, VanishingCondition):
         if operands:
@@ -173,12 +185,15 @@ def prove_equivalence(
                 "prove_equivalence on VanishingConditions takes no operands"
             )
         strat = strategy if strategy is not None else ExpandAndSimplify()
-        return strat.prove(
+        chain = strat.prove(
             stmt1.obstruction,
             stmt2.obstruction,
             registry=registry,
             engine=engine,
         )
+        on_closed(stmt1.obstruction, stmt2.obstruction, registry=registry,
+                  source="prove_equivalence:vanishing", engine=engine, engine_factory=default_engine, chain=chain)
+        return chain
 
     if isinstance(stmt1, Expr) and isinstance(stmt2, Expr):
         if operands:
@@ -243,7 +258,10 @@ def prove_operator_equation(
     or any generator's sub-proof fails.
     """
     strat = AgreementOnGenerators(algebra, sub_strategy=sub_strategy)
-    return strat.prove(op1, op2, registry=registry, engine=engine)
+    chain = strat.prove(op1, op2, registry=registry, engine=engine)
+    on_closed(op1, op2, registry=registry, source="prove_operator_equation", engine=engine,
+              engine_factory=default_engine, chain=chain)
+    return chain
 
 
 def unroll_property(prop: Property) -> ProofChain:
