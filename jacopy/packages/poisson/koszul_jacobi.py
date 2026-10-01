@@ -300,10 +300,40 @@ class _InstanceOf(Definition):
 class _GenericFunction:
     """The generating set ``{f}`` of a GENERIC function (``generic-
     function`` generality): a vector field killing the generic ``f``
-    kills every function, hence is zero."""
+    kills every function, hence is zero.
 
-    def __init__(self, f: Expr) -> None:
+    ``f`` is MINTED here, never taken from the caller: a fresh symbol
+    (absent from ``avoid`` and unknown to the registry) declared
+    ``Graded(0)`` only — not Scalar, not a constant — so agreement on it
+    is agreement on an arbitrary function (a constant such as ``1``
+    would make every vector field "vanish")."""
+
+    def __init__(self, avoid: Expr, registry) -> None:
+        from jacopy.core.expr import Symbol
+        from jacopy.core.properties import Graded, Scalar
+
+        text = avoid._repr_inner()
+        k = 0
+        while True:
+            f = Symbol(f"𝔣{k}")
+            if f._repr_inner() not in text and not any(registry.all_for(f)):
+                break
+            k += 1
+        registry.declare(f, Graded(degree=0))
+        props = list(registry.all_for(f))
+        if registry.has(f, Scalar) or len(props) != 1:
+            raise ProofFailure(
+                f"generic function {f._repr_inner()} is not unconstrained "
+                f"in this registry: {props}"
+            )
+        self.f = f
         self.generators = (f,)
+
+
+#: Only the library's seed space mints :class:`ZeroSeed` records
+#: (``_seed_records``); a certificate built from anything else is
+#: refused by :func:`prove_koszul_zero_by_certificate`.
+_SEED_TOKEN = object()
 
 
 @dataclass(frozen=True, eq=False)
@@ -328,7 +358,15 @@ class ZeroSeed:
     normal_form: Expr
     origin: str
     _prover: Callable[[], Theorem] = field(repr=False)
+    _token: object = field(default=None, repr=False)
     _cache: dict = field(default_factory=dict, repr=False)
+
+    def __post_init__(self) -> None:
+        if self._token is not _SEED_TOKEN:
+            raise TypeError(
+                "ZeroSeed records are minted by the library's seed space "
+                "only (koszul_jacobi_certificate)"
+            )
 
     @property
     def theorem(self) -> Theorem:
@@ -391,6 +429,30 @@ def _theorem(name, lhs, rhs, engine, registry, *, max_steps=20000) -> Theorem:
     ).with_structural_requires()
 
 
+def _declared_rules(engine):
+    """The engine's ``[π,π] = 0`` declaration rules (owned by the
+    declared structure): citations of declared zeros check them."""
+    from jacopy.packages.poisson.core import PoissonSNDeclaration
+
+    return [r for r in engine.definitions if isinstance(r, PoissonSNDeclaration)]
+
+
+def _cite_engine(theorems, declared, *, reverse=(), extra=()):
+    """An engine citing ``theorems`` (indices in ``reverse`` read
+    right-to-left), with ``extra`` rules, the declaration rules the
+    citations require and slot-zero linearity."""
+    from jacopy.central.calculus.bracket_calculus import SlotZeroDefinition
+    from jacopy.proof.theorems import TheoremDefinition
+
+    rules = [
+        TheoremDefinition(t, reverse=(i in reverse))
+        for i, t in enumerate(theorems)
+    ]
+    return ExpansionEngine(
+        rules + list(extra) + list(declared) + [SlotZeroDefinition()]
+    )
+
+
 class _SeedProvers:
     """The zero theorems of the seed families, memoized per run.
 
@@ -419,22 +481,14 @@ class _SeedProvers:
     def __init__(self, P, search_engine, registry) -> None:
         from jacopy.central.calculus.bracket_calculus import (
             IntrinsicLDefinition,
-            SlotZeroDefinition,
         )
-        from jacopy.packages.poisson.core import PoissonSNDeclaration
 
         self._P = P
         self._engine = search_engine
         self._registry = registry
         self._memo: dict = {}
         self._il = IntrinsicLDefinition(CARTAN_TM, registry)
-        self._slot_zero = SlotZeroDefinition()
-        # the search engine's own declaration rule (its owner is the
-        # declared structure): citations of declared zeros check it
-        self._declared = [
-            r for r in search_engine.definitions
-            if isinstance(r, PoissonSNDeclaration)
-        ]
+        self._declared = _declared_rules(search_engine)
 
     # -- helpers ------------------------------------------------------- #
 
@@ -444,14 +498,8 @@ class _SeedProvers:
         return self._memo[key]
 
     def _cite(self, *theorems, reverse=(), extra=()):
-        from jacopy.proof.theorems import TheoremDefinition
-
-        rules = [
-            TheoremDefinition(t, reverse=(i in reverse))
-            for i, t in enumerate(theorems)
-        ]
-        return ExpansionEngine(
-            rules + list(extra) + self._declared + [self._slot_zero]
+        return _cite_engine(
+            theorems, self._declared, reverse=reverse, extra=extra
         )
 
     def _sharp(self, a):
@@ -573,40 +621,55 @@ class _SeedProvers:
         return self._memoized(("brD", c, a, b, X), build)
 
     def zero_two_nf(self, node, sharp_only) -> Tuple[Expr, Callable]:
-        """``(n_sharp − n_full, prover)`` for one node."""
-        from jacopy.proof.normalize import normalize
+        """``(n_sharp − n_full, prover)`` for one node. The search needs
+        only the two normal forms; the recorded chains are produced by
+        the (memoized) prover, i.e. only for a 2NF seed a certificate
+        uses, and must reproduce the same normal forms."""
+        from jacopy.packages.poisson.tilde import _normal_form
 
         reg = self._registry
+        n_full = _normal_form(self._engine, node, reg).expr
+        n_sharp = _normal_form(sharp_only, node, reg).expr
+        expr = Sum(n_sharp, Neg(n_full))
 
-        def nf_theorem(engine, label):
-            nf = normalize(engine, node, reg, rounds=10, max_steps=1024, record=True)
-            if nf.stopped_by == "steps":
-                raise RuntimeError(f"ExpansionEngine did not converge within 1024 steps; {nf.detail}")
+        def nf_theorem(engine, expected, label):
+            try:
+                nf = _normal_form(engine, node, reg, record=True)
+            except RuntimeError as exc:
+                raise ProofFailure(f"koszul seed 2NF ({label}): {exc}")
+            if nf.expr != expected:
+                raise ProofFailure(
+                    f"koszul seed 2NF ({label}): the recorded normal form "
+                    "differs from the searched one"
+                )
             return Theorem(
                 name=f"koszul seed 2NF: {label} normal form",
                 statement=f"{node._repr_inner()[:200]} = {nf.expr._repr_inner()[:200]}",
                 lhs=node, rhs=nf.expr, proof=ProofChain(nf.chain),
             ).with_structural_requires()
 
-        full = nf_theorem(self._engine, "full-engine")
-        sharp = nf_theorem(sharp_only, "sharp-only")
-        expr = Sum(sharp.rhs, Neg(full.rhs))
-
-        def prove():
+        def build():
+            full = nf_theorem(self._engine, n_full, "full-engine")
+            sharp = nf_theorem(sharp_only, n_sharp, "sharp-only")
             return _theorem(
                 "koszul seed 2NF = 0", expr, Integer(0),
                 self._cite(sharp, full, reverse=(0, 1)), reg,
             )
 
-        return expr, prove
+        return expr, (lambda: self._memoized(("2NF", expr), build))
 
-    def zero_vf_jacobi(self, J, f) -> Theorem:
+    def zero_vf_jacobi(self, J) -> Theorem:
+        """``J = 0`` for a vector-field combination, by agreement on a
+        FRESH generic function (:class:`_GenericFunction`)."""
         def build():
             from jacopy.central.tangent.engine import tangent_engine
+            from jacopy.core.registry import PropertyRegistry
             from jacopy.proof.strategies import AgreementOnGenerators
 
             reg = self._registry
-            chain = AgreementOnGenerators(_GenericFunction(f)).prove(
+            if reg is None:
+                reg = PropertyRegistry()
+            chain = AgreementOnGenerators(_GenericFunction(J, reg)).prove(
                 J, Integer(0), registry=reg,
                 engine=tangent_engine(registry=reg),
             )
@@ -616,7 +679,7 @@ class _SeedProvers:
                 lhs=J, rhs=Integer(0), proof=chain,
             ).with_structural_requires()
 
-        return self._memoized(("jac", J, f), build)
+        return self._memoized(("jac", J), build)
 
     def zero_sym(self, expr) -> Theorem:
         def build():
@@ -688,8 +751,6 @@ def _seed_records(
             node = Pairing(Act(Interior(sharp(c)), d(a)), sharp(b))
             two_nf, z = pv.zero_two_nf(node, sharp_only)
             add("2NF", two_nf, "two normal forms of one node", z)
-            z = (lambda two_nf=two_nf, z=z: pv._memoized(("2NF", two_nf), z))
-            raw[-1] = raw[-1][:3] + (z,)
             add("X2NF", Act(X, two_nf), "X applied to a 2NF zero",
                 lambda z=z: pv.zero_act(X, z(), "2NF"))
     for (a, b) in pairs:
@@ -723,7 +784,7 @@ def _seed_records(
             # tangent record; its zero is re-proved here (agreement on
             # the generic function, a library strategy)
             J = t.lhs
-            zj = (lambda J=J: pv.zero_vf_jacobi(J, f))
+            zj = (lambda J=J: pv.zero_vf_jacobi(J))
             add("jac", J, "vector-field Jacobi (agreement on the generic function)", zj)
             for cc in trip:
                 add("pjac", Pairing(cc, J), "paired vector-field Jacobi",
@@ -738,9 +799,12 @@ def _seed_records(
     out: List[Tuple[int, ZeroSeed, Expr]] = []
     seen = set()
     for family, expr, origin, prover in raw:
+        nfs = {
+            1: _normalize(engine, expr, registry),
+            -1: _normalize(engine, Neg(expr), registry),
+        }
         seed = None
-        for sign in (1, -1):
-            nf = _normalize(engine, expr if sign == 1 else Neg(expr), registry)
+        for sign, nf in nfs.items():
             if nf == Integer(0):
                 continue
             k = nf._repr_inner()
@@ -749,9 +813,8 @@ def _seed_records(
             seen.add(k)
             if seed is None:
                 seed = ZeroSeed(
-                    family=family, expr=expr,
-                    normal_form=nf if sign == 1 else _normalize(engine, expr, registry),
-                    origin=origin, _prover=prover,
+                    family=family, expr=expr, normal_form=nfs[1],
+                    origin=origin, _prover=prover, _token=_SEED_TOKEN,
                 )
             out.append((sign, seed, nf))
     return out, pv
@@ -777,7 +840,6 @@ def koszul_jacobi_certificate(
     *,
     target: Optional[Expr] = None,
     registry: Optional[PropertyRegistry] = None,
-    declare_poisson: bool = True,
     max_rounds: int = 40,
 ) -> KoszulJacobiCertificate:
     """SEARCH for a certificate ``target = Σ c_i S_i`` (default target:
@@ -788,7 +850,7 @@ def koszul_jacobi_certificate(
     :class:`ProofFailure` when no certificate is found."""
     if target is None:
         target = _koszul_jacobiator(P, alpha, beta, gamma, X)
-    engine = _rich_engine(P, registry, declare=declare_poisson)
+    engine = _rich_engine(P, registry, declare=True)
     vectors, _ = _seed_records(
         P, engine, alpha, beta, gamma, X, f, registry
     )
@@ -829,54 +891,101 @@ def koszul_jacobi_certificate(
     return KoszulJacobiCertificate(terms)
 
 
+def _checked_zero(seed) -> Theorem:
+    """The seed's zero theorem, checked: a library-minted record whose
+    theorem proves EXACTLY ``seed.expr = 0`` with a replayed chain."""
+    if type(seed) is not ZeroSeed or seed._token is not _SEED_TOKEN:
+        raise ProofFailure("certificate term is not a library ZeroSeed record")
+    t = seed.theorem
+    if type(t) is not Theorem:
+        raise ProofFailure(f"seed {seed.family}: its zero is not a Theorem record")
+    if t.lhs != seed.expr or t.rhs != Integer(0):
+        raise ProofFailure(
+            f"seed {seed.family}: its theorem proves "
+            f"{t.lhs._repr_inner()[:80]} = {t.rhs._repr_inner()[:40]}, not "
+            f"{seed.expr._repr_inner()[:80]} = 0"
+        )
+    if not t.chain_replayed or t.legacy:
+        raise ProofFailure(
+            f"seed {seed.family}: its zero theorem is not a replayed record "
+            f"({'; '.join(t.unreplayed_reasons() or t.unverified_reasons())[:160]})"
+        )
+    return t
+
+
 def prove_koszul_zero_by_certificate(
     P,
     target: Expr,
     certificate: KoszulJacobiCertificate,
     *,
     registry: Optional[PropertyRegistry] = None,
-    declare_poisson: bool = True,
     max_steps: int = 20000,
 ) -> ProofChain:
     """``target = 0`` from a certificate, as a chain of LIBRARY steps:
 
     1. the reduction ``target = Σ c_i S_i`` — :class:`ExpandAndSimplify`
        over the search engine (the coefficients appear in the claim:
-       the witness is an explicit step, not a comment);
-    2. ``target → Σ c_i S_i → Σ c_i·0 → 0`` — the reduction and every
-       seed's zero theorem cited by the engine, then simplification.
+       the witness is an explicit step, not a comment), cited ONCE at
+       the root (``target → Σ c_i S_i``; skipped when the combination
+       is the target itself);
+    2. ``Σ c_i S_i → Σ c_i·0 → 0`` — every seed's zero theorem cited
+       by the engine, then simplification
+       (:func:`~jacopy.proof.result.prove`).
 
-    Every cited record replays; the result's requirements carry each
-    seed's (the declared ``[π,π] = 0`` for the defect slices).
-    :class:`ProofFailure` when the certificate does not reduce
-    ``target`` or a seed's zero does not close."""
-    from jacopy.proof.result import prove
+    Every seed must be a library-minted :class:`ZeroSeed` whose theorem
+    proves exactly ``S_i = 0`` with a replayed chain; the result's
+    requirements carry each seed's (the declared ``[π,π] = 0`` for the
+    defect slices). :class:`ProofFailure` otherwise, or when the
+    certificate does not reduce ``target``."""
+    from jacopy.oracle.hook import on_closed
+    from jacopy.proof.registry_facts import registry_context
+    from jacopy.proof.result import Goal, ProofResult, prove
 
-    engine = _rich_engine(P, registry, declare=declare_poisson)
-    combination = certificate.combination()
-    reduction = _theorem(
-        "Koszul Jacobi reduction to the certificate",
-        target, combination, engine, registry, max_steps=max_steps,
-    )
+    if type(certificate) is not KoszulJacobiCertificate:
+        raise ProofFailure("not a KoszulJacobiCertificate")
+    engine = _rich_engine(P, registry, declare=True)
+    declared = _declared_rules(engine)
     zeros = []
     seen = set()
-    for _, seed in certificate.terms:
+    for c, seed in certificate.terms:
+        if not isinstance(c, Fraction) or c == 0:
+            raise ProofFailure(f"certificate coefficient {c!r} is not a nonzero rational")
         if id(seed) not in seen:
             seen.add(id(seed))
-            zeros.append(seed.theorem)
-    pv = _SeedProvers(P, engine, registry)
-    final = pv._cite(reduction, *zeros)
+            zeros.append(_checked_zero(seed))
+    combination = certificate.combination()
+    steps = []
+    if combination != target:
+        reduction = _theorem(
+            "Koszul Jacobi reduction to the certificate",
+            target, combination, engine, registry, max_steps=max_steps,
+        )
+        once = _cite_engine((reduction,), declared)
+        with registry_context(registry):
+            after, step = once.expand_once(target)
+        if step is None or after != combination or step.before != target:
+            raise ProofFailure(
+                "Koszul certificate: the reduction is not citable at the root"
+                + ("; " + "; ".join(once.assembly_report[:3]) if once.assembly_report else "")
+            )
+        steps.append(step)
+    final = _cite_engine(zeros, declared)
     result = prove(
-        final, target, Integer(0), registry=registry, max_steps=max_steps
+        final, combination, Integer(0), registry=registry, max_steps=max_steps
     )
     if not result.closed:
         raise ProofFailure(
-            "Koszul certificate: the cited reduction and zeros leave "
+            "Koszul certificate: the cited zeros leave "
             f"{getattr(result.residual, '_repr_inner', lambda: '?')()[:140]}"
-            + ("; " + "; ".join(getattr(final, "assembly_report", ())[:3])
-               if getattr(final, "assembly_report", None) else "")
+            + ("; " + "; ".join(final.assembly_report[:3]) if final.assembly_report else "")
         )
-    return result.chain
+    chain = ProofChain(steps + list(result.chain.steps))
+    whole = ProofResult.from_chain(chain, Goal(target, Integer(0)))
+    if not whole.closed:  # pragma: no cover - the two legs compose
+        raise ProofFailure("Koszul certificate: the chain does not close")
+    on_closed(target, Integer(0), registry=registry, source="prove_koszul_zero_by_certificate",
+              engine=final, requires=whole.requires, chain=chain)
+    return chain
 
 
 def prove_general_koszul_jacobi(

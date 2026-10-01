@@ -320,10 +320,112 @@ class TestM33SeedRecords:
             lie_bracket(V, lie_bracket(W, X)),
             lie_bracket(W, lie_bracket(X, V)),
         )
-        jac = pv.zero_vf_jacobi(J, f)
+        jac = pv.zero_vf_jacobi(J)
         for t in (sbr, jac):
             assert t.chain_replayed and not t.legacy
             assert not _declared(t.requires)
+
+    def test_vf_zero_needs_a_genuinely_generic_function(self, poisson_setup):
+        # gate probe: agreement on a CONSTANT "generator" made [X,Y] = 0
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+        from jacopy.packages.poisson.koszul_jacobi import (
+            _GenericFunction,
+            _SeedProvers,
+            _rich_engine,
+        )
+        from jacopy.core.expr import Symbol
+        from jacopy.core.properties import Scalar
+
+        reg, f, a, b, c, X, P = poisson_setup
+        (Y,) = vector_fields("Y")
+        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
+        with pytest.raises(ProofFailure):
+            pv.zero_vf_jacobi(lie_bracket(X, Y))
+        # the generic function is fresh: it avoids the names in the
+        # claim and anything the registry already constrains
+        reg.declare(Symbol("𝔣0"), Scalar())
+        g = _GenericFunction(lie_bracket(X, Y), reg).f
+        assert g != Symbol("𝔣0") and not reg.has(g, Scalar)
+
+    def test_instance_of_keeps_the_wrapped_rule_role(self, poisson_setup):
+        # the inventory lists _InstanceOf's CLASS default; each instance
+        # carries the effective role of the rule it restricts
+        from jacopy.central.calculus.bracket_calculus import IntrinsicLDefinition
+        from jacopy.packages.poisson.core import PoissonSNDeclaration
+        from jacopy.packages.poisson.koszul_jacobi import _InstanceOf
+        from jacopy.proof.expansion import ExplicitAssumption, effective_role
+
+        reg, f, a, b, c, X, P = poisson_setup
+        node = Pairing(Act(CARTAN_TM.lie(X), a), X)
+        for rule in (
+            IntrinsicLDefinition(CARTAN_TM, reg),
+            PoissonSNDeclaration(P),
+            ExplicitAssumption(node, Integer(0)),
+        ):
+            inst = _InstanceOf(rule, node)
+            assert inst.role == effective_role(rule)
+            assert effective_role(inst) == effective_role(rule)
+
+    def test_two_nf_seed_is_lazy_and_memoized(self, poisson_setup):
+        from jacopy.central.objects.interior import Interior
+        from jacopy.packages.poisson.core import SharpEvaluationDefinition
+        from jacopy.packages.poisson.koszul_jacobi import (
+            _SeedProvers,
+            _rich_engine,
+        )
+
+        reg, f, a, b, c, X, P = poisson_setup
+        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
+        node = Pairing(Act(Interior(pv._sharp(c)), d(a)), pv._sharp(b))
+        expr, prover = pv.zero_two_nf(
+            node, ExpansionEngine([SharpEvaluationDefinition(P)])
+        )
+        t = prover()
+        assert t is prover() and t.lhs == expr and t.chain_replayed
+
+    def test_certificate_accepts_only_checked_library_seeds(self, poisson_setup):
+        from fractions import Fraction
+
+        from jacopy.packages.poisson.koszul_jacobi import (
+            _SEED_TOKEN,
+            KoszulJacobiCertificate,
+            ZeroSeed,
+            _SeedProvers,
+            _rich_engine,
+            prove_koszul_zero_by_certificate,
+        )
+
+        reg, f, a, b, c, X, P = poisson_setup
+        pv = _SeedProvers(P, _rich_engine(P, reg, declare=True), reg)
+        S = Pairing(c, pv.defect(a, b))
+        # a seed cannot be minted outside the library's seed space
+        with pytest.raises(TypeError):
+            ZeroSeed("fake", S, S, "caller", lambda: None)
+        # S + S = 0 "proved" by a theorem about another expression
+        other = pv.zero_pair_defect(b, a, c)
+        bad = ZeroSeed("pairD", S, S, "t", lambda: other, _token=_SEED_TOKEN)
+        with pytest.raises(ProofFailure, match="not"):
+            prove_koszul_zero_by_certificate(
+                P, Sum(S, S), KoszulJacobiCertificate(((Fraction(2), bad),)),
+                registry=reg,
+            )
+        # one seed, coefficient 1, expr == target: no self-citation loop
+        good = ZeroSeed(
+            "pairD", S, S, "t", lambda: pv.zero_pair_defect(c, a, b),
+            _token=_SEED_TOKEN,
+        )
+        chain = prove_koszul_zero_by_certificate(
+            P, S, KoszulJacobiCertificate(((Fraction(1), good),)), registry=reg
+        )
+        assert chain.initial == S and chain.final == Integer(0)
+        r = ProofResult.from_chain(chain, Goal(S, Integer(0)))
+        assert r.closed and not r.legacy
+        assert any("[π, π]_SN = 0" in n for n in _declared(r.requires))
+        # a wrong combination (S counted twice) does not reduce S
+        with pytest.raises(ProofFailure):
+            prove_koszul_zero_by_certificate(
+                P, S, KoszulJacobiCertificate(((Fraction(2), good),)), registry=reg
+            )
 
     def test_a_wrong_seed_claim_fails(self, poisson_setup):
         # ⟨c,[a♯,b♯]⟩ − a♯π(b,c) − π(b, L_{a♯}c): sign of the last term

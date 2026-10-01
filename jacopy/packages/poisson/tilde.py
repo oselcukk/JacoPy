@@ -621,12 +621,19 @@ def _normalized_by(engine, seed: Expr, registry) -> Expr:
     exhaustion raises as ``engine.expand`` used to; a round exhaustion
     returns the last expression (pre-4b behaviour — callers that need
     the guarantee use ``require_normal_form``)."""
+    return _normal_form(engine, seed, registry).expr
+
+
+def _normal_form(engine, seed: Expr, registry, *, record: bool = False):
+    """The :class:`~jacopy.proof.normalize.NormalForm` behind
+    :func:`_normalized_by` (same defaults); ``record=True`` keeps the
+    minted chain. A step-budget exhaustion raises."""
     from jacopy.proof.normalize import normalize
 
-    nf = normalize(engine, seed, registry, rounds=10, max_steps=1024)
+    nf = normalize(engine, seed, registry, rounds=10, max_steps=1024, record=record)
     if nf.stopped_by == "steps":
         raise RuntimeError(f"ExpansionEngine did not converge within 1024 steps; {nf.detail}")
-    return nf.expr
+    return nf
 
 
 def _cite_jacobi_instances(engine, P, triples, registry) -> None:
