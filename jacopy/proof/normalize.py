@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Sequence, Tuple
 
 from jacopy.core.expr import Expr
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint
 
 STOP_REASONS = ("fixpoint", "rounds", "steps", "target")
 
@@ -168,15 +168,36 @@ def normalize(
         else:
             raise TypeError("passes must be names or callables")
 
+    from jacopy.proof.registry_facts import registry_context
+
+    with registry_context(registry):
+        return _normalize(engine, expr, registry, rounds, max_steps, fns, inner_rounds, record, stop_when)
+
+
+def _normalize(engine, expr, registry, rounds, max_steps, fns, inner_rounds, record, stop_when) -> NormalForm:
     chain: List[ProofStep] = []
     total_steps = 0
     cur = expr
 
     def apply(name, fn, before):
-        after = fn(before, registry)
-        if record and after != before:
+        if not record:
+            return fn(before, registry)
+        from jacopy.core.registry import track_reads
+        from jacopy.proof.registry_facts import facts_from_log
+
+        with track_reads() as log:
+            after = fn(before, registry)
+        if after != before:
             rule, why = PASS_RULES.get(name, (name, "normalization pass"))
-            chain.append(ProofStep(before, after, rule=rule, justification=why))
+            if PASSES.get(name) is fn:
+                # a LIBRARY pass: keyed and minted
+                chain.append(_mint(ProofStep(before, after, rule=rule, justification=why,
+                                             key=("pass", rule), registry_facts=facts_from_log(log))))
+            else:
+                # a caller-supplied callable is the caller's word: no key,
+                # not minted — a hand-built step (review 2026-10-01 #4)
+                chain.append(ProofStep(before, after, rule=rule, justification=why,
+                                       registry_facts=facts_from_log(log)))
         return after
 
     def done(stopped_by, used_rounds, detail=""):

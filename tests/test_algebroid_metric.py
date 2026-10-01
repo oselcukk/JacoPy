@@ -429,7 +429,7 @@ class TestRightLeibnizFromMetric:
         book = TheoremBook()
         book.add(thm)
         eng = algebroid_engine(E, registry=reg)
-        cite(eng, book, thm.name)
+        cite(eng, book, thm.name, allow_legacy=True)  # requirements-derived, chain unreplayed (audit 0b00e1b-FULL M1-5)
         chain = ExpandAndSimplify().prove(
             E.bracket(u, Product(f, v)),
             Sum(
@@ -447,7 +447,7 @@ class TestRightLeibnizFromMetric:
         book = TheoremBook()
         book.add(thm)
         eng = algebroid_engine(E, registry=reg)
-        cite(eng, book, thm.name)
+        cite(eng, book, thm.name, allow_legacy=True)  # requirements-derived, chain unreplayed (audit 0b00e1b-FULL M1-5)
         with pytest.raises(ProofFailure):
             ExpandAndSimplify().prove(
                 E.bracket(u, Product(f, v)),

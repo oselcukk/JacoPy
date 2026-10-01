@@ -358,7 +358,10 @@ class TestSubsetReplacement:
             ),
             generality="instance",
         ).with_structural_requires()
-        rule = TheoremDefinition(thm)
+        # a hand-built one-step record is not a proof (audit 0b00e1b-FULL
+        # M1-5): cited only explicitly; this test is about subset matching
+        assert thm.legacy
+        rule = TheoremDefinition(thm, allow_legacy=True)
         big = Sum(a, b, e)
         assert rule.matches(big)
         out = rule.rewrite(big)

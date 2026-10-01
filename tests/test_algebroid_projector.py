@@ -158,7 +158,7 @@ class TestLocalityAnchorAnnihilation:
         book = TheoremBook()
         book.add(thm)
         eng = algebroid_engine(E, registry=reg, projectors=(P,))
-        cite(eng, book, thm.name)
+        cite(eng, book, thm.name, allow_legacy=True)  # requirements-derived, chain unreplayed (audit 0b00e1b-FULL M1-5)
         chain = ExpandAndSimplify().prove(
             E.anchor(P(locality_term(E, f, u, v))),
             Integer(0),

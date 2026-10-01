@@ -36,6 +36,7 @@ type.
 
 from __future__ import annotations
 
+import threading
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import Callable, Iterable, Iterator, List, Optional, Set, Tuple, Type, TypeVar
@@ -44,6 +45,60 @@ from jacopy.core.expr import Expr
 from jacopy.core.properties import Property, Provenance
 
 P = TypeVar("P", bound=Property)
+
+#: Read tracking (audit 0b00e1b-FULL P0-3 / M1X-2): a proof step's
+#: validity can depend on registry ANSWERS (``x`` is Scalar, ``p`` has
+#: no Graded declaration …). :meth:`PropertyRegistry.get` is the single
+#: query choke point; while a :func:`track_reads` block is open on this
+#: thread, every answer is appended to the block's log as
+#: ``(expr, property class, visible property or None)``. Off by
+#: default: one attribute lookup per query.
+_READS = threading.local()
+
+
+def begin_reads() -> list:
+    """Open a read log on this thread without a context manager (the
+    expansion engine's hot path); close it with :func:`end_reads`."""
+    stack = getattr(_READS, "stack", None)
+    if stack is None:
+        stack = _READS.stack = []
+    log: list = []
+    stack.append(log)
+    return log
+
+
+def end_reads(log: list, keep=None) -> None:
+    """Close the log opened by :func:`begin_reads` and hand the reads
+    that COUNT — ``keep`` (default: the whole log) — to the enclosing
+    log. A read is appended only to the innermost open log; a consumer
+    that discards part of its log (the engine drops the reads of the
+    candidate rules that did not fire) keeps them out of every outer
+    log too (review 2026-10-01 r3 #6)."""
+    stack = _READS.stack
+    if stack and stack[-1] is log:
+        stack.pop()
+    else:
+        # mismatched nesting: remove THIS log by identity (list.remove
+        # compares by value — an equal, e.g. empty, outer log would go)
+        for i in range(len(stack) - 1, -1, -1):
+            if stack[i] is log:
+                del stack[i]
+                break
+    if stack:
+        stack[-1].extend(log if keep is None else keep)
+
+
+@contextmanager
+def track_reads():
+    """Record every :meth:`PropertyRegistry.get` answer given inside the
+    block (on this thread, any registry); yields the log list. On exit
+    the block's reads are handed to the enclosing log, so nested blocks
+    are seen by the outer ones."""
+    log = begin_reads()
+    try:
+        yield log
+    finally:
+        end_reads(log)
 
 Predicate = Callable[[Expr], bool]
 
@@ -197,7 +252,11 @@ class PropertyRegistry:
                 if isinstance(p, prop_cls) and pred(expr):
                     prop = p
                     break
-        return self._filter(prop)  # type: ignore[return-value]
+        visible = self._filter(prop)
+        stack = getattr(_READS, "stack", None)
+        if stack:
+            stack[-1].append((expr, prop_cls, visible))
+        return visible  # type: ignore[return-value]
 
     def has(self, expr: Expr, prop_cls: Type[Property]) -> bool:
         return self.get(expr, prop_cls) is not None

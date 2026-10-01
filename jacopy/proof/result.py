@@ -47,10 +47,10 @@ from typing import Iterable, List, Optional, Sequence, Tuple
 from jacopy.core.expr import Expr, Integer
 from jacopy.oracle.hook import on_closed
 from jacopy.proof.chain import ProofChain
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint, is_minted
 
 STATUSES = ("CLOSED", "RESIDUAL", "BUDGET", "INVALID")
-ASSUMPTION_KINDS = ("declared", "structure", "scope", "legacy", "textual")
+ASSUMPTION_KINDS = ("declared", "structure", "scope", "legacy", "textual", "registry", "unreplayed")
 PROVENANCE_KINDS = ("theorem", "definition", "canonicalization", "engine-step", "computation")
 
 _CANONICAL_RULES = ("simplify", "canonicalize", "normalize", "collect", "sort", "flatten", "distribute")
@@ -209,6 +209,20 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         else:
             bump(assumptions, "declared", s.rule, owner, s.before, rkey)
 
+    def inherit(cited):
+        # every requirement kind of the cited record flows to the citing
+        # proof — "textual" from_axioms entries included (review
+        # 2026-10-01 rules-match) and "structure" (review r3 #3: also a
+        # structure no inherited declared record names); an unknown kind
+        # is kept as legacy, never dropped
+        for a in getattr(cited, "requires", ()) or ():
+            kind = getattr(a, "kind", None)
+            if kind in ASSUMPTION_KINDS:
+                bump(assumptions, kind, a.name, a.owner, a.example, a.key)
+            else:
+                bump(assumptions, "legacy", f"unrecognized requirement kind {kind!r} of theorem "
+                     f"{getattr(cited, 'name', '?')}: {getattr(a, 'name', a)!r}", getattr(a, "owner", None))
+
     def visit(seq):
         for s in seq:
             tag, role = s.provenance_tag, getattr(s, "role", None)
@@ -224,16 +238,21 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                     # a TheoremBook record cited under its explicit
                     # ``unverified`` flag (audit dc44f79 F5)
                     bump(assumptions, "legacy", f"unverified citation (record marked unverified): {s.rule}", owner, s.before)
-                elif cited is not None:
-                    # TRANSITIVE requirements (Faz 8 step 3b): a verified
-                    # citation contributes its own requirements; an
-                    # unverified (legacy) one is itself a legacy assumption
+                    if cited is not None:
+                        inherit(cited)
+                elif cited is not None and type(cited).__name__ == "Theorem" and type(cited).__module__ == "jacopy.proof.theorems":
+                    # TRANSITIVE requirements (Faz 8 step 3b): a citation
+                    # contributes ALL its own requirements; an unverified
+                    # (legacy) one is, in addition, a legacy assumption
                     if getattr(cited, "legacy", True):
                         bump(assumptions, "legacy", f"unverified citation: theorem {cited.name}", getattr(cited, "owner", None), s.before)
-                    else:
-                        for a in cited.requires:
-                            if a.kind in ("declared", "legacy", "scope"):
-                                bump(assumptions, a.kind, a.name, a.owner, a.example, a.key)
+                    inherit(cited)
+                elif cited is not None:
+                    # not an exact Theorem record: its verdict properties
+                    # are not trusted (review r3 #8) — legacy, its
+                    # requirements still carried
+                    bump(assumptions, "legacy", f"unverified citation: {type(cited).__name__} is not a Theorem record: {s.rule}", owner, s.before)
+                    inherit(cited)
                 elif getattr(s, "key", None) is None and not s.children:
                     # a HAND-BUILT theorem claim with neither the cited object
                     # nor an attached derivation: not verifiable here (audit
@@ -256,12 +275,41 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                 kind = "canonicalization" if any(low.startswith(c) or f" {c}" in low for c in _CANONICAL_RULES) else "engine-step"
                 bump(provenance, kind, s.rule, owner)
             # a whole-expression wrapper carries its local step as the only
-            # child with the same rule: that child is the same event
-            kids = [c for c in s.children if not (len(s.children) == 1 and c.rule == s.rule and c.provenance_tag == tag)]
+            # child: that child is the SAME event (same rule and metadata)
+            # and is not counted twice — but ITS children (a modulo
+            # citation's recorded normalization, a foundational sub-proof)
+            # are always visited: skipping the wrapper's twin must never
+            # drop a sub-step's requirements (review 2026-10-01 #1)
+            kids = []
+            for c in s.children:
+                if len(s.children) == 1 and _same_event(c, s):
+                    kids.extend(c.children)
+                else:
+                    kids.append(c)
             visit(kids)
 
     visit(steps)
+    # registry answers the steps relied on (audit 0b00e1b-FULL P0-3):
+    # recorded on the steps by their producers; a cited theorem's own
+    # registry records arrived through its requires above
+    from jacopy.proof.registry_facts import facts_of, requirement_records, step_facts
+
+    cited_registry = []
+    for key in [k for k in assumptions if k[0] == "registry"]:
+        k_, n_, o_, c_, ex_, rk_ = assumptions[key]
+        parsed = facts_of([Assumption(k_, n_, o_, c_, ex_, rk_)])
+        if parsed:
+            cited_registry.extend(parsed)
+            del assumptions[key]
+        else:
+            # a registry record whose facts cannot be read back cannot be
+            # checked at a citation: never dropped silently — legacy
+            # (review 2026-10-01 #5)
+            del assumptions[key]
+            bump(assumptions, "legacy", f"unverifiable registry requirement (no readable facts): {n_}", o_, ex_)
+    cited_registry = tuple(cited_registry)
     req = [Assumption(k, n, o, c, ex, rk) for (k, n, o, c, ex, rk) in assumptions.values()]
+    req.extend(requirement_records(tuple(step_facts(steps)) + cited_registry))
     prov = [Provenance(k, n, o, c) for (k, n, o, c, _, _) in provenance.values()]
     # the structures behind the declared axioms are assumptions too
     seen_owners: list = []
@@ -269,10 +317,25 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         if a.kind == "declared" and a.owner is not None and not any(a.owner is o or a.owner == o for o in seen_owners):
             seen_owners.append(a.owner)
     for o in seen_owners:
+        if any(a.kind == "structure" and (a.owner is o or a.owner == o) for a in req):
+            continue  # (already inherited from a cited record)
         decl = getattr(o, "declarations", None)
         text = f"{o!r}" + (f" declaring {sorted(decl)}" if decl is not None else "")
         req.append(Assumption("structure", text, o))
     return tuple(req), tuple(prov)
+
+
+def _same_event(child: ProofStep, parent: ProofStep) -> bool:
+    """``child`` is the local twin of the whole-expression wrapper
+    ``parent`` (:func:`_whole_step`): identical rule and metadata."""
+    return (
+        child.rule == parent.rule
+        and child.provenance_tag == parent.provenance_tag
+        and getattr(child, "role", None) == getattr(parent, "role", None)
+        and getattr(child, "key", None) == getattr(parent, "key", None)
+        and getattr(child, "owner", None) is getattr(parent, "owner", None)
+        and getattr(child, "cites", None) is getattr(parent, "cites", None)
+    )
 
 
 def _hashable(x):
@@ -283,28 +346,38 @@ def _hashable(x):
         return repr(x)
 
 
-def _whole_step(before: Expr, after: Expr, local: ProofStep) -> ProofStep:
+def _whole_step(before: Expr, after: Expr, local: ProofStep, *, at_site: bool = False) -> ProofStep:
     """A whole-expression step carrying the engine's local step (a
     subterm rewrite) as its child; the same rule, tag, owner, role and
     citation, so classification is unchanged."""
     if local.before == before and local.after == after:
         return local
-    return ProofStep(
+    wrapper = ProofStep(
         before, after, rule=local.rule, justification=local.justification, children=[local],
         provenance_tag=local.provenance_tag, owner=local.owner, role=getattr(local, "role", None),
         cites=getattr(local, "cites", None), key=getattr(local, "key", None),
+        registry_facts=getattr(local, "registry_facts", ()),
     )
+    # minted only when the local step is AND the caller's own rewrite
+    # produced ``after`` at the local step's site (``at_site``: the
+    # engine's expand_once / the search's path rewrite) — review
+    # 2026-10-01 #3, r3 #4: no first-occurrence guess, no extra walk
+    if at_site and is_minted(local):
+        _mint(wrapper)
+    return wrapper
 
 
 def _reversed_step(s: ProofStep) -> ProofStep:
     """The step read backwards, with ALL its semantic metadata (owner,
     role, citation, key, children) — reversing an equation must not
     drop what it depends on (audit dc44f79 F1)."""
-    return ProofStep(
+    rev = ProofStep(
         s.after, s.before, rule=s.rule, justification=(s.justification + " (reversed)").strip(),
         children=list(s.children), provenance_tag=s.provenance_tag, owner=s.owner, role=getattr(s, "role", None),
         cites=getattr(s, "cites", None), key=getattr(s, "key", None),
+        registry_facts=getattr(s, "registry_facts", ()),
     )
+    return _mint(rev) if is_minted(s) else rev
 
 
 # ------------------------------------------------------------------ #
@@ -421,13 +494,45 @@ class ProofResult:
             raise TypeError("from_chain expects a ProofChain")
         if not isinstance(goal, Goal):
             raise TypeError("from_chain expects a Goal")
+        if status not in (None, "CLOSED", "RESIDUAL", "BUDGET"):
+            raise ValueError(
+                f"from_chain status must be None, 'CLOSED', 'RESIDUAL' or 'BUDGET', got {status!r} "
+                "(an ill-typed goal is ProofResult.invalid)"
+            )
         if len(chain) and chain.initial != goal.lhs:
             raise ValueError(
                 f"the chain starts at {chain.initial._repr_inner()}, not at the goal's "
                 f"left-hand side {goal.lhs._repr_inner()}"
             )
-        final = chain.final if len(chain) else goal.lhs
+        # the transcript must be CONNECTED (audit 0b00e1b-FULL M1-6 ≡
+        # K2-7): every step rewrites what the previous one left (a
+        # whole-expression step, or a local step at its first site)
+        from jacopy.proof.replay import replay
+
+        replayed, why = replay(goal.lhs, chain.steps)
+        if replayed is None:
+            raise ValueError(f"the chain is not connected: {why}")
+        if status == "CLOSED" and replayed != goal.rhs:
+            # a CLOSED status is a claim the transcript must carry, not a
+            # flag the caller sets (audit 0b00e1b-FULL M1-6)
+            raise ValueError(
+                f"status='CLOSED' but the chain ends at {replayed._repr_inner()[:200]}, "
+                f"not at the goal's right-hand side {goal.rhs._repr_inner()[:200]}"
+            )
+        final = replayed
         req, prov = _classify(tuple(chain.steps) + tuple(side_steps), principal=owner)
+        # a hand-built step (not minted by a library producer) is the
+        # author's word, not a licensed rewrite: a legacy assumption
+        # (audit 0b00e1b-FULL M1-5), never silent provenance
+        from jacopy.proof.replay import unaccountable_steps
+
+        hand: dict = {}
+        for rule in unaccountable_steps(tuple(chain.steps) + tuple(side_steps)):
+            hand[rule] = hand.get(rule, 0) + 1
+        req = req + tuple(
+            Assumption("legacy", f"hand-built step (not produced by a library producer): {rule}", instances=n)
+            for rule, n in hand.items()
+        )
         req = req + tuple(extra)
         if generality == "instance":
             req = req + (Assumption("scope", "instance proof — the certificate is not generalized"),)
@@ -454,19 +559,11 @@ class ProofResult:
             raise TypeError("from_theorem expects a Theorem")
         goal = Goal(theorem.lhs, theorem.rhs)
         chain = theorem.proof
-        req, prov = _classify(chain.steps, principal=theorem.owner)
-        known = {a.name for a in req} | {p.name for p in prov}
-        legacy: List[Assumption] = []
-        for text in theorem.from_axioms:
-            if text not in known and not any(text in k for k in known):
-                legacy.append(Assumption("textual", f"from_axioms: {text}", theorem.owner))
-        # (a Theorem's chain is the engine's transcript of LOCAL rewrites;
-        # its endpoints are not the whole sides, so the chain's shape is
-        # not judged here — the record asserts the closure, the
-        # requirements say what it depends on)
-        req = req + tuple(legacy)
-        if theorem.generality == "instance":
-            req = req + (Assumption("scope", "instance proof — the certificate is not generalized"),)
+        # the record's requirements, its chain verdict included (audit
+        # 0b00e1b-FULL M1-5): a chain that does not replay into
+        # ``lhs = rhs`` is an ``unreplayed`` record, an empty / purely
+        # hand-built one a legacy record
+        req, prov = _theorem_requirements(theorem)
         if owners is None:
             # the structures the record itself names (its owner and the
             # owners of its steps); none at all → unknown to the oracle
@@ -482,14 +579,12 @@ class ProofResult:
         )
 
 
-def structural_requires(theorem) -> Tuple[Assumption, ...]:
-    """The requirement records of a theorem derived from its OWN chain
-    (Faz 8 step 3b): declared axiom instances, the structures behind
-    them, the transitive requirements of cited theorems, a scope entry
-    for an instance proof, and a legacy entry for every ``from_axioms``
-    text no step accounts for. The chain's endpoint shape is not a
-    requirement and is not judged here (``ProofResult.from_theorem``
-    flags it)."""
+def _theorem_requirements(theorem):
+    """``(requires, provenance)`` of a theorem record derived from its
+    OWN chain (shared by :func:`structural_requires` and
+    :meth:`ProofResult.from_theorem`)."""
+    from jacopy.proof.replay import chain_verdict
+
     req, prov = _classify(theorem.proof.steps, principal=theorem.owner)
     known = {a.name for a in req} | {p.name for p in prov}
     out = list(req)
@@ -498,7 +593,29 @@ def structural_requires(theorem) -> Tuple[Assumption, ...]:
             out.append(Assumption("textual", f"from_axioms: {text}", theorem.owner))
     if theorem.generality == "instance" and not any(a.kind == "scope" for a in out):
         out.append(Assumption("scope", "instance proof — the certificate is not generalized"))
-    return tuple(out)
+    verdict = chain_verdict(theorem.lhs, theorem.rhs, theorem.proof)
+    if verdict.hard:
+        out.append(Assumption("legacy", f"theorem {theorem.name}: not a proof of its claim — {verdict.hard}", theorem.owner))
+    elif not verdict.replayed:
+        out.append(Assumption(
+            "unreplayed",
+            f"theorem {theorem.name}: chain does not replay into its claim — " + "; ".join(verdict.soft),
+            theorem.owner, key=("unreplayed", theorem.name),
+        ))
+    return tuple(out), prov
+
+
+def structural_requires(theorem) -> Tuple[Assumption, ...]:
+    """The requirement records of a theorem derived from its OWN chain
+    (Faz 8 step 3b): declared axiom instances, the structures behind
+    them, the transitive requirements of cited theorems, the registry
+    answers the steps relied on (``registry``, audit 0b00e1b-FULL
+    P0-3), a scope entry for an instance proof, a legacy entry for
+    every ``from_axioms`` text no step accounts for — and the chain
+    verdict (audit 0b00e1b-FULL M1-5, :func:`jacopy.proof.replay.chain_verdict`):
+    ``legacy`` for an empty / purely hand-built chain, ``unreplayed``
+    for a chain that does not replay into ``lhs = rhs``."""
+    return _theorem_requirements(theorem)[0]
 
 
 # ------------------------------------------------------------------ #
@@ -552,6 +669,33 @@ def prove(
     reason = check_goal(lhs, rhs, registry)
     if reason is not None:
         return ProofResult.invalid(goal, reason, generality=generality, owner=owner)
+    # the citing registry context (audit 0b00e1b-FULL P0-3): a cited
+    # theorem's registry requirements are checked against ``registry``
+    from jacopy.proof.registry_facts import registry_context
+
+    with registry_context(registry):
+        return _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simplify_normal_forms, oracle)
+
+
+def _tracked_simplify(expr: Expr, registry):
+    """``simplify(expr, registry)`` and the registry facts it consulted."""
+    from jacopy.algorithms.simplify import simplify
+    from jacopy.core.registry import track_reads
+    from jacopy.proof.registry_facts import facts_from_log
+
+    with track_reads() as log:
+        out = simplify(expr, registry)
+    return out, facts_from_log(log)
+
+
+def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simplify_normal_forms, oracle):
+
+    from jacopy.proof.expansion import ExpansionEngine
+
+    # the library engine's expand_once returns the whole expression
+    # rewritten at the step's site; an engine overriding it is not
+    # trusted to (the wrapper is then not minted)
+    engine_rewrites_at_site = getattr(type(engine), "expand_once", None) is ExpansionEngine.expand_once
 
     def run(expr: Expr, cap: int):
         steps: List[ProofStep] = []
@@ -563,18 +707,17 @@ def prove(
             # the engine's step is LOCAL (the rewritten subterm); the
             # result's chain is a whole-expression transcript, so wrap it
             # — the local step rides along as the child that names the site
-            steps.append(_whole_step(cur, nxt, step))
+            steps.append(_whole_step(cur, nxt, step, at_site=engine_rewrites_at_site))
             cur = nxt
         else:
             nxt, step = engine.expand_once(cur)
             if step is not None:
                 return cur, steps, True
         if simplify_normal_forms:
-            from jacopy.algorithms.simplify import simplify
-
-            simplified = simplify(cur, registry)
+            simplified, facts = _tracked_simplify(cur, registry)
             if simplified != cur:
-                steps.append(ProofStep(cur, simplified, rule="simplify", justification="canonical form"))
+                steps.append(_mint(ProofStep(cur, simplified, rule="simplify", justification="canonical form",
+                                             key=("pass", "simplify"), registry_facts=facts)))
                 cur = simplified
         return cur, steps, False
 
@@ -601,15 +744,16 @@ def prove(
     from jacopy.core.expr import Neg, Sum
 
     diff = Sum(left, Neg(right)) if right != Integer(0) else left
+    facts = ()
     if simplify_normal_forms:
-        from jacopy.algorithms.simplify import simplify
-
-        diff = simplify(diff, registry)
+        diff, facts = _tracked_simplify(diff, registry)
     steps = list(lsteps)
     if diff != left:
         # the right-hand side's normalization is attached to the residual
         # step so its assumptions and citations count (audit dc44f79 F1)
-        steps.append(ProofStep(left, diff, rule="residual: lhs − rhs", justification="normal forms differ; the difference is the residual", children=list(rsteps)))
+        steps.append(_mint(ProofStep(left, diff, rule="residual: lhs − rhs", justification="normal forms differ; the difference is the residual",
+                               key=("pass", "residual"),
+                               children=list(rsteps), registry_facts=facts)))
         rside = ()
     else:
         rside = tuple(rsteps)

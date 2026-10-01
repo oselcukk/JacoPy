@@ -152,7 +152,14 @@ class TestDSquaredZero:
         assert thm.generality == "generic-function"
         eng = cite(ExpansionEngine([]), book, thm.name)
         node = MultiEval(d(d(f)), X, Y, alternating=True, slot_kind="vector")
-        out, steps = eng.expand(node)
+        # the theorem relied on registry answers (audit 0b00e1b-FULL P0-3):
+        # it fires only under a known registry context that agrees
+        from jacopy.proof.registry_facts import registry_context
+
+        assert thm.registry_facts
+        assert eng.expand(node)[0] == node
+        with registry_context(reg):
+            out, steps = eng.expand(node)
         assert out == Integer(0)
         assert steps[0].provenance_tag == "theorem"
 

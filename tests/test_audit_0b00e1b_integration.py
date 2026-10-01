@@ -161,7 +161,8 @@ class TestLieProductRuleHookEndToEnd:
         with pytest.raises(ProofFailure):
             _prove(lhs, _rl(A, u, f, v), reg, algebroid_engine(A, registry=reg))
         _, thm = prove_right_leibniz_from_metric(A, u, v, f, registry=reg)
-        eng = ExpansionEngine([TheoremDefinition(thm)])
+        # requirements-derived, chain unreplayed (audit 0b00e1b-FULL M1-5): explicit
+        eng = ExpansionEngine([TheoremDefinition(thm, allow_legacy=True)])
         for d in algebroid_engine(A, registry=reg).definitions:
             eng.register(d)
         eng.register(ActExpansionDefinition(reg))

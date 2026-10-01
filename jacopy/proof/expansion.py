@@ -29,7 +29,7 @@ from jacopy.algebra.derivation import Act, Derivation, compose, degree_of
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint
 
 
 
@@ -238,8 +238,28 @@ D_SQUARED_CLASSIFICATIONS = ("axiom", "theorem")
 MODES = ("efficient", "foundational")
 
 
+def is_library_rule(d) -> bool:
+    """True when ``d``'s class is one of the package's own rule classes
+    (``jacopy.*`` — the reviewed role inventory, ``tests/test_rule_roles.py``)."""
+    mod = getattr(type(d), "__module__", "") or ""
+    return mod == "jacopy" or mod.startswith("jacopy.")
+
+
+def effective_role(d) -> Optional[str]:
+    """The role a rule's steps are classified under (review 2026-10-01
+    r3 #2). A library rule keeps its reviewed role; a rule class defined
+    OUTSIDE the package is the caller's own claim — whatever ``role`` it
+    declares (the base default ``"definition"`` included) its rewrites
+    are an ``"assumption"``: visible in every result's requirements,
+    never a silent definitional unfolding. (Threat model as in
+    :mod:`jacopy.proof.step`: ordinary use of the public API cannot pass
+    a rule off as a definition; deliberately spoofing ``__module__`` is
+    code inside the trust boundary.)"""
+    return getattr(d, "role", None) if is_library_rule(d) else "assumption"
+
+
 def _step_role(d: Definition, tag: str) -> str:
-    role = getattr(d, "role", None)
+    role = effective_role(d)
     if role == "assumption":
         return "assumption"
     if getattr(d, "unverified", False):
@@ -367,7 +387,7 @@ class ExpansionEngine:
 
     # -- single-step ----------------------------------------------------- #
 
-    def _match(self, expr: Expr) -> Optional[Definition]:
+    def _candidates(self, expr: Expr):
         # Gather anchored candidates via the expression's MRO so a rule
         # anchored at a base class also fires on subclasses, then merge
         # with the unanchored fallback list in registration order.
@@ -375,15 +395,46 @@ class ExpansionEngine:
         for cls in type(expr).__mro__:
             candidates.extend(self._index.get(cls, ()))
         candidates.sort(key=lambda pair: pair[0])
-        for _, d in candidates:
+        return candidates
+
+    def _match(self, expr: Expr) -> Optional[Definition]:
+        for _, d in self._candidates(expr):
             if d.matches(expr):
                 return d
         return None
 
+    def _fire(self, expr: Expr):
+        """``(rule, rewritten, registry facts)`` for the first matching
+        rule at ``expr``, or ``None``. The registry answers the FIRED
+        rule consulted — its match decision and its rewrite — are the
+        step's hypotheses (audit 0b00e1b-FULL P0-3); they are recorded
+        during the one ``matches`` call that decided (no second call:
+        review 2026-10-01 #6 — a modulo match is a full normalization)."""
+        candidates = self._candidates(expr)
+        if not candidates:
+            return None
+        from jacopy.core.registry import begin_reads, end_reads
+        from jacopy.proof.registry_facts import facts_from_log
+
+        log = begin_reads()
+        kept: list = []
+        try:
+            for _, d in candidates:
+                start = len(log)
+                if d.matches(expr):
+                    after = d.rewrite(expr)
+                    kept = log[start:]
+                    return d, after, facts_from_log(kept)
+            return None
+        finally:
+            # only the FIRED rule's reads reach an enclosing log; the
+            # candidates that did not fire assumed nothing (r3 #6)
+            end_reads(log, keep=kept)
+
     def _build_step(self, expr: Expr, after: Expr, d: Definition) -> ProofStep:
         """Create the :class:`ProofStep` for a fired rewrite, with mode-dependent children."""
         tag = "theorem" if d.is_theorem else "axiom"
-        step = ProofStep(
+        step = _mint(ProofStep(
             expr,
             after,
             rule=d.name,
@@ -396,7 +447,14 @@ class ExpansionEngine:
             role=_step_role(d, tag),
             cites=(getattr(d, "theorem", None) if tag == "theorem" else None),
             key=d.key,
-        )
+        ))
+        # a rule's recorded side derivation (a modulo citation's
+        # normalization, audit 0b00e1b-FULL M1X-3) is ALWAYS attached:
+        # its assumptions are the step's assumptions
+        side = getattr(d, "side_steps", None)
+        if side is not None:
+            for sub_step in side(expr):
+                step.add_child(sub_step)
         if self._mode == "foundational" and d.is_theorem:
             builder = d.theorem_proof_builder()
             if builder is not None:
@@ -438,10 +496,13 @@ class ExpansionEngine:
                     if step is not None:
                         new_slots = slots[:i] + (new_sub,) + slots[i + 1:]
                         return expr.with_slots(*new_slots), step
-        d = self._match(expr)
-        if d is not None:
-            after = d.rewrite(expr)
-            return after, self._build_step(expr, after, d)
+        fired = self._fire(expr)
+        if fired is not None:
+            d, after, facts = fired
+            step = self._build_step(expr, after, d)
+            if facts:
+                step._registry_facts = facts
+            return after, step
         return expr, None
 
     # -- driver ---------------------------------------------------------- #

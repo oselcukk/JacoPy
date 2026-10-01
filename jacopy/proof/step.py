@@ -19,9 +19,55 @@ without coupling.
 
 from __future__ import annotations
 
+import weakref
 from typing import List, Optional, Tuple
 
 from jacopy.core.expr import Expr
+
+
+#: Steps MINTED by the library's own producers (review 2026-10-01 #3).
+#:
+#: Threat model. Ordinary use of the public API — accidental or
+#: deliberate — cannot claim provenance: a step's provenance (that the engine, a library
+#: normalization pass or a library strategy produced it from an actual
+#: computation) must not be claimable through the public API: a
+#: ``ProofStep(..., key=..., provenance_tag=...)`` built by any caller —
+#: by accident or deliberately — is NEVER minted, whatever metadata it
+#: carries; copies are not minted either. Only producer code inside
+#: :mod:`jacopy.proof` calls :func:`_mint` (the trusted computing base;
+#: patching module internals is outside the model, as in any Python
+#: library). Membership is by object IDENTITY and exact type
+#: (``type(step) is ProofStep``): a subclass cannot impersonate a minted
+#: step through ``__eq__`` / ``__hash__``. Out of scope (the Python
+#: limit): code that subclasses, monkeypatches or imports the private
+#: minting function on purpose. Minting certifies ORIGIN only — that
+#: the step is the producer's record — not that the rule is
+#: mathematically right: the step's ``before = after`` is the rule's
+#: responsibility, checked independently by the model oracle
+#: (``check_chain``).
+_MINTED: dict = {}
+
+
+def _mint(step: "ProofStep") -> "ProofStep":
+    """Record ``step`` as produced by a library producer (private)."""
+    if type(step) is ProofStep:
+        k = id(step)
+
+        def _forget(ref, k=k):
+            if _MINTED.get(k) is ref:
+                del _MINTED[k]
+
+        _MINTED[k] = weakref.ref(step, _forget)
+    return step
+
+
+def is_minted(step) -> bool:
+    """True when ``step`` was produced by the library's own producers
+    (engine, normalization passes, strategies) — see :data:`_MINTED`."""
+    if type(step) is not ProofStep:
+        return False
+    ref = _MINTED.get(id(step))
+    return ref is not None and ref() is step
 
 
 class ProofStep:
@@ -38,6 +84,8 @@ class ProofStep:
         "_role",
         "_cites",
         "_key",
+        "_registry_facts",
+        "__weakref__",
     )
 
     #: Recognised provenance tags. ``None`` means the step carries no
@@ -65,6 +113,7 @@ class ProofStep:
         role: Optional[str] = None,
         cites=None,
         key=None,
+        registry_facts=(),
     ) -> None:
         if not isinstance(before, Expr):
             raise TypeError("ProofStep.before must be an Expr")
@@ -95,6 +144,10 @@ class ProofStep:
         # the structural key of the licensing rule (Definition.key); an
         # assumption step without one cannot be located in another engine
         self._key = key
+        # the registry answers the step's producer consulted (audit
+        # 0b00e1b-FULL P0-3): ``RegistryFact`` records; a theorem whose
+        # steps carry them is citable only where the registry agrees
+        self._registry_facts = tuple(registry_facts or ())
         self._children: List[ProofStep] = []
         if children:
             for ch in children:
@@ -155,6 +208,13 @@ class ProofStep:
         """Structural key of the rule that fired (``Definition.key``);
         ``None`` for a hand-built step."""
         return self._key
+
+    @property
+    def registry_facts(self) -> tuple:
+        """The registry answers (:class:`~jacopy.proof.registry_facts.RegistryFact`)
+        this step's computation consulted; ``()`` when it consulted none
+        or its producer does not record them."""
+        return self._registry_facts
 
     def add_child(self, step: "ProofStep") -> None:
         """Nest ``step`` under this one as a sub-proof."""

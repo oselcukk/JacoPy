@@ -140,7 +140,7 @@ class TestECurvatureConditional:
         book = TheoremBook()
         book.add(thm)
         engine = e_connection_engine(E, registry=reg)
-        cite(engine, book, thm.name)
+        cite(engine, book, thm.name, allow_legacy=True)  # requirements-derived, chain unreplayed (audit 0b00e1b-FULL M1-5)
         chain = ExpandAndSimplify().prove(
             curvature(nabla, u, v, Product(f, w)),
             Product(f, curvature(nabla, u, v, w)),

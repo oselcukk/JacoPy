@@ -26,7 +26,7 @@ from jacopy.core.registry import PropertyRegistry
 from jacopy.oracle.hook import on_closed, oracle_mode
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import ExpansionEngine, default_engine
-from jacopy.proof.step import ProofStep
+from jacopy.proof.step import ProofStep, _mint
 from jacopy.proof.strategies import (
     AgreementOnGenerators,
     DerivedBracketStrategy,
@@ -105,16 +105,22 @@ def prove_jacobi(
     # / :class:`Product` / atom shapes. Once Faz 7 adds a bracket-aware
     # definition to :class:`ExpansionEngine`, this pre-pass can move
     # into the engine and drop from the verifier layer.
-    flattened = _expand_all_brackets(obstruction, registry)
+    from jacopy.core.registry import track_reads
+    from jacopy.proof.registry_facts import facts_from_log
+
+    with track_reads() as _log:
+        flattened = _expand_all_brackets(obstruction, registry)
     chain = ProofChain()
     if flattened != obstruction:
         chain.append(
-            ProofStep(
+            _mint(ProofStep(
                 obstruction,
                 flattened,
                 rule="bracket-expand",
+                key=("strategy", "bracket-expand"),
+                registry_facts=facts_from_log(_log),
                 justification="expand bracket nodes by definition",
-            )
+            ))
         )
     strat = strategy if strategy is not None else ExpandAndSimplify()
     inner = strat.prove(flattened, Integer(0), registry=registry, engine=engine)
