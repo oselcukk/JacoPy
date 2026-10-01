@@ -70,6 +70,9 @@ class _SlotAtom(Derivation):
     """Shared base: a named operator atom over labelled Expr slots
     (degree-0; the slot protocol makes the engine walk inside)."""
 
+    # Not a derivation: every quintet/structure atom is a VALUE in 𝔛(R), 𝔛(Z) or 𝔛(E), never an operator on functions.
+    section_value = True
+
     __slots__ = ("_slots",)
 
     def __init__(self, display: str, *slots: Expr) -> None:

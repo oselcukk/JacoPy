@@ -58,6 +58,7 @@ class AnchoredVF(Derivation):
     :mod:`jacopy.central.algebroid.rules`.
     """
 
+    # A derivation: ρ(u) is a genuine vector field on M (Leibniz on C∞(M)).
     __slots__ = ("_algebroid_name", "_section", "_anchor_name")
 
     def __init__(
@@ -115,6 +116,9 @@ class AlgebroidBracket(Derivation):
     :class:`LieBracketVF`: an algebroid bracket does NOT act on
     functions directly — only through the anchor.
     """
+
+    # Not a derivation: a section of E, acting on functions only through ρ (audit 0b00e1b).
+    section_value = True
 
     __slots__ = ("_algebroid_name", "_u", "_v")
 
@@ -235,6 +239,9 @@ class LocalityOperator(Derivation):
 LocalityMultilinearityDefinition`. The locality *structure* (the
     ``Df``-equivalence class) and the projector are Phase 3.E.4.
     """
+
+    # Not a derivation: L(ω,u,v) is a section of E (C∞-trilinear value), not an operator on functions.
+    section_value = True
 
     __slots__ = ("_algebroid_name", "_form", "_u", "_v")
 
@@ -417,6 +424,9 @@ class MetricSharp(Derivation):
     Appears in the symmetric-part axiom ``[u,v] + [v,u] = g⁻¹D g(u,v)``
     [B Def 4.2-4.3].
     """
+
+    # Not a derivation: g⁻¹(ω) is a section of E; it reaches functions only through ρ.
+    section_value = True
 
     __slots__ = ("_algebroid_name", "_metric_name", "_form")
 

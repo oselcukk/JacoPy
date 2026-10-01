@@ -29,7 +29,10 @@ operator may take the decision itself through the PROTOCOL
 unexpanded (e.g. a Lie-derivative model that is not Leibniz in that
 slot), ``True`` splits; a :class:`Derivation` without the method
 behaves as ``True``. ``leibniz = False`` operators are C∞-linear
-(scalars pull out). A certified scalar function in operator position
+(scalars pull out); ``section_value = True`` (from which a
+:class:`Derivation`'s ``leibniz`` is derived) marks a section-valued
+atom that is a Derivation only for slot plumbing — its ``Act`` stays
+inert. A certified scalar function in operator position
 multiplies; every other operator is only ℝ-linear (sums, signs and
 numeric factors pass through). :class:`~jacopy.central.calculus.bracket_calculus.ActExpansionDefinition`
 delegates here, so the engine rule follows the same protocol.
@@ -218,6 +221,8 @@ def _is_certified_derivation(op: Expr) -> bool:
     star, a ``Graded(k)`` symbol, an arbitrary operator — is split."""
     from jacopy.algebra.commutator import Commutator
 
+    if getattr(op, "section_value", False):
+        return False
     marker = getattr(op, "leibniz", None)
     if isinstance(op, Derivation):
         return marker is not False
@@ -233,6 +238,8 @@ def _is_certified_derivation(op: Expr) -> bool:
 def _product_mode(op: Expr, arg: Expr, registry) -> str:
     """How ``op`` acts on the product ``arg`` (a Product or Wedge):
 
+    * ``"blocked"`` — ``op.section_value`` (a value, not an operator:
+      ``Act`` on it is undefined);
     * ``"cinf-linear"`` — ``op.leibniz is False`` (C∞-linear, not a
       derivation: scalars pull out, no split);
     * the operator PROTOCOL ``op.splits_over_product(arg, registry)``
@@ -244,6 +251,12 @@ def _product_mode(op: Expr, arg: Expr, registry) -> str:
       :class:`Derivation` is ``True``, the pre-protocol behaviour);
     * ``"linear"`` otherwise (numeric factors pull out only).
     """
+    if getattr(op, "section_value", False):
+        # a section-VALUED atom (bracket, Jacobiator, g⁻¹ω, …) that
+        # subclasses Derivation only for slot plumbing: Act(value, ·)
+        # has no meaning, so neither Leibniz nor a C∞ pull-out applies
+        # — inert (default reject). The marker alone suffices.
+        return "blocked"
     if getattr(op, "leibniz", None) is False:
         return "cinf-linear"
     hook = getattr(op, "splits_over_product", None)

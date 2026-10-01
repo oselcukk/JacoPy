@@ -97,7 +97,7 @@ def metric_affine_engine(
     )
 
     engine.register(IndexedSumEvalPushInDefinition())
-    engine.register(IndexedSumLinearityDefinition())
+    engine.register(IndexedSumLinearityDefinition(registry))
     engine.register(KroneckerContractionDefinition())
     engine.register(WedgeEvalDefinition(registry))
     engine.register(MetricValueSymmetryDefinition())

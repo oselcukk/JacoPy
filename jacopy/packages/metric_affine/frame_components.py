@@ -158,6 +158,13 @@ class ConnectionForm(Atom):
 
     __slots__ = ("_connection_name", "_frame_name", "_upper", "_lower")
 
+    #: Alternation certificate (``admits_alternation``): ω^a_b is a
+    #: 1-form — one slot, so trivially alternating; its tensoriality
+    #: (∇_{hX} = h∇_X) is certified separately in ``modified.py``.
+    #: Without it wedges of connection forms evaluated plain-
+    #: multilinearly (completeness; audit 0b00e1b integration).
+    alternating_values = True
+
     def __init__(
         self,
         connection_name: str,

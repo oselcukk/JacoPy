@@ -73,6 +73,24 @@ class LieBracketVF(Derivation):
         return self._Y
 
     @property
+    def section_value(self) -> bool:
+        """Not a vector field — so not a derivation of C∞(M) — when an
+        operand is section-valued (a section of E ≠ TM, [u,v]_E, …) or
+        is KNOWN (without a registry) to be something other than a
+        vector (a form, a multivector, a function). An operand of
+        unknown type stays accepted (no registry here). Audit 0b00e1b
+        integration review, item 3."""
+        from jacopy.central.objects.kind import is_section_valued, kind_of
+
+        for op in (self._X, self._Y):
+            if is_section_valued(op):
+                return True
+            k = kind_of(op, None)
+            if k.known and k.kind != "vector":
+                return True
+        return False
+
+    @property
     def wedge_degree(self):
         """Multivector-grading contribution inside a Wedge: the Lie
         bracket of vector fields is again a 1-vector."""
