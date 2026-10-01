@@ -105,7 +105,11 @@ Predicate = Callable[[Expr], bool]
 def _refuse_scalar_contradiction(where, scalar, graded, noncomm) -> None:
     """Refuse an EFFECTIVE property combination that contradicts the
     Scalar contract (:class:`~jacopy.core.properties.Scalar` =
-    ℝ-constant, audit 0b00e1b M1-1): a constant has degree 0, so
+    ℝ-constant at WHATEVER level it is declared — exact, class or
+    predicate; audit 0b00e1b M1-1, chef decision). Deliberate contract
+    change: ``declare_for_class(Symbol, Scalar())`` followed by
+    ``declare(w, Graded(1))`` is REFUSED (main accepted it, but it
+    makes ``w`` a constant of degree 1). A constant has degree 0, so
     ``Graded(k)`` with ``k`` a non-zero constant contradicts it, and a
     declared ``NonCommuting`` contradicts "commutes with every
     operator". The arguments are what :meth:`PropertyRegistry.get`
@@ -190,10 +194,12 @@ class PropertyRegistry:
 
         return isinstance(prop, (Scalar, Graded, NonCommuting))
 
-    def _effective(self, expr, prop_cls, mro, exact=None, klass=None):
+    def _effective(self, expr, prop_cls, mro, exact=None, klass=None, pred=None):
         """What :meth:`get` would answer (untracked, predicates
         included when ``expr`` is given) with the pending ``exact``
-        ``(expr, prop)`` / ``klass`` ``(cls, prop)`` declaration."""
+        ``(expr, prop)`` / ``klass`` ``(cls, prop)`` / ``pred``
+        ``(predicate, prop)`` declaration (a new predicate is last in
+        registration order)."""
         if expr is not None:
             if exact is not None and exact[0] == expr and type(exact[1]) is prop_cls:
                 return self._filter(exact[1])
@@ -207,17 +213,18 @@ class PropertyRegistry:
             if prop is not None:
                 return self._filter(prop)
         if expr is not None:
-            for pred, p in self._by_predicate:
-                if isinstance(p, prop_cls) and pred(expr):
+            preds = list(self._by_predicate) + ([pred] if pred is not None else [])
+            for test, p in preds:
+                if isinstance(p, prop_cls) and test(expr):
                     return self._filter(p)
         return None
 
-    def _check_contract(self, expr, *, mro=None, exact=None, klass=None) -> None:
+    def _check_contract(self, expr, *, mro=None, exact=None, klass=None, pred=None) -> None:
         from jacopy.core.properties import Graded, NonCommuting, Scalar
 
         if mro is None:
             mro = type(expr).__mro__
-        look = lambda pc: self._effective(expr, pc, mro, exact, klass)  # noqa: E731
+        look = lambda pc: self._effective(expr, pc, mro, exact, klass, pred)  # noqa: E731
         _refuse_scalar_contradiction(
             expr if expr is not None else mro[0].__name__,
             look(Scalar), look(Graded), look(NonCommuting),
@@ -295,6 +302,13 @@ class PropertyRegistry:
             raise TypeError(
                 "declare_for_predicate: `prop` must be a Property"
             )
+        if self._contract_relevant(prop):
+            # effective answers of every exact-declared expression the
+            # predicate covers (expressions declared later are checked
+            # by declare itself)
+            for e in list(self._props):
+                if predicate(e):
+                    self._check_contract(e, pred=(predicate, prop))
         self._by_predicate.append((predicate, prop))
 
     # ---- query ----------------------------------------------------- #
@@ -343,17 +357,17 @@ class PropertyRegistry:
     def has(self, expr: Expr, prop_cls: Type[Property]) -> bool:
         return self.get(expr, prop_cls) is not None
 
-    def declared_exact(self, expr: Expr, prop_cls: Type[Property]) -> bool:
-        """Is a visible ``prop_cls`` declared on EXACTLY ``expr`` (no
-        class / predicate fallback)? NOT recorded as a read: a caller
-        whose result depends on a positive answer re-queries with
-        :meth:`get` so that answer becomes a hypothesis (negative
-        pre-filter answers do not pile up as requirements)."""
+    def peek(self, expr: Expr, prop_cls: Type[P]) -> Optional[P]:
+        """:meth:`get`'s answer WITHOUT recording a read: a pre-filter
+        for a caller whose result depends only on a POSITIVE answer,
+        which it then re-queries with :meth:`get` so the answer becomes
+        the step's hypothesis (negative answers do not pile up)."""
+        stack = getattr(_READS, "stack", None)
+        _READS.stack = None
         try:
-            prop = self._props.get(expr, {}).get(prop_cls)
-        except TypeError:  # unhashable
-            return False
-        return self._filter(prop) is not None
+            return self.get(expr, prop_cls)
+        finally:
+            _READS.stack = stack
 
     def all_for(self, expr: Expr) -> Iterator[Property]:
         """Yield every property visible for ``expr`` (after filters).

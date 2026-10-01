@@ -105,40 +105,46 @@ class Property:
 
 class ScalarContractError(ValueError):
     """A DECLARATION contradicts the :class:`Scalar` contract (a Scalar
-    is an ℝ-constant): ``Scalar`` together with ``Graded(k ≠ 0)`` or
-    ``NonCommuting`` (refused by the registry)."""
+    is an ℝ-constant): an expression whose EFFECTIVE registry answers
+    are ``Scalar`` together with ``Graded(k ≠ 0)`` or ``NonCommuting``
+    (refused by the registry at every declaration level)."""
 
 
 @dataclass(frozen=True)
 class Scalar(Property):
     """Expression is an ℝ-CONSTANT scalar (audit 0b00e1b M1-1 ≡ M1-2).
 
-    CONTRACT. ``Scalar`` means a real constant — not a smooth function:
+    CONTRACT (one meaning, at WHATEVER level it is declared — exact,
+    class or predicate). ``Scalar`` means a real constant, not a smooth
+    function:
 
-    * it commutes with every ℝ-linear operator, so it swaps freely in a
-      :class:`Product` and never contributes a Koszul sign (the neutral
-      case of the sign rule) — EXCEPT next to a factor declared
-      :class:`NonCommuting`, which takes precedence and never moves;
-    * every certified derivation annihilates it, ``D(c) = 0``
-      (:func:`~jacopy.algorithms.product_rule.product_rule`) — the
+    * it commutes with every ℝ-linear operator — a :class:`NonCommuting`
+      one included — so it swaps freely in a :class:`Product` and never
+      contributes a Koszul sign (``sort_product`` checks constants
+      before the NonCommuting block);
+    * every certified derivation annihilates it, ``D(c) = 0`` — the
       same fact that makes ``D∘c = c∘D`` (the swap above) true;
     * it is still a (constant) function: ``kind_of`` reports
       ``"function"`` and ``is_scalar_function`` holds.
 
+    The single predicate is
+    :func:`~jacopy.central.calculus.scalars.is_real_constant` (a numeral,
+    or an atom of function kind whose effective answer is Scalar); the
+    engine, sort_product, AgreementOnGenerators and the oracle all use
+    it, and the facts it relies on ("c is Scalar", its Graded) become
+    the hypotheses of the step, so a citation needs them too.
+
     A symbol that may have a non-zero derivative is a FUNCTION: declare
     it ``Graded(0)`` (as :func:`~jacopy.central.objects.function.functions`
-    does), never ``Scalar``. Declaring ``Scalar`` on ``x`` and also
-    supplying a rule ``D(x) ≠ 0`` is a contradictory input; the
-    declaration wins. Resolution:
-    only an EXACT Scalar declaration on an atom of kind function counts
-    (:func:`~jacopy.central.calculus.scalars.is_real_constant`), and the
-    expansion engine applies the recorded contract step
-    ``D(c) = 0`` (:class:`~jacopy.proof.expansion.ScalarConstantContract`)
-    BEFORE any registered rule — a rule giving ``c`` a non-zero
-    derivative is simply never used (it is not an error: rules that
-    would rewrite ``D(c)`` to an expression equal to 0 stay harmless).
-    The registry refuses ``Scalar`` together with ``Graded(k ≠ 0)`` or
-    ``NonCommuting`` (exact and class-level, :class:`ScalarContractError`).
+    does), never ``Scalar``. Declaring ``Scalar`` on ``x`` and supplying
+    a rule ``D(x) ≠ 0`` is a contradictory input; the declaration wins:
+    the engine applies the recorded contract step ``D(c) = 0``
+    (:class:`~jacopy.proof.expansion.ScalarConstantContract`) BEFORE any
+    registered rule, so such a rule is never used (not an error).
+    The registry refuses, by effective answers at every level,
+    ``Scalar`` together with ``Graded(k ≠ 0)`` or ``NonCommuting``
+    (:class:`ScalarContractError`) — deliberately also
+    ``declare_for_class(Symbol, Scalar())`` + ``declare(w, Graded(1))``.
     """
 
 
