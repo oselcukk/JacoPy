@@ -343,3 +343,32 @@ class TestReviewProbes:
         cite_step = ProofStep(x, x, rule="cite lemma", provenance_tag="theorem", cites=fake)
         req, _ = _classify((cite_step,))
         assert any(a.legacy and "unverifiable registry requirement" in a.name for a in req)
+
+    def test_forged_registry_record_cannot_keep_requires_verified(self):
+        # 047ddc8: the forgery check compared only (kind, name) — a registry
+        # record with key=None kept requires_verified, registry_facts == ()
+        # and the Scalar theorem was citable where x is not Scalar (P0-3 back)
+        import dataclasses
+
+        from jacopy.proof.result import Assumption
+
+        thm, src, tgt, lhs, rhs, _ = _scalar_theorem()
+        forged = tuple(
+            Assumption(a.kind, a.name, a.owner, a.instances, a.example, None) if a.kind == "registry" else a
+            for a in thm.requires
+        )
+        with pytest.raises(ValueError, match="not what the chain yields"):
+            dataclasses.replace(thm, requires=forged)
+        with pytest.raises(ValueError, match="not what the chain yields"):
+            dataclasses.replace(thm, requires=tuple(a for a in thm.requires if a.kind != "registry"))
+        with pytest.raises(ValueError, match="not what the chain yields"):
+            Theorem("x", "D x = x D", lhs, rhs, thm.proof, requires=forged, requires_verified=True)
+
+    def test_with_structural_requires_derives_once(self, monkeypatch):
+        import jacopy.proof.result as R
+
+        calls = []
+        orig = R.structural_requires
+        monkeypatch.setattr(R, "structural_requires", lambda t: calls.append(1) or orig(t))
+        _scalar_theorem()
+        assert len(calls) == 1

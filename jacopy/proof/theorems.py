@@ -29,6 +29,7 @@ extension once the first genuinely schematic theorem needs it.
 
 from __future__ import annotations
 
+import contextvars
 from dataclasses import dataclass, field
 from typing import Iterator, Optional, Tuple
 
@@ -58,6 +59,29 @@ GENERALITY_TAGS = (
     "symbolic-p",       # proved with symbolic degree (IndexedSum route)
     "instance",         # proved for a concrete instance (e.g. p=2)
 )
+
+
+#: the requirement tuple :meth:`Theorem.with_structural_requires` is
+#: installing right now (identity-checked: it was derived by the call)
+_JUST_DERIVED = contextvars.ContextVar("jacopy_theorem_just_derived", default=None)
+
+
+def _requirement_signature(reqs):
+    """A multiset of the requirement records with ALL their content."""
+    from collections import Counter
+
+    def norm(x):
+        try:
+            hash(x)
+            return x
+        except TypeError:
+            return repr(x)
+
+    return Counter(
+        (a.kind, a.name, norm(a.key), id(a.owner) if a.owner is not None else None,
+         norm(a.example), a.instances)
+        for a in reqs
+    )
 
 
 @dataclass(frozen=True)
@@ -137,20 +161,16 @@ class Theorem:
             raise TypeError("Theorem.requires must be a tuple of Assumption records")
         if not isinstance(self.requires_verified, bool):
             raise TypeError("Theorem.requires_verified must be a bool")
-        if self.requires_verified:
+        if self.requires_verified and _JUST_DERIVED.get() is not self.requires:
             # "derived" is a property of the record, not a flag a caller
             # sets (audit 0b00e1b-FULL M1-5): the requirements must be
-            # exactly what the chain yields
-            from collections import Counter
-
+            # EXACTLY what the chain yields — kind, name, key, owner,
+            # example and count of every record, structures included
+            # (review 2026-10-01 #2: a registry record with its key set
+            # to None kept requires_verified and lost its facts)
             from jacopy.proof.result import structural_requires
 
-            derived = structural_requires(self)
-
-            def sig(reqs):  # (the "structure" records name the owner, which an explicit transfer re-points)
-                return Counter((a.kind, a.name) for a in reqs if a.kind != "structure")
-
-            if sig(self.requires) != sig(derived):
+            if _requirement_signature(self.requires) != _requirement_signature(structural_requires(self)):
                 raise ValueError(
                     "Theorem.requires_verified=True but `requires` is not what the chain yields; "
                     "use Theorem.with_structural_requires()"
@@ -177,7 +197,14 @@ class Theorem:
 
         from jacopy.proof.result import structural_requires
 
-        return dataclasses.replace(self, requires=structural_requires(self), requires_verified=True)
+        derived = structural_requires(self)
+        # the tuple just derived here is installed without re-deriving it
+        # in __post_init__ (review 2026-10-01 #7); any other tuple is checked
+        token = _JUST_DERIVED.set(derived)
+        try:
+            return dataclasses.replace(self, requires=derived, requires_verified=True)
+        finally:
+            _JUST_DERIVED.reset(token)
 
     @property
     def requirements_derived(self) -> bool:
