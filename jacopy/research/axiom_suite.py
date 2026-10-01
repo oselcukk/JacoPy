@@ -102,7 +102,7 @@ class Bracket:
         *,
         name: Optional[str] = None,
     ) -> "Bracket":
-        """Eq. (7.3): ``[e₁,e₂]_Ψ = Ψ⁻¹[Ψe₁, Ψe₂]``."""
+        """[TW (7.3), arXiv:2409.11973]: ``[e₁,e₂]_Ψ = Ψ⁻¹[Ψe₁, Ψe₂]``."""
         inv = psi_inverse if psi_inverse is not None else psi.inverse()
         return Bracket(
             self._type,

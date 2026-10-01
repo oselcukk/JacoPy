@@ -18,11 +18,19 @@ Component dictionary produced here:
 * ``⟨form[0⊕e^a, 0⊕e^b]_θ, e_c⟩ = γ̃_c^{ab}`` — the Koszul side of
   the Poisson generalized double reproduces the TILDE anholonomy
   (PDF 12i, now read as a 14h component);
-* ``⟨e^c, ρ(0 ⊕ e^b)⟩ = θ(e^b, e^c)`` — the (2.6) anchor
+* ``⟨e^c, ρ(0 ⊕ e^b)⟩ = θ(e^b, e^c)`` — the [Watamura (2.6)] anchor
   ``ρ(U+ω) = θ♯ω`` decomposes into the bivector components on the
   coframe (pure frame vectors are killed: ``ρ(e_a ⊕ 0) = 0``).
 
 Everything is engine-normalized; honest-fail throughout.
+
+Citation note: "(2.6)" / "Watamura" = Asakawa, Muraki, Sasa & Watamura
+(2015), arXiv:1408.2649 (bibliography key AsakawaMurakiSasaWatamura2015)
+— no PDF in the repository, so that number is unverified. "(4.13)" /
+"(4.14)" in :func:`prove_boxtimes_components_are_413` are numbers of the
+"E6 paper", an UNIDENTIFIED source NOT in the repository (authors /
+arXiv id never recorded); they are unverified and are not
+arXiv:2409.11973 [TW] equation numbers.
 """
 
 from __future__ import annotations
@@ -254,7 +262,7 @@ def prove_anchor_components(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """``⟨e^c, ρ(0 ⊕ e^b)⟩ = θ(e^b, e^c)`` — the (2.6) anchor
+    """``⟨e^c, ρ(0 ⊕ e^b)⟩ = θ(e^b, e^c)`` — the [Watamura (2.6)] anchor
     ``ρ(U+ω) = θ♯ω`` decomposes into the BIVECTOR COMPONENTS on
     the coframe."""
     co = fr.dual()
@@ -284,7 +292,8 @@ def prove_anchor_components(
         from_axioms=(
             "total anchor + sharp evaluation definitions",
         ),
-        notes="ρ(0 ⊕ e^b) = θ♯e^b on the basis (Watamura (2.6))",
+        notes="ρ(0 ⊕ e^b) = θ♯e^b on the basis (Watamura (2.6), "
+        "arXiv:1408.2649 — no PDF in the repository, unverified)",
         label="anchor components normalize to 0",
     )
 
@@ -297,13 +306,13 @@ def prove_boxtimes_components_are_413(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """The (4.13) ↔ ⊛ COMPONENT IDENTITY (the last open item of
+    """The [E6 paper (4.13)] ↔ ⊛ COMPONENT IDENTITY (the last open item of
     ``examples/bracket_twist_research_interface``, 2026-09-10):
 
         ⟨e^c, (Π₃⊛Π₃)(e^{a₁}∧…∧e^{a₅})⟩ = 5 Π^{[a₁a₂a₃} Π^{a₄a₅]c}
 
-    — the (4.14) bundle map ``⊛ω₅ = ½Π₃(ι_{Π₃}ω₅)`` evaluated on a
-    basis 5-form has exactly the paper's antisymmetrised frame
+    — the [E6 paper (4.14)] bundle map ``⊛ω₅ = ½Π₃(ι_{Π₃}ω₅)`` evaluated
+    on a basis 5-form has exactly the E6 paper's antisymmetrised frame
     components. Left side: ``ι_{Π₃}`` on the decomposable coframe
     wedge (:class:`~jacopy.central.objects.multivector_interior.MultivectorInteriorDecomposableFormDefinition`),
     then the sharp's pairing face; right side: the antisymmetriser
@@ -394,7 +403,8 @@ def prove_boxtimes_components_are_413(
         name="boxtimes_components_are_413",
         statement="⟨e^c, (Π₃⊛Π₃)(e^{a₁}∧…∧e^{a₅})⟩ = "
         "5Π^{[a₁a₂a₃}Π^{a₄a₅]c} — the (4.14) bundle map ⊛ = ½Π₃∘ι_{Π₃} "
-        "has the paper's (4.13) frame components",
+        "has the E6 paper's (4.13) frame components (unidentified "
+        "source, not in the repository)",
         lhs=Sum(lhs, Neg(rhs)),
         rhs=Integer(0),
         proof=chain,
@@ -407,6 +417,8 @@ def prove_boxtimes_components_are_413(
             "sharp pairing evaluation on decomposable forms",
             "antisymmetriser definition",
         ),
-        notes="E6 paper (4.13)/(4.14) agree with the ½ normalisation",
+        notes="unidentified 'E6 paper' (not in the repository; numbers "
+        "unverified) (4.13)/(4.14): the ½ normalisation agrees with the "
+        "frame components as transcribed in this module",
     ).with_structural_requires()
     return chain, theorem

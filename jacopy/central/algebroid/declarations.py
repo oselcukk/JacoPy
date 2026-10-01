@@ -8,18 +8,19 @@ almost-Leibniz / local / pre-Leibniz / Leibniz algebroid". Undeclared
 axioms simply have no rule: the shapes they govern stay inert and
 proofs that need them fail with an honest residual.
 
-The rules (papers: B = pre-metric-bourbaki.pdf, MC =
-metric-connection.pdf):
+The rules (papers: B = Çatal-Özer, Dereli & Doğan, arXiv:2210.00548;
+MC = Dereli & Doğan, arXiv:2006.05957; each rule's ``source``
+attribute carries the structured citation):
 
-* ``right-leibniz`` [B 4.4 / MC 3.10]:
+* ``right-leibniz`` [B (4.4) / MC (3.10)]:
   ``[u, fv]_E → ρ(u)(f)·v + f·[u, v]_E``.
-* ``left-leibniz`` [MC 3.11]:
+* ``left-leibniz`` [MC (3.11)]:
   ``[fu, v]_E → −ρ(v)(f)·u + f·[u, v]_E + L(Df, u, v)`` — introduces
   the (still opaque) locality term; the locality structure itself is
   Phase 3.E.
-* ``anchor-morphism`` [B 4.5 / MC 3.19]:
+* ``anchor-morphism`` [B (4.5) / MC (3.19)]:
   ``ρ([u, v]_E) → [ρ(u), ρ(v)]_Lie``.
-* ``jacobi`` (Leibniz-Jacobi, [B 4.6]): carried by the
+* ``jacobi`` (Leibniz-Jacobi, [B (4.6)]): carried by the
   **Jacobiator node** — ``J^E(u,v,w) → 0``. A naive bracket-level
   rewrite ``[u,[v,w]] → [[u,v],w] + [v,[u,w]]`` would not terminate
   (it reproduces its own shape), so the declaration rewrites the
@@ -39,6 +40,7 @@ from typing import Optional
 
 from jacopy.algebra.derivation import Act
 from jacopy.algebra.lie_bracket_vf import LieBracketVF
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.expansion import Definition
@@ -68,6 +70,10 @@ class RightLeibnizDeclaration(Definition):
     """``[u, fv]_E → ρ(u)(f)·v + f·[u, v]_E`` (declared axiom)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = (
+        cite("DereliDogan2020", "Definition 3.4, Eq. (3.10)"),
+        cite("CatalOzerDereliDogan2022", "Definition 4.1, Eq. (4.4)"),
+    )
 
     anchor = AlgebroidBracket
 
@@ -100,6 +106,7 @@ class LeftLeibnizDeclaration(Definition):
     (declared axiom; the locality term stays opaque until 3.E)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite("DereliDogan2020", "Definition 3.5, Eq. (3.11)")
 
     anchor = AlgebroidBracket
 
@@ -137,6 +144,10 @@ class AnchorMorphismDeclaration(Definition):
     Phase 3.D theorem)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = (
+        cite("DereliDogan2020", "Eq. (3.19), Definition 3.8"),
+        cite("CatalOzerDereliDogan2022", "Definition 4.1, Eq. (4.5)"),
+    )
 
     anchor = AnchoredVF
 
@@ -165,6 +176,10 @@ class JacobiDeclaration(Definition):
     by the Jacobiator node)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = (
+        cite("CatalOzerDereliDogan2022", "Definition 4.1, Eq. (4.6)"),
+        cite("DereliDogan2020", "Eq. (3.20)"),
+    )
 
     anchor = Jacobiator
 
@@ -196,6 +211,7 @@ class AntisymmetryDeclaration(Definition):
     precedence via registration order."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite("DereliDogan2020", "Definition 3.15")
 
     anchor = AlgebroidBracket
 
@@ -231,9 +247,10 @@ class AntisymmetryDeclaration(Definition):
 
 class MetricInvarianceDeclaration(Definition):
     """``ρ(u)(g(v, w)) → g([u,v], w) + g(v, [u,w])`` (declared axiom
-    C1 [B 4.10] — the metric-compatibility of the bracket)."""
+    C1 [B (4.10)] — the metric-compatibility of the bracket)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite("CatalOzerDereliDogan2022", "Definition 4.3, Eq. (4.10)")
 
     anchor = Act
 
@@ -263,7 +280,7 @@ class MetricInvarianceDeclaration(Definition):
 
 
 class SymmetricPartDeclaration(Definition):
-    """The symmetric-part axiom C2 [B Def 4.2-4.3]:
+    """The symmetric-part axiom C2 [B Definitions 4.2–4.3, Eqs. (4.7)/(4.9)]:
     ``[u,v]_E + [v,u]_E = g⁻¹D g(u,v)``, applied in the COLLECTION
     direction: a same-signed pair ``±([u,v] … [v,u])`` inside a sum is
     replaced by ``±g⁻¹D g(u,v)``.
@@ -286,6 +303,11 @@ class SymmetricPartDeclaration(Definition):
     """
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = (
+        cite("CatalOzerDereliDogan2022", "Definition 4.2, Eq. (4.7)"),
+        cite("CatalOzerDereliDogan2022", "Definition 4.3, Eq. (4.9)"),
+        cite("DereliDogan2020", "Definition 4.1, Eq. (4.1)"),
+    )
 
     anchor = Sum
 

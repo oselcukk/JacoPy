@@ -42,6 +42,7 @@ from __future__ import annotations
 from typing import Optional
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Neg, Product, Rational, Sum
 from jacopy.core.indexed_sum import IndexedSum
 from jacopy.core.registry import PropertyRegistry
@@ -116,6 +117,9 @@ class AdmissibilityDeclaration(SymmetricPartDeclaration):
     and cycle-avoidance rationale inherited from the C2
     :class:`SymmetricPartDeclaration`."""
 
+    # overrides the inherited C2 source: this is a different axiom
+    source = cite("DereliDogan2023", "Definition 3.4")
+
     def __init__(
         self,
         alg: Algebroid,
@@ -182,6 +186,10 @@ class ModifiedTorsionFreeDeclaration(Definition):
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
 
     anchor = AlgebroidBracket
+    source = (
+        cite("DereliDogan2023", "Eq. (3.11)"),
+        cite("DereliDogan2020", "Definition 3.7, Eq. (3.16)"),
+    )
 
     def __init__(
         self,
@@ -238,6 +246,7 @@ class CourantLocalityDefinition(Definition):
     role = "assumption"
 
     anchor = LocalityOperator
+    source = cite("DereliDogan2020", "Proposition 4.1, Eq. (4.3)")
 
     def __init__(self, alg: Algebroid) -> None:
         if alg.is_tangent:
@@ -281,6 +290,7 @@ class MetricCompatibilityCollection(Definition):
     role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
 
     anchor = Sum
+    source = cite("DereliDogan2020", "Definition 3.3, Eqs. (3.6)–(3.7)")
 
     def __init__(self, alg: Algebroid, conn: Connection) -> None:
         self._alg = alg
@@ -479,7 +489,7 @@ def prove_courant_locality_generator(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """[MC Prop 4.1 / Bourbaki eq (4.8)]: the almost-Courant
+    """[MC Prop 4.1 / B (4.8)]: the almost-Courant
     symmetric part ``S(u,v) := g⁻¹(D g(u,v))`` satisfies the local
     consistency condition with the metric-generated locality
     operator:

@@ -1,11 +1,11 @@
-"""Drinfeld package — App D instantiation (tilde calculus).
+"""Drinfeld package — DD App D instantiation (tilde calculus; arXiv:2312.06584).
 
 Closed here, declaration-free (d²=0 / Cartan relations / Lie
-Jacobi): the Jacobi compatibility conditions (D.9), (D.11), (D.12),
+Jacobi): the Jacobi compatibility conditions DD (D.9), (D.11), (D.12),
 (D.13) at p = 1, 2.
 
 DIAGNOSED-OPEN (recorded, honest): the tilde CALCULUS conditions
-(D.5)-(D.7). The declared-FI machinery (node face + composed-action
+DD (D.5)-(D.7). The declared-FI machinery (node face + composed-action
 instance citations) reduces them to two known residual families —
 p = 1: the 5.E.2b bracket-pairing family; p ≥ 2: a g_Z-shaped family
 ``Π(d g_Z(ω, ι_W dη))`` that the bracket-morphism face of the FI
@@ -33,7 +33,7 @@ def _setup(p):
 
 @pytest.mark.parametrize("p", [1, 2])
 class TestJacobiCompatibility:
-    """(D.9)/(D.11)-(D.13): declaration-free closures."""
+    """DD (D.9)/(D.11)-(D.13): declaration-free closures."""
 
     def test_d9(self, p):
         reg, f, h, U, V, W, om, et, mu, slots, N = _setup(p)
@@ -65,7 +65,7 @@ class TestJacobiCompatibility:
 
 
 class TestCalculusConditionsClosed:
-    """(D.5)-(D.7) at p ≥ 2: CLOSED 2026-08-05 — the "g_Z family"
+    """DD (D.5)-(D.7) at p ≥ 2: CLOSED 2026-08-05 — the "g_Z family"
     residual turned out to be a DERIVABLE consequence of the FI
     itself (both orientations + Lie antisymmetry force
     Π(d g_Z) = 0, the FISharpPairingSwap rule), discovered via the
@@ -84,7 +84,7 @@ class TestCalculusConditionsClosed:
 
 
 class TestCalculusConditionsP1Closed:
-    """The p = 1 face of (D.5)-(D.7): CLOSED 2026-09-07 by the 6.J
+    """The p = 1 face of DD (D.5)-(D.7): CLOSED 2026-09-07 by the 6.J
     stall-time difference-test citation — the s-bridge (the 5.E.2b
     bracket-pairing family) and the FI-on-exacts family enter as
     ±/d/W/Π-paired instance lifts subtracted at stall points under a
@@ -143,7 +143,7 @@ class TestTildeBuildingBlocks:
 
 @pytest.mark.parametrize("p", [1, 2])
 class TestJacobiCompatibilityHeavy:
-    """(D.8)/(D.10): the 'heavy' pair — closes declaration-free at
+    """DD (D.8)/(D.10): the 'heavy' pair — closes declaration-free at
     the RAW expression level with the 6.E rule set (operator-level
     magic + lie-iota + interior anticommutation). The p = 1 Poisson
     counterparts (6.B, eqs 4.36/4.38) needed bridge-instance craft;

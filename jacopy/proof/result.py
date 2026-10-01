@@ -367,6 +367,7 @@ def _whole_step(before: Expr, after: Expr, local: ProofStep, *, at_site: bool = 
         provenance_tag=local.provenance_tag, owner=local.owner, role=getattr(local, "role", None),
         cites=getattr(local, "cites", None), key=getattr(local, "key", None),
         registry_facts=getattr(local, "registry_facts", ()),
+        source=getattr(local, "source", None),
     )
     # minted only when the local step is AND the caller's own rewrite
     # produced ``after`` at the local step's site (``at_site``: the
@@ -386,6 +387,7 @@ def _reversed_step(s: ProofStep) -> ProofStep:
         children=list(s.children), provenance_tag=s.provenance_tag, owner=s.owner, role=getattr(s, "role", None),
         cites=getattr(s, "cites", None), key=getattr(s, "key", None),
         registry_facts=getattr(s, "registry_facts", ()),
+        source=getattr(s, "source", None),
     )
     return _mint(rev) if is_minted(s) else rev
 

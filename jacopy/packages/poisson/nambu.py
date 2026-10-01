@@ -518,8 +518,9 @@ def prove_dorfman_form_reduces_to_koszul_at_p1(
 
 class NambuFIDeclaration(Definition):
     """The DECLARED fundamental identity, in its bracket-morphism
-    face on exact generators [drinfeld eq (6.9): the R-twist
-    ``[Πω,Πη] − Π[ω,η]`` vanishes iff ``Π`` is Nambu-Poisson]:
+    face on exact generators [DD (6.9), arXiv:2312.06584: the R-twist
+    ``[Πω,Πη] − Π[ω,η]``; that it vanishes iff ``Π`` is Nambu-Poisson
+    is the remark after DD (6.13), citing their ref. [122]]:
 
         (Π(L_{Πω} η))(h) → (Πω)(Πη(h)) − (Πη)(Πω(h))
 

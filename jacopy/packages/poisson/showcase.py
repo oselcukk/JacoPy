@@ -34,6 +34,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite as bib_cite
 from jacopy.algebra.lie_bracket_vf import LieBracketVF
 from jacopy.brackets.base import BracketApply
 from jacopy.core.expr import Expr, Integer, Neg, Product, Rational, Sum
@@ -475,6 +476,7 @@ def prove_poisson_jacobi(
             f"Poisson ({P.pi._repr_inner()}): [π, π]_SN = 0",
         ),
         notes="Jacobi ⟺ [π,π]_SN = 0, mechanized on the generators",
+        source=bib_cite("Math595Midterm2026", "Question 2(h)"),
     ).with_structural_requires()
     return chain, theorem
 

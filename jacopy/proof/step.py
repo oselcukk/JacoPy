@@ -85,6 +85,7 @@ class ProofStep:
         "_cites",
         "_key",
         "_registry_facts",
+        "_source",
         "__weakref__",
     )
 
@@ -114,6 +115,7 @@ class ProofStep:
         cites=None,
         key=None,
         registry_facts=(),
+        source=None,
     ) -> None:
         if not isinstance(before, Expr):
             raise TypeError("ProofStep.before must be an Expr")
@@ -148,6 +150,15 @@ class ProofStep:
         # 0b00e1b-FULL P0-3): ``RegistryFact`` records; a theorem whose
         # steps carry them is citable only where the registry agrees
         self._registry_facts = tuple(registry_facts or ())
+        # literature source of the licensing rule (metadata only: a
+        # :class:`jacopy.bibliography.Citation` or a tuple of them,
+        # copied from ``Definition.source`` / ``Theorem.source``); no
+        # proof logic reads it
+        if source is not None:
+            from jacopy.bibliography import as_citations
+
+            source = as_citations(source)
+        self._source = source or None
         self._children: List[ProofStep] = []
         if children:
             for ch in children:
@@ -215,6 +226,14 @@ class ProofStep:
         this step's computation consulted; ``()`` when it consulted none
         or its producer does not record them."""
         return self._registry_facts
+
+    @property
+    def source(self):
+        """The literature citations of the rule that fired — a tuple of
+        :class:`jacopy.bibliography.Citation`, or ``None`` when the rule
+        names no source (structural rewrites, hand-built steps).
+        Display metadata only."""
+        return self._source
 
     def add_child(self, step: "ProofStep") -> None:
         """Nest ``step`` under this one as a sub-proof."""

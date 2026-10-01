@@ -1,7 +1,7 @@
 """
 The exceptional Ψ_Π ROTATION (PDF item 13k; the long-reported
 missing slice): the exceptional Courant bracket on
-``TM ⊕ Λ² ⊕ Λ⁵`` conjugated by the E6 twist (4.10)-(4.12),
+``TM ⊕ Λ² ⊕ Λ⁵`` conjugated by the E6 twist [E6 paper (4.10)-(4.12)],
 
     [e₁, e₂]' := Ψ_Π⁻¹ [Ψ_Π e₁, Ψ_Π e₂]_exc,
 
@@ -24,6 +24,11 @@ every term" demand, on the triple decomposition):
 Together with :mod:`general_twist` (the abstract 13j transport
 suite) this delivers the full "rotate and separate" programme; the
 triple split (13k) is exercised on the genuine exceptional data.
+
+Citation note: every bare (4.10)–(4.15) in this module is a number of
+the "E6 paper" — an UNIDENTIFIED source that is NOT in the repository
+(authors / arXiv id were never recorded), so these numbers are
+unverified. They are not arXiv:2409.11973 [TW] equation numbers.
 """
 
 from __future__ import annotations
@@ -205,7 +210,8 @@ def prove_rotated_form_decomposition(
             "ℒ/ι direction-additivity (operator slot "
             "additivity)",
         ),
-        notes="E6 paper (4.10)-(4.15) territory, term-separated",
+        notes="unidentified 'E6 paper' (not in the repository; numbers "
+        "unverified) (4.10)-(4.15) territory, term-separated",
         labels=(
             "2-form slot decomposition normalizes to 0",
             "5-form slot decomposition normalizes to 0",
@@ -257,6 +263,7 @@ def prove_rotated_vector_decomposition(
             "exceptional bracket + (4.10)/(4.11) twist "
             "definitions",
         ),
-        notes="the (4.11) inverse, term-separated",
+        notes="the E6-paper (4.11) inverse (unidentified source, not in "
+        "the repository), term-separated",
         labels=("vector slot decomposition normalizes to 0",),
     )

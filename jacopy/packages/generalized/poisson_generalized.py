@@ -1,6 +1,7 @@
 """
-Poisson generalized geometry (Phase 7.B.2b; PDF item 14f, Watamura
-et al. [arXiv:1408.2649 §2.2, (2.6)-(2.7)]): the Courant algebroid
+Poisson generalized geometry (Phase 7.B.2b; project directive item 14f, Watamura
+et al. [arXiv:1408.2649 §2.2, (2.6)-(2.7)] — no local PDF; the
+labels are unverified here): the Courant algebroid
 ``(TM)₀ ⊕ (T*M)_θ`` over a Poisson base — the Lie bialgebroid
 double whose **T*M side carries the Koszul structure** (bracket
 ``[·,·]_θ``, anchor ``θ♯``) and whose **TM side is TRIVIAL** (zero
@@ -11,7 +12,7 @@ bracket, zero anchor — the ``(TM)₀`` subscript of the paper):
     form:   [ω, η]_θ                      (2.7),
 
 with coboundary ``D_θ(h) = ½·(d̃h, 0) = ½·(−θ♯dh, 0)`` (Uchino
-Rem 1 normalization: ``⟨D_θh, x⟩₊ = ½ρ(x)h``). In particular the
+Remark 1 normalization: ``⟨D_θh, x⟩₊ = ½ρ(x)h``). In particular the
 anchor KILLS pure vectors and the bracket of two pure vectors is
 ZERO — direct consequences of (2.6)-(2.7) (2026-09-09 audit,
 finding 2: an earlier revision wrongly exposed the TRIANGULAR/LWX
@@ -57,6 +58,7 @@ from jacopy.core.expr import (
     Rational,
     Sum,
 )
+from jacopy.bibliography import cite
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.multi_eval import MultiEval
 from jacopy.proof.chain import ProofChain
@@ -165,7 +167,7 @@ def theta_courant(
 ) -> Tuple[Expr, Expr]:
     """The TILDE-Courant bracket — the skew-symmetrization:
     ``[x,y]_{C,θ} = [x,y]_{D,θ} − D_θ⟨x,y⟩₊`` component-wise
-    (PDF 14f.ii)."""
+    (directive 14f.ii)."""
     vec, form = theta_dorfman(N, U, omega, V, eta)
     D_vec, D_form = d_operator_theta(
         N, canonical_pairing(U, omega, V, eta)
@@ -238,6 +240,7 @@ def _zero_theorem(
     from_axioms,
     notes: str,
     labels,
+    source=None,
 ) -> Tuple[ProofChain, Theorem]:
     steps: List[ProofStep] = []
     for label, diff in zip(labels, diffs):
@@ -267,6 +270,7 @@ def _zero_theorem(
         generality="generic-function",
         from_axioms=from_axioms,
         notes=notes,
+        source=source,
     ).with_structural_requires()
     return chain, theorem
 
@@ -303,7 +307,7 @@ def prove_theta_courant_skew(
             "Koszul antisymmetry + tilde Cartan magic "
             "(D_θ = ½(−θ♯dh, 0))",
         ),
-        notes="PDF 14f.ii / Watamura §2",
+        notes="directive 14f.ii / Watamura §2",
         labels=(
             "vector component normalizes to 0",
             "form component normalizes to 0",
@@ -361,7 +365,7 @@ def prove_theta_right_leibniz(
             "tilde-Dorfman + (2.6) anchor definitions",
             "Koszul/tilde calculus Leibniz rules",
         ),
-        notes="PDF 14f / Watamura §2.2",
+        notes="directive 14f / Watamura §2.2",
         labels=(
             "vector component normalizes to 0",
             "form component normalizes to 0",
@@ -413,7 +417,7 @@ def prove_theta_symmetric_part(
             "tilde-Dorfman + pairing + D_θ definitions",
             "Koszul antisymmetry + tilde Cartan magic",
         ),
-        notes="PDF 14f / Watamura §2.2",
+        notes="directive 14f / Watamura §2.2",
         labels=(
             "vector component normalizes to 0",
             "form component normalizes to 0",
@@ -538,6 +542,15 @@ def _theta_jacobi_instances(engine, N, forms3, vectors, h, registry):
     return deep
 
 
+#: [C'1] (Leibniz-Jacobi of a Dorfman bracket, Uchino Remark 2.3) for the
+#: Poisson-generalized double of Watamura et al. §2.2 (no local PDF:
+#: that locator is unverified)
+THETA_JACOBI_SOURCE = (
+    cite("Uchino2002", "Remark 2.3, axiom [C'1]"),
+    cite("AsakawaMurakiSasaWatamura2015", "Section 2.2"),
+)
+
+
 def prove_theta_jacobi(
     N: NambuPoissonStructure,
     U: Expr,
@@ -637,7 +650,8 @@ def prove_theta_jacobi(
             "vector-field Jacobi identity (theorem instances)",
             "tilde-Dorfman + Koszul/tilde calculus definitions",
         ),
-        notes="PDF 14f / Watamura §2.2 — [C'1] closed 2026-09-10",
+        notes="directive 14f / Watamura §2.2 — [C'1] closed 2026-09-10",
+        source=THETA_JACOBI_SOURCE,
     ).with_structural_requires()
     return chain, theorem
 
@@ -650,7 +664,7 @@ def prove_theta_d_pairing_value(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """The Uchino Rem 1 normalization of the θ-coboundary:
+    """The Uchino Remark 1 normalization of the θ-coboundary:
 
     ``⟨D_θh, x⟩₊ = ½·ρ(x)(h)``
 
@@ -676,10 +690,11 @@ def prove_theta_d_pairing_value(
             "D_θ + pairing + (2.6) anchor definitions",
             "bivector antisymmetry",
         ),
-        notes="PDF 14f",
+        notes="directive 14f; Uchino (2002) Remark 1",
         labels=(
             "pairing value normalizes to the anchor action",
         ),
+        source=cite("Uchino2002", "Remark 1"),
     )
 
 
@@ -903,7 +918,7 @@ def prove_theta_invariance(
             else ()
         ),
         notes=(
-            "PDF 14f.i / Watamura §2 — the 14f.i deferral CLOSES"
+            "directive 14f.i / Watamura §2 — the 14f.i deferral CLOSES"
         ),
         labels=("invariance defect normalizes to 0",),
     )

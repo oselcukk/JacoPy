@@ -31,6 +31,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple
 
 from jacopy.algebra.derivation import Act, Derivation
+from jacopy.bibliography import cite
 from jacopy.core.expr import Atom, Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -193,6 +194,7 @@ class MetricValueSymmetryDefinition(Definition):
 
     name = "metric symmetry: g(Y, X) = g(X, Y) (canonical order)"
     anchor = MetricValue
+    source = cite("DereliDogan2020", "Section 2, definition of metric-affine geometries")
 
     def matches(self, expr: Expr) -> bool:
         return (
@@ -209,6 +211,7 @@ class MetricValueBilinearityDefinition(Definition):
 
     name = "metric bilinearity: g(fX + W, Y) = f·g(X,Y) + g(W,Y) (both slots)"
     anchor = MetricValue
+    source = cite("DereliDogan2020", "Section 2, definition of metric-affine geometries")
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
         self._registry = registry
@@ -545,6 +548,7 @@ class NonMetricityExpansionDefinition(Definition):
 
     name = "non-metricity definition: Q(X,Y,Z) = X(g(Y,Z)) − g(∇_X Y,Z) − g(Y,∇_X Z)"
     anchor = NonMetricity
+    source = cite("DereliDogan2020", "Eqs. (2.6)–(2.7)")
 
     def matches(self, expr: Expr) -> bool:
         return isinstance(expr, NonMetricity)
@@ -585,6 +589,7 @@ class MetricCompatibilityDefinition(Definition):
     ``(∇, g)`` pair (the tangent analogue of the algebroid C1)."""
 
     role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    source = cite("DereliDogan2020", "Section 2, remark after Eq. (2.7)")
 
     anchor = Act
 
@@ -624,6 +629,7 @@ class TorsionFreeDefinition(Definition):
     declared torsion-free connection)."""
 
     role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    source = cite("DereliDogan2020", "Section 2, remark after Eq. (2.9)")
 
     anchor = LieBracketVF
 

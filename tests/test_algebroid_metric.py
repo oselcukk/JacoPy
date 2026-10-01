@@ -53,7 +53,7 @@ class TestMetricLevels:
 
     def test_derivable_axioms_absent(self, setup):
         """Honesty of the levels: metric/pre-courant/courant do NOT
-        hand out right-Leibniz ([B 4.11] derives it); courant does NOT
+        hand out right-Leibniz ([B (4.11)] derives it); courant does NOT
         hand out anchor-morphism (4.11 + the 3.D theorem derive it)."""
         for level in ("metric", "pre-courant", "courant"):
             assert not algebroid("E", declare=(level,)).declares(
@@ -322,7 +322,7 @@ class TestSymmetricPart:
 
 
 # --------------------------------------------------------------------- #
-# Honesty: [B 4.11] is NOT free                                          #
+# Honesty: [B (4.11)] is NOT free                                          #
 # --------------------------------------------------------------------- #
 
 
@@ -355,7 +355,7 @@ class TestHonesty:
 
 
 # --------------------------------------------------------------------- #
-# Phase 3.E.3 — the [B 4.11] tactics                                     #
+# Phase 3.E.3 — the [B (4.11)] tactics                                     #
 # --------------------------------------------------------------------- #
 
 

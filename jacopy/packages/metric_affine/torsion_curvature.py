@@ -27,6 +27,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple
 
 from jacopy.algebra.derivation import Act, Derivation
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -219,6 +220,7 @@ ETorsionExpansionDefinition` with the algebroid bracket)."""
 
     name = "torsion definition: T(X,Y) = ∇_X Y − ∇_Y X − [X,Y]"
     anchor = Torsion
+    source = cite("DereliDogan2020", "Eq. (2.9)")
 
     def matches(self, expr: Expr) -> bool:
         from jacopy.central.objects.bundle import TangentBundle
@@ -244,6 +246,7 @@ class CurvatureExpansionDefinition(Definition):
         "curvature definition: R(X,Y)Z = ∇_X∇_Y Z − ∇_Y∇_X Z − ∇_{[X,Y]}Z"
     )
     anchor = Curvature
+    source = cite("DereliDogan2020", "Eq. (2.12)")
 
     def matches(self, expr: Expr) -> bool:
         from jacopy.central.objects.bundle import TangentBundle

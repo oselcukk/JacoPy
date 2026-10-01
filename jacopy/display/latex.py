@@ -87,6 +87,37 @@ _UNICODE_TO_LATEX: Dict[str, str] = {
     "…": r"\dots", "⋯": r"\cdots",
     "≤": r"\leq", "≥": r"\geq", "≠": r"\neq",
     "±": r"\pm", "×": r"\times", "÷": r"\div",
+    # further glyphs that occur in rule names / statements (audit
+    # 0b00e1b-FULL K1-9, T3-2): every one maps to a math command
+    "ϕ": r"\phi", "ϵ": r"\epsilon", "ϑ": r"\vartheta", "ϖ": r"\varpi",
+    "µ": r"\mu", "ð": r"\eth",
+    "⊂": r"\subset", "⊆": r"\subseteq", "⊃": r"\supset", "∉": r"\notin",
+    "∀": r"\forall", "∃": r"\exists", "¬": r"\neg",
+    "≡": r"\equiv", "≈": r"\approx", "≅": r"\cong", "∼": r"\sim", "≃": r"\simeq",
+    "∪": r"\cup", "∩": r"\cap", "∅": r"\emptyset", "∖": r"\setminus",
+    "∑": r"\sum", "∏": r"\prod", "∫": r"\int", "√": r"\surd",
+    "⊥": r"\perp", "∥": r"\parallel", "†": r"\dagger", "⋅": r"\cdot",
+    "∗": r"\ast", "⊙": r"\odot", "⊖": r"\ominus", "⊞": r"\boxplus",
+    "⊠": r"\boxtimes", "⋊": r"\rtimes", "⋉": r"\ltimes", "⊲": r"\triangleleft",
+    "⟦": r"[\![", "⟧": r"]\!]", "⌊": r"\lfloor", "⌋": r"\rfloor",
+    "⇐": r"\Leftarrow", "⟵": r"\longleftarrow", "⟶": r"\longrightarrow",
+    "↪": r"\hookrightarrow", "↠": r"\twoheadrightarrow", "↑": r"\uparrow", "↓": r"\downarrow",
+    "ℏ": r"\hbar", "ℓ": r"\ell", "℘": r"\wp", "ℑ": r"\Im", "ℜ": r"\Re",
+    "ℂ": r"\mathbb{C}", "ℕ": r"\mathbb{N}", "ℤ": r"\mathbb{Z}", "ℚ": r"\mathbb{Q}",
+    "ℋ": r"\mathcal{H}", "ℐ": r"\mathcal{I}", "ℛ": r"\mathcal{R}", "ℬ": r"\mathcal{B}",
+    "ℰ": r"\mathcal{E}", "ℱ": r"\mathcal{F}", "ℳ": r"\mathcal{M}",
+    "ℭ": r"\mathfrak{C}", "ℌ": r"\mathfrak{H}", "ℨ": r"\mathfrak{Z}",
+    "°": r"^{\circ}", "″": "''",
+    "½": r"\tfrac{1}{2}", "⅓": r"\tfrac{1}{3}", "¼": r"\tfrac{1}{4}", "⅔": r"\tfrac{2}{3}",
+    "¾": r"\tfrac{3}{4}",
+    "•": r"\bullet", "§": r"\S", "⌟": r"\lrcorner", "⌞": r"\llcorner", "∓": r"\mp",
+    "⟸": r"\Longleftarrow", "⟪": r"\langle\!\langle", "⟫": r"\rangle\!\rangle",
+}
+
+#: text-mode punctuation (never math)
+_TEXT_PUNCT: Dict[str, str] = {
+    "’": "'", "‘": "`", "“": "``", "”": "''", "–": "--", "—": "---",
+    "\u00a0": "~", "\u202f": "\\,", "\u2009": "\\,",
 }
 
 _SUBSCRIPT_DIGITS = dict(zip("₀₁₂₃₄₅₆₇₈₉", "0123456789"))
@@ -99,9 +130,9 @@ _MULTICHAR_SUB = re.compile(r"_(\w{2,})")
 _COMBINING_TILDE_CHAR = "\u0303"
 _COMBINING_DOT_CHAR = "\u0307"
 _COMBINING_HAT_CHAR = "\u0302"
-_MATH_COMBINING_TILDE_RE = re.compile(rf"(.)({_COMBINING_TILDE_CHAR})")
-_MATH_COMBINING_DOT_RE = re.compile(rf"(.)({_COMBINING_DOT_CHAR})")
-_MATH_COMBINING_HAT_RE = re.compile(rf"(.)({_COMBINING_HAT_CHAR})")
+_MATH_COMBINING_TILDE_RE = re.compile(rf"([^_^{{}}\s\\])({_COMBINING_TILDE_CHAR})")
+_MATH_COMBINING_DOT_RE = re.compile(rf"([^_^{{}}\s\\])({_COMBINING_DOT_CHAR})")
+_MATH_COMBINING_HAT_RE = re.compile(rf"([^_^{{}}\s\\])({_COMBINING_HAT_CHAR})")
 
 
 def _brace_nested_subscripts(name: str) -> str:
@@ -160,11 +191,250 @@ def latex_name(name: str) -> str:
     name = _MATH_COMBINING_HAT_RE.sub(
         lambda m: "\\hat{" + m.group(1) + "}", name
     )
+    name = _script_letters(name)
     name = _scripts(name)
     name = _brace_nested_subscripts(name)
     name = _glyphs(name)
     name = _MULTICHAR_SUB.sub(lambda m: "_{" + m.group(1) + "}", name)
-    return name
+    return _fix_scripts(_math_fallback(name))
+
+
+def _take_group(s: str, i: int):
+    """``(group text, end)`` for the brace group opening at ``s[i]``."""
+    depth = 0
+    for j in range(i, len(s)):
+        if s[j] == "\\":
+            continue
+        if s[j] == "{" and (j == 0 or s[j - 1] != "\\"):
+            depth += 1
+        elif s[j] == "}" and s[j - 1] != "\\":
+            depth -= 1
+            if depth == 0:
+                return s[i : j + 1], j + 1
+    return s[i:] + "}" * depth, len(s)
+
+
+def _fix_scripts(s: str) -> str:
+    """Make every sub/superscript well formed (audit review: no input
+    may yield LaTeX that does not compile): a script with no argument
+    gets ``{}``, a script whose argument is itself a script is braced
+    (``x^_{i}`` → ``x^{_{i}}``), a second ``_`` (``^``) on the same base
+    gets an empty base ``{}`` first (``x_{i}_j`` → ``x_{i}{}_j``)."""
+    out: list[str] = []
+    have: set = set()
+    i, n = 0, len(s)
+    while i < n:
+        c = s[i]
+        if c in "_^":
+            if c in have:
+                out.append("{}")
+                have = set()
+            have.add(c)
+            out.append(c)
+            i += 1
+            while i < n and s[i] == " ":
+                i += 1
+            if i >= n:
+                out.append("{}")
+                break
+            if s[i] in "_^":
+                # the argument is a script itself: brace it with its own argument
+                j = i + 1
+                if j < n and s[j] == "{":
+                    grp, j = _take_group(s, j)
+                elif j < n and s[j] == "\\":
+                    m = _CMD_ARG_RE.match(s, j)
+                    grp, j = m.group(0), m.end()
+                elif j < n:
+                    grp, j = s[j], j + 1
+                else:
+                    grp = "{}"
+                out.append("{" + s[i] + _fix_scripts(grp) + "}")
+                i = j
+            elif s[i] == "{":
+                grp, i = _take_group(s, i)
+                out.append("{" + _fix_scripts(grp[1:-1]) + "}")
+            elif s[i] == "\\":
+                # braced: a macro like \\notin is not a valid bare script
+                m = _CMD_ARG_RE.match(s, i)
+                out.append("{" + m.group(0) + "}")
+                i = m.end()
+            elif s[i] == "'":
+                out.append("{'}")
+                i += 1
+            elif s[i] == "}":
+                out.append("{}")
+            else:
+                out.append(s[i])
+                i += 1
+            continue
+        if c == "{":
+            grp, i = _take_group(s, i)
+            out.append("{" + _fix_scripts(grp[1:-1]) + "}")
+            have = set()
+            continue
+        if c == "\\":
+            m = _CMD_ARG_RE.match(s, i)
+            out.append(m.group(0))
+            i = m.end()
+            have = set()
+            continue
+        if c == "'":
+            # a prime IS a superscript: after one, start a new base
+            if "^" in have and not (out and out[-1] == "'"):
+                out.append("{}")
+            out.append(c)
+            have = {"'", "^"}  # a prime is a superscript (x'^2 is not x^{\prime}^2 …)
+            i += 1
+            continue
+        if c != " ":
+            have = set()
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+#: a command with its brace argument(s) (``\\mathcal{L}``, ``\\tfrac{1}{2}``)
+_CMD_ARG_RE = re.compile(r"\\(?:[A-Za-z]+|.)(?:\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})*")
+
+
+#: combining marks of PRECOMPOSED letters (NFD) → text-mode accents
+_TEXT_ACCENTS = {
+    "̀": "\\`", "́": "\\'", "̂": "\\^", "̃": "\\~",
+    "̄": "\\=", "̆": "\\u", "̇": "\\.", "̈": '\\"',
+    "̊": "\\r", "̋": "\\H", "̌": "\\v", "̧": "\\c",
+    "̨": "\\k",
+}
+
+_TEXT_SPECIAL_LETTERS = {
+    "ı": r"{\i}", "ß": r"{\ss}", "ø": r"{\o}", "Ø": r"{\O}", "æ": r"{\ae}",
+    "Æ": r"{\AE}", "œ": r"{\oe}", "Œ": r"{\OE}", "ł": r"{\l}", "Ł": r"{\L}",
+    "å": r"{\aa}", "Å": r"{\AA}",
+}
+
+
+def _math_char(ch: str):
+    """LaTeX MATH for one non-ASCII character, or ``None`` when no
+    rule applies. Table first, then Unicode-name heuristics: sub- and
+    superscript letters (``ᵢ`` → ``_{i}``, ``ᴸ`` → ``^{L}``) and the
+    mathematical alphanumerics (``𝔖`` → ``\\mathfrak{S}``)."""
+    import unicodedata
+
+    if ch in _UNICODE_TO_LATEX:
+        return _UNICODE_TO_LATEX[ch]
+    try:
+        uname = unicodedata.name(ch)
+    except ValueError:
+        return None
+    base = unicodedata.normalize("NFKC", ch)
+    if base == ch:
+        return None
+    if base.isascii() and base.isprintable():
+        inner = base
+    elif len(base) == 1 and base in _UNICODE_TO_LATEX:
+        inner = _UNICODE_TO_LATEX[base]  # 𝜔 → ω → \omega
+    else:
+        return None
+    if "SUBSCRIPT" in uname:
+        return "_{" + inner + "}"
+    if "SUPERSCRIPT" in uname or uname.startswith("MODIFIER LETTER"):
+        return "^{" + inner + "}"
+    if "FRAKTUR" in uname or "BLACK-LETTER" in uname:
+        return r"\mathfrak{" + inner + "}"
+    if "DOUBLE-STRUCK" in uname:
+        return r"\mathbb{" + inner + "}"
+    if "SCRIPT" in uname:
+        return r"\mathcal{" + inner + "}"
+    if "BOLD" in uname:
+        return r"\mathbf{" + inner + "}"
+    if "SANS-SERIF" in uname:
+        return r"\mathsf{" + inner + "}"
+    if "MONOSPACE" in uname:
+        return r"\mathtt{" + inner + "}"
+    if uname.startswith(("MATHEMATICAL", "FULLWIDTH")):
+        return inner
+    return None
+
+
+def _warn_unmapped(ch: str) -> None:
+    import warnings
+
+    warnings.warn(
+        f"jacopy.display.latex: no LaTeX mapping for {ch!r} (U+{ord(ch):04X}); rendered as '?'",
+        stacklevel=4,
+    )
+
+
+def _math_fallback(text: str) -> str:
+    """Map every remaining non-ASCII character of a MATH snippet; an
+    unknown one becomes a visible ``?`` (and a warning) instead of a
+    pdfLaTeX error (audit 0b00e1b-FULL K1-9)."""
+    if text.isascii():
+        return text
+    out = []
+    for ch in text:
+        if ch.isascii():
+            out.append(ch)
+            continue
+        m = _math_char(ch)
+        if m is None:
+            _warn_unmapped(ch)
+            m = r"\text{?}"
+        if m[-1].isalpha():
+            m += " "  # never glue a command to a following letter
+        out.append(m)
+    return "".join(out)
+
+
+def _text_char(ch: str) -> str:
+    """LaTeX TEXT for one non-ASCII character: punctuation, accented
+    letters (``ğ`` → ``\\u{g}``), math glyphs lifted with
+    ``\\ensuremath``; unknown ones become a visible ``?``."""
+    import unicodedata
+
+    if ch in _TEXT_PUNCT:
+        return _TEXT_PUNCT[ch]
+    if ch in _TEXT_SPECIAL_LETTERS:
+        return _TEXT_SPECIAL_LETTERS[ch]
+    if ch in _TEXT_ACCENTS:  # a combining mark with no base letter
+        return _TEXT_ACCENTS[ch] + "{}"
+    m = _math_char(ch)
+    if m is not None:
+        return f"\\ensuremath{{{m}}}"
+    nfd = unicodedata.normalize("NFD", ch)
+    if len(nfd) >= 2 and nfd[0].isascii() and all(c in _TEXT_ACCENTS for c in nfd[1:]):
+        out = nfd[0]
+        for mark in nfd[1:]:
+            out = f"{_TEXT_ACCENTS[mark]}{{{out}}}"
+        return out
+    _warn_unmapped(ch)
+    return r"\textbf{?}"
+
+
+def _script_letters(name: str) -> str:
+    """Unicode sub/superscript LETTERS (``ᵢ``, ``ₐ``, ``ᴸ``, ``ᵍ``) →
+    ``_{i}`` / ``^{L}``; directly after an explicit ``_`` / ``^`` only
+    the letter is kept (``T_ᵢ`` → ``T_i``, never a double script)."""
+    if name.isascii():
+        return name
+    import unicodedata
+
+    out: list[str] = []
+    for ch in name:
+        if ch.isascii() or ch in _SUBSCRIPT_DIGITS or ch in _SUPERSCRIPT_DIGITS or ch == "⁻":
+            out.append(ch)
+            continue
+        m = _math_char(ch)
+        if m and m[:2] in ("_{", "^{") and ch not in _UNICODE_TO_LATEX:
+            if out and out[-1] == m[0]:
+                out.append(m[2:-1])
+            elif out and out[-1].startswith(m[:2]) and out[-1].endswith("}"):
+                out[-1] = out[-1][:-1] + m[2:]  # ᵢⱼ → _{ij}
+            else:
+                out.append(m)
+        else:
+            out.append(ch)
+    return "".join(out)
 
 
 def _glyphs(name: str) -> str:
@@ -735,7 +1005,7 @@ def _escape_text(text: str) -> str:
     into ``\\ensuremath{…}`` so a ``\\text{…}`` argument built from a
     rule name or a theorem statement is pdfLaTeX-safe."""
     text = (
-        text.replace("\\", r"\textbackslash{}")
+        text.replace("\\", "\x00")  # placeholder: escaped braces must not hit it
         .replace("_", r"\_")
         .replace("#", r"\#")
         .replace("%", r"\%")
@@ -747,6 +1017,7 @@ def _escape_text(text: str) -> str:
         .replace("~", r"\textasciitilde{}")
         .replace("<", r"\textless{}")
         .replace(">", r"\textgreater{}")
+        .replace("\x00", r"\textbackslash{}")
     )
     text = _COMBINING_TILDE_RE.sub(
         lambda m: f"\\ensuremath{{\\tilde{{{m.group(1)}}}}}", text
@@ -772,60 +1043,391 @@ def _escape_text(text: str) -> str:
     for glyph, cmd in _UNICODE_TO_LATEX.items():
         if glyph in text:
             text = text.replace(glyph, f"\\ensuremath{{{cmd}}}")
+    if not text.isascii():
+        text = "".join(c if c.isascii() else _text_char(c) for c in text)
     return text
 
 
-def step_to_latex(step: ProofStep) -> str:
-    r"""Render a single :class:`ProofStep` as ``before \to after
-    \quad \text{[rule]}`` (justification appended unless it merely
-    repeats the rule)."""
+def text_to_latex(text: str) -> str:
+    """Public: escape free text (a rule name, a statement, a citation)
+    for LaTeX TEXT mode — special characters escaped, accented letters
+    as accent commands, Unicode math glyphs as ``\\ensuremath{…}``.
+    The result is pure ASCII and pdfLaTeX-safe."""
+    if not isinstance(text, str):
+        raise TypeError("text_to_latex: expected a str")
+    return _escape_text(text)
+
+
+# ---- line breaking (audit 0b00e1b-FULL T3-2) ----------------------- #
+
+#: default line budget of a transcript row, in "visible units" (about
+#: one glyph each; sub/superscripts count less) — calibrated against
+#: pdfLaTeX's ``article`` text width at ``\small``
+DEFAULT_WIDTH = 62
+
+_CMD_RE = re.compile(r"\\([A-Za-z]+|.)")
+_INVISIBLE_CMDS = {
+    "left", "right", "bigl", "bigr", "Bigl", "Bigr", ",", "!", ";", ":", " ",
+    "quad", "qquad", "mathcal", "mathbb", "mathfrak", "mathbf", "mathrm",
+    "mathsf", "mathtt", "text", "operatorname", "tilde", "hat", "dot", "bar",
+    "overline", "widetilde", "widehat", "ensuremath", "textit", "textbf",
+}
+
+
+def _visible_len(latex: str) -> float:
+    """A rough width estimate of a LaTeX math snippet: commands count
+    as one glyph (spacing / delimiter-sizing ones as none), braces as
+    none, sub/superscript material as 0.7."""
+    n = 0.0
+    depth_script = 0
+    i = 0
+    stack: list[bool] = []
+    script_next = False
+    while i < len(latex):
+        c = latex[i]
+        if c == "\\":
+            m = _CMD_RE.match(latex, i)
+            name = m.group(1)
+            i = m.end()
+            if name not in _INVISIBLE_CMDS:
+                n += 0.7 if depth_script else 1.0
+            continue
+        if c in "_^":
+            script_next = True
+            i += 1
+            continue
+        if c == "{":
+            stack.append(script_next)
+            if script_next:
+                depth_script += 1
+            script_next = False
+            i += 1
+            continue
+        if c == "}":
+            if stack and stack.pop():
+                depth_script -= 1
+            i += 1
+            continue
+        if c != " ":
+            n += 0.7 if (depth_script or script_next) else 1.0
+        script_next = False
+        i += 1
+    return n
+
+
+def _pieces(expr: Expr, width: float) -> list[str]:
+    """Break ``expr`` into pieces that may be set on separate lines:
+    the summands of a top-level sum; a long parenthesised sum inside a
+    summand (``f·(a + b + …)``, ``−(a + b + …)``) is opened up with
+    ``\\bigl( … \\bigr)`` (which, unlike ``\\left/\\right``, may span
+    lines)."""
+    whole = to_latex(expr)
+    if _visible_len(whole) <= width:
+        return [whole]
+    if isinstance(expr, Sum):
+        out: list[str] = []
+        for i, child in enumerate(expr.children):
+            sign = ""
+            body = child
+            if isinstance(child, Neg):
+                sign, body = ("- " if i > 0 else "-"), child.arg
+            elif i > 0:
+                sign = "+ "
+            rendered = to_latex(body, (_P_NEG if sign.strip() == "-" else _P_SUM) + 1)
+            if _visible_len(rendered) <= width:
+                out.append(sign + rendered)
+                continue
+            sub = _open_up(body, width)
+            if sub is None:
+                out.append(sign + rendered)
+            else:
+                sub[0] = sign + sub[0]
+                out.extend(sub)
+        return out
+    if isinstance(expr, Neg):
+        sub = _open_up(expr.arg, width)
+        if sub is not None:
+            sub[0] = "-" + sub[0]
+            return sub
+    sub = _open_up(expr, width)
+    return sub if sub is not None else [whole]
+
+
+def _open_up(expr: Expr, width: float):
+    """Pieces of a too-long non-sum term, or ``None`` if it cannot be
+    opened: a sum is parenthesised with ``\\bigl(…\\bigr)``; a product
+    with sum factors opens each long sum factor in place."""
+    if isinstance(expr, Sum):
+        inner = _pieces(expr, width)
+        if len(inner) == 1:
+            return None
+        inner[0] = "\\bigl(" + inner[0]
+        inner[-1] = inner[-1] + "\\bigr)"
+        return inner
+    if isinstance(expr, Product):
+        out: list[str] = []
+        prefix = ""
+        opened = False
+        for c in expr.children:
+            r = to_latex(c, _P_PRODUCT + 1)
+            if isinstance(c, Sum) and _visible_len(r) > width / 2:
+                inner = _pieces(c, width)
+                if len(inner) > 1:
+                    inner[0] = prefix + "\\bigl(" + inner[0]
+                    inner[-1] = inner[-1] + "\\bigr)"
+                    out.extend(inner[:-1])
+                    prefix = inner[-1] + " \\, "
+                    opened = True
+                    continue
+            prefix += r + " \\, "
+        if not opened:
+            return None
+        out.append(prefix[: -len(" \\, ")])
+        return out
+    return None
+
+
+def _fill(pieces: list[str], width: float) -> list[str]:
+    """Greedy line filling of breakable pieces."""
+    lines: list[str] = []
+    cur = ""
+    for p in pieces:
+        if cur and _visible_len(cur) + _visible_len(p) + 1 > width:
+            lines.append(cur)
+            cur = p
+        else:
+            cur = f"{cur} {p}" if cur else p
+    if cur:
+        lines.append(cur)
+    # a dangling \bigl( / \bigr) pair split over lines is balanced by
+    # construction (each piece list opens and closes once)
+    return lines
+
+
+def math_lines(expr: Expr, width: float = DEFAULT_WIDTH) -> list[str]:
+    """``expr`` rendered as LaTeX math, broken into lines of about
+    ``width`` visible units at summand boundaries (public; used by the
+    transcript renderers)."""
+    if not isinstance(expr, Expr):
+        raise TypeError("math_lines: expected an Expr")
+    return _fill(_pieces(expr, width), width)
+
+
+def _wrap_words(text: str, width: float) -> list[str]:
+    """Split plain text into lines of about ``width`` characters at
+    spaces (before escaping, so no command is cut)."""
+    words = text.split()
+    lines: list[str] = []
+    cur = ""
+    for w in words:
+        if cur and len(cur) + 1 + len(w) > width:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = f"{cur} {w}" if cur else w
+    if cur:
+        lines.append(cur)
+    return lines or [""]
+
+
+# ---- citations -------------------------------------------------------- #
+
+#: in-text citation styles: ``"apa"`` prints the APA string (one
+#: pdfLaTeX pass, no extra tools); ``"biblatex"`` emits
+#: ``\parencite`` commands for ``biblatex`` + ``style=apa`` + biber
+CITE_STYLES = ("apa", "biblatex")
+
+
+def _bib_postnote(locator: str) -> str:
+    # brackets in a biblatex postnote must be braced
+    return text_to_latex(locator).replace("[", "{[}").replace("]", "{]}")
+
+
+def cite_to_latex(source, style: str = "apa") -> str:
+    """The in-text citation of a ``source`` (a
+    :class:`~jacopy.bibliography.Citation` or a tuple of them) in TEXT
+    mode: APA string, or biblatex ``\\parencites`` commands."""
+    from jacopy.bibliography import as_citations, in_text
+
+    if style not in CITE_STYLES:
+        raise ValueError(f"cite style must be one of {CITE_STYLES}, got {style!r}")
+    cits = as_citations(source)
+    if not cits:
+        return ""
+    if style == "apa":
+        return in_text(cits, "latex")
+    return _parencites(cits)
+
+
+def _parencites(cits) -> str:
+    """ONE ``\\parencites`` group for all works of a source: works in APA
+    order, the locators of one work merged into one postnote."""
+    from jacopy.bibliography import BIBLIOGRAPHY, _ref_sort_key, apa_locator
+
+    by_work: dict = {}
+    for c in cits:
+        locs = by_work.setdefault(c.key, [])
+        if c.locator and c.locator not in locs:
+            locs.append(c.locator)
+    parts = []
+    for k in sorted(by_work, key=lambda k: _ref_sort_key(BIBLIOGRAPHY[k])):
+        note = ", ".join(apa_locator(l) for l in by_work[k])
+        parts.append((f"[{_bib_postnote(note)}]" if note else "") + f"{{{k}}}")
+    return "\\parencites" + "".join(parts)
+
+
+#: line budget of TEXT rows (rule names, citations, justifications),
+#: in characters at ``\\small`` on the default page
+TEXT_WIDTH = 78
+
+
+def _cite_rows(ind: str, label: str, source, style: str) -> list[str]:
+    """Aligned TEXT rows ``label (Author, year, locator; …)`` wrapped at
+    :data:`TEXT_WIDTH` (APA; an italic no-author title split across rows
+    is closed and reopened), or one ``\\parencites`` row (biblatex)."""
+    from jacopy.bibliography import as_citations, in_text
+
+    cits = as_citations(source)
+    if not cits:
+        return []
+    if style != "apa":
+        return [f"&{ind}\\textit{{{_escape_text(label)} {cite_to_latex(cits, style)}}}"]
+    # \x01 … \x02 mark italic (no-author) titles through wrapping and
+    # escaping; a title split across rows is closed and reopened
+    marked = in_text(cits, "sentinel")
+    rows, open_it = [], False
+    for line in _wrap_words(f"{label} {marked}", TEXT_WIDTH):
+        out = ["\\textit{"] if open_it else []
+        for ch in _escape_text(line):
+            if ch == "\x01":
+                out.append("\\textit{")
+                open_it = True
+            elif ch == "\x02":
+                out.append("}")
+                open_it = False
+            else:
+                out.append(ch)
+        if open_it:
+            out.append("}")
+        rows.append(f"&{ind}\\text{{{''.join(out)}}}")
+    return rows
+
+
+def _sub_sources(step: ProofStep):
+    from jacopy.bibliography import chain_sources
+
+    return chain_sources(step.children)
+
+
+# ---- steps, chains, theorems ------------------------------------------ #
+
+
+def _step_rows(step: ProofStep, *, width: float, cite_style: str, depth: int, max_depth: int) -> list[str]:
+    """The ``aligned`` rows of one step (and, up to ``max_depth``, of
+    its sub-steps, indented)."""
+    ind = "\\quad " * depth
+    rows: list[str] = []
+    tag = f" ({step.provenance_tag})" if step.provenance_tag else ""
+    for line in _wrap_words(f"[{step.rule}]{tag}", TEXT_WIDTH):
+        rows.append(f"&{ind}\\text{{{_escape_text(line)}}}")
+    rows.extend(_cite_rows(ind, "Source:", step.source, cite_style))
+    before = math_lines(step.before, width - 3 * depth)
+    after = math_lines(step.after, width - 3 * depth)
+    for k, line in enumerate(before):
+        rows.append(f"&{ind}\\quad {line}" if k == 0 else f"&{ind}\\qquad {line}")
+    for k, line in enumerate(after):
+        rows.append(f"&{ind}\\to {line}" if k == 0 else f"&{ind}\\qquad {line}")
+    just = step.justification or ""
+    just_strip = just.removeprefix("apply axiom: ").removeprefix("apply theorem: ").removeprefix("apply ")
+    if just and just_strip != step.rule:
+        for line in _wrap_words(f"--- {just}", TEXT_WIDTH):
+            rows.append(f"&{ind}\\textit{{{_escape_text(line)}}}")
+    if step.children:
+        if depth < max_depth:
+            for ch in step.children:
+                rows.extend(_step_rows(ch, width=width, cite_style=cite_style, depth=depth + 1, max_depth=max_depth))
+        else:
+            rows.extend(_cite_rows(ind, "Sub-steps cite:", _sub_sources(step), cite_style))
+    return rows
+
+
+def step_to_latex(
+    step: ProofStep, *, width: float = DEFAULT_WIDTH, cite_style: str = "apa", max_depth: int = 0
+) -> str:
+    r"""Render a :class:`ProofStep` as an ``aligned`` block (math mode):
+    the rule name and provenance tag (``\text{[rule] (axiom)}``), the
+    literature source of the rule (APA in-text citation), ``before`` and
+    ``\to after`` broken at summand boundaries into lines of about
+    ``width`` visible units, and the justification. Sub-steps are shown
+    indented up to ``max_depth``; deeper ones are summarised by the
+    sources they cite."""
     if not isinstance(step, ProofStep):
         raise TypeError("step_to_latex: expected a ProofStep")
-    before = to_latex(step.before)
-    after = to_latex(step.after)
-    rule = _escape_text(step.rule)
-    tag = f"\\,({step.provenance_tag})" if step.provenance_tag else ""
-    annotation = f"\\text{{[{rule}]{tag}}}"
-    just = step.justification or ""
-    just_strip = just.removeprefix("apply axiom: ").removeprefix("apply ")
-    if just and just_strip != step.rule:
-        annotation = annotation + f"\\;\\text{{--- {_escape_text(just)}}}"
-    return f"{before} \\to {after} \\quad {annotation}"
+    rows = _step_rows(step, width=width, cite_style=cite_style, depth=0, max_depth=max_depth)
+    return "\\begin{aligned}[t]\n" + " \\\\\n".join(rows) + "\n\\end{aligned}"
 
 
-def chain_to_latex(chain: ProofChain, *, max_steps: int | None = None) -> str:
-    r"""Render a :class:`ProofChain` as a ``gather*`` block (one
-    independent row per top-level step; nested sub-proofs are not
-    expanded — see :func:`jacopy.display.jupyter.display_chain_collapsible`
-    for the tree view). ``max_steps`` truncates long transcripts with
-    an explicit ellipsis row."""
+def chain_to_latex(
+    chain: ProofChain,
+    *,
+    max_steps: int | None = None,
+    width: float = DEFAULT_WIDTH,
+    cite_style: str = "apa",
+    max_depth: int = 0,
+) -> str:
+    r"""Render a :class:`ProofChain` as a ``gather*`` block, one
+    :func:`step_to_latex` row per top-level step (page breaks allowed
+    between steps). ``max_steps`` truncates long transcripts with an
+    explicit ellipsis row; ``max_depth`` unfolds sub-proofs."""
     if not isinstance(chain, ProofChain):
         raise TypeError("chain_to_latex: expected a ProofChain")
     if len(chain) == 0:
         return "\\begin{gather*}\n\\text{(empty proof chain)}\n\\end{gather*}"
     steps = list(chain.steps)
-    rows = [step_to_latex(s) for s in (steps if max_steps is None else steps[:max_steps])]
+    shown = steps if max_steps is None else steps[:max_steps]
+    rows = [
+        f"\\text{{\\textbf{{({i})}}}}\\ {step_to_latex(s, width=width, cite_style=cite_style, max_depth=max_depth)}"
+        for i, s in enumerate(shown, 1)
+    ]
     if max_steps is not None and len(steps) > max_steps:
         rows.append(f"\\vdots \\quad \\text{{({len(steps) - max_steps} more steps)}}")
-    body = " \\\\\n".join(rows)
+    body = " \\\\[1ex]\n".join(rows)
     return (
-        "{\\allowdisplaybreaks\\scriptsize\n"
+        "{\\allowdisplaybreaks\\small\n"
         f"\\begin{{gather*}}\n{body}\n\\end{{gather*}}\n"
         "}"
     )
 
 
-def theorem_to_latex(theorem: Theorem, *, with_proof: bool = True, max_steps: int | None = None) -> str:
+def theorem_to_latex(
+    theorem: Theorem,
+    *,
+    with_proof: bool = True,
+    max_steps: int | None = None,
+    cite_style: str = "apa",
+    max_depth: int = 0,
+) -> str:
     r"""Render a :class:`Theorem` as a ``theorem``-style paragraph:
-    the statement (escaped text), the proven equation ``lhs = rhs`` in
-    display math, the assumptions it depends on, and (optionally) the
-    proof transcript."""
+    the statement (escaped text) with the theorem's literature source,
+    the proven equation ``lhs = rhs`` in display math (broken into
+    lines when long), the assumptions it depends on, and (optionally)
+    the proof transcript."""
     if not isinstance(theorem, Theorem):
         raise TypeError("theorem_to_latex: expected a Theorem")
-    lines = [
+    src = cite_to_latex(getattr(theorem, "source", None), cite_style)
+    head = (
         f"\\paragraph{{Theorem ({_escape_text(theorem.name)}).}} "
-        f"{_escape_text(theorem.statement)}",
-        f"\\[ {to_latex(theorem.lhs)} = {to_latex(theorem.rhs)} \\]",
+        f"{_escape_text(theorem.statement)}"
+    )
+    if src:
+        head += f" {src}"
+    lhs = math_lines(theorem.lhs)
+    rhs = math_lines(theorem.rhs)
+    eq_rows = [f"&{l}" if k == 0 else f"&\\quad {l}" for k, l in enumerate(lhs)]
+    eq_rows += [f"&= {r}" if k == 0 else f"&\\quad {r}" for k, r in enumerate(rhs)]
+    lines = [
+        head,
+        "\\begin{align*}\n" + " \\\\\n".join(eq_rows) + "\n\\end{align*}",
         f"\\noindent\\textit{{Generality:}} {_escape_text(theorem.generality)}.",
     ]
     if theorem.from_axioms:
@@ -835,7 +1437,7 @@ def theorem_to_latex(theorem: Theorem, *, with_proof: bool = True, max_steps: in
         lines.append(f"\\noindent\\textit{{Notes:}} {_escape_text(theorem.notes)}")
     if with_proof:
         lines.append("\\noindent\\textit{Proof.}")
-        lines.append(chain_to_latex(theorem.proof, max_steps=max_steps))
+        lines.append(chain_to_latex(theorem.proof, max_steps=max_steps, cite_style=cite_style, max_depth=max_depth))
     return "\n".join(lines)
 
 
@@ -845,14 +1447,56 @@ def theorem_to_latex(theorem: Theorem, *, with_proof: bool = True, max_steps: in
 
 
 _DEFAULT_PREAMBLE = (
+    r"\usepackage[utf8]{inputenc}" "\n"
+    r"\usepackage[T1]{fontenc}" "\n"
     r"\usepackage{amsmath}" "\n"
     r"\usepackage{amssymb}" "\n"
-    r"\usepackage[utf8]{inputenc}" "\n"
+    r"\usepackage[margin=2.5cm]{geometry}" "\n"
 )
 
 
-def _document(body: str, *, title: str, author: str, preamble_extras: str) -> str:
+#: how a document lists its references: ``"apa"`` (a ``References``
+#: section typeset from :mod:`jacopy.bibliography`, one pdfLaTeX pass),
+#: ``"biblatex"`` (an embedded ``.bib`` + ``biblatex``/``style=apa``;
+#: needs pdflatex → biber → pdflatex), or ``None`` (no list)
+REFERENCE_MODES = ("apa", "biblatex", None)
+
+
+def references_to_latex(citations) -> str:
+    """A ``References`` section (APA 7, hanging indent) for the works
+    behind ``citations``; ``""`` when there are none."""
+    from jacopy.bibliography import apa_reference, cited_references
+
+    refs = cited_references(citations)
+    if not refs:
+        return ""
+    items = "\n".join(f"\\par {apa_reference(r, 'latex')}" for r in refs)
+    return (
+        "\\section*{References}\n"
+        "{\\setlength{\\parindent}{-2em}\\setlength{\\leftskip}{2em}\\raggedright\n"
+        f"{items}\\par}}\n"
+    )
+
+
+def _document(
+    body: str,
+    *,
+    title: str,
+    author: str,
+    preamble_extras: str,
+    citations=(),
+    references: str | None = "apa",
+) -> str:
+    if references not in REFERENCE_MODES:
+        raise ValueError(f"references must be one of {REFERENCE_MODES}, got {references!r}")
+    from jacopy.bibliography import bibtex_entries
+
     lines = [r"\documentclass{article}", _DEFAULT_PREAMBLE.rstrip()]
+    if references == "biblatex" and citations:
+        lines.append("\\begin{filecontents*}[overwrite]{\\jobname.bib}\n"
+                     + bibtex_entries(citations) + "\\end{filecontents*}")
+        lines.append(r"\usepackage[style=apa,backend=biber]{biblatex}")
+        lines.append(r"\addbibresource{\jobname.bib}")
     if preamble_extras:
         lines.append(preamble_extras.rstrip())
     if title:
@@ -863,8 +1507,16 @@ def _document(body: str, *, title: str, author: str, preamble_extras: str) -> st
     if title or author:
         lines.append(r"\maketitle")
     lines.append(body)
+    if references == "apa" and citations:
+        lines.append(references_to_latex(citations).rstrip())
+    elif references == "biblatex" and citations:
+        lines.append(r"\printbibliography")
     lines.append(r"\end{document}")
     return "\n".join(lines) + "\n"
+
+
+def _cite_style_for(references: str | None) -> str:
+    return "biblatex" if references == "biblatex" else "apa"
 
 
 def chain_to_latex_document(
@@ -874,13 +1526,21 @@ def chain_to_latex_document(
     author: str = "",
     preamble_extras: str = "",
     max_steps: int | None = None,
+    references: str | None = "apa",
+    max_depth: int = 0,
 ) -> str:
-    r"""Wrap :func:`chain_to_latex` in a pdfLaTeX-ready ``article``."""
+    r"""Wrap :func:`chain_to_latex` in a pdfLaTeX-ready ``article`` that
+    ends with the reference list of every source the chain cites (sub-
+    steps included). ``references="apa"`` (default) compiles in one
+    pdfLaTeX run; ``"biblatex"`` uses ``biblatex-apa`` + biber."""
     if not isinstance(chain, ProofChain):
         raise TypeError("chain_to_latex_document: expected a ProofChain")
+    from jacopy.bibliography import chain_sources
+
     return _document(
-        chain_to_latex(chain, max_steps=max_steps),
+        chain_to_latex(chain, max_steps=max_steps, cite_style=_cite_style_for(references), max_depth=max_depth),
         title=title, author=author, preamble_extras=preamble_extras,
+        citations=chain_sources(chain.steps), references=references,
     )
 
 
@@ -891,14 +1551,21 @@ def theorem_to_latex_document(
     preamble_extras: str = "",
     with_proof: bool = True,
     max_steps: int | None = None,
+    references: str | None = "apa",
+    max_depth: int = 0,
 ) -> str:
     r"""Wrap :func:`theorem_to_latex` in a pdfLaTeX-ready ``article``
-    titled by the theorem's name."""
+    titled by the theorem's name, with its reference list."""
     if not isinstance(theorem, Theorem):
         raise TypeError("theorem_to_latex_document: expected a Theorem")
+    from jacopy.bibliography import as_citations, chain_sources
+
+    cits = as_citations(getattr(theorem, "source", None)) + (chain_sources(theorem.proof.steps) if with_proof else ())
     return _document(
-        theorem_to_latex(theorem, with_proof=with_proof, max_steps=max_steps),
+        theorem_to_latex(theorem, with_proof=with_proof, max_steps=max_steps,
+                         cite_style=_cite_style_for(references), max_depth=max_depth),
         title=theorem.name, author=author, preamble_extras=preamble_extras,
+        citations=cits, references=references,
     )
 
 

@@ -1,10 +1,10 @@
 """Metric-affine package — Phase 4.E.1: linear E-connections and the
-pseudo E-torsion/E-curvature [MC Def 3.2-3.3, Prop 3.3].
+pseudo E-torsion/E-curvature [MC Definition 3.2, Eqs. (3.8)–(3.9)].
 
 The punchlines: the pseudo-torsion's first slot carries the locality
 DEFECT (why the modified ᴸT exists), and the E-curvature's last-slot
-tensoriality is exactly the anchor-morphism condition (MC Prop 3.3,
-conditional + honest)."""
+tensoriality is exactly the anchor-morphism condition (MC (3.19) +
+Proposition 3.3, conditional + honest)."""
 
 import pytest
 
@@ -109,7 +109,7 @@ class TestPseudoTorsion:
 
 class TestECurvatureConditional:
     def test_last_slot_closes_under_morphism(self, setup):
-        """MC Prop 3.3: the ΓΓ-free obstruction is exactly the anchor
+        """MC (3.19) + Proposition 3.3: the ΓΓ-free obstruction is exactly the anchor
         commutator; pre-Leibniz kills it."""
         reg, f, *_ = setup
         E = algebroid("E", Bundle("E"), declare=("pre-leibniz",))
@@ -131,7 +131,7 @@ class TestECurvatureConditional:
 
     def test_closes_on_leibniz_via_cited_flagship(self, setup):
         """On a Leibniz algebroid the morphism is derived (3.D) and
-        cited — MC Prop 3.3 meets the flagship theorem."""
+        cited — MC (3.19) + Proposition 3.3 meets the flagship theorem."""
         reg, f, *_ = setup
         E = algebroid("E", Bundle("E"), declare=("leibniz",))
         u, v, w = E.sections("u v w")

@@ -1,13 +1,15 @@
 """
 LWX Courant-algebroid axiomatics and the Uchino redundancy theorems
-(Phase 7.A) [uchino.pdf, math/0204010].
+(Phase 7.A) [Uchino 2002, arXiv:math/0204010].
 
-The Liu-Weinstein-Xu definition lists five axioms [C1]-[C5] plus the
+The Liu-Weinstein-Xu definition (quoted in Uchino Section 1 from
+his ref. [2] = LWX 1997) lists five axioms [C1]-[C5] plus the
 defining relation ``D = ½β⁻¹ρ*d``. Uchino's remark: **[C3] (the
 Leibniz rule with pairing defect), [C4] (ρ∘D = 0) and the D-formula
 are REDUNDANT** — they follow from [C2] (anchor morphism), [C5]
 (invariance of the pairing) and the bare Leibniz rule (L) for the
-otherwise-arbitrary map ``D : C^∞(M) → ΓE``.
+otherwise-arbitrary map ``D : C^∞(M) → ΓE`` (the label (L) is
+Uchino's own, Section 2; LWX has no such label).
 
 Mechanization strategy (definition policy §1 — nothing derivable is
 assumed):
@@ -27,7 +29,9 @@ assumed):
   (the D-term-carrying analogue of the metric-invariance rule C1);
 * [C2] is the Phase 3 ``anchor-morphism`` declaration.
 
-The proofs are the [B 4.11] two-leg tactic (Phase 3.E): expand the
+The proofs are the two-leg tactic of Phase 3.E (the derivation
+behind [B Eq. (4.11)]: the right-Leibniz rule from the invariance
+(4.10) + non-degeneracy): expand the
 same anchored action of a pairing two ways, subtract, strip the
 generic probe section by non-degeneracy, solve. Honest-fail: without
 the [C5] declaration each proof stalls with a residual.
@@ -38,6 +42,7 @@ from __future__ import annotations
 from typing import Any, List, Optional, Tuple
 
 from jacopy.algebra.derivation import Act, Derivation
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Product, Rational, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -77,7 +82,7 @@ class CourantD(Derivation):
     Its only structure at this layer is the Leibniz rule (L)
     (:class:`DLeibnizDefinition`). Everything else about it —
     ``(Df, y) = ½ρ(y)(f)``, ``ρ∘D = 0`` — is a THEOREM (Uchino
-    Prop 2.1-2.2), never a defining rule.
+    Propositions 2.1(ii) and 2.2), never a defining rule.
     """
 
     # Not a derivation: D(f) is a section of E; its only law is (L) in f, not Leibniz on an operand.
@@ -142,6 +147,8 @@ class DLeibnizDefinition(Definition):
     """
 
     role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    # (L) is Uchino's own label (Section 2, "the Leibniz rule (L)")
+    source = cite("Uchino2002", "Section 2, Leibniz rule (L)")
 
     anchor = CourantD
 
@@ -187,16 +194,21 @@ class DLeibnizDefinition(Definition):
 
 
 class CourantInvarianceDeclaration(Definition):
-    """[C5] — the declared invariance axiom of the LWX definition:
+    """[C5] — the declared invariance axiom of the LWX definition
+    (Uchino Section 1, quoting LWX = his ref. [2]):
 
     ``ρ(x)(y, z) → ([x,y] + D(x,y), z) + (y, [x,z] + D(x,z))``
 
     where ``D(x,y)`` abbreviates ``D`` applied to the pairing
     function ``(x, y)``. The D-term-carrying analogue of the Phase 3
-    metric-invariance rule C1 [B 4.10].
+    metric-invariance rule C1 [B Eq. (4.10)].
     """
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = (
+        cite("Uchino2002", "Section 1, axiom [C5]"),
+        cite("LiuWeinsteinXu1997"),
+    )
 
     anchor = Act
 
@@ -232,8 +244,8 @@ class CourantInvarianceDeclaration(Definition):
 
 
 class C3IdentityDeclaration(Definition):
-    """The Prop 2.1(i) IDENTITY assumed as a rewrite (for Rem 2.1,
-    where it is the hypothesis):
+    """The Prop 2.1(i) IDENTITY assumed as a rewrite (for Uchino
+    Remark 2.1, where it is the hypothesis):
 
     ``[x, f·R] → f·[x,R] + ρ(x)(f)·R − (x, R)·D(f)``
 
@@ -245,6 +257,10 @@ class C3IdentityDeclaration(Definition):
     """
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = (
+        cite("Uchino2002", "Proposition 2.1(i)"),
+        cite("Uchino2002", "Remark 2.1"),
+    )
 
     anchor = AlgebroidBracket
 
@@ -318,13 +334,19 @@ class SkewSwapCompositeDefinition(Definition):
 
     The Phase 3 :class:`AntisymmetryDeclaration` deliberately fires
     on plain slots only (linearity splits keep precedence there);
-    the Uchino 2.2 derivation needs the swap exactly where the LEFT
+    the Uchino Prop 2.2 derivation needs the swap exactly where the LEFT
     slot is composite, so the right-slot Leibniz theorem (Prop
     2.1(i)) can open the result. Same axiom, different site — the
     sign rule holds for ALL sections.
     """
 
     role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    # skew-symmetry is part of the LWX definition ("a skew-symmetric
+    # bracket [ , ] on ΓE"), quoted in Uchino Section 1
+    source = (
+        cite("Uchino2002", "Section 1, definition of a Courant algebroid"),
+        cite("LiuWeinsteinXu1997"),
+    )
 
     anchor = AlgebroidBracket
 
@@ -379,6 +401,8 @@ class DPairingUnfoldDefinition(CitedTheoremMixin, Definition):
     which :func:`prove_d_pairing_formula` succeeds; every step cites
     that theorem, so its declared requirements ([C5], (L), skew) flow
     into the result instead of it reading assumption-free."""
+
+    source = cite("Uchino2002", "Proposition 2.2")
 
     anchor = EMetric
 
@@ -440,6 +464,11 @@ class DDZeroDefinition(CitedTheoremMixin, Definition):
     both propositions are proved; each step cites the combined record
     (:func:`_dd_zero_theorem`), whose requirements flow into the
     result."""
+
+    source = (
+        cite("Uchino2002", "Proposition 2.1(ii)"),
+        cite("Uchino2002", "Proposition 2.2"),
+    )
 
     anchor = (EMetric, Act)
 
@@ -526,7 +555,11 @@ def _dd_zero_theorem(alg: Algebroid) -> Theorem:
         rhs=Integer(0),
         proof=ProofChain(list(run.chain)),
         generality="generic-function",
-        notes="uchino.pdf Prop 2.1(ii), Prop 2.2",
+        notes="Uchino (2002) Prop 2.1(ii), Prop 2.2",
+        source=(
+            cite("Uchino2002", "Proposition 2.1(ii)"),
+            cite("Uchino2002", "Proposition 2.2"),
+        ),
     ).with_structural_requires()
 
 
@@ -545,7 +578,7 @@ class DNumericHomogeneityDeclaration(Definition):
     non-degeneracy; ``D(c) = 0`` is the ``f = 1`` case combined with
     ``D(1) = 0`` (from (L): ``D(1·1) = 2·D(1)``). The mechanical
     derivation is :func:`prove_d_numeric_homogeneity`; the classical
-    Rem 2.2 corollary therefore needs NO extra axiom. (The class
+    Remark 2.2 corollary therefore needs NO extra axiom. (The class
     name is kept for API stability; ``Declaration`` is historical —
     the rule cites a theorem.)"""
 
@@ -868,9 +901,10 @@ def prove_left_leibniz_c3(
             "non-degeneracy of the pairing (definitional)",
         ),
         notes=(
-            "uchino.pdf Prop 2.1(i): ρ(x)(f·y, w) expanded two ways "
+            "Uchino (2002) Prop 2.1(i): ρ(x)(f·y, w) expanded two ways "
             "against a generic probe section w"
         ),
+        source=cite("Uchino2002", "Proposition 2.1(i)"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -1017,9 +1051,10 @@ def prove_anchor_annihilates_d(
             "non-degeneracy of the pairing (definitional)",
         ),
         notes=(
-            "uchino.pdf Prop 2.1(ii): ρ([x, f·y])(h) expanded two "
+            "Uchino (2002) Prop 2.1(ii): ρ([x, f·y])(h) expanded two "
             "ways; the defect is (x,y)·ρ(Df)(h)"
         ),
+        source=cite("Uchino2002", "Proposition 2.1(ii)"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -1223,9 +1258,10 @@ def prove_d_pairing_formula(
             "non-degeneracy of the pairing (definitional)",
         ),
         notes=(
-            "uchino.pdf Prop 2.2: ρ(f·x)(y,y) expanded two ways; "
+            "Uchino (2002) Prop 2.2: ρ(f·x)(y,y) expanded two ways; "
             "the defect is (x,y)·(2(Df,y) − ρ(y)f)"
         ),
+        source=cite("Uchino2002", "Proposition 2.2"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -1441,9 +1477,10 @@ def prove_leibniz_from_c3(
             "non-degeneracy of the pairing (definitional)",
         ),
         notes=(
-            "uchino.pdf Rem 2.1: [x, f·g·y] peeled two ways; no "
+            "Uchino (2002) Remark 2.1: [x, f·g·y] peeled two ways; no "
             "(L) rule is registered in either engine"
         ),
+        source=cite("Uchino2002", "Remark 2.1"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -1463,7 +1500,8 @@ def prove_bracket_with_d(
     ``[x, Df] + D((x, Df)) = D(ρ(x)(f))``.
 
     This is the raw pre-collapse form. The classical Courant
-    property ``[x, Df] = D((x, Df))`` [Roytenberg] follows by the
+    property ``[x, Df] = D((x, Df))`` [Roytenberg 1999 / Roytenberg-
+    Weinstein 1998, Uchino refs. [4], [5]] follows by the
     ℝ-homogeneity ``D(c·h) = c·D(h)`` — which is itself DERIVED
     from Prop 2.2 + non-degeneracy
     (:func:`prove_d_numeric_homogeneity`; 2026-09-08 audit,
@@ -1738,6 +1776,14 @@ def prove_bracket_with_d(
             "homogeneity D(c·h) = c·D(h) follows from Prop 2.2 + "
             "non-degeneracy under the same assumptions — both "
             "forms of Rem 2.2 close with NO extra axiom."
+        ),
+        source=(
+            (
+                cite("Uchino2002", "Remark 2.2"),
+                cite("Roytenberg1999"),
+            )
+            if classical
+            else cite("Uchino2002", "Remark 2.2")
         ),
     ).with_structural_requires()
     return chain, theorem

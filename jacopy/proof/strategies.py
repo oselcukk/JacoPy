@@ -485,7 +485,7 @@ class UnrollToFoundations(Strategy):
 class DerivedBracketStrategy:
     """Apply the Derived Bracket Theorem to discharge Jacobi.
 
-    The theorem [Kosmann-Schwarzbach 1996]: over a graded LIE base
+    The theorem [Kosmann-Schwarzbach 1996 — year AMBIGUOUS: local sources list only "Derived brackets" (2004); docs/CITATIONS.md]: over a graded LIE base
     with an ODD shifted generator, ``[Q, Q]_base = 0`` makes the
     derived bracket ``{a, b}_Q = [[a, Q], b]`` a LODAY
     (left-Leibniz-Jacobi) bracket. The CYCLIC Lie-form Jacobi that

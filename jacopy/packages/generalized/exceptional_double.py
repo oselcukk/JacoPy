@@ -2,7 +2,7 @@
 The EXCEPTIONAL DRINFEL'D DOUBLE identification (the question left
 open at the end of ``examples/bracket_twist_research_interface``):
 the exceptional Courant bracket on ``TM ⊕ Λ² ⊕ Λ⁵`` rotated by the
-E6 twist ``Ψ_Π`` (4.10)-(4.14) IS the Drinfel'd double of
+E6 twist ``Ψ_Π`` [E6 paper (4.10)-(4.14)] IS the Drinfel'd double of
 ``A = TM`` and ``Z = Λ² ⊕ Λ⁵`` built from the block map
 
     Π : Z → TM,   Π(ω₂, ω₅) = Π₃ω₂ + Π̂ω₅,   Π̂ := Π₆ + Π₃⊛Π₃,
@@ -62,7 +62,7 @@ Poisson).
     ``ℒ_{Π̂ω}η − ι_{Π̂η}dω``. NOTE (2026-09-10 audit, F6): ``Π̂`` is a
     ``TM``-valued map, NOT a 6-vector in general — ``Π₃⊛Π₃`` is
     alternating in its five covector slots but not in the sixth (the
-    paper's (4.13) has the free index ``c``; e.g. on ℝ⁵ with
+    E6 paper's (4.13) has the free index ``c``; e.g. on ℝ⁵ with
     ``Π₃ = e₀₁₂ + e₀₃₄``, ``⟨e⁰, ⊛(e⁰¹²³⁴)⟩ = 1`` although ``e⁰``
     repeats). So ``R′₅₅ = 0`` is a condition on the map, not the
     fundamental identity of a Nambu 6-vector;
@@ -77,6 +77,11 @@ Poisson).
   ``Π D′⟨ω,η⟩ = 0``, the exceptional face of the ``g_Z``-family
   consequence of the fundamental identity
   (:class:`jacopy.packages.drinfeld.tilde_calculus.FISharpPairingSwapDefinition`).
+
+Citation note: every bare (4.10)–(4.15) in this module is a number of
+the "E6 paper" — an UNIDENTIFIED source that is NOT in the repository
+(authors / arXiv id were never recorded), so these numbers are
+unverified. They are not arXiv:2409.11973 [TW] equation numbers.
 """
 
 from __future__ import annotations
@@ -397,7 +402,8 @@ def prove_rotated_is_exceptional_double_plus_r(
         from_axioms=_DEFS
         + ("Cartan magic formula (engine rule)",),
         notes="exceptional analogue of twist.prove_pi_twist_vec_is_"
-        "nambu_plus_r; E6 (4.10)-(4.14) territory",
+        "nambu_plus_r; unidentified 'E6 paper' (not in the repository) "
+        "(4.10)-(4.14) territory",
         labels=(
             "vector slot: rotated − double − R′ on the probe "
             "normalizes to 0",

@@ -1,13 +1,14 @@
 """
 Twist automorphisms and the brackets they induce (Phase 6.E) —
-[2409.11973 §7]: a bundle automorphism ``Ψ ∈ Aut(A ⊕ Z)`` turns an
-initial bracket into
+[TW §7; TW = arXiv:2409.11973]: a bundle automorphism
+``Ψ ∈ Aut(A ⊕ Z)`` turns an initial bracket into
 
-    [u, v]_Ψ := Ψ⁻¹ [Ψu, Ψv]                                  (7.3)
+    [u, v]_Ψ := Ψ⁻¹ [Ψu, Ψv]                                  TW (7.3)
 
 and the twisted bracket's components read off a whole twisted
-calculus family (7.25). Two of the three special shapes (7.11) land
-here (the frame-change ``Ψ_m`` arrives with 6.E-devam):
+calculus family TW (7.25). Two of the three special shapes TW (7.11)
+are described here (the frame-change ``Ψ_m``, added with 6.E-devam, is
+further below):
 
 * **Π-transform** ``Ψ_Π = [[1, Π], [0, 1]]`` with ``Π`` a
   ``(p+1)``-vector acting as ``Λᵖ T*M → TM``. THE structural
@@ -26,13 +27,14 @@ here (the frame-change ``Ψ_m`` arrives with 6.E-devam):
 
 * **B-transform** ``Ψ_B = [[1, 0], [B, 1]]`` with ``B`` a
   ``(p+1)``-form acting as ``TM → Λᵖ T*M``, ``BU = ι_U B``. The
-  Ševera remnant (7.20): the twisted Dorfman differs from the
-  original by an H-twist with ``H = dB`` —
+  Ševera remnant (the H′ formula TW (7.19); the remark on the Ševera
+  classification follows TW (7.20)): the twisted Dorfman differs
+  from the original by an H-twist with ``H = dB`` —
 
       vec([e₁,e₂]_Ψ)  = vec of the Dorfman double (unchanged),
       form([e₁,e₂]_Ψ) = form of the Dorfman double + ι_V ι_U dB.
 
-Twisted calculus elements (7.25, H = 0 initial bracket) are proved
+Twisted calculus elements (TW (7.25), H = 0 initial bracket) are proved
 against the 6.D tilde calculus componentwise; the mediating fact is
 the Cartan magic formula (``𝒦_V = −ι_V d``), applied by the engine.
 """
@@ -65,17 +67,17 @@ from jacopy.packages.drinfeld.double import (
 
 
 def pi_twist(N, vec: Expr, form: Expr) -> Tuple[Expr, Expr]:
-    """``Ψ_Π (vec ⊕ form) = (vec + Π form) ⊕ form`` [eq (7.11)]."""
+    """``Ψ_Π (vec ⊕ form) = (vec + Π form) ⊕ form`` [TW (7.11)]."""
     return Sum(vec, N.sharp_vf(form)), form
 
 
 def pi_twist_inverse(N, vec: Expr, form: Expr) -> Tuple[Expr, Expr]:
-    """``Ψ_Π⁻¹ (vec ⊕ form) = (vec − Π form) ⊕ form`` [eq (7.12)]."""
+    """``Ψ_Π⁻¹ (vec ⊕ form) = (vec − Π form) ⊕ form`` [TW (7.12)]."""
     return Sum(vec, Neg(N.sharp_vf(form))), form
 
 
 def b_twist(B: Expr, vec: Expr, form: Expr) -> Tuple[Expr, Expr]:
-    """``Ψ_B (vec ⊕ form) = vec ⊕ (ι_vec B + form)`` [eq (7.11)] —
+    """``Ψ_B (vec ⊕ form) = vec ⊕ (ι_vec B + form)`` [TW (7.11)] —
     ``B`` is a ``(p+1)``-form acting as ``TM → Λᵖ`` by interior
     product."""
     return vec, Sum(Act(Interior(vec), B), form)
@@ -89,7 +91,7 @@ def b_twist_inverse(B: Expr, vec: Expr, form: Expr) -> Tuple[Expr, Expr]:
 def twisted_dorfman(
     apply_twist, invert_twist, U: Expr, omega: Expr, V: Expr, eta: Expr
 ) -> Tuple[Expr, Expr]:
-    """``[e₁, e₂]_Ψ = Ψ⁻¹ [Ψ e₁, Ψ e₂]_Dorfman`` [eq (7.3)] on
+    """``[e₁, e₂]_Ψ = Ψ⁻¹ [Ψ e₁, Ψ e₂]_Dorfman`` [TW (7.3)] on
     component pairs; ``apply_twist(vec, form)`` and
     ``invert_twist(vec, form)`` return component pairs."""
     u1, o1 = apply_twist(U, omega)
@@ -98,7 +100,7 @@ def twisted_dorfman(
 
 
 def r_twist(N, omega: Expr, eta: Expr) -> Expr:
-    """``R′(ω, η) = [Πω, Πη]_Lie − Π[ω,η]_Kos`` [eq (7.25) with the
+    """``R′(ω, η) = [Πω, Πη]_Lie − Π[ω,η]_Kos`` [TW (7.25) with the
     Dorfman initial bracket] — the anchor defect of the twisted
     Z-bracket; vanishes exactly under the fundamental identity."""
     from jacopy.central.tangent.lie_bracket import lie_bracket
@@ -125,7 +127,7 @@ class MagicFormulaDefinition(Definition):
     The magic formula is a proven theorem (Phase 2 seed + the
     higher-degree audit to p = 5); the always-on engines apply it at
     EVAL sites via the Palais route. The twist proofs need it at the
-    OPERATOR level: (7.25) writes the twisted family through
+    OPERATOR level: TW (7.25) writes the twisted family through
     ``𝒦_V = −ℒ_V + dι_V`` and the equivalence with the tilde
     calculus is mediated by magic on forms sitting INSIDE sharp
     slots, where no evaluation ever happens. Guarded away from
@@ -285,7 +287,7 @@ def prove_pi_twist_vec_is_nambu_plus_r(
 ) -> ProofChain:
     """Vector component of the Ψ_Π-twisted Dorfman bracket equals
     the Nambu double's vector component PLUS the R-twist
-    ``R′(ω,η) = [Πω,Πη] − Π[ω,η]_Kos`` [the (7.25) obstruction] —
+    ``R′(ω,η) = [Πω,Πη] − Π[ω,η]_Kos`` [the TW (7.25) obstruction] —
     declaration-free for ANY ``(p+1)``-vector. Under the fundamental
     identity ``R′ = 0`` and the twist reproduces the tilde calculus
     exactly. Acting on the probe function ``h``."""
@@ -318,7 +320,7 @@ def prove_twisted_lie_tilde(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """``ℒ̃′_ω V = [Πω, V] − Π(𝒦_V ω)`` [eq (7.25)] equals the 6.D
+    """``ℒ̃′_ω V = [Πω, V] − Π(𝒦_V ω)`` [TW (7.25)] equals the 6.D
     tilde Lie derivative ``ℒ̃_ω V = [Πω, V] + Π(ι_V dω)`` — the
     mediating fact is the magic formula ``𝒦_V = −ι_V d``. Acting on
     ``h``; declaration-free."""
@@ -354,7 +356,7 @@ def prove_twisted_kappa_tilde(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """``𝒦̃′_η U = [U, Πη] − Π(ℒ_U η)`` [eq (7.25)] equals the 6.D
+    """``𝒦̃′_η U = [U, Πη] − Π(ℒ_U η)`` [TW (7.25)] equals the 6.D
     combination ``−ℒ̃_η U + d̃(ι_U η)`` with ``d̃ = −Πd`` (again via
     the magic formula). Acting on ``h``; declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -387,7 +389,7 @@ def prove_twisted_z_bracket_is_koszul(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """``[ω,η]′_Z = ℒ_{Πω} η + 𝒦_{Πη} ω`` [eq (7.25)] equals the
+    """``[ω,η]′_Z = ℒ_{Πω} η + 𝒦_{Πη} ω`` [TW (7.25)] equals the
     higher Koszul bracket ``ℒ_{Πω} η − ι_{Πη} dω`` (magic formula).
     Evaluated on the given slots; declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -427,7 +429,7 @@ def prove_b_twist_vec_unchanged(
     max_steps: int = 30000,
 ) -> ProofChain:
     """Vector component of the Ψ_B-twisted Dorfman bracket is the
-    untouched ``[U,V]_Lie`` [eq (7.18) with zero tilde side]. Acting
+    untouched ``[U,V]_Lie`` [TW (7.18) with zero tilde side]. Acting
     on ``h``; declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
     from jacopy.central.tangent.engine import tangent_engine
@@ -459,7 +461,8 @@ def prove_b_twist_severa(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """The Ševera remnant [eq (7.20)]: the Ψ_B-twisted Dorfman
+    """The Ševera remnant [TW (7.19), the H′ formula; TW (7.20) is the
+    change of the tilde calculus]: the Ψ_B-twisted Dorfman
     bracket differs from the original by the H-twist ``H = dB``,
 
         form([e₁,e₂]_Ψ) − form([e₁,e₂]) = ι_V ι_U dB,
@@ -508,7 +511,7 @@ def prove_b_twist_severa(
 
 
 # ------------------------------------------------------------------- #
-# R′-linearity obstruction (7.26)                                      #
+# R′-linearity obstruction TW (7.26)                                   #
 # ------------------------------------------------------------------- #
 
 
@@ -523,7 +526,7 @@ def prove_r_twist_second_entry_linear(
     max_steps: int = 30000,
 ) -> ProofChain:
     """``R′(ω, f·η) = f·R′(ω, η)`` — the R-twist IS C∞-linear in its
-    SECOND entry [eq (7.26) context]. Acting on the probe ``h``;
+    SECOND entry [TW (7.26) context]. Acting on the probe ``h``;
     declaration-free."""
     from jacopy.core.expr import Product
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -555,7 +558,7 @@ def prove_r_twist_first_entry_obstruction(
     max_steps: int = 30000,
 ) -> ProofChain:
     """The FIRST-entry C∞-linearity obstruction of the R-twist
-    [eq (7.26), TM Lie algebroid case ``L_A = 0``,
+    [TW (7.26), TM Lie algebroid case ``L_A = 0``,
     ``σ_d(f, x) = df ∧ x``]:
 
         R′(f·ω, η) = f·R′(ω, η) − Π( df ∧ (ι_{Πω}η + ι_{Πη}ω) ).
@@ -618,7 +621,7 @@ def twisted_dorfman_h(
     V: Expr,
     eta: Expr,
 ) -> Tuple[Expr, Expr]:
-    """``Ψ⁻¹ [Ψe₁, Ψe₂]_{H-Dorfman}`` [eq (7.3) with an H-twisted
+    """``Ψ⁻¹ [Ψe₁, Ψe₂]_{H-Dorfman}`` [TW (7.3) with an H-twisted
     initial bracket]."""
     u1, o1 = apply_twist(U, omega)
     v1, e1 = apply_twist(V, eta)
@@ -637,7 +640,7 @@ def prove_b_twist_severa_h(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """The FULL Ševera statement [eq (7.19)-(7.20)]: Ψ_B applied to
+    """The FULL Ševera statement [TW (7.19)-(7.20)]: Ψ_B applied to
     the H-TWISTED Dorfman bracket gives the ``(H + dB)``-twisted
     Dorfman bracket,
 
@@ -696,7 +699,7 @@ def prove_pi_twist_h_form(
     max_steps: int = 30000,
 ) -> ProofChain:
     """Ψ_Π on the H-twisted Dorfman bracket, form component
-    [eq (7.24)-(7.25) with H]: the twist shifts the Nambu double's
+    [TW (7.24)-(7.25) with H]: the twist shifts the Nambu double's
     form part by the H-term of the TWISTED anchors,
 
         form([e₁,e₂]_{Ψ_Π, H}) = form_Nambu + H(U + Πω, V + Πη).
@@ -904,7 +907,7 @@ class WedgeSumScalarDefinition(Definition):
 
 
 def m_twist(name: str, vec: Expr, form: Expr) -> Tuple[Expr, Expr]:
-    """``Ψ_m (vec ⊕ form) = m(vec) ⊕ m̃(form)`` [eq (7.11)] — the
+    """``Ψ_m (vec ⊕ form) = m(vec) ⊕ m̃(form)`` [TW (7.11)] — the
     frame-change twist by an invertible endomorphism pair."""
     from jacopy.central.objects.endomorphism import EndoForm, EndoVF
 
@@ -914,7 +917,7 @@ def m_twist(name: str, vec: Expr, form: Expr) -> Tuple[Expr, Expr]:
 def m_twist_inverse(
     name: str, vec: Expr, form: Expr
 ) -> Tuple[Expr, Expr]:
-    """``Ψ_m⁻¹ (vec ⊕ form) = m⁻¹(vec) ⊕ m̃⁻¹(form)`` [eq (7.12)]."""
+    """``Ψ_m⁻¹ (vec ⊕ form) = m⁻¹(vec) ⊕ m̃⁻¹(form)`` [TW (7.12)]."""
     from jacopy.central.objects.endomorphism import EndoForm, EndoVF
 
     return (
@@ -961,7 +964,7 @@ def _m_twist_engine(registry):
 def twisted_dorfman_m(
     name: str, U: Expr, omega: Expr, V: Expr, eta: Expr
 ) -> Tuple[Expr, Expr]:
-    """``Ψ_m⁻¹ [Ψ_m e₁, Ψ_m e₂]_Dorfman`` — by (7.14)/(7.16) the
+    """``Ψ_m⁻¹ [Ψ_m e₁, Ψ_m e₂]_Dorfman`` — by TW (7.14)/(7.16) the
     conjugated bracket ``m⁻¹[mU, mV] ⊕ m̃⁻¹(Dorfman form on the
     twisted entries)``."""
     return twisted_dorfman(
@@ -980,7 +983,7 @@ def prove_m_is_bracket_morphism(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """``m([U,V]′_A) = [mU, mV]_Lie`` [the (7.14) morphism
+    """``m([U,V]′_A) = [mU, mV]_Lie`` [the TW (7.14) morphism
     statement]: applying ``m`` to the conjugated A-bracket recovers
     the Lie bracket of the images — the inverse law in action.
     Acting on the probe ``h``."""
@@ -1023,7 +1026,7 @@ def prove_m_twist_right_leibniz_vec(
 ) -> ProofChain:
     """Vector component of ``[e₁, f·e₂]_Ψ = f[e₁,e₂]_Ψ +
     (ρ′(e₁)f)·e₂`` with the TWISTED anchor ``ρ′(U+ω) = m(U)``
-    [eq (7.13)]: the conjugated bracket is again a Leibniz-algebroid
+    [TW (7.13)]: the conjugated bracket is again a Leibniz-algebroid
     bracket. Acting on ``h``; declaration-free."""
     from jacopy.core.expr import Product
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -1124,13 +1127,14 @@ def prove_m_twist_symmetric_part_form(
 
 
 # ------------------------------------------------------------------- #
-# General 2×2 Ψ composition (7.7)-(7.10) — the last 6.E leftover       #
+# Composition of twists (code's own; TW (7.7)-(7.10) give the bracket  #
+# components for ONE general 2×2 Ψ, not a composition law)             #
 # ------------------------------------------------------------------- #
 
 
 def compose_twists(apply1, invert1, apply2, invert2):
     """``Ψ₁ ∘ Ψ₂`` on component pairs: apply = Ψ₁∘Ψ₂, inverse =
-    Ψ₂⁻¹∘Ψ₁⁻¹. With (7.3) this realizes the general 2×2 program:
+    Ψ₂⁻¹∘Ψ₁⁻¹. With TW (7.3) this realizes the general 2×2 program:
     every upper/lower-triangular block product of the three special
     types is reachable, and
 
@@ -1160,7 +1164,10 @@ def prove_b_twists_compose_additively(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(7.7) instance, MECHANICAL: B-transforms compose additively —
+    """B-transforms compose additively, MECHANICAL — this module's own
+    result (TW states no composition law; TW (7.7) is the component
+    formula of a single general Ψ, of which Ψ_{B₁}∘Ψ_{B₂} = Ψ_{B₁+B₂}
+    is one block-lower-triangular instance) —
 
         [e₁, e₂]_{Ψ_{B₁} ∘ Ψ_{B₂}} = [e₁, e₂]_{Ψ_{B₁+B₂}}
 

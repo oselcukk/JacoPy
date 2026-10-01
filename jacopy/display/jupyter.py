@@ -210,6 +210,10 @@ def _step_summary_html(step: ProofStep, verbosity: str) -> str:
     pieces = [f'<span class="jacopy-rule">[{rule}]</span>']
     if step.provenance_tag:
         pieces.append(f'<span class="jacopy-tag">({_html.escape(step.provenance_tag)})</span>')
+    if getattr(step, "source", None):
+        from jacopy.bibliography import in_text
+
+        pieces.append(f'<span class="jacopy-source">— {_html.escape(in_text(step.source))}</span>')
     if verbosity != "compact":
         pieces.append(
             f'<span class="jacopy-math">\\({to_latex(step.before)} \\to {to_latex(step.after)}\\)</span>'

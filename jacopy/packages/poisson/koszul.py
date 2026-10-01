@@ -25,6 +25,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Atom, Expr, Integer, Neg, Product, Sum
 from jacopy.core.multi_eval import MultiEval
 from jacopy.core.pairing import Pairing
@@ -131,6 +132,7 @@ class KoszulBracketDefinition(Definition):
     canonical definition."""
 
     anchor = KoszulBracket
+    source = cite("Math595Midterm2026", "Question 2")
 
     def __init__(self, structure: PoissonStructure) -> None:
         self._structure = structure

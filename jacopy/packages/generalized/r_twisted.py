@@ -1,6 +1,7 @@
 """
-The R-TWISTED tilde-Dorfman bracket (Phase 7.B.2c; PDF item 14f.iii,
-Watamura et al.): the R-flux deformation of the Poisson generalized
+The R-TWISTED tilde-Dorfman bracket (Phase 7.B.2c; project directive item
+14f.iii, Watamura et al., arXiv 1408.2649 — no local PDF): the
+R-flux deformation of the Poisson generalized
 double ``(TM)₀ ⊕ (T*M)_θ`` — the exact DUAL of the H-twist
 (:mod:`twisted_courant`), with the roles of forms and vectors
 swapped: a trivector ``R`` contracts the two FORM parts and lands in
@@ -56,6 +57,7 @@ from jacopy.core.expr import (
     Product,
     Sum,
 )
+from jacopy.bibliography import cite
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import Definition, ExplicitAssumption
@@ -68,6 +70,7 @@ from jacopy.central.tangent.lie_bracket import lie_bracket
 from jacopy.packages.drinfeld.double import canonical_pairing
 from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
 from jacopy.packages.generalized.poisson_generalized import (
+    THETA_JACOBI_SOURCE,
     _normalize,
     _require_poisson,
     d_operator_theta,
@@ -271,6 +274,7 @@ def _zero_theorem(
     from_axioms,
     notes: str,
     labels,
+    source=None,
 ) -> Tuple[ProofChain, Theorem]:
     steps: List[ProofStep] = []
     for label, diff in zip(labels, diffs):
@@ -300,6 +304,7 @@ def _zero_theorem(
         generality="generic-function",
         from_axioms=from_axioms,
         notes=notes,
+        source=source,
     ).with_structural_requires()
     return chain, theorem
 
@@ -336,7 +341,7 @@ def prove_r_twisted_right_leibniz(
         from_axioms=(
             "tilde-interior C∞-tensoriality (definitional)",
         ),
-        notes="PDF 14f.iii / Watamura R-flux",
+        notes="directive 14f.iii / Watamura R-flux",
         labels=("R-term Leibniz defect normalizes to 0",),
     )
 
@@ -370,7 +375,7 @@ def prove_r_twisted_symmetric_part(
         from_axioms=(
             "tilde-interior anticommutation (alternation)",
         ),
-        notes="PDF 14f.iii / Watamura R-flux",
+        notes="directive 14f.iii / Watamura R-flux",
         labels=("R-term symmetric part normalizes to 0",),
     )
 
@@ -508,6 +513,8 @@ class RFluxClosureDeclaration(Definition):
     (audit dc44f79 F2)."""
 
     role = "assumption"
+    # Watamura et al. (no local PDF): the section is unverified
+    source = cite("AsakawaMurakiSasaWatamura2015", "Section 3")
 
     def __init__(self, N: NambuPoissonStructure, R: Expr, registry=None) -> None:
         from jacopy.core.multi_eval import MultiEval
@@ -760,7 +767,7 @@ def prove_r_twisted_jacobi_defect_is_dtheta_r(
             "R-twisted / tilde-Dorfman + Lichnerowicz d_θ (intrinsic Palais) definitions",
             "tilde-contraction = evaluation (definitional)",
         ),
-        notes="PDF 14f.iii / Watamura §3 — the R-flux dual of dH = 0",
+        notes="directive 14f.iii / Watamura §3 — the R-flux dual of dH = 0",
     ).with_structural_requires()
     return chain, theorem
 
@@ -843,6 +850,9 @@ def prove_r_twisted_jacobi(
         cite = " (proven: prove_theta_jacobi, steps attached)"
         c1_tag, c1_role = "theorem", "theorem"
         c1_key_vec = c1_key_form = None
+    # the [C'1] steps carry the source of the [C'1] law they instantiate:
+    # the proven theorem's own, or (cited) that of prove_theta_jacobi
+    c1_source = thm_t.source if thm_t is not None else THETA_JACOBI_SOURCE
     closure = RFluxClosureDeclaration(N, R, registry)  # the licensing rule of the closure step
     assert closure.matches(dtheta)
     steps = [
@@ -857,6 +867,7 @@ def prove_r_twisted_jacobi(
             rule="declared closure d_θR = 0 (instance at (ω,η,ζ,dh))",
             justification="axiom instance of the opt-in R-flux closure",
             provenance_tag="axiom", owner=N, role="assumption", key=closure.key,
+            source=closure.source,
         ),
         ProofStep(
             j0_vec, Integer(0),
@@ -864,6 +875,7 @@ def prove_r_twisted_jacobi(
             "vector component on the probe" + cite,
             justification="cited" if c1_vec is None else "proven",
             children=c1_vec, provenance_tag=c1_tag, owner=N, role=c1_role, cites=thm_t, key=c1_key_vec,
+            source=c1_source,
         ),
         ProofStep(
             jr_form, j0_form,
@@ -877,6 +889,7 @@ def prove_r_twisted_jacobi(
             "form component (paired with every X)" + cite,
             justification="cited" if c1_form is None else "proven",
             children=c1_form, provenance_tag=c1_tag, owner=N, role=c1_role, cites=thm_t, key=c1_key_form,
+            source=c1_source,
         ),
     ]
     chain = ProofChain(steps)
@@ -892,7 +905,7 @@ def prove_r_twisted_jacobi(
         proof=chain,
         generality="generic-function",
         from_axioms=assumptions + (thm_d.name,),
-        notes="PDF 14f.iii / Watamura §3; lhs is the vector Jacobiator on the probe, "
+        notes="directive 14f.iii / Watamura §3; lhs is the vector Jacobiator on the probe, "
         "the form Jacobiator is carried in the chain",
     ).with_structural_requires()
     return chain, theorem
@@ -906,7 +919,9 @@ def prove_derived_r_vanishes_under_poisson(
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
     """The DERIVED twist ``R′(ω,η) = [θ♯ω, θ♯η] − θ♯[ω,η]_θ``
-    (eq (7.25)) vanishes under the declared Poisson condition — the
+    [TW (7.25), arXiv 2409.11973] vanishes under the declared Poisson
+    condition (TW, remark after Eq. (7.25): "the R′-twist vanishes
+    due to the Nambu-Poisson condition") — the
     R-flux of a genuine Poisson structure is zero, so the R-twisted
     family deforms AWAY from generalized geometry exactly when
     ``[θ,θ] ≠ 0`` [Watamura §3]."""
@@ -927,8 +942,12 @@ def prove_derived_r_vanishes_under_poisson(
             "declared Poisson condition (FI bracket-morphism "
             "face)",
         ),
-        notes="PDF 14f.iii; eq (7.25) at p = 1",
+        notes="directive 14f.iii; TW Eq. (7.25) at p = 1",
         labels=("derived R-twist normalizes to 0",),
+        source=cite(
+            "CatalOzerDoganYetismisoglu2025",
+            "Eq. (7.25) and the remark after it",
+        ),
     )
 
 
@@ -973,7 +992,7 @@ def prove_r_twisted_courant_relation(
         from_axioms=(
             "R-twisted bracket + pairing + D_θ definitions",
         ),
-        notes="PDF 14f.iii",
+        notes="directive 14f.iii",
         labels=(
             "vector component normalizes to 0",
             "form component normalizes to 0",

@@ -1,9 +1,9 @@
 """
 Example / regression suites from the literature (Phase 6.H) —
-[2409.11973 §8]: three concrete doubled structures exercised on the
-6.C-6.G machinery.
+[TW §8; TW = arXiv:2409.11973]: three concrete doubled structures
+exercised on the 6.C-6.G machinery.
 
-* **B_n-generalized geometry (8.15)-(8.16)**: ``E = TM ⊕ C∞M ⊕
+* **B_n-generalized geometry TW (8.15)-(8.16)**: ``E = TM ⊕ C∞M ⊕
   T*M`` with triple sections ``(U, f, ω)``,
 
       [e₁, e₂] = [U,V]_Lie ⊕ U(g) − V(f)
@@ -13,22 +13,28 @@ Example / regression suites from the literature (Phase 6.H) —
   the symmetric part is EXACTLY ``(0, 0, d g_E)`` and the bracket is
   right-Leibniz with anchor ``ρ(e) = U`` — both declaration-free.
 
-* **Exceptional Courant bracket (8.1)**: ``E = TM ⊕ Λ² ⊕ Λ⁵`` with
+* **Exceptional Courant bracket TW (8.1)**: ``E = TM ⊕ Λ² ⊕ Λ⁵`` with
   the M-theory cross-term,
 
       [e₁, e₂] = [U,V]_Lie ⊕ (ℒ_U η₂ − ι_V dω₂)
                  ⊕ (ℒ_U η₅ − ι_V dω₅ − η₂ ∧ dω₂),
 
   whose symmetric part closes onto ``d`` of the exceptional pairing
-  ``⟨e₁,e₂⟩ = ι_Uη₂ + ι_Vω₂ ⊕ ι_Uη₅ + ι_Vω₅ − ω₂∧η₂`` — the
-  cross-term is the ``H``-twist of the ``A = TM ⊕ Λ⁵`` decomposition
-  [eq (8.2)] and the ``R``-twist of ``A = TM ⊕ Λ⁵, Z = Λ²`` [eq
-  (8.3)].
+  ``⟨e₁,e₂⟩ = ι_Uη₂ + ι_Vω₂ ⊕ ι_Uη₅ + ι_Vω₅ − ω₂∧η₂`` (this pairing
+  is the code's; TW does not print one for (8.1)) — the cross-term
+  is the ``H``-twist of the ``A = TM ⊕ Λ²T*M, Z = Λ⁵T*M``
+  decomposition [TW (8.2)] and the ``R``-twist of
+  ``A = TM ⊕ Λ⁵T*M, Z = Λ²T*M`` [TW (8.3)].
 
-* **Atiyah algebroids (8.10)-(8.14)**: the (5.13) H-closure
-  condition IS the Bianchi identity ``d^∇F = 0`` — the bridge to the
-  Phase 4 metric-affine package, tested by citing its proven Bianchi
-  II (`prove_bianchi_second`).
+* **Atiyah algebroids TW (8.10)-(8.14)**: TW states that the TW (5.13)
+  H-closure condition follows from the Bianchi identity for the
+  curvature ``F`` (TW §8, after TW (8.14)). NAME-LEVEL REFERENCE ONLY,
+  NO MECHANICAL LINK: nothing here builds the Atiyah bracket TW (8.11),
+  ``H = −F`` or :func:`~jacopy.packages.drinfeld.roytenberg.
+  h_closure_defect` for it; the Phase 4 test merely runs
+  ``prove_bianchi_second`` (the torsionful second Bianchi identity of
+  an affine connection on TM), which is a different statement
+  (audit 0b00e1b V-M4 / M4-2).
 """
 
 from __future__ import annotations
@@ -61,7 +67,7 @@ def _iota(X: Expr, x: Expr) -> Expr:
 def bn_bracket(
     U: Expr, f: Expr, omega: Expr, V: Expr, g: Expr, eta: Expr
 ) -> Tuple[Expr, Expr, Expr]:
-    """The B_n bracket [eq (8.15)] on triple sections
+    """The B_n bracket [TW (8.15)] on triple sections
     ``(U, f, ω) ∈ TM ⊕ C∞M ⊕ T*M``."""
     return (
         lie_bracket(U, V),
@@ -78,7 +84,7 @@ def bn_bracket(
 def bn_pairing(
     U: Expr, f: Expr, omega: Expr, V: Expr, g: Expr, eta: Expr
 ) -> Expr:
-    """``g_E = ι_Uη + ι_Vω + f·g`` [eq (8.16)] — the SO(n+1, n)
+    """``g_E = ι_Uη + ι_Vω + f·g`` [TW (8.16)] — the SO(n+1, n)
     pairing (scalar-valued)."""
     return Sum(
         _iota(U, eta), _iota(V, omega), Product(f, g)
@@ -229,7 +235,7 @@ def exceptional_courant_bracket(
     et2: Expr,
     et5: Expr,
 ) -> Tuple[Expr, Expr, Expr]:
-    """The exceptional Courant bracket [eq (8.1)] on
+    """The exceptional Courant bracket [TW (8.1)] on
     ``TM ⊕ Λ² ⊕ Λ⁵`` — the M-theory cross-term ``−η₂ ∧ dω₂`` lands
     in the top (5-form) slot."""
     return (
@@ -556,7 +562,8 @@ def _probe(registry):
 
 
 def boxtimes(N3, omega5: Expr) -> Expr:
-    """``(Π₃ ⊛ Π₃)(ω₅) := ½ Π₃( ι_{Π₃} ω₅ )`` [E6 paper eq (4.14)]
+    """``(Π₃ ⊛ Π₃)(ω₅) := ½ Π₃( ι_{Π₃} ω₅ )`` [E6 paper eq (4.14) —
+    unidentified paper, not in the repository: unverified; NOT TW (4.14)]
     — the TM-valued pentavector of the exceptional Ψ_Π twist,
     buildable now that the PARTIAL contraction ``ι_{Π₃}: Λ⁵ → Λ²``
     exists (:class:`MultivectorInterior`). ``N3`` is the
@@ -577,7 +584,7 @@ def boxtimes(N3, omega5: Expr) -> Expr:
 def exceptional_h_reading(
     U: Expr, om2: Expr, V: Expr, et2: Expr
 ) -> Expr:
-    """The (8.2) H-twist reading of the cross-term for the
+    """The TW (8.2) H-twist reading of the cross-term for the
     decomposition ``A = TM ⊕ Λ², Z = Λ⁵``:
     ``H(U+ω₂, V+η₂) = −η₂ ∧ dω₂``."""
     return Neg(Wedge(et2, d(om2)))
@@ -594,7 +601,7 @@ def prove_exceptional_h_second_entry_linear(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(8.2)-H is C∞-linear in its SECOND entry [the (5.6) twisted
+    """TW (8.2)-H is C∞-linear in its SECOND entry [the TW (5.6) twisted
     linearity]: ``H(e₁, f·e₂) = f·H(e₁, e₂)`` — the cross-term is
     tensorial in ``η₂``. Declaration-free, on 5 slots."""
     from jacopy.core.pairing import Pairing
@@ -639,7 +646,7 @@ def prove_exceptional_h_first_entry_symbol(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(8.2)-H's FIRST-entry anomaly [the (5.7) symbol map]:
+    """TW (8.2)-H's FIRST-entry anomaly [the TW (5.7) symbol map]:
 
         H(f·e₁, e₂) − f·H(e₁, e₂) = −η₂ ∧ df ∧ ω₂
 
@@ -678,11 +685,11 @@ def prove_exceptional_h_first_entry_symbol(
 
 
 # ------------------------------------------------------------------- #
-# B_n decomposition readings (8.17)/(8.21)/(8.26) — 6.H leftovers      #
+# B_n decomposition readings TW (8.17)/(8.21)/(8.26) — 6.H leftovers      #
 # ------------------------------------------------------------------- #
 #
-# The SAME B_n bracket under three A ⊕ Z splits [§8.4]: the calculus
-# elements/twists it induces per split, with the (5.21) symmetric-
+# The SAME B_n bracket under three A ⊕ Z splits [TW §8.4]: the calculus
+# elements/twists it induces per split, with the TW (5.21) symmetric-
 # part decompositions as MECHANICAL theorems:
 #
 #   split 1  (A = TM, Z = C∞ ⊕ T*M): twistless — metric-Bourbaki
@@ -694,14 +701,14 @@ def prove_exceptional_h_first_entry_symbol(
 #            R(f,g) = g·df, g_R = f·g, d_R = d — tilde-quasi.
 #
 # The decomposition-dependence regression: one bracket, three twist
-# readings; the (5.21) laws H(U,V) + H(V,U) = d_H g_H(U,V) and
+# readings; the TW (5.21) laws H(U,V) + H(V,U) = d_H g_H(U,V) and
 # R(f,g) + R(g,f) = d_R g_R(f,g) close mechanically (they are the
 # same scalar Leibniz fact g·df + f·dg = d(f·g)).
 
 
 def bn_scalar_twist(f: Expr, g: Expr) -> Expr:
     """``g·df`` — the shared twist kernel of splits 2 and 3
-    [(8.22)/(8.28)]."""
+    [TW (8.22)/(8.28)]."""
     return Product(g, d(f))
 
 
@@ -713,7 +720,7 @@ def prove_bn_twist_symmetric_part(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 10000,
 ) -> ProofChain:
-    """(5.21) for splits 2 and 3 at once:
+    """TW (5.21) for splits 2 and 3 at once:
     ``H(e₁,e₂) + H(e₂,e₁) = d(g·f)`` — i.e. ``g·df + f·dg = d(fg)``,
     the scalar Leibniz rule as the twist's symmetric-part law.
     Declaration-free, probe ``Y``."""
@@ -740,7 +747,7 @@ def prove_bn_twist_symmetric_part(
 def bn_split1_z_bracket(
     f: Expr, omega: Expr, g: Expr, eta: Expr
 ) -> Expr:
-    """Split 1's Z-bracket [(8.18)]: ``[f+ω, g+η]_Z = g·df`` (the
+    """Split 1's Z-bracket [TW (8.18)]: ``[f+ω, g+η]_Z = g·df`` (the
     form part; the scalar part vanishes)."""
     return bn_scalar_twist(f, g)
 
@@ -755,7 +762,7 @@ def prove_bn_split1_z_symmetric_part(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 10000,
 ) -> ProofChain:
-    """(8.19): the split-1 Z-bracket's symmetric part decomposes
+    """TW (8.19): the split-1 Z-bracket's symmetric part decomposes
     with ``g_Z(f+ω, g+η) = f·g`` and ``𝔻_Z = d`` — mechanically the
     same scalar Leibniz law."""
     from jacopy.core.pairing import Pairing
@@ -779,7 +786,7 @@ def prove_bn_split1_z_symmetric_part(
 
 
 def bn_split2_calculus(U: Expr, f: Expr, eta: Expr):
-    """Split 2's calculus elements [(8.21)]: sections of
+    """Split 2's calculus elements [TW (8.21)]: sections of
     ``A = TM ⊕ C∞`` act through their VECTOR part only —
     ``ℒ_{U+f}η = ℒ_Uη``, ``ι_{U+f}η = ι_Uη`` (structural
     identifications, returned as the pair)."""
@@ -789,19 +796,20 @@ def bn_split2_calculus(U: Expr, f: Expr, eta: Expr):
 def bn_split3_anchor_action(
     U: Expr, omega: Expr, f: Expr
 ) -> Expr:
-    """Split 3's calculus [(8.26)]: the Dorfman side acts on the
+    """Split 3's calculus [TW (8.26)]: the Dorfman side acts on the
     ``C∞`` part through the anchor only — ``ℒ̂_{U+ω}f = U(f)``,
     ``ι ≡ 0`` (structural)."""
     return Act(U, f)
 
 
 # ------------------------------------------------------------------- #
-# Full exceptional Ψ_Π twist with ⊛ (E6 eqs 4.10-4.14)                 #
+# Full exceptional Ψ_Π twist with ⊛ (E6 paper eqs 4.10-4.14; unverified) #
 # ------------------------------------------------------------------- #
 
 
 def exceptional_pi_twist(N3, N6, U, om2, om5):
-    """The exceptional twist [E6 eq (4.10)-(4.12)] on triple
+    """The exceptional twist [E6 paper eq (4.10)-(4.12); unidentified
+    paper, not in the repository — unverified] on triple
     sections: ``Ψ_Π(U ⊕ ω₂ ⊕ ω₅) = (U + Π₃ω₂ + (Π₆ + Π₃⊛Π₃)ω₅)
     ⊕ ω₂ ⊕ ω₅`` — buildable since 6.H.2 (partial contraction +
     boxtimes). ``N3``/``N6`` host the trivector/hexavector."""
@@ -818,7 +826,8 @@ def exceptional_pi_twist(N3, N6, U, om2, om5):
 
 
 def exceptional_pi_twist_inverse(N3, N6, U, om2, om5):
-    """``Ψ_Π⁻¹`` [eq (4.11)]: minus the same Π-block."""
+    """``Ψ_Π⁻¹`` [E6 paper eq (4.11); unverified]: minus the same
+    Π-block."""
     return (
         Sum(
             U,

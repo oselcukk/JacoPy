@@ -1,7 +1,7 @@
-"""Generalized geometry (PDF item 14; Phase 7).
+"""Generalized geometry (project directive item 14; Phase 7).
 
 Courant algebroid axiomatics + the Uchino redundancy theorems
-(uchino.pdf, math/0204010); Dorfman & Courant bracket property
+(Uchino 2002, arXiv:math/0204010); Dorfman & Courant bracket property
 suites, H-twists and the Roytenberg family arrive from the Phase 6
 drinfeld package as this phase proceeds."""
 

@@ -1,6 +1,6 @@
 """Phase 7.B.2f.2 — the Bourbaki STRUCTURE layer (primary paper
 §6-7): R-valued metric, 𝔻/𝕃, ℒ^R with anchor symbol; Cor 6.1, the
-(7.2) generalized B 4.11, and the left-Leibniz corollary."""
+(7.2) generalized B (4.11), and the left-Leibniz corollary."""
 
 import pytest
 
@@ -37,7 +37,7 @@ def test_cor_61_locality_is_the_symbol(setup):
 
 
 def test_72_right_leibniz_from_r_valued_invariance(setup):
-    # The generalized B 4.11: R-VALUED invariance + anchor-symbol
+    # The generalized B (4.11): R-VALUED invariance + anchor-symbol
     # derivation + non-degeneracy ⟹ defect-free right-Leibniz.
     reg, f, E, u, v = setup
     chain, thm = prove_right_leibniz_from_r_invariance(

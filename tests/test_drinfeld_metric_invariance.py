@@ -1,5 +1,5 @@
 """Drinfeld package — Phase 6.I.1: metric-invariance compatibility
-(App D (D.14)-(D.19) / the (4.44)-(4.50) family). Claim 6: the
+(DD App D (D.14)-(D.19) / the DD (4.44)-(4.50) family). Claim 6: the
 double's metric-invariance operator is ℒ along the TOTAL anchor."""
 
 import pytest
@@ -31,7 +31,7 @@ def _setup(p):
 @pytest.mark.parametrize("p", [1, 2])
 class TestMetricInvariance:
     def test_d14_z_invariance(self, p):
-        """(D.14): the Z-side invariance operator is ℒ_{Πω} — under
+        """DD (D.14): the Z-side invariance operator is ℒ_{Πω} — under
         the declared FI (p = 3 verified offline: 209 steps)."""
         reg, U, V, W, om, et, mu, om2, om3, slots, N = _setup(p)
         assert mi.prove_z_metric_invariance(
@@ -45,7 +45,7 @@ class TestMetricInvariance:
         ).steps
 
     def test_d17_a_invariance_of_gz(self, p):
-        """(D.17): exact 𝒦̃ corrections, declaration-free."""
+        """DD (D.17): exact 𝒦̃ corrections, declaration-free."""
         reg, U, V, W, om, et, mu, om2, om3, slots, N = _setup(p)
         assert mi.prove_a_invariance_of_gz(
             N, U, et, mu, slots, registry=reg
@@ -68,7 +68,7 @@ class TestMetricInvariance:
 
 
 class TestHonestFails:
-    """(D.14) and Claim 6 genuinely NEED the FI — pinned."""
+    """DD (D.14) and Claim 6 genuinely NEED the FI — pinned."""
 
     def test_d14_without_fi(self):
         reg, U, V, W, om, et, mu, om2, om3, slots, N = _setup(2)

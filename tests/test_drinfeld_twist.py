@@ -1,4 +1,4 @@
-"""Drinfeld package — Phase 6.E: twist automorphisms [2409.11973 §7].
+"""Drinfeld package — Phase 6.E: twist automorphisms [TW §7, arXiv:2409.11973].
 
 The Ψ_Π-twisted standard Dorfman bracket reproduces the Nambu tilde
 calculus (form side exactly, vec side modulo the R-twist) and the
@@ -55,7 +55,7 @@ class TestPiTwist:
         assert chain.steps
 
     def test_twisted_lie_tilde_matches(self, p):
-        """(7.25) ℒ̃′_ω = [Πω,·] − Π𝒦_· equals 6.D's ℒ̃ via magic."""
+        """TW (7.25) ℒ̃′_ω = [Πω,·] − Π𝒦_· equals 6.D's ℒ̃ via magic."""
         reg, h, U, V, om, et, B, slots, N = _setup(p)
         chain = prove_twisted_lie_tilde(N, om, V, h, registry=reg)
         assert chain.steps
@@ -66,7 +66,7 @@ class TestPiTwist:
         assert chain.steps
 
     def test_twisted_z_bracket_is_koszul(self, p):
-        """(7.25) [ω,η]′_Z = ℒ_Πωη + 𝒦_Πηω equals the higher Koszul
+        """TW (7.25) [ω,η]′_Z = ℒ_Πωη + 𝒦_Πηω equals the higher Koszul
         bracket (magic formula)."""
         reg, h, U, V, om, et, B, slots, N = _setup(p)
         chain = prove_twisted_z_bracket_is_koszul(
@@ -98,7 +98,7 @@ class TestBTwist:
 
 @pytest.mark.parametrize("p", [1, 2])
 class TestRTwistLinearity:
-    """(7.26): R′ is C∞-linear in the second entry; the first entry
+    """TW (7.26): R′ is C∞-linear in the second entry; the first entry
     carries the ``−Π(df ∧ g_Z)`` anomaly (TM case: L_A = 0,
     σ_d(f,·) = df ∧ ·)."""
 
@@ -132,7 +132,7 @@ class TestHTwistedInitialBracket:
     """Twists applied to the H-TWISTED Dorfman bracket."""
 
     def test_severa_full(self, p):
-        """Ψ_B on H-Dorfman = (H+dB)-Dorfman [eq (7.19)-(7.20)]."""
+        """Ψ_B on H-Dorfman = (H+dB)-Dorfman [TW (7.19)-(7.20)]."""
         from jacopy.packages.drinfeld.twist import (
             prove_b_twist_severa_h,
         )
@@ -173,7 +173,7 @@ class TestHTwistedInitialBracket:
 
 @pytest.mark.parametrize("p", [1, 2])
 class TestMTwist:
-    """Ψ_m = [[m,0],[0,m̃]] frame-change twist [eq (7.13)-(7.16)]:
+    """Ψ_m = [[m,0],[0,m̃]] frame-change twist [TW (7.13)-(7.16)]:
     conjugation by an OPAQUE invertible endomorphism pair (EndoVF /
     EndoForm primitives + linearity/inverse laws). No new bracket
     terms are generated — the mechanical content is that the
@@ -227,7 +227,7 @@ class TestMTwist:
         assert chain.steps
 
     def test_components_are_conjugation_formulas(self, p):
-        """(7.14)/(7.16) structural: the twisted components ARE the
+        """TW (7.14)/(7.16) structural: the twisted components ARE the
         conjugation formulas verbatim."""
         from jacopy.central.objects.endomorphism import (
             EndoForm,
@@ -298,8 +298,9 @@ class TestEndomorphismLaws:
 
 
 class TestGeneralTwistComposition:
-    """The last 6.E leftover: the general 2×2 Ψ program via
-    composition (7.7)-(7.10)."""
+    """The last 6.E leftover: composition of twists (the code's own
+    result — TW (7.7)-(7.10) give the components of ONE general Ψ,
+    not a composition law)."""
 
     def test_sequential_law_structural(self):
         """[·]_{Ψ₁Ψ₂} = Ψ₂⁻¹([Ψ₂·, Ψ₂·]_{Ψ₁}) — by construction."""
@@ -322,7 +323,8 @@ class TestGeneralTwistComposition:
 
     @pytest.mark.parametrize("p", [1, 2])
     def test_b_twists_compose_additively(self, p):
-        """Ψ_{B₁}∘Ψ_{B₂} = Ψ_{B₁+B₂} — mechanical (7.7 instance)."""
+        """Ψ_{B₁}∘Ψ_{B₂} = Ψ_{B₁+B₂} — mechanical (the code's own composition
+        law; not printed in TW)."""
         from jacopy.packages.drinfeld.twist import (
             prove_b_twists_compose_additively,
         )

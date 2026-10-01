@@ -28,6 +28,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple
 
 from jacopy.algebra.derivation import Act, Derivation
+from jacopy.bibliography import cite
 from jacopy.brackets.base import BracketApply
 from jacopy.core.expr import Atom, Expr, Integer, Neg, Product, Sum
 from jacopy.core.multi_eval import MultiEval
@@ -311,6 +312,7 @@ class PoissonBracketDefinition(Definition):
     """``{f, g} → π(df, dg)`` — the canonical definition."""
 
     anchor = PoissonBracketValue
+    source = cite("Math595Midterm2026", "Question 2")
 
     def __init__(self, structure: PoissonStructure) -> None:
         self._structure = structure
@@ -372,6 +374,7 @@ class SharpEvaluationDefinition(Definition):
     sharp vector field."""
 
     anchor = Pairing
+    source = cite("Math595Midterm2026", "Question 2")
 
     def __init__(self, structure: PoissonStructure) -> None:
         self._structure = structure

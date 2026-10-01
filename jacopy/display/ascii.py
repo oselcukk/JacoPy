@@ -141,6 +141,15 @@ def _check_verbosity(verbosity: str) -> None:
         )
 
 
+def source_suffix(step: ProofStep) -> str:
+    """`` — (Uchino, 2002, Section 1, axiom [C5])``: the APA in-text
+    citation of the rule's literature source, or ``""``."""
+    from jacopy.bibliography import in_text
+
+    src = getattr(step, "source", None)
+    return f" — {in_text(src)}" if src else ""
+
+
 def step_to_ascii(
     step: ProofStep,
     indent: int = 0,
@@ -154,6 +163,7 @@ def step_to_ascii(
     _check_verbosity(verbosity)
     pad = "  " * indent
     tag = f" ({step.provenance_tag})" if step.provenance_tag else ""
+    tag += source_suffix(step)
     if verbosity == "compact":
         return f"{pad}[{step.rule}]{tag}"
     head = f"{pad}[{step.rule}]{tag} {to_ascii(step.before)} -> {to_ascii(step.after)}"
@@ -171,14 +181,28 @@ def chain_to_ascii(
     max_depth: int = 64,
     *,
     verbosity: str = "full",
+    references: bool = False,
 ) -> str:
-    """Render an entire :class:`ProofChain` as an ordered step list."""
+    """Render an entire :class:`ProofChain` as an ordered step list;
+    ``references=True`` appends the APA reference list of every source
+    the chain cites (sub-steps included)."""
     if not isinstance(chain, ProofChain):
         raise TypeError("chain_to_ascii: expected a ProofChain")
     _check_verbosity(verbosity)
     if len(chain) == 0:
         return "(empty proof chain)"
-    return "\n".join(
+    text = "\n".join(
         step_to_ascii(s, indent=0, max_depth=max_depth, verbosity=verbosity)
         for s in chain.steps
     )
+    if references:
+        text += references_suffix(chain)
+    return text
+
+
+def references_suffix(chain: ProofChain) -> str:
+    """``"\\n\\nReferences\\n…"`` for the chain's sources, or ``""``."""
+    from jacopy.bibliography import chain_sources, references_block
+
+    block = references_block(chain_sources(chain.steps))
+    return f"\n\n{block}" if block else ""

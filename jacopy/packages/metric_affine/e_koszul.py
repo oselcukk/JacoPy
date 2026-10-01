@@ -36,6 +36,7 @@ from __future__ import annotations
 from typing import Optional
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Product, Rational, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
@@ -118,6 +119,7 @@ class EKoszulDeclaration(Definition):
     inside ``L``-slots (inert to this rule)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite("DereliDogan2020", "Definition 3.14, Eqs. (3.34), (3.36)")
 
     def __init__(
         self,
@@ -190,6 +192,7 @@ class AdmissibilityMetricPairCollection(Definition):
     rationale."""
 
     role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    source = cite("DereliDogan2023", "Definition 3.4")
 
     anchor = Sum
 
@@ -417,7 +420,7 @@ def prove_e_koszul_admissible_implies_torsion_free(
     ``g(ᴸT(u,v), w) = 0`` for the generic section ``w`` (the
     antisymmetrized Koszul combination + the metric-wrapped
     admissibility collection); the conclusion ``ᴸT(u,v) = 0`` is the
-    explicitly-labeled non-degeneracy step ([B 4.11] pattern)."""
+    explicitly-labeled non-degeneracy step ([B (4.11)] pattern)."""
     engine = _engine(alg, fr, registry)
     engine.register(EKoszulDeclaration(alg, conn, fr))
     engine.register(
@@ -534,6 +537,7 @@ class NullLocalityDefinition(Definition):
     [MC Thm 3.2]."""
 
     role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    source = cite("DereliDogan2020", "Theorem 3.2 (null locality operator)")
 
     def __init__(self, alg: Algebroid) -> None:
         from jacopy.central.algebroid.context import LocalityOperator
@@ -572,7 +576,7 @@ def prove_e_koszul_unique_under_null_locality(
     K-corrections vanish with ``L = 0``, both sides collapse to the
     same Koszul right-hand side), and non-degeneracy (the explicitly
     labeled stripping step) gives ``∇¹_u v = ∇²_u v``. The component
-    decomposition (3.44) is the deferred component-level half."""
+    decomposition MC (3.44) is the deferred component-level half."""
     from jacopy.proof.step import ProofStep
 
     g = alg.metric
@@ -734,7 +738,7 @@ def prove_fundamental_theorem_components(
     step1 = ProofStep(
         lhs,
         rhs,
-        rule="(3.44), lowered index: Γ(∇)_{dbc} = Γ(K∇)_{dbc} + ½[Q-block + ⁰T-block]",
+        rule="MC (3.44), lowered index: Γ(∇)_{dbc} = Γ(K∇)_{dbc} + ½[Q-block + ⁰T-block]",
         justification="frame instance of the Schouten trick (L = 0 ⟹ K = 0); engine normal form",
     )
     for s in leg1:
@@ -749,7 +753,7 @@ def prove_fundamental_theorem_components(
     step2 = ProofStep(
         rhs,
         rhs_expanded,
-        rule="E-Koszul components at L = 0 (3.37) substituted: Γ(K∇)_{dbc} = ½[ρ(X)g + lowered γ terms]",
+        rule="E-Koszul components at L = 0, MC (3.37), substituted: Γ(K∇)_{dbc} = ½[ρ(X)g + lowered γ terms]",
         justification="declared E-Koszul connection; engine normal form of the component",
     )
     for s in leg2:

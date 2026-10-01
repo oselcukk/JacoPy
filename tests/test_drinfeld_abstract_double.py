@@ -24,7 +24,7 @@ def _setup(decls, tag):
 class TestRightLeibnizSweep:
     """The double's right-Leibniz defect IS the locality operator:
     under the 'local' level the form-component defect equals
-    ⟨α, L(df,v,w)⟩ exactly (paper (3.17)/(5.8) in instance form)."""
+    ⟨α, L(df,v,w)⟩ exactly (TW (3.17)/(5.8) in instance form)."""
 
     def test_local_closes_with_locality_defect(self):
         reg, f, E, u, v, w, pr, al, be, ga = _setup(("local",), "r1")

@@ -1,6 +1,10 @@
 """
 Interior product by a MULTIVECTOR (Phase 6.H.2) — the primitive the
-exceptional twist needs [2409.11973 / E6 paper eqs (4.13)-(4.14)]:
+exceptional twist needs [E6 paper eqs (4.13)-(4.14) — an exceptional-
+geometry paper that is NOT in the repository and is not identified
+(no author / arXiv number recorded): labels unverified. Not
+arXiv:2409.11973, whose (4.13)/(4.14) are the calculus linearity and
+Jacobi-compatibility conditions]:
 
     ι_P : Λ^q T*M → Λ^{q−p} T*M,   P ∈ Λ^p TM,
 
@@ -176,7 +180,7 @@ class MultivectorInteriorLinearityDefinition(Definition):
 
 
 class MultivectorInteriorDecomposableDefinition(Definition):
-    """The DECOMPOSABLE case [eq (4.13)]:
+    """The DECOMPOSABLE case [E6 paper eq (4.13); unverified]:
     ``ι_{X₁∧…∧X_p}(ω) → ι_{X_p}(⋯ ι_{X₁}(ω) ⋯)`` — nested ordinary
     interiors (rightmost factor contracts first). Fires when every
     wedge factor is a wedge-degree-1 vector."""
@@ -258,7 +262,8 @@ class MultivectorInteriorDecomposableFormDefinition(Definition):
     = ι_{X_p}∘⋯∘ι_{X₁}``): the two routes agree mechanically on every
     ``(p, q)`` tested (``tests/test_multivector_interior_forms.py``).
     This is the rule that evaluates ``ι_{Π₃}`` on a basis 5-form — the
-    (4.13) ↔ ⊛ component bridge (2026-09-10)."""
+    E6-paper (4.13) ↔ ⊛ component bridge (2026-09-10; unverified
+    label)."""
 
     name = (
         "multivector interior on a decomposable form: "

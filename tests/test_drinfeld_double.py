@@ -187,7 +187,7 @@ class TestPoissonDoubleTheorems:
 
 class TestNambuDoubleTheorems:
     """Phase 6.D-devam: the Nambu double on TM ⊕ Λᵖ T*M [App D] —
-    anchor ρ(U+ω) = U + Πω (D.4), the (D.1)-(D.3) linearity-anomaly
+    anchor ρ(U+ω) = U + Πω DD (D.4), the DD (D.1)-(D.3) linearity-anomaly
     cancellation inside right-Leibniz, and the symmetric part with
     the g_Z contribution (the Z-side bracket is Leibniz for p ≥ 2).
     All declaration-free (any (p+1)-vector). p = 2 in-suite; p = 3

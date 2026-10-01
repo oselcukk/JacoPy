@@ -1,6 +1,7 @@
 """Drinfeld package — Phase 6.H: example/regression suites from
-[2409.11973 §8]: B_n-generalized geometry, the exceptional Courant
-bracket, and the Atiyah bridge to the Phase 4 Bianchi identity."""
+[TW §8, arXiv:2409.11973]: B_n-generalized geometry, the exceptional
+Courant bracket, and the (name-level) Atiyah pointer to the Phase 4
+Bianchi identity."""
 
 import pytest
 
@@ -20,7 +21,7 @@ def bn_setup():
 
 
 class TestBnGeneralizedGeometry:
-    """(8.15)-(8.16): TM ⊕ C∞M ⊕ T*M with the SO(n+1,n) pairing."""
+    """TW (8.15)-(8.16): TM ⊕ C∞M ⊕ T*M with the SO(n+1,n) pairing."""
 
     def test_symmetric_part_is_d_pairing(self, bn_setup):
         reg, f, g, s, U, V, Y, om, et = bn_setup
@@ -50,7 +51,7 @@ def exc_setup():
 
 
 class TestExceptionalCourant:
-    """(8.1): TM ⊕ Λ² ⊕ Λ⁵ with the M-theory cross-term η₂∧dω₂ —
+    """TW (8.1): TM ⊕ Λ² ⊕ Λ⁵ with the M-theory cross-term η₂∧dω₂ —
     the user's X+α+β question, now a package theorem suite (5-slot
     mixed-degree wedge evaluations)."""
 
@@ -74,10 +75,12 @@ class TestExceptionalCourant:
 
 
 class TestAtiyahBridge:
-    """(8.10)-(8.14): for an Atiyah algebroid the (5.13) H-closure
-    condition IS the Bianchi identity d^∇F = 0 — the concrete
-    mechanical content lives in the Phase 4 metric-affine package
-    (curvature F of ∇, cited VF-Jacobi instances)."""
+    """TW (8.10)-(8.14): TW says the TW (5.13) H-closure condition of an
+    Atiyah algebroid follows from the Bianchi identity for F.
+    NAME-LEVEL REFERENCE ONLY, NO MECHANICAL LINK: this test only runs
+    the Phase 4 torsionful second Bianchi identity of an affine
+    connection on TM; it does not build the Atiyah bracket TW (8.11),
+    H = −F or the TW (5.13) defect (audit 0b00e1b V-M4 / M4-2)."""
 
     def test_h_closure_is_bianchi_second(self):
         from jacopy.central.objects import connection, vector_fields
@@ -136,7 +139,8 @@ class TestMultivectorInterior:
 
     def test_decomposable_eval_consistency(self):
         """ι_{X∧Y∧Z}ω₅ evaluated on 2 slots == ω₅(X,Y,Z,·,·) —
-        the (4.13) convention closes mechanically."""
+        the E6-paper (4.13) convention (unverified label) closes
+        mechanically."""
         from jacopy.algebra.derivation import Act
         from jacopy.core.expr import Integer, Neg, Sum
         from jacopy.core.multi_eval import MultiEval
@@ -173,7 +177,7 @@ class TestMultivectorInterior:
         assert chain.steps
 
     def test_boxtimes_buildable_and_typed(self):
-        """(Π₃⊛Π₃)(ω₅) = ½Π₃(ι_{Π₃}ω₅) — the (4.14) bundle map now
+        """(Π₃⊛Π₃)(ω₅) = ½Π₃(ι_{Π₃}ω₅) — the E6-paper (4.14) bundle map now
         exists as an expression (atomic Π₃: inert, honest)."""
         from jacopy.core.expr import Product, Rational
 
@@ -185,9 +189,9 @@ class TestMultivectorInterior:
 
 
 class TestExceptionalDecompositionReadings:
-    """(8.2)/(8.3): the SAME cross-term reads as an H-twist or an
+    """TW (8.2)/(8.3): the SAME cross-term reads as an H-twist or an
     R-twist depending on the decomposition; the twisted linearity
-    structure (5.6)-(5.7) is mechanical."""
+    structure TW (5.6)-(5.7) is mechanical."""
 
     def test_h_second_entry_linear(self):
         reg = PropertyRegistry()
@@ -202,7 +206,7 @@ class TestExceptionalDecompositionReadings:
 
     def test_h_first_entry_symbol(self):
         """H(f·e₁,e₂) − f·H(e₁,e₂) = −η₂ ∧ df ∧ ω₂ — the exact
-        (5.7) symbol."""
+        TW (5.7) symbol."""
         reg = PropertyRegistry()
         (f,) = functions("fx", registry=reg)
         U, V = vector_fields("Ux Vx")
@@ -214,7 +218,7 @@ class TestExceptionalDecompositionReadings:
         assert chain.steps
 
     def test_r_reading_is_same_cross_term(self):
-        """(8.3): for A = TM⊕Λ⁵, Z = Λ² the cross-term IS the
+        """TW (8.3): for A = TM⊕Λ⁵, Z = Λ² the cross-term IS the
         R-twist — structural identification."""
         from jacopy.core.expr import Neg
         from jacopy.core.wedge import Wedge
@@ -228,8 +232,8 @@ class TestExceptionalDecompositionReadings:
 
 class TestBnDecompositionReadings:
     """6.H leftover closed: the three A ⊕ Z splits of the B_n
-    bracket [(8.17)/(8.21)/(8.26)] — one bracket, three twist
-    readings; the (5.21) symmetric-part laws are the scalar Leibniz
+    bracket [TW (8.17)/(8.21)/(8.26)] — one bracket, three twist
+    readings; the TW (5.21) symmetric-part laws are the scalar Leibniz
     rule, mechanical."""
 
     def test_twist_symmetric_part_is_d_of_metric(self, bn_setup):
@@ -248,7 +252,7 @@ class TestBnDecompositionReadings:
         assert chain.steps
 
     def test_structural_identifications(self, bn_setup):
-        """(8.21)/(8.26): the split calculus elements are the
+        """TW (8.21)/(8.26): the split calculus elements are the
         expected projections."""
         from jacopy.algebra.derivation import Act
 

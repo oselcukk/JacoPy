@@ -8,11 +8,13 @@ Three operators, each measuring the failure of a structural property
   ``J^E(u,v,w) := [u,[v,w]]_E − [[u,v]_E,w]_E − [v,[u,w]_E]_E``;
   ``J^E ≡ 0`` ⟺ Leibniz-Jacobi (the carrier of the ``jacobi``
   declaration — a bracket-level Jacobi rewrite would not terminate).
-* **Derivator** (item 10f; also MC's tool for the ``C^∞``-module
-  analysis and the Midterm Q3 duality conditions):
+* **Derivator** (item 10f; defined in [DD (4.39), arXiv:2312.06584]
+  and in the Midterm Q3 duality conditions):
   ``D^E_Φ(u,v) := Φ[u,v]_E − [Φu,v]_E − [u,Φv]_E`` for a
   ``C^∞``-linear ``Φ: E → E``; ``D^E_Φ ≡ 0`` ⟺ Φ derives the bracket.
-* **Predator** (item 10g):
+* **Predator** (item 10g; [DD footnote 5, arXiv:2312.06584] — note
+  that [TW (6.9)/(A.6), arXiv:2409.11973] uses the opposite sign
+  ``[ρu, ρv] − ρ[u,v]``):
   ``P^E_Φ(u,v) := Φ[u,v]_E − [Φu, Φv]_Lie`` for a ``C^∞``-linear
   ``Φ: E → TM``; ``P^E_Φ ≡ 0`` ⟺ Φ is a morphism onto the Lie
   bracket. **In particular ``P^E_ρ ≡ 0`` ⟺ the pre-Leibniz
@@ -33,6 +35,7 @@ from typing import Any, Optional
 
 from jacopy.algebra.derivation import Derivation
 from jacopy.algebra.lie_bracket_vf import LieBracketVF
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -312,6 +315,7 @@ class JacobiatorExpansionDefinition(Definition):
     ``J^E(u,v,w) → [u,[v,w]] − [[u,v],w] − [v,[u,w]]``."""
 
     anchor = Jacobiator
+    source = cite("CatalOzerDoganYetismisoglu2025", "Eq. (3.20)")
 
     def __init__(self, alg: Algebroid) -> None:
         if not isinstance(alg, Algebroid):
@@ -442,6 +446,10 @@ class DerivatorExpansionDefinition(Definition):
     """``D_Φ(u,v) → Φ[u,v]_E − [Φu, v]_E − [u, Φv]_E``."""
 
     anchor = Derivator
+    source = (
+        cite("Math595Midterm2026", "Question 3"),
+        cite("CatalOzerDoganYetismisoglu2024", "Eq. (4.39)"),
+    )
 
     def __init__(self, alg: Algebroid) -> None:
         self._alg = alg
@@ -586,6 +594,7 @@ class PredatorExpansionDefinition(Definition):
     anchor, so the pre-Leibniz declaration can act on them."""
 
     anchor = Predator
+    source = cite("CatalOzerDoganYetismisoglu2024", "footnote 5")
 
     def __init__(self, alg: Algebroid) -> None:
         self._alg = alg

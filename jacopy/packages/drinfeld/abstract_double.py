@@ -16,11 +16,11 @@ Sweep results (each an ⟹ with an honest-fail partner):
 
 * **right-Leibniz**: the double is right-Leibniz with anchor
   ``ρ(u+α) = u``  ⟺  ``A`` declares ``right-leibniz`` +
-  ``left-leibniz`` + ``local`` — the paper's "LOCAL almost-Leibniz"
-  hypothesis rediscovered mechanically, term by term: right-Leibniz
-  alone leaves the left-Leibniz defect; adding left-Leibniz leaves
-  EXACTLY ``⟨α, L(df,v,w)⟩`` — the locality operator — as the
-  one-term residual, so ``local`` (L = 0) is forced.
+  ``left-leibniz`` + ``local`` — TW's "local almost-Leibniz"
+  (TW §3, after TW (3.17)) hypothesis rediscovered mechanically,
+  term by term: right-Leibniz alone leaves the left-Leibniz defect;
+  adding left-Leibniz leaves EXACTLY ``⟨α, L(df,v,w)⟩`` — the
+  locality operator — as the one-term residual, so ``local`` (L = 0) is forced.
 * **symmetric part**: form component ``= d_E⟨e₁,e₂⟩₊`` needs NO
   declaration (the 3.F magic theorem); the vector component
   ``[u,v]+[v,u] = 0`` is exactly the ``antisymmetric`` declaration.
@@ -118,8 +118,11 @@ def prove_abstract_double_right_leibniz(
     (surfaced mechanically: the bare run leaves the left-Leibniz
     defect; the local run leaves exactly this one term). The vector
     component is plain right-Leibniz. Corollary: the double is
-    right-Leibniz ⟺ the locality operator vanishes — the paper's
-    (5.8)/(3.17) decomposition in instance form."""
+    right-Leibniz ⟺ the locality operator vanishes — an instance-form
+    reading of TW (3.17) (the locality operator ``L_E``, defined in the
+    paper through the LEFT-Leibniz defect) and its decomposition TW (5.8).
+    The right-Leibniz ⟺ locality equivalence is this module's own
+    derivation, not a statement printed in TW."""
     vec_l, form_l = abstract_double(
         alg, u, alpha, Product(f, v), Product(f, beta)
     )
@@ -287,6 +290,7 @@ def prove_abstract_double_jacobi_form(
                 rhs=Integer(0),
                 proof=thm.proof,
                 generality="instance",
+                source=thm.source,  # copied from the cited record
             ).with_structural_requires()
             eng.register(TheoremDefinition(variant, allow_legacy=True))  # instance record: explicit
             used.append(variant)

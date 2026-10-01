@@ -1,5 +1,6 @@
 """Drinfeld package — Phase 6.B: the Poisson Lie-bialgebroid
-compatibility conditions (drinfeld eqs 4.36-4.38 on (TM, T*M_π))."""
+compatibility conditions (DD (4.36)-(4.38), arXiv:2312.06584, on
+(TM, T*M_π))."""
 
 import pytest
 
@@ -24,14 +25,14 @@ def setup():
 
 class TestCompatibilityConditions:
     def test_condition_two(self, setup):
-        """(4.37): ℒ_{d̃ι̃_ηU}μ = −[dι_Uη, μ]_π — bare."""
+        """DD (4.37): ℒ_{d̃ι̃_ηU}μ = −[dι_Uη, μ]_π — bare."""
         reg, eta, mu, U, Y, P = setup
         assert prove_compat_condition_two(
             P, eta, mu, U, Y, registry=reg
         ).steps
 
     def test_condition_one_derivator(self, setup):
-        """(4.36), the DERIVATOR condition (PDF item 10f): cited
+        """DD (4.36), the DERIVATOR condition (PDF item 10f): cited
         VF-Jacobi + bridge instances."""
         reg, eta, mu, U, Y, P = setup
         chain = prove_compat_condition_one(
@@ -40,7 +41,7 @@ class TestCompatibilityConditions:
         assert any(s.provenance_tag == "theorem" for s in chain.steps)
 
     def test_condition_three_p1(self, setup):
-        """(4.38) at p = 1 (the 𝔻_Z g_Z side vanishes by
+        """DD (4.38) at p = 1 (the 𝔻_Z g_Z side vanishes by
         alternation)."""
         reg, eta, mu, U, Y, P = setup
         assert prove_compat_condition_three_p1(

@@ -1,5 +1,5 @@
 """Drinfeld package — Phase 6.A: the usual Cartan calculus IS a
-calculus in the bialgebroid sense (drinfeld §4 conditions + 𝒦
+calculus in the bialgebroid sense (DD §4 conditions + 𝒦
 composition laws), mechanically at p = 1, 2."""
 
 import pytest

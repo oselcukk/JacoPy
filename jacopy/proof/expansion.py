@@ -93,6 +93,15 @@ class Definition(ABC):
     #: a structure with its parameters …).
     identity = None
 
+    #: Literature source of the rule (metadata only): a
+    #: :class:`jacopy.bibliography.Citation` — or a tuple of them —
+    #: built with :func:`jacopy.bibliography.cite`, e.g.
+    #: ``cite("Uchino2002", "Section 1, axiom [C5]")``. The engine
+    #: copies it onto every :class:`ProofStep` the rule produces and the
+    #: display layer prints it; no matching, rewriting or
+    #: classification reads it. ``None``: the rule names no source.
+    source = None
+
     @property
     def key(self):
         """The rule's structural key: :attr:`identity` when given, else
@@ -460,6 +469,7 @@ class ExpansionEngine:
             role=_step_role(d, tag),
             cites=(getattr(d, "theorem", None) if tag == "theorem" else None),
             key=d.key,
+            source=getattr(d, "source", None),
         )
         if is_library_engine(self):
             # minted only by the library engine's own matching/rewriting

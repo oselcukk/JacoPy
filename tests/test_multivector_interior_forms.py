@@ -1,7 +1,8 @@
 """The component face of the multivector interior (2026-09-10):
 ι_P on a decomposable form, its sign consistency with the
 decomposable-multivector rule, the sharp's pairing face at p ≥ 2,
-and the (4.13) ↔ ⊛ frame-component identity."""
+and the E6-paper (4.13) ↔ ⊛ frame-component identity (unidentified
+paper, not in the repository: label unverified; not arXiv:2409.11973)."""
 
 import pytest
 

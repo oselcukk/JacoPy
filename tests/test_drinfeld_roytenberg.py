@@ -1,5 +1,5 @@
 """Drinfeld package — Phase 6.F.1: the concrete Roytenberg bracket
-[2409.11973 (5.2)] on TM ⊕ Λᵖ and the H-closure theorem (5.13)."""
+[TW (5.2), arXiv:2409.11973] on TM ⊕ Λᵖ and the H-closure theorem TW (5.13)."""
 
 import pytest
 
@@ -67,7 +67,7 @@ class TestRoytenbergBracket:
 
 @pytest.mark.parametrize("p", [1, 2])
 class TestTwistedLinearity:
-    """(5.6)-(5.7): the concrete H is C∞-bilinear — zero symbols."""
+    """TW (5.6)-(5.7): the concrete H is C∞-bilinear — zero symbols."""
 
     def test_h_bilinearity(self, p):
         reg, f, h, U, V, W, om, et, B, H, slots, N = _setup(p)
@@ -79,7 +79,7 @@ class TestTwistedLinearity:
 
 @pytest.mark.parametrize("p", [1, 2])
 class TestHClosure:
-    """(5.13): the new twisted-Jacobi requirement measures dH."""
+    """TW (5.13): the new twisted-Jacobi requirement measures dH."""
 
     def test_defect_equals_dh(self, p):
         reg, f, h, U, V, W, om, et, B, H, slots, N = _setup(p)
@@ -89,7 +89,7 @@ class TestHClosure:
         assert chain.steps
 
     def test_exact_h_satisfies_condition(self, p):
-        """Corollary: H = dB (the Ševera image) passes (5.13) by
+        """Corollary: H = dB (the Ševera image) passes TW (5.13) by
         d² = 0. The p = 2 closure takes ~14 s (1016 steps), so it
         runs only with JACOPY_RUN_SLOW=1 (verified offline)."""
         import os
@@ -121,9 +121,9 @@ class TestTwistedJacobi:
 
     @pytest.mark.parametrize("p", [1, 2])
     def test_fi_collapses_twisted_compat(self, p):
-        """(5.14)'s extra term H(U, R(η,μ)) dies under the declared
+        """TW (5.14)'s extra term H(U, R(η,μ)) dies under the declared
         FI — the twisted Jacobi-compat family collapses to the
-        proven untwisted (D.8)."""
+        proven untwisted DD (D.8) (arXiv:2312.06584)."""
         reg, f, h, U, V, W, om, et, B, H, slots, N = _setup(p)
         (mu,) = forms("μr", degree=p)
         chain = ro.prove_fi_collapses_twisted_compat(
@@ -133,7 +133,7 @@ class TestTwistedJacobi:
 
     @pytest.mark.parametrize("p", [1, 2])
     def test_twisted_calculus_obstruction_pinned_open(self, p):
-        """(5.9)-1: generic (Π, H) do NOT satisfy the twisted
+        """TW (5.9)-1: generic (Π, H) do NOT satisfy the twisted
         calculus condition — the obstruction is honest-nonzero
         (mixing H with the tilde side is a genuine constraint)."""
         from jacopy.core.expr import Integer
@@ -162,11 +162,13 @@ class TestTwistedJacobi:
 @pytest.mark.parametrize("p", [1, 2])
 class TestMasterEquationDictionary:
     """6.F.3: bosonic readings of the proto-bialgebroid master
-    equations (3.11)-(3.15) for (μ, γ, φ, ψ) = (Lie, Π, H, 0)."""
+    equations TW (3.11)-(3.15) for (μ, γ, φ, ψ) = (Lie, Π, H, 0)."""
 
     def test_twisted_fi_kills_r_twist_h(self, p):
-        """(3.11) consistency: under the declared H-twisted FI the
-        corrected R-twist R′_H vanishes (twisted-Poisson shape)."""
+        """Twisted-Poisson FI consistency [TW (7.25) with H] — not the
+        bosonic TW (3.11), which is the bi-degree (1,3) A-sector (audit
+        0b00e1b V-M4 / M4-1): under the declared H-twisted FI the
+        corrected R-twist R′_H vanishes."""
         reg, f, h, U, V, W, om, et, B, H, slots, N = _setup(p)
         chain = ro.prove_twisted_fi_kills_r_twist_h(
             N, H, om, et, h, registry=reg
@@ -174,7 +176,7 @@ class TestMasterEquationDictionary:
         assert chain.steps
 
     def test_h_correction_is_bilinear(self, p):
-        """The H-correction of R′_H is C∞-bilinear — the (7.26)
+        """The H-correction of R′_H is C∞-bilinear — the TW (7.26)
         anomaly is H-independent."""
         reg, f, h, U, V, W, om, et, B, H, slots, N = _setup(p)
         c1, c2 = ro.prove_r_twist_h_correction_bilinear(
@@ -183,7 +185,7 @@ class TestMasterEquationDictionary:
         assert c1.steps and c2.steps
 
     def test_jacobiator_a_obstruction_pinned(self, p):
-        """(5.12): generic (Π, H) violate the A-Jacobiator
+        """TW (5.12): generic (Π, H) violate the A-Jacobiator
         requirement — honest-fail pinned."""
         from jacopy.algebra.derivation import Act
         from jacopy.core.expr import Integer
@@ -208,7 +210,7 @@ class TestMasterEquationDictionary:
 
 class TestFreePsiMasterEquations:
     """The last 6.F.3 leftover: the free trivector ψ for the
-    (3.12)/(3.15) master-equation components."""
+    TW (3.12)/(3.15) master-equation components."""
 
     def _hosts(self):
         from jacopy.packages.poisson import poisson_structure
@@ -227,7 +229,7 @@ class TestFreePsiMasterEquations:
         assert c1.steps and c2.steps and c3.steps
 
     def test_psi_twisted_fi_consistency(self):
-        """(3.12) quasi-Poisson face: under the declared ψ-twisted
+        """TW (3.12) quasi-Poisson face: under the declared ψ-twisted
         FI, the anchor defect IS the free R-twist."""
         reg, f, h, om, et, P, PSI = self._hosts()
         chain = ro.prove_psi_twisted_fi_consistency(
@@ -236,7 +238,7 @@ class TestFreePsiMasterEquations:
         assert chain.steps
 
     def test_sn_compat_node_structural(self):
-        """(3.15) carrier [π,ψ]_SN exists as a node."""
+        """TW (3.15) carrier [π,ψ]_SN exists as a node."""
         reg, f, h, om, et, P, PSI = self._hosts()
         n = ro.sn_compat_node(P, PSI)
         assert "SN" in n._repr_inner()

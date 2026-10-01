@@ -1,6 +1,7 @@
 """
 Linear E-connections and E-torsion/E-curvature (Phase 4.E.1)
-[MC Def 3.2-3.3, Prop 3.1-3.3].
+[MC Definition 3.2, Eqs. (3.8)–(3.9); last-slot tensoriality from
+MC (3.19) + the proof of Proposition 3.3].
 
 A **linear E-connection** on an anchored bundle ``(E, ρ)`` is a map
 ``∇: 𝔛(E) × 𝔛(E) → 𝔛(E)`` that is ``C^∞``-linear in the direction and
@@ -21,7 +22,7 @@ bracket in their expansions:
     T⁽⁰⁾(u,v)  = ∇_u v − ∇_v u − [u,v]_E,
     R⁽⁰⁾(u,v)w = ∇_u ∇_v w − ∇_v ∇_u w − ∇_{[u,v]_E} w.
 
-The superscript ⁰ is deliberate [MC §3]: on a general local algebroid
+The superscript ⁰ is deliberate [MC Section 3, Eqs. (3.8)–(3.9)]: on a general local algebroid
 these are only PSEUDO-tensors —
 
 * ``T⁽⁰⁾(u, f·v) = f·T⁽⁰⁾(u,v)`` holds (right-Leibniz), but
@@ -30,7 +31,8 @@ these are only PSEUDO-tensors —
   (:func:`prove_pseudo_torsion_first_slot_defect`), which is exactly
   why the MODIFIED torsion ``ᴸT`` exists (Phase 4.E.2);
 * ``R⁽⁰⁾(u,v)(f·w) = f·R⁽⁰⁾(u,v)w`` holds IFF the anchor is a bracket
-  morphism — MC Prop 3.3, mechanized as the conditional theorem
+  morphism — MC (3.19) + Proposition 3.3 (its proof's ``f·w``
+  computation), mechanized as the conditional theorem
   :func:`prove_e_curvature_last_slot_conditional` (honest failure
   without ``anchor-morphism``).
 """
@@ -40,6 +42,7 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
@@ -71,6 +74,10 @@ class EConnectionScalarActionDefinition(Definition):
     rule's docstring, now delivered)."""
 
     anchor = Act
+    source = (
+        cite("DereliDogan2020", "Definition 3.2, Eq. (3.2)"),
+        cite("DereliDogan2020", "Section 3, remark after Proposition 3.1"),
+    )
 
     def __init__(
         self,
@@ -105,6 +112,7 @@ class ETorsionExpansionDefinition(Definition):
     definition (the algebroid bracket in the correction slot)."""
 
     anchor = Torsion
+    source = cite("DereliDogan2020", "Eq. (3.8)")
 
     def __init__(self, alg: Algebroid) -> None:
         self._alg = alg
@@ -143,6 +151,7 @@ class ECurvatureExpansionDefinition(Definition):
     E-curvature definition."""
 
     anchor = Curvature
+    source = cite("DereliDogan2020", "Eq. (3.9)")
 
     def __init__(self, alg: Algebroid) -> None:
         self._alg = alg
@@ -204,7 +213,7 @@ def e_connection_engine(
 
 
 # --------------------------------------------------------------------- #
-# Theorems [MC Prop 3.1-3.3 territory]                                   #
+# Theorems [MC Definition 3.2, Eqs. (3.8)–(3.9), (3.19)]                 #
 # --------------------------------------------------------------------- #
 
 
@@ -285,7 +294,7 @@ def prove_e_curvature_last_slot_conditional(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """[MC Prop 3.3] ``R⁽⁰⁾(u,v)(f·w) = f·R⁽⁰⁾(u,v)w`` — holds exactly
+    """[MC (3.19) + Proposition 3.3] ``R⁽⁰⁾(u,v)(f·w) = f·R⁽⁰⁾(u,v)w`` — holds exactly
     when the anchor is a bracket morphism: the obstruction is
     ``(ρ(u)ρ(v) − ρ(v)ρ(u) − ρ([u,v]))(f)·w``. Closes under a
     declared ``anchor-morphism``; fails honestly otherwise."""

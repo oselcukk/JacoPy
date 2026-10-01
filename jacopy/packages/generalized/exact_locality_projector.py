@@ -27,7 +27,7 @@ each certified on its own):
   is ``C^∞``-linear (both slots, sums and scalars), has image in
   ``ker ρ``, absorbs coboundary values, is idempotent and is the
   identity on ``ker ρ`` — every requirement of [MC Def 3.10] and of
-  the admissible-paper Def 3.8. The ``B``-field family
+  [ADM Def 3.8] (DereliDogan2023, the extra condition ``P|ker ρ = id``). The ``B``-field family
   ``C(U, ·) = ι_U B`` (:func:`b_field_projector`) is the ANTISYMMETRIC
   subfamily; in dimension one every 2-form vanishes while
   ``C(u∂ₓ) = u dx`` still works, so the freedom is NOT only a
@@ -72,6 +72,7 @@ from jacopy.proof.expansion import Definition
 from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import ProofFailure
 from jacopy.proof.theorems import Theorem
+from jacopy.bibliography import cite
 from jacopy.central.objects.endomorphism import EndoForm
 from jacopy.central.objects.interior import Interior
 from jacopy.central.objects.partial_eval import musical_view
@@ -143,12 +144,17 @@ def _require_bundle_map(C: Expr, what: str, registry=None) -> None:
 
 class ProjectorAbsorbsExactFormsDefinition(Definition):
     """The [MC Def 3.10] hypothesis ``L̂ ∈ [L̃]`` on the exact Courant
-    algebroid, where ``L(Df, u, v) = g(u, v)·Df`` [MC Prop 4.1]: the
+    algebroid, where ``L(Df, u, v) = g(u, v)·g⁻¹(Df)`` [MC Prop 4.1,
+    Eq. (4.3)]: the
     form-slot map ``C`` of a locality projector FIXES exact 1-forms,
     ``C(dg) → dg`` for a function ``g``. DECLARED (it is the defining
     property of a locality projector, not derivable)."""
 
     role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    source = (
+        cite("DereliDogan2020", "Definition 3.10"),
+        cite("DereliDogan2020", "Proposition 4.1, Eq. (4.3)"),
+    )
 
     anchor = EndoForm
 
@@ -272,6 +278,7 @@ def prove_projector_fixes_locally_exact_forms(
         notes="MC Prop 4.2; the TM part of the projector is NOT fixed by this "
         "argument — see prove_linear_projector_is_a_locality_projector and "
         "prove_projector_differs_from_pr2_on_a_frame",
+        source=cite("DereliDogan2020", "Proposition 4.2, proof"),
     ).with_structural_requires()
     return chain, theorem
 
