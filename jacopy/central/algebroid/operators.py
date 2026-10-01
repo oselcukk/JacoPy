@@ -226,10 +226,10 @@ class Jacobiator(Derivation):
     """``J^E(u, v, w)`` — the Leibniz-Jacobi defect, itself a section
     of ``E`` (degree-0 atom acting through the anchor only)."""
 
-    # Not a derivation: J(u,v,w) is a section of E, acting on functions only through ρ.
-    section_value = True
-
-    __slots__ = ("_algebroid_name", "_u", "_v", "_w")
+    # A derivation only on the tangent algebroid (J(X,Y,Z) is then a
+    # vector field); otherwise a section of E acting on functions only
+    # through ρ. ``tangent`` comes from the algebroid (jacobiator()).
+    __slots__ = ("_algebroid_name", "_u", "_v", "_w", "_tangent")
 
     def __init__(
         self,
@@ -239,6 +239,7 @@ class Jacobiator(Derivation):
         w: Expr,
         *,
         name: Optional[str] = None,
+        tangent: bool = False,
     ) -> None:
         for s in (u, v, w):
             if not isinstance(s, Expr):
@@ -256,6 +257,15 @@ class Jacobiator(Derivation):
         self._u = u
         self._v = v
         self._w = w
+        self._tangent = bool(tangent)
+
+    @property
+    def tangent(self) -> bool:
+        return self._tangent
+
+    @property
+    def section_value(self) -> bool:
+        return not self._tangent
 
     @property
     def algebroid_name(self) -> str:
@@ -274,7 +284,9 @@ class Jacobiator(Derivation):
         return (self._u, self._v, self._w)
 
     def with_slots(self, u: Expr, v: Expr, w: Expr) -> "Jacobiator":
-        return Jacobiator(self._algebroid_name, u, v, w)
+        return Jacobiator(
+            self._algebroid_name, u, v, w, tangent=self._tangent
+        )
 
     def _key(self) -> Any:
         return (
@@ -284,6 +296,7 @@ class Jacobiator(Derivation):
             self._u,
             self._v,
             self._w,
+            self._tangent,
         )
 
 
@@ -291,7 +304,7 @@ def jacobiator(alg: Algebroid, u: Expr, v: Expr, w: Expr) -> Jacobiator:
     """``J^E(u, v, w)`` for the given algebroid context."""
     if not isinstance(alg, Algebroid):
         raise TypeError("jacobiator expects an Algebroid")
-    return Jacobiator(alg.name, u, v, w)
+    return Jacobiator(alg.name, u, v, w, tangent=alg.is_tangent)
 
 
 class JacobiatorExpansionDefinition(Definition):
@@ -332,10 +345,10 @@ class Derivator(Derivation):
     """``D^E_Φ(u, v)`` — the bracket-derivation defect of a
     ``C^∞``-linear ``Φ: E → E`` (item 10f), itself a section of E."""
 
-    # Not a derivation: D_Φ(u,v) is a section of E (Φ: E → E), not an operator on functions.
-    section_value = True
-
-    __slots__ = ("_algebroid_name", "_map_name", "_u", "_v")
+    # A derivation only when Φ: E → E targets TM (E = TM: D_Φ(X,Y) is
+    # a vector field); otherwise a section of E. ``tangent`` comes from
+    # the SectionMap (derivator()), the one source of Φ's target.
+    __slots__ = ("_algebroid_name", "_map_name", "_u", "_v", "_tangent")
 
     def __init__(
         self,
@@ -345,6 +358,7 @@ class Derivator(Derivation):
         v: Expr,
         *,
         name: Optional[str] = None,
+        tangent: bool = False,
     ) -> None:
         for s in (u, v):
             if not isinstance(s, Expr):
@@ -361,6 +375,15 @@ class Derivator(Derivation):
         self._map_name = map_name
         self._u = u
         self._v = v
+        self._tangent = bool(tangent)
+
+    @property
+    def tangent(self) -> bool:
+        return self._tangent
+
+    @property
+    def section_value(self) -> bool:
+        return not self._tangent
 
     @property
     def algebroid_name(self) -> str:
@@ -383,7 +406,9 @@ class Derivator(Derivation):
         return (self._u, self._v)
 
     def with_slots(self, u: Expr, v: Expr) -> "Derivator":
-        return Derivator(self._algebroid_name, self._map_name, u, v)
+        return Derivator(
+            self._algebroid_name, self._map_name, u, v, tangent=self._tangent
+        )
 
     def _key(self) -> Any:
         return (
@@ -393,6 +418,7 @@ class Derivator(Derivation):
             self._map_name,
             self._u,
             self._v,
+            self._tangent,
         )
 
 
@@ -409,7 +435,7 @@ def derivator(
             f"derivator needs Φ: E → E on {alg.bundle!r}; got "
             f"{phi.source!r} → {phi.target!r}"
         )
-    return Derivator(alg.name, phi.name, u, v)
+    return Derivator(alg.name, phi.name, u, v, tangent=phi.targets_tangent)
 
 
 class DerivatorExpansionDefinition(Definition):
@@ -435,10 +461,15 @@ class DerivatorExpansionDefinition(Definition):
         u, v = expr.sections
         m = expr.map_name
         br = self._alg.bracket
+        t = expr.tangent  # Φ's target, recorded from the SectionMap
+
+        def phi(s: Expr) -> Expr:
+            return MappedSection(m, s, tangent=t)
+
         return Sum(
-            MappedSection(m, br(u, v)),
-            Neg(br(MappedSection(m, u), v)),
-            Neg(br(u, MappedSection(m, v))),
+            phi(br(u, v)),
+            Neg(br(phi(u), v)),
+            Neg(br(u, phi(v))),
         )
 
 
@@ -447,8 +478,10 @@ class Predator(Derivation):
     Lie-morphism defect of ``Φ: E → TM`` (item 10g). ``Φ = ρ`` gives
     the pre-Leibniz defect: ``P^E_ρ ≡ 0 ⟺ anchor-morphism``."""
 
-    # A derivation: Φ: E → TM (checked by predator()), so P_Φ(u,v) is a vector field.
-    __slots__ = ("_algebroid_name", "_map_name", "_u", "_v")
+    # A derivation only when Φ targets TM (predator() checks it and sets
+    # ``tangent``; a bare Predator(...) is NOT certified — default
+    # reject): then P_Φ(u,v) is a vector field.
+    __slots__ = ("_algebroid_name", "_map_name", "_u", "_v", "_tangent")
 
     def __init__(
         self,
@@ -458,6 +491,7 @@ class Predator(Derivation):
         v: Expr,
         *,
         name: Optional[str] = None,
+        tangent: bool = False,
     ) -> None:
         for s in (u, v):
             if not isinstance(s, Expr):
@@ -474,6 +508,15 @@ class Predator(Derivation):
         self._map_name = map_name
         self._u = u
         self._v = v
+        self._tangent = bool(tangent)
+
+    @property
+    def tangent(self) -> bool:
+        return self._tangent
+
+    @property
+    def section_value(self) -> bool:
+        return not self._tangent
 
     @property
     def algebroid_name(self) -> str:
@@ -496,7 +539,9 @@ class Predator(Derivation):
         return (self._u, self._v)
 
     def with_slots(self, u: Expr, v: Expr) -> "Predator":
-        return Predator(self._algebroid_name, self._map_name, u, v)
+        return Predator(
+            self._algebroid_name, self._map_name, u, v, tangent=self._tangent
+        )
 
     def _key(self) -> Any:
         return (
@@ -506,6 +551,7 @@ class Predator(Derivation):
             self._map_name,
             self._u,
             self._v,
+            self._tangent,
         )
 
 
@@ -522,7 +568,7 @@ def predator(
             f"predator needs Φ: E → TM; got {phi.source!r} → "
             f"{phi.target!r}"
         )
-    return Predator(alg.name, phi.name, u, v)
+    return Predator(alg.name, phi.name, u, v, tangent=phi.targets_tangent)
 
 
 def anchor_predator(alg: Algebroid, u: Expr, v: Expr) -> Predator:
@@ -530,7 +576,8 @@ def anchor_predator(alg: Algebroid, u: Expr, v: Expr) -> Predator:
     vanishing is exactly the pre-Leibniz property."""
     if not isinstance(alg, Algebroid):
         raise TypeError("anchor_predator expects an Algebroid")
-    return Predator(alg.name, alg.anchor_name, u, v)
+    # the anchor targets TM by definition
+    return Predator(alg.name, alg.anchor_name, u, v, tangent=True)
 
 
 class PredatorExpansionDefinition(Definition):
@@ -561,8 +608,9 @@ class PredatorExpansionDefinition(Definition):
             image = self._alg.anchor
         else:
             def image(s: Expr) -> Expr:
-                # Φ: E → TM (predator contract): the images are vector fields
-                return MappedSection(m, s, tangent=True)
+                # the images are vector fields only for a certified
+                # Φ: E → TM (flag recorded by predator())
+                return MappedSection(m, s, tangent=expr.tangent)
         return Sum(
             image(self._alg.bracket(u, v)),
             Neg(LieBracketVF(image(u), image(v))),

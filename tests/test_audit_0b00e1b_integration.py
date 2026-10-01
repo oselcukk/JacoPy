@@ -282,7 +282,7 @@ def _section_values():
 
 def _vector_fields():
     """Derivation subclasses that ARE vector fields (Leibniz on C∞(M))."""
-    from jacopy.central.algebroid.operators import Predator, section_map
+    from jacopy.central.algebroid.operators import predator, section_map
     from jacopy.central.objects.bundle import TM
     from jacopy.packages.metric_affine.torsion_curvature import (
         Curvature,
@@ -296,7 +296,7 @@ def _vector_fields():
     X, Y, Z = vector_fields("X Y Z")
     return reg, f, g, {
         "AnchoredVF": A.anchor(u),
-        "Predator": Predator("Avf", "Φ", u, v),
+        "Predator": predator(A, section_map("Φ", A.bundle, TM), u, v),
         "MappedSection(E→TM)": section_map("Φ", A.bundle, TM)(u),
         "Torsion(TM)": Torsion("∇", X, Y),
         "Curvature(TM)": Curvature("∇", X, Y, Z),
@@ -517,3 +517,94 @@ class TestSectionValueMarkerSuffices:
         for op in (_Val("s"), _ValOverride("t")):
             assert product_rule(Act(op, Product(f, g)), reg) == Act(op, Product(f, g))
             assert product_rule(Act(op, Integer(3)), reg) == Act(op, Integer(3))
+
+
+class TestDefectOperatorTangency:
+    """Review items 1, 2, 6: the tangency of Φ(·), D_Φ, J, P_Φ comes from
+    ONE source — the SectionMap's target (or the algebroid itself)."""
+
+    def _tangent(self):
+        from jacopy.central.algebroid import tangent_algebroid
+        from jacopy.central.objects.bundle import TM
+
+        reg = PropertyRegistry()
+        f, g = functions("f g", registry=reg)
+        T = tangent_algebroid()
+        X, Y = vector_fields("X Y")
+        from jacopy.central.algebroid import section_map
+
+        return reg, f, g, T, X, Y, section_map("Φ", TM, TM)
+
+    def test_tangent_derivator_definition_closes(self):
+        # item 1: CLOSED on ec63751; fa7ec21/4f29acf built Φ(·) without
+        # the tangent flag in the expansion → ProofFailure; closes again.
+        from jacopy.central.algebroid import derivator
+        from jacopy.central.algebroid.operators import (
+            DerivatorExpansionDefinition,
+            MappedSectionLinearityDefinition,
+        )
+        from jacopy.core.expr import Neg
+
+        reg, f, g, T, X, Y, phi = self._tangent()
+        eng = algebroid_engine(T, registry=reg)
+        eng.register(DerivatorExpansionDefinition(T))
+        eng.register(MappedSectionLinearityDefinition(reg))
+        rhs = Sum(
+            phi(T.bracket(X, Y)),
+            Neg(T.bracket(phi(X), Y)),
+            Neg(T.bracket(X, phi(Y))),
+        )
+        assert _prove(derivator(T, phi, X, Y), rhs, reg, eng).steps
+
+    def test_tangent_defects_are_vector_fields(self):
+        # item 6: on E = TM, J(X,Y,Z) and D_Φ(X,Y) are vector fields
+        # (split on ec63751, inert on fa7ec21/4f29acf; split again).
+        from jacopy.central.algebroid import derivator, jacobiator
+
+        reg, f, g, T, X, Y, phi = self._tangent()
+        for op in (jacobiator(T, X, Y, X), derivator(T, phi, X, Y)):
+            assert not op.section_value
+            assert product_rule(Act(op, Product(f, g)), reg) == Sum(
+                Product(Act(op, f), g), Product(f, Act(op, g))
+            )
+            assert op.with_slots(*op.rewritable_slots).tangent
+        # on a non-tangent algebroid they stay section values
+        from jacopy.central.algebroid import derivator as der, jacobiator as jac
+        from jacopy.central.algebroid import section_map
+
+        A = algebroid("Adt", Bundle("Adt"))
+        u, v = A.sections("u v")
+        for op in (jac(A, u, v, u), der(A, section_map("Ψ", A.bundle, A.bundle), u, v)):
+            assert op.section_value
+            assert product_rule(Act(op, Product(f, g)), reg) == Act(op, Product(f, g))
+
+    def test_predator_tangency_needs_the_checked_map(self):
+        # item 2: a bare Predator(...) is not certified (split on
+        # ec63751 and fa7ec21 whatever Φ's target); predator() /
+        # anchor_predator record Φ: E → TM, and the expansion's images
+        # carry exactly that flag.
+        from jacopy.central.algebroid import anchor_predator, predator, section_map
+        from jacopy.central.algebroid.operators import (
+            MappedSection,
+            Predator,
+            PredatorExpansionDefinition,
+        )
+        from jacopy.central.objects.bundle import TM
+
+        reg = PropertyRegistry()
+        f, g = functions("f g", registry=reg)
+        A = algebroid("Apd", Bundle("Apd"))
+        u, v = A.sections("u v")
+        bare = Predator("Apd", "Ψ", u, v)
+        assert bare.section_value
+        assert product_rule(Act(bare, Product(f, g)), reg) == Act(bare, Product(f, g))
+        good = predator(A, section_map("Ψ", A.bundle, TM), u, v)
+        assert good.tangent and not good.section_value
+        assert anchor_predator(A, u, v).tangent
+        assert product_rule(Act(good, Product(f, g)), reg) == Sum(
+            Product(Act(good, f), g), Product(f, Act(good, g))
+        )
+        img = PredatorExpansionDefinition(A).rewrite(good).children[0]
+        assert img == MappedSection("Ψ", A.bracket(u, v), tangent=True)
+        img_bare = PredatorExpansionDefinition(A).rewrite(bare).children[0]
+        assert img_bare == MappedSection("Ψ", A.bracket(u, v))
