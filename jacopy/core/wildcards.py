@@ -309,7 +309,15 @@ def _match_indexed_sum(pattern, target, bindings, registry) -> bool:
         return False
     pd, td = pattern.dummy, target.dummy
     body = target.body
-    if isinstance(pd, Wildcard):
+    prior = bindings.get(pd.name) if isinstance(pd, Wildcard) else None
+    if isinstance(prior, Expr) and prior.is_atom and prior != td:
+        # the same ?D already names another Σ's dummy: α-rename this
+        # target binder to it (two Σ_{?D} need not share a dummy name)
+        if contains(body, prior) or contains(pattern.body, prior):
+            return False
+        body = target.with_dummy(prior).body
+        dummy = prior
+    elif isinstance(pd, Wildcard):
         if contains(pattern.body, td):
             return False
         if not _bind_wildcard(pd, td, bindings, registry):

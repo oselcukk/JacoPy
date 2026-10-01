@@ -557,3 +557,15 @@ def test_cited_rule_reraises_programming_errors():
 
         with pytest.raises(exc):
             Broken().matches(Symbol("x"))
+
+
+def test_two_sigmas_sharing_a_wildcard_dummy_match_up_to_alpha():
+    # Σ_{?D}?A + Σ_{?D}?B against Σ_i F(i) + Σ_j G(j): the dummies are
+    # bound names, so the pattern matches (review: false reject)
+    i, j, F, D, A, B = _sigma_setup()
+    G = lambda x: Act(Derivation("G"), x)  # noqa: E731
+    pat = Sum(IndexedSum(D, None, A), IndexedSum(D, None, B))
+    t = Sum(IndexedSum(i, None, F(i)), IndexedSum(j, None, G(j)))
+    b = match(pat, t)
+    assert b is not None and b["D"] == i and b["B"] == G(i)
+    assert substitute(pat, b) == t
