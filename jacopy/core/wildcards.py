@@ -420,10 +420,20 @@ def _bind_sequence(
 def substitute(pattern: Expr, bindings: Bindings) -> Expr:
     """Replace every wildcard in ``pattern`` with its binding.
 
-    Unbound wildcards are left in place (they're not errors, a rule's
-    right-hand side may intentionally contain wildcards that don't
-    appear on the left). SeqWildcards must be inside a Sum/Product;
-    using one elsewhere is rejected at the Expr-building level.
+    Unbound CHILD wildcards are left in place (a pattern may be
+    instantiated partially; :class:`~jacopy.algorithms.rewrite.Rule`
+    refuses a result that still contains wildcards). SeqWildcards must
+    be inside a Sum/Product; using one elsewhere is rejected at the
+    Expr-building level.
+
+    Wildcards in a node's non-child PAYLOAD (an IndexedSum dummy, a
+    Hodge metric — :func:`node_payload`) are filled too (audit
+    0B00E1B-FULL M1X-6 review): :func:`match` binds them, so a rule's
+    right-hand side must be able to use them. A payload wildcard that
+    is unbound, or that sits on a node class without a payload
+    substitution (``_substitute_payload(bindings)`` hook or a built-in
+    handler), raises :class:`PayloadSubstitutionError` — never a
+    silent literal ``?G`` in the result.
     """
     if isinstance(pattern, Wildcard):
         bound = bindings.get(pattern.name)
@@ -453,4 +463,64 @@ def substitute(pattern: Expr, bindings: Bindings) -> Expr:
     # here, not simplification. Direct constructor call via _rebuild
     # so types whose __init__ diverges from children (BracketApply
     # carries its bracket outside children) reconstruct correctly.
-    return pattern._rebuild(tuple(new_children))
+    rebuilt = pattern._rebuild(tuple(new_children))
+    if _payload_has_wildcard(node_payload(pattern)):
+        rebuilt = _substitute_payload(rebuilt, bindings)
+    return rebuilt
+
+
+class PayloadSubstitutionError(ValueError):
+    """A payload wildcard cannot be filled (unbound, or no handler)."""
+
+
+def has_wildcard(expr: Expr) -> bool:
+    """True when ``expr`` contains a Wildcard/SeqWildcard anywhere —
+    in its children or in a node's non-child payload."""
+    if isinstance(expr, (Wildcard, SeqWildcard)):
+        return True
+    if expr.is_atom:
+        return False
+    if _payload_has_wildcard(node_payload(expr)):
+        return True
+    return any(has_wildcard(c) for c in expr.children)
+
+
+def _payload_has_wildcard(pk: Any) -> bool:
+    if pk is _CHILD:
+        return False
+    if isinstance(pk, Expr):
+        return has_wildcard(pk)
+    if type(pk) is tuple:
+        return any(_payload_has_wildcard(k) for k in pk)
+    return False
+
+
+def _fill(e: Expr, bindings: Bindings) -> Expr:
+    out = substitute(e, bindings)
+    if has_wildcard(out):
+        raise PayloadSubstitutionError(
+            f"unbound payload wildcard in {out._repr_inner()}"
+        )
+    return out
+
+
+def _substitute_payload(node: Expr, bindings: Bindings) -> Expr:
+    hook = getattr(type(node), "_substitute_payload", None)
+    if hook is not None:
+        return hook(node, bindings)
+    from jacopy.core.hodge import HodgeStar
+    from jacopy.core.indexed_sum import IndexedSum
+
+    if isinstance(node, IndexedSum):
+        dummy = _fill(node.dummy, bindings)
+        if not dummy.is_atom:
+            raise PayloadSubstitutionError(
+                "an IndexedSum dummy must be bound to an atom"
+            )
+        return IndexedSum(dummy, node.range_, node.body)
+    if isinstance(node, HodgeStar):
+        return HodgeStar(node.arg, node.dim, metric=_fill(node.metric, bindings))
+    raise PayloadSubstitutionError(
+        f"{type(node).__name__} has a wildcard in its payload but no "
+        "payload substitution"
+    )

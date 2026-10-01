@@ -302,3 +302,41 @@ def test_liez_definition_rule_cites_lemma_91():
     r = prove(exact_bourbaki_engine(X, reg), lhs_x, Integer(0), registry=reg)
     assert r.status == "CLOSED"
     assert any(kd == "declared" and n.startswith("anchor morphism (X)") for kd, n in _kinds(r))
+
+
+# --------------------------------------------------------------------- #
+# review of f02fa15 (M1X-6): payload wildcards must be SUBSTITUTED       #
+# --------------------------------------------------------------------- #
+
+
+def test_payload_wildcard_is_substituted_not_left_literal():
+    # ⋆ is C∞-linear: ⋆_g(f·ω) = f·⋆_g ω, metric by metric. At 3a38eb2
+    # match bound ?G but substitute kept it literal: both ⋆_g(fω) and
+    # ⋆_h(fω) rewrote to f·⋆_?G ω, closing ⋆_g(fω) = ⋆_h(fω) (false
+    # for g ≠ h: ⋆ depends on the metric) assumption-free.
+    from jacopy.core.wildcards import PayloadSubstitutionError
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    (om,) = forms("om", degree=1)
+    g, h = Symbol("g"), Symbol("h")
+    F, A, G = Wildcard("F"), Wildcard("A"), Wildcard("G")
+    rule = Rule(HodgeStar(Product(F, A), 3, metric=G), Product(F, HodgeStar(A, 3, metric=G)))
+    assert rule.try_at(HodgeStar(Product(f, om), 3, metric=g)) == Product(f, HodgeStar(om, 3, metric=g))
+    assert rule.try_at(HodgeStar(Product(f, om), 3, metric=h)) == Product(f, HodgeStar(om, 3, metric=h))
+    lhs, rhs = HodgeStar(Product(f, om), 3, metric=g), HodgeStar(Product(f, om), 3, metric=h)
+    eng = ExpansionEngine([_RuleAdapter(rule)])
+    assert prove(eng, lhs, rhs, registry=reg).status == "RESIDUAL"
+    with pytest.raises(ProofFailure):
+        ExpandAndSimplify().prove(lhs, rhs, registry=reg, engine=eng)
+    # an unbound payload hole is an error, and a Rule does not fire
+    with pytest.raises(PayloadSubstitutionError):
+        substitute(HodgeStar(om, 3, metric=Wildcard("Q")), {})
+    bad = Rule(HodgeStar(A, 3, metric=g), HodgeStar(A, 3, metric=Wildcard("Q")))
+    assert bad.try_at(HodgeStar(om, 3, metric=g)) is None
+    # IndexedSum dummy hole is filled too
+    j = Symbol("j")
+    fj = Act(Derivation("f"), j)
+    d, B = Wildcard("d"), Wildcard("B")
+    b = match(IndexedSum(d, None, B), IndexedSum(j, None, fj))
+    assert substitute(IndexedSum(d, None, B), b) == IndexedSum(j, None, fj)

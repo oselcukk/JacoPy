@@ -24,7 +24,13 @@ from typing import Callable, Optional, Sequence, Tuple
 
 from jacopy.core.expr import Expr
 from jacopy.core.registry import PropertyRegistry
-from jacopy.core.wildcards import Bindings, match, substitute
+from jacopy.core.wildcards import (
+    Bindings,
+    PayloadSubstitutionError,
+    has_wildcard,
+    match,
+    substitute,
+)
 
 
 Guard = Callable[[Bindings, Optional[PropertyRegistry]], bool]
@@ -79,7 +85,16 @@ class Rule:
             return None
         if self.guard is not None and not self.guard(bindings, registry):
             return None
-        return substitute(self.rhs, bindings)
+        # a rewrite whose result still carries a wildcard (unbound on
+        # the left, or a payload hole that cannot be filled) does not
+        # fire (audit 0B00E1B-FULL M1X-6 review: ⋆_{?G} left literal)
+        try:
+            out = substitute(self.rhs, bindings)
+        except PayloadSubstitutionError:
+            return None
+        if has_wildcard(out) and not has_wildcard(expr):
+            return None
+        return out
 
 
 # --------------------------------------------------------------------- #
