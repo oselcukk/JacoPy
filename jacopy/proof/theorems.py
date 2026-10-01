@@ -176,6 +176,11 @@ class Theorem:
                     "use Theorem.with_structural_requires()"
                 )
 
+    def __copy__(self) -> "Theorem":
+        """A shallow copy shares the (immutable) record and its minted
+        steps: the record itself, no re-derivation (proof-trust-2 #6)."""
+        return self
+
     def __reduce__(self):
         """Copies and pickles are REBUILT (review 2026-10-01 r3 #7): a
         deep copy's chain holds new step objects, which are not minted,

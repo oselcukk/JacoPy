@@ -238,6 +238,18 @@ D_SQUARED_CLASSIFICATIONS = ("axiom", "theorem")
 MODES = ("efficient", "foundational")
 
 
+_ENGINE_PATH = ("expand_once", "_fire", "_build_step", "_match", "_candidates")
+
+
+def is_library_engine(engine) -> bool:
+    """True when ``engine`` rewrites through the library's own matching
+    and rewriting path (none of :data:`_ENGINE_PATH` overridden) — the
+    single minting gate for engine-produced steps and the whole-step
+    wrappers built around them (proof-trust-2 #4)."""
+    cls = type(engine)
+    return all(getattr(cls, n, None) is getattr(ExpansionEngine, n) for n in _ENGINE_PATH)
+
+
 def is_library_rule(d) -> bool:
     """True when ``d``'s class is one of the package's own rule classes
     (``jacopy.*`` — the reviewed role inventory, ``tests/test_rule_roles.py``)."""
@@ -417,24 +429,25 @@ class ExpansionEngine:
         from jacopy.proof.registry_facts import facts_from_log
 
         log = begin_reads()
-        kept: list = []
         try:
             for _, d in candidates:
                 start = len(log)
                 if d.matches(expr):
                     after = d.rewrite(expr)
-                    kept = log[start:]
-                    return d, after, facts_from_log(kept)
+                    # the STEP's hypotheses: the fired rule's own reads
+                    return d, after, facts_from_log(log[start:])
             return None
         finally:
-            # only the FIRED rule's reads reach an enclosing log; the
-            # candidates that did not fire assumed nothing (r3 #6)
-            end_reads(log, keep=kept)
+            # the WHOLE log reaches an enclosing log: when this engine
+            # runs inside another rule's decision, that decision also
+            # depends on which candidates did NOT fire here
+            # (proof-trust-2 #1; the earlier r3 #6 slice dropped them)
+            end_reads(log)
 
     def _build_step(self, expr: Expr, after: Expr, d: Definition) -> ProofStep:
         """Create the :class:`ProofStep` for a fired rewrite, with mode-dependent children."""
         tag = "theorem" if d.is_theorem else "axiom"
-        step = _mint(ProofStep(
+        step = ProofStep(
             expr,
             after,
             rule=d.name,
@@ -447,7 +460,11 @@ class ExpansionEngine:
             role=_step_role(d, tag),
             cites=(getattr(d, "theorem", None) if tag == "theorem" else None),
             key=d.key,
-        ))
+        )
+        if is_library_engine(self):
+            # minted only by the library engine's own matching/rewriting
+            # path (an engine subclass could hand any ``after``)
+            _mint(step)
         # a rule's recorded side derivation (a modulo citation's
         # normalization, audit 0b00e1b-FULL M1X-3) is ALWAYS attached:
         # its assumptions are the step's assumptions

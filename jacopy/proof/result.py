@@ -240,7 +240,7 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                     bump(assumptions, "legacy", f"unverified citation (record marked unverified): {s.rule}", owner, s.before)
                     if cited is not None:
                         inherit(cited)
-                elif cited is not None and type(cited).__name__ == "Theorem" and type(cited).__module__ == "jacopy.proof.theorems":
+                elif cited is not None and type(cited) is _theorem_class():
                     # TRANSITIVE requirements (Faz 8 step 3b): a citation
                     # contributes ALL its own requirements; an unverified
                     # (legacy) one is, in addition, a legacy assumption
@@ -317,12 +317,22 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         if a.kind == "declared" and a.owner is not None and not any(a.owner is o or a.owner == o for o in seen_owners):
             seen_owners.append(a.owner)
     for o in seen_owners:
-        if any(a.kind == "structure" and (a.owner is o or a.owner == o) for a in req):
-            continue  # (already inherited from a cited record)
         decl = getattr(o, "declarations", None)
         text = f"{o!r}" + (f" declaring {sorted(decl)}" if decl is not None else "")
+        # the proof's OWN structure record is always produced; only an
+        # exact duplicate (same text, same owner) of an inherited one is
+        # dropped (proof-trust-2 #5: an inherited record of the same
+        # owner with other declarations no longer suppresses it)
+        if any(a.kind == "structure" and a.name == text and a.owner is o for a in req):
+            continue
         req.append(Assumption("structure", text, o))
     return tuple(req), tuple(prov)
+
+
+def _theorem_class():
+    from jacopy.proof.theorems import Theorem
+
+    return Theorem
 
 
 def _same_event(child: ProofStep, parent: ProofStep) -> bool:
@@ -690,12 +700,12 @@ def _tracked_simplify(expr: Expr, registry):
 
 def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simplify_normal_forms, oracle):
 
-    from jacopy.proof.expansion import ExpansionEngine
+    from jacopy.proof.expansion import is_library_engine
 
-    # the library engine's expand_once returns the whole expression
-    # rewritten at the step's site; an engine overriding it is not
-    # trusted to (the wrapper is then not minted)
-    engine_rewrites_at_site = getattr(type(engine), "expand_once", None) is ExpansionEngine.expand_once
+    # the library engine returns the whole expression rewritten at the
+    # step's site; an engine overriding its path is not trusted to (the
+    # wrapper is then not minted) — one gate with the search
+    engine_rewrites_at_site = is_library_engine(engine)
 
     def run(expr: Expr, cap: int):
         steps: List[ProofStep] = []

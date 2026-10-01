@@ -562,41 +562,50 @@ class TestReviewRound3:
             end_reads(base)
         assert not any(l is inner or l is outer or l is base for l in _READS.stack)
 
-    def test_failed_inner_candidates_do_not_leak_reads(self):
-        # 3f38370: every read went to EVERY open log, so the reads of a
-        # nested engine's candidate that did NOT fire became requirements
-        # of the outer step (a spurious "x has no Scalar declared" → a
-        # wrong refusal where x is Scalar)
+    def test_inner_engine_reads_reach_the_enclosing_decision(self):
+        # main 75acc5a: only the FIRED inner candidate's reads reached the
+        # enclosing log, so an outer rule whose decision depends on an inner
+        # rule NOT firing (x not Scalar) recorded no registry fact: the
+        # theorem a = b proved where x is Graded(0) was cited CLOSED where
+        # x is Scalar (there Outer itself does not fire)
         from jacopy.proof.expansion import Definition
+        from jacopy.proof.registry_facts import current_context
 
-        reg = PropertyRegistry()
-        a, b, x = Symbol("a"), Symbol("b"), Symbol("x")
+        a, b, c, x = Symbol("a"), Symbol("b"), Symbol("c"), Symbol("x")
 
-        class Peek(Definition):            # consults the registry, never fires
-            name = "peek"
+        class GuardIfScalar(Definition):   # fires (a → c) only when x is Scalar
+            name = "guard"
 
             def matches(self, expr):
-                reg.get(x, Scalar)
-                return False
+                return expr == a and current_context()[0].get(x, Scalar) is not None
 
-            def rewrite(self, expr):       # pragma: no cover
-                return expr
+            def rewrite(self, expr):
+                return c
 
-        inner = ExpansionEngine([Peek(), ExplicitAssumption(a, b)])
+        inner = ExpansionEngine([GuardIfScalar(), ExplicitAssumption(b, c)])
 
         class Outer(Definition):
-            name = "outer: normalize by the inner engine"
+            name = "outer: a = b when a is inner-normal"
 
             def matches(self, expr):
-                return expr == a and inner.expand(expr)[0] == b
+                return expr == a and inner.expand(expr)[0] == a
 
             def rewrite(self, expr):
                 return b
 
-        with registry_context(reg):
-            _, step = ExpansionEngine([Outer()]).expand_once(a)
-        assert step is not None
-        assert not any(f.expr == x for f in step.registry_facts)
+        R1, R2 = PropertyRegistry(), PropertyRegistry()
+        R1.declare(x, Graded(0))
+        R2.declare(x, Scalar())
+        res = prove(ExpansionEngine([Outer()]), a, b, registry=R1)
+        assert res.closed
+        thm = Theorem("t", "a = b", a, b, res.chain).with_structural_requires()
+        assert any(f.expr == x and f.prop_cls is Scalar and not f.declared for f in thm.registry_facts)
+        assert not check_citation(thm, ExpansionEngine([Outer()]), registry=R2).ok
+        assert prove(ExpansionEngine([Outer(), TheoremDefinition(thm)]), a, b, registry=R2).status == "RESIDUAL"
+        # a fired inner step's OWN facts are its rule's slice only
+        with registry_context(R1):
+            _, (st,) = ExpansionEngine([GuardIfScalar(), ExplicitAssumption(b, c)]).expand(b)
+        assert not any(f.expr == x for f in st.registry_facts)
 
     def test_subclasses_cannot_impersonate_minted_steps_or_theorems(self):
         # 2270a83: is_minted used WeakSet membership (__eq__/__hash__), and
@@ -655,3 +664,100 @@ class TestReviewRound3:
         dataclasses.replace(c, notes="still consistent")          # no ValueError
         assert c.chain_replayed == (how == "copy")                 # a shallow copy shares the minted steps
         assert c.registry_facts == t.registry_facts
+
+
+class TestProofTrust2:
+    def test_end_reads_hands_to_the_enclosing_log_only(self):
+        # main 75acc5a: with mismatched nesting end_reads appended to
+        # stack[-1] (a log opened LATER), and a log that was never opened
+        # or closed twice still extended the top log
+        from jacopy.core.registry import _READS, begin_reads, end_reads
+
+        base = begin_reads()
+        outer = begin_reads()
+        inner = begin_reads()
+        outer.append("o")
+        try:
+            end_reads(outer)                       # out of order
+            assert base == ["o"] and inner == []
+            end_reads(outer)                       # closed twice: no effect
+            end_reads(["stray"])                   # never opened: no effect
+            assert base == ["o"] and inner == []
+        finally:
+            end_reads(inner)
+            end_reads(base)
+        assert not any(l is inner or l is outer or l is base for l in getattr(_READS, "stack", []))
+
+    def test_cited_record_type_is_checked_by_identity(self):
+        # main 75acc5a: _classify compared type names as strings — a class
+        # NAMED "Theorem" in module "jacopy.proof.theorems" passed as a
+        # verified record (no legacy marker)
+        from jacopy.proof.result import _classify
+
+        Fake = type("Theorem", (), {"__module__": "jacopy.proof.theorems", "legacy": False,
+                                     "requires": (), "name": "fake", "owner": None})
+        x = Symbol("x")
+        req, _ = _classify((ProofStep(x, Integer(0), rule="cite", provenance_tag="theorem", cites=Fake()),))
+        assert any(r.legacy and "not a Theorem record" in r.name for r in req)
+
+    def test_one_minting_gate_for_engine_steps(self):
+        # main 75acc5a: prove checked only an expand_once override, the
+        # search minted its wrappers unconditionally, and _build_step minted
+        # whatever an engine subclass's _fire returned (x → 0 "by" a real rule)
+        from jacopy.proof.expansion import is_library_engine
+        from jacopy.proof.search import _definition_moves
+        from jacopy.proof.step import is_minted
+
+        a, b, x = Symbol("a"), Symbol("b"), Symbol("x")
+
+        class Lying(ExpansionEngine):
+            __slots__ = ()
+
+            def _fire(self, expr):
+                fired = super()._fire(expr)
+                return None if fired is None else (fired[0], Integer(0), fired[2])
+
+        eng = Lying([ExplicitAssumption(a, b)])
+        assert not is_library_engine(eng) and is_library_engine(ExpansionEngine())
+        _, step = eng.expand_once(a)
+        assert step.after == Integer(0) and not is_minted(step)
+        moves = _definition_moves(eng, Product(a, x))
+        assert moves and not any(is_minted(s) for _, s in moves)
+        res = prove(eng, a, Integer(0))
+        assert res.closed and any(r.legacy for r in res.requires)
+        good = _definition_moves(ExpansionEngine([ExplicitAssumption(a, b)]), Product(a, x))
+        assert all(is_minted(s) for _, s in good)
+
+    def test_own_structure_record_is_kept_beside_an_inherited_one(self):
+        # main 75acc5a: an inherited structure record of the SAME owner
+        # suppressed the citing proof's own record — its declaration list
+        # (here the declared axiom actually used) was missing
+        from jacopy.central.algebroid import algebroid
+        from jacopy.central.objects import Bundle
+        from jacopy.proof.result import Assumption, _classify
+
+        E = algebroid("E", Bundle("E"), declare=("lie",))
+        x, y = Symbol("x"), Symbol("y")
+        lemma = Theorem("lemma", "x = x", x, x, ProofChain())
+        object.__setattr__(lemma, "requires", (Assumption("structure", "E (older record) declaring []", E),))
+        object.__setattr__(lemma, "requires_verified", True)
+        cite_step = ProofStep(x, x, rule="cite lemma", provenance_tag="theorem", cites=lemma)
+        axiom = ProofStep(y, Integer(0), rule="E axiom", provenance_tag="axiom", role="assumption", owner=E, key=("k",))
+        req, _ = _classify((cite_step, axiom))
+        names = sorted(a.name for a in req if a.kind == "structure")
+        assert len(names) == 2 and any("'jacobi'" in n for n in names)
+        req2, _ = _classify((axiom, axiom))                       # exact duplicates still collapse
+        assert len([a for a in req2 if a.kind == "structure"]) == 1
+
+    def test_shallow_copy_does_not_rederive(self, monkeypatch):
+        # main 75acc5a: copy.copy went through __reduce__ and re-derived
+        # every requirement; deepcopy / pickle still rebuild
+        import copy
+
+        import jacopy.proof.result as R
+
+        thm, *_ = _scalar_theorem()
+        calls = []
+        orig = R.structural_requires
+        monkeypatch.setattr(R, "structural_requires", lambda t: calls.append(1) or orig(t))
+        assert copy.copy(thm) is thm and calls == []

@@ -74,18 +74,17 @@ def end_reads(log: list, keep=None) -> None:
     that discards part of its log (the engine drops the reads of the
     candidate rules that did not fire) keeps them out of every outer
     log too (review 2026-10-01 r3 #6)."""
-    stack = _READS.stack
-    if stack and stack[-1] is log:
-        stack.pop()
-    else:
-        # mismatched nesting: remove THIS log by identity (list.remove
-        # compares by value — an equal, e.g. empty, outer log would go)
-        for i in range(len(stack) - 1, -1, -1):
-            if stack[i] is log:
-                del stack[i]
-                break
-    if stack:
-        stack[-1].extend(log if keep is None else keep)
+    stack = getattr(_READS, "stack", None) or []
+    # find THIS log by identity (list.remove compares by value — an
+    # equal, e.g. empty, log would go); a log that is not open (never
+    # opened, or closed twice) hands nothing to anyone
+    for i in range(len(stack) - 1, -1, -1):
+        if stack[i] is log:
+            del stack[i]
+            if i > 0:
+                # the log it was opened INSIDE — not a later-opened one
+                stack[i - 1].extend(log if keep is None else keep)
+            return
 
 
 @contextmanager
