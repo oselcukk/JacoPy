@@ -540,7 +540,7 @@ class EFormV:
     def __init__(self, b, deg: int, fn: Callable, *, alt: bool, ctx, label: str = "") -> None:
         self.b = b
         self.deg = deg
-        self.fn = fn
+        self.fn = _memo_fn(fn)
         self.alt = alt
         self.ctx = ctx
         self.label = label
@@ -560,6 +560,24 @@ class EFormV:
         for t in self.ctx.test_tuples(self.b, self.deg)[:1]:
             vals.append(str(self.fn(list(t)).as_expr()))
         return f"EForm[{self.b}, deg {self.deg}]({self.label}; on test sections: {', '.join(vals)})"
+
+
+def _memo_fn(fn):
+    """Cache an E-form's values per argument tuple: the same evaluation is
+    requested repeatedly (zero tests, displays, nested Palais terms)."""
+    if getattr(fn, "_oracle_memo", False):
+        return fn
+    cache: Dict = {}
+
+    def wrapped(args):
+        key = tuple(tuple(a) for a in args)
+        hit = cache.get(key)
+        if hit is None:
+            hit = cache[key] = fn(args)
+        return hit
+
+    wrapped._oracle_memo = True
+    return wrapped
 
 
 def sec_add(R: Ring, a: Sequence[sp.Poly], b: Sequence[sp.Poly]) -> Tuple[sp.Poly, ...]:

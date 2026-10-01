@@ -496,5 +496,38 @@ def _indexed_sum(e, env, path):
     return add(vals, env.R, path)
 
 
+def free_index_labels(expr, cache) -> frozenset:
+    """Index labels occurring free in ``expr`` (indexed atoms'
+    ``index_names``, minus the dummies of nested IndexedSums)."""
+    from jacopy.core.expr import Expr
+
+    key = id(expr)
+    hit = cache.get(key)
+    if hit is not None:
+        return hit[1]
+    if isinstance(expr, IndexedSum):
+        out = free_index_labels(expr.body, cache) - {getattr(expr.dummy, "name", None)}
+    else:
+        out = set(getattr(expr, "index_names", ()) or ()) if isinstance(
+            expr, (FrameField, CoframeField, KroneckerDelta, AnholonomyCoefficient)) else set()
+        kids = list(expr.children)
+        for s_ in getattr(expr, "rewritable_slots", None) or ():
+            if isinstance(s_, Expr):
+                kids.append(s_)
+        for attr in ("pi", "form", "vector", "multivector", "section", "function"):
+            try:
+                v = getattr(expr, attr, None)
+            except Exception:  # noqa: BLE001
+                v = None
+            if isinstance(v, Expr):
+                kids.append(v)
+        for k in kids:
+            if k is not expr:
+                out |= free_index_labels(k, cache)
+        out = frozenset(out)
+    cache[key] = (expr, out)  # keep expr alive: id() stays unique
+    return out
+
+
 # silence unused-import linters: kept for symmetry with realize.py helpers
 _ = (as_form, is_zero)

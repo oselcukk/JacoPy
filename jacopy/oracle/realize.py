@@ -132,12 +132,19 @@ class Env:
         #: frame-index values: the free labels' assignment of this run,
         #: overridden by the binders of enclosing IndexedSums
         self.indices: Dict[str, int] = dict(indices or {})
+        self._labels: Dict = {}
 
     # ---- entry points ------------------------------------------------- #
 
     def value(self, expr, path=()):
-        # index bindings are part of the key: Σ_a e_a(…) re-evaluates the body
-        key = ("v", expr, tuple(sorted(self.indices.items()))) if self.indices else ("v", expr)
+        # index bindings are part of the key — but only those of the labels
+        # occurring free in ``expr``: a dummy-independent subexpression of
+        # a Σ body is evaluated once, not once per index value
+        if self.indices:
+            labs = free_index_labels(expr, self._labels)
+            key = ("v", expr, tuple(sorted((k, v) for k, v in self.indices.items() if k in labs)))
+        else:
+            key = ("v", expr)
         hit = self._memo.get(key)
         if hit is not None:
             return hit
@@ -845,6 +852,7 @@ from jacopy.oracle.realize_e import (  # noqa: E402
     _eform_atom,
     _section_atom,
     as_sec,
+    free_index_labels,
 )
 
 
