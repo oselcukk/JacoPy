@@ -367,6 +367,13 @@ class PhiIsotropyDeclaration(Definition):
         return Integer(0)
 
 
+def _invariance_source():
+    """Source of the declared B (7.8) invariance a cited instance is of."""
+    from jacopy.packages.generalized.bourbaki_structure import BourbakiInvarianceDeclaration
+
+    return BourbakiInvarianceDeclaration.source
+
+
 def severa_engine(
     alg: Algebroid,
     registry: Optional[PropertyRegistry] = None,
@@ -529,6 +536,7 @@ def prove_chi_chi_bracket_vanishes(
         rule="cite the (7.8) invariance instance at (χz, χy, w)",
         justification="declared axiom",
         provenance_tag="axiom",
+        source=_invariance_source(),
     )
     residual = _normalize(engine, instance, registry)
     step_norm = ProofStep(

@@ -291,6 +291,18 @@ def _structural_step(
     )
 
 
+def _bourbaki_source(law: str):
+    """The source of the declared B law a cited instance is of: the
+    symmetric part B (6.11) or the metric invariance B (7.8)."""
+    if law == "symmetric part":
+        from jacopy.packages.generalized.bourbaki_severa import SymPartCollectDeclaration
+
+        return SymPartCollectDeclaration.source
+    from jacopy.packages.generalized.bourbaki_structure import BourbakiInvarianceDeclaration
+
+    return BourbakiInvarianceDeclaration.source
+
+
 def _cited_transport_theorem(
     name,
     statement,
@@ -305,6 +317,7 @@ def _cited_transport_theorem(
     label,
     owner=None,
     key=None,
+    source=None,
 ) -> Tuple[ProofChain, Theorem]:
     """``target = 0`` in two honest legs: the structural identity
     ``target → instance`` followed by the cited declared-zero
@@ -329,6 +342,9 @@ def _cited_transport_theorem(
         # caller names one, else the caller's EXPLICIT instance assumption
         # (declare_r_axioms=True) — a citing engine must register the same
         key=key if key is not None else ExplicitAssumption(instance, owner=owner, name=cite_rule).key,
+        # the literature source of the declared law the instance is of
+        # (copied from its declaration rule — metadata only)
+        source=source,
     )
     chain = ProofChain([structural, cite])
     theorem = Theorem(
@@ -565,6 +581,7 @@ def prove_general_twist_jacobi(
         label=label,
         owner=alg,
         key=JacobiDeclaration(alg).key,  # licensed by the declared Leibniz-Jacobi of the initial bracket
+        source=JacobiDeclaration.source,
     )
 
 
@@ -658,6 +675,7 @@ def prove_general_twist_symmetric_part(
         notes="directive 13j: the primed operators 𝔻', g'",
         label=label,
         owner=alg,
+        source=_bourbaki_source("symmetric part"),
     )
 
 
@@ -760,4 +778,5 @@ def prove_general_twist_invariance(
         notes="directive 13j: g' = g(Ψ·,Ψ·), ρ' = ρ∘Ψ",
         label=label,
         owner=alg,
+        source=_bourbaki_source("invariance"),
     )

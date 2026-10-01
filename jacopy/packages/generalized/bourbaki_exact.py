@@ -590,6 +590,8 @@ def _cited_zero_proof(
                             "the rest to literal 0"
                         ),
                         provenance_tag="axiom",
+                        # the source of the cited instance's result
+                        source=source,
                     )
                 ]
             )

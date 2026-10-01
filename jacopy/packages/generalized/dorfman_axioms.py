@@ -55,6 +55,11 @@ from jacopy.central.algebroid.theorems import (
 from jacopy.algorithms.simplify import simplify
 
 
+#: [C'1] of the alternative (Dorfman) definition: the declared law the
+#: cited instances are of (Uchino Remark 2.3)
+C1_PRIME_SOURCE = cite("Uchino2002", "Remark 2.3, axiom [C'1]")
+
+
 def dorfman_axiom_context(name: str = "E") -> Algebroid:
     """The alternative-definition DATA: non-skew opaque ``∘``
     (ℝ-bilinear by definition), anchor, definitional pairing, and
@@ -255,6 +260,7 @@ def prove_dorfman_c2_redundant(
             "composite argument f·z"
         ),
         provenance_tag="axiom",
+        source=C1_PRIME_SOURCE,
     )
 
     n1, steps1 = _normalize(jac_f, engine, registry)
@@ -286,6 +292,7 @@ def prove_dorfman_c2_redundant(
             "declared zero"
         ),
         provenance_tag="axiom",
+        source=C1_PRIME_SOURCE,
     )
     for s in steps2:
         step_plain.add_child(s)

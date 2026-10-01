@@ -21,6 +21,7 @@ import pytest
 
 from jacopy.bibliography import (
     BIBLIOGRAPHY,
+    cited_references,
     Citation,
     Reference,
     apa_reference,
@@ -64,10 +65,55 @@ def test_apa_in_text_groups_works_alphabetically_and_merges_locators():
         cite("MC", "Definition 3.1"),
         cite("MC", "Eq. (3.10)"),
     )
+    # §6.9: parentheses inside the citation's parentheses become brackets
     assert in_text(src) == (
-        "(Dereli & Doğan, 2020, Definition 3.1, Eq. (3.10); Liu et al., 1997; "
+        "(Dereli & Doğan, 2020, Definition 3.1, Eq. [3.10]; Liu et al., 1997; "
         "Uchino, 2002, Section 1, axiom [C5])"
     )
+
+
+def test_apa_in_text_order_folds_accents_and_joins_years():
+    src = (
+        cite("Uchino2002", "Remark 1"),
+        cite("Severa2017"),
+        cite("Roytenberg1999"),
+        cite("CatalOzerDereliDogan2022", "Lemma 9.1"),
+        cite("ADM", "Proposition 3.7"),
+        cite("MC", "Definition 3.1"),
+    )
+    # Ç sorts as C, Š as S (§8.12); same authors, several years joined
+    assert in_text(src) == (
+        "(Çatal-Özer et al., 2022, Lemma 9.1; "
+        "Dereli & Doğan, 2020, Definition 3.1, 2023, Proposition 3.7; "
+        "Roytenberg, 1999; Ševera, 2017; Uchino, 2002, Remark 1)"
+    )
+    order = [r.key for r in cited_references(src)]
+    assert order == ["CatalOzerDereliDogan2022", "DereliDogan2020", "DereliDogan2023",
+                     "Roytenberg1999", "Severa2017", "Uchino2002"]
+
+
+def test_apa_no_author_work_is_cited_by_italic_title():
+    assert in_text(cite("Midterm", "Problem 2"), "markdown") == "(*Math 595 Midterm, Spring 2026*, 2026, Problem 2)"
+    assert in_text(cite("Guideline", "item 1"), "latex") == r"(\textit{Math 595 -- JacoPy}, n.d., item 1)"
+
+
+def test_apa_et_al_disambiguation_and_initials(monkeypatch):
+    def ref(key, authors, year="2010", title="T"):
+        return Reference(key=key, authors=authors, year=year, title=title, kind="preprint", arxiv=key)
+
+    # §8.18: same year, lists differ, same short form → more names
+    monkeypatch.setitem(BIBLIOGRAPHY, "K1", ref("K1", (("Kapoor", "A."), ("Bloom", "B."), ("Montez", "C."), ("Z", "D."))))
+    monkeypatch.setitem(BIBLIOGRAPHY, "K2", ref("K2", (("Kapoor", "A."), ("Bloom", "B."), ("Zucker", "E."), ("Z", "D."))))
+    assert Citation("K1").in_text() == "(Kapoor, Bloom, Montez, et al., 2010)"
+    assert Citation("K2").in_text() == "(Kapoor, Bloom, Zucker, et al., 2010)"
+    # identical lists, same year → a/b by title (§8.19)
+    monkeypatch.setitem(BIBLIOGRAPHY, "Y1", ref("Y1", (("Yee", "A."),), title="Beta"))
+    monkeypatch.setitem(BIBLIOGRAPHY, "Y2", ref("Y2", (("Yee", "A."),), title="Alpha"))
+    assert Citation("Y2").in_text() == "(Yee, 2010a)" and Citation("Y1").in_text() == "(Yee, 2010b)"
+    # §8.20: same surname, different first author → initials
+    monkeypatch.setitem(BIBLIOGRAPHY, "W1", ref("W1", (("Wu", "A."),), year="2001"))
+    monkeypatch.setitem(BIBLIOGRAPHY, "W2", ref("W2", (("Wu", "B."),), year="2005"))
+    assert Citation("W1").in_text() == "(A. Wu, 2001)" and Citation("W2").in_text() == "(B. Wu, 2005)"
 
 
 def test_apa_reference_list_entries():
@@ -90,12 +136,24 @@ def test_apa_reference_list_entries():
     assert "[issue, DOI not in source]" in lwx and "45, 547–574" in lwx
 
 
-def test_year_suffix_for_same_author_year(monkeypatch):
+def test_year_suffix_only_for_identical_author_lists(monkeypatch):
     a = Reference(key="ZzA", authors=(("Zed", "A."),), year="2001", title="Alpha", kind="preprint", arxiv="x")
     b = Reference(key="ZzB", authors=(("Zed", "A."),), year="2001", title="Beta", kind="preprint", arxiv="y")
+    c = Reference(key="ZzC", authors=(("Zed", "A."), ("Q", "B.")), year="2001", title="Gamma", kind="preprint", arxiv="z")
     monkeypatch.setitem(BIBLIOGRAPHY, "ZzA", a)
     monkeypatch.setitem(BIBLIOGRAPHY, "ZzB", b)
+    monkeypatch.setitem(BIBLIOGRAPHY, "ZzC", c)
     assert Citation("ZzA").in_text() == "(Zed, 2001a)" and Citation("ZzB").in_text() == "(Zed, 2001b)"
+    assert Citation("ZzC").in_text() == "(Zed & Q, 2001)"
+
+
+def test_bibtex_protects_capitalised_words():
+    from jacopy.bibliography import bibtex_entry
+
+    bib = bibtex_entry("CatalOzerDereliDogan2022")
+    assert "title = {{Pre-metric-Bourbaki} algebroids: {Cartan} calculus for {M-theory}}" in bib
+    assert "{Courant}" in bibtex_entry("Uchino2002") and "{Lie}" in bibtex_entry("LiuWeinsteinXu1997")
+    assert "{Drinfel’d}" in bibtex_entry("CatalOzerDoganYetismisoglu2024")
 
 
 def test_every_reference_records_its_provenance():
@@ -116,10 +174,7 @@ def test_citations_doc_reference_list_is_generated():
     (single source of truth)."""
     doc = (ROOT / "docs" / "CITATIONS.md").read_text(encoding="utf-8")
     block = doc.split("<!-- references:begin -->")[1].split("<!-- references:end -->")[0]
-    expected = "\n\n".join(
-        apa_reference(r, "markdown")
-        for r in sorted(BIBLIOGRAPHY.values(), key=lambda r: (r.authors[0][0] if r.authors else r.title, r.year))
-    )
+    expected = "\n\n".join(apa_reference(r, "markdown") for r in cited_references([cite(k) for k in BIBLIOGRAPHY]))
     assert block.strip() == expected.strip()
 
 
@@ -216,7 +271,7 @@ def test_c3_latex_shows_every_axiom_source(c3):
             for c in s.source:
                 assert text_to_latex(c.author_year()) in flat, (s.rule, c)
     first = step_to_latex(chain.steps[0])
-    assert r"\textit{Source: (Liu et al., 1997; Uchino, 2002, Section 1, axiom [C5])}" in first
+    assert r"\text{Source: (Liu et al., 1997; Uchino, 2002, Section 1, axiom [C5])}" in first
     # collapsed sub-proofs still name what they cite
     assert "Sub-steps cite:" in chain_to_latex(chain)
 
@@ -228,7 +283,9 @@ def test_c3_latex_document_lists_references(c3):
     assert r"Uchino, K. (2002). \textit{Remarks on the definition of a Courant algebroid}" in doc
     assert doc.isascii()
     bib = chain_to_latex_document(chain, references="biblatex")
-    assert r"\usepackage[style=apa,backend=biber]{biblatex}" in bib and r"\parencites" in bib
+    assert r"\usepackage[style=apa,backend=biber]{biblatex}" in bib
+    # one \parencites group per step: all works, APA order, merged locators
+    assert r"\parencites{LiuWeinsteinXu1997}[Section 1, axiom {[}C5{]}]{Uchino2002}" in bib
     assert "@online{Uchino2002," in bibtex_entries(chain_sources(chain.steps))
     assert r"\section*{References}" not in chain_to_latex_document(chain, references=None)
     assert "Uchino" in theorem_to_latex_document(thm)
@@ -260,6 +317,10 @@ def test_c3_document_compiles_without_overfull_lines(c3, depth):
 
 
 # ---- LaTeX: Unicode and line breaking (T3-2, K1-9) ------------------ #
+
+
+def test_text_to_latex_backslash_is_escaped_once():
+    assert text_to_latex(r"a\b {c}") == r"a\textbackslash{}b \{c\}"
 
 
 def test_text_to_latex_unicode():
@@ -306,3 +367,157 @@ def test_math_lines_break_long_sums():
     assert all(len(l) < 80 for l in lines)
     # a short expression stays on one line
     assert len(math_lines(Sum(xs[0], xs[1]))) == 1
+
+
+def _random_names(n=300, seed=7):
+    import random
+
+    from jacopy.display.latex import _UNICODE_TO_LATEX
+
+    rng = random.Random(seed)
+    pool = (
+        list("abcXYZ019_^ ")
+        + list(_UNICODE_TO_LATEX)
+        + list("₀₁₂₃⁰¹²⁻ᵢⱼₐₙᴸᵍᵀ𝔖𝕃𝒜𝐀𝜔")
+        + ["\u0303", "\u0307", "\u0302"]
+    )
+    for _ in range(n):
+        yield "".join(rng.choice(pool) for _ in range(rng.randint(1, 7)))
+
+
+@pytest.mark.skipif(shutil.which("pdflatex") is None, reason="pdflatex not installed")
+def test_latex_name_never_yields_uncompilable_math():
+    """Any name — including scripts after scripts (``x^ᵢ``), trailing
+    ``_``, combining marks — must give compilable LaTeX."""
+    from jacopy.display.latex import latex_name
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        body = "\n".join(f"${latex_name(n)}$\\par" for n in _random_names())
+    assert latex_name("x^ᵢ") == "x^{_{i}}" and latex_name("x_") == "x_{}"
+    doc = (
+        "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n"
+        "\\begin{document}\n" + body + "\n\\end{document}\n"
+    )
+    rc, log = _pdflatex(doc)
+    assert rc == 0, [l for l in log.splitlines() if l.startswith("!")][:5]
+
+
+# ---- hand-built axiom steps copy the source of what they cite ------ #
+
+
+def _axiom_steps(chain):
+    return [s for s in _walk(chain.steps) if s.provenance_tag == "axiom"]
+
+
+def test_general_twist_axiom_steps_are_sourced():
+    from jacopy.central.algebroid.context import algebroid
+    from jacopy.packages.generalized.general_twist import (
+        prove_general_twist_invariance,
+        prove_general_twist_jacobi,
+        prove_general_twist_symmetric_part,
+    )
+
+    reg = PropertyRegistry()
+    functions("f", registry=reg)
+    E = algebroid("E", declare=("right-leibniz", "jacobi", "symmetric-part", "metric-invariance"))
+    u, v, w = E.sections("u v w")
+    runs = (
+        prove_general_twist_jacobi(E, u, v, w, registry=reg),
+        prove_general_twist_symmetric_part(E, u, v, registry=reg, declare_r_axioms=True),
+        prove_general_twist_invariance(E, u, v, w, registry=reg, declare_r_axioms=True),
+    )
+    for chain, _ in runs:
+        steps = _axiom_steps(chain)
+        assert steps
+        for s in steps:
+            assert s.source and any(re.search(r"\d", c.locator) for c in s.source), s.rule
+
+
+def test_r_flux_closure_declaration_is_sourced():
+    from jacopy.packages.generalized.r_twisted import RFluxClosureDeclaration
+
+    assert RFluxClosureDeclaration.source.key == "AsakawaMurakiSasaWatamura2015"
+
+
+# ---- ADM printed-sign regressions (M8-1 = M7-3; lane-C finding) ----- #
+
+
+@pytest.fixture(scope="module")
+def adm():
+    from jacopy.central.algebroid import algebroid, locality_projector
+    from jacopy.central.objects import Bundle
+    from jacopy.central.objects.frame import Frame
+    from jacopy.packages.metric_affine.e_connection import e_connection
+
+    reg = PropertyRegistry()
+    E = algebroid("E", Bundle("E"), declare=("local", "regular", "anchor-morphism"))
+    u, v, w = E.sections("u v w")
+    return reg, E, u, v, w, e_connection(E), Frame("e", bundle=E.bundle), locality_projector(E)
+
+
+def test_adm_3_35_printed_signs_are_rejected(adm):
+    """ADM (3.35) prints the (1−𝒫)Λ block and [[u,v]^∇,w]^∇ with +; with
+    the paper's own definitions both enter with − (the library's form,
+    which closes). The printed form must NOT close (admissible ∇)."""
+    from jacopy.packages.metric_affine.admissible import AdmissibilityDeclaration, modified_bracket
+    from jacopy.packages.metric_affine.e_bianchi import (
+        _cyc,
+        covariant_modified_torsion_derivative,
+        prove_e_bianchi_first_identity,
+    )
+    from jacopy.packages.metric_affine.modified import (
+        _engine,
+        generalized_ricci_anomaly,
+        modified_torsion,
+        projected_curvature,
+    )
+    from jacopy.proof.strategies import ExpandAndSimplify, ProofFailure
+
+    reg, E, u, v, w, nabla, fr, P = adm
+    assert prove_e_bianchi_first_identity(E, nabla, fr, P, u, v, w, registry=reg, admissible=True).steps
+    lhs = _cyc(lambda a, b, c: projected_curvature(E, nabla, fr, P, a, b, c), u, v, w)
+    printed = Sum(
+        _cyc(lambda a, b, c: covariant_modified_torsion_derivative(E, nabla, fr, a, b, c), u, v, w),
+        _cyc(lambda a, b, c: modified_torsion(E, nabla, fr, modified_torsion(E, nabla, fr, a, b), c), u, v, w),
+        _cyc(lambda a, b, c: generalized_ricci_anomaly(E, nabla, fr, P, a, b, c), u, v, w),  # paper: +
+        _cyc(lambda a, b, c: modified_bracket(E, nabla, fr, modified_bracket(E, nabla, fr, a, b), c), u, v, w),  # paper: +
+    )
+    engine = _engine(E, fr, reg, projectors=(P,))
+    engine.register(AdmissibilityDeclaration(E, nabla, fr))
+    with pytest.raises(ProofFailure):
+        ExpandAndSimplify().prove(lhs, printed, registry=reg, engine=engine)
+
+
+def test_adm_3_44_printed_sign_is_rejected(adm):
+    """d̂²α(u,v,w) = +⟨α, b̂(b̂(u,v),w) − b̂(b̂(u,w),v) + b̂(b̂(v,w),u)⟩
+    (Palais formula; TW (A.5)) closes; the opposite overall sign — what
+    ADM (3.44) prints for an admissible ∇ — does not."""
+    from jacopy.central.objects import forms
+    from jacopy.core.expr import Neg
+    from jacopy.core.multi_eval import MultiEval
+    from jacopy.core.pairing import Pairing
+    from jacopy.packages.metric_affine.derived import (
+        d_derived,
+        derived_algebroid,
+        derived_engine,
+        prove_projected_d_squared_associator,
+    )
+    from jacopy.packages.metric_affine.e_bianchi import projected_modified_bracket
+    from jacopy.proof.strategies import ExpandAndSimplify, ProofFailure
+
+    reg, E, u, v, w, nabla, fr, P = adm
+    (alpha,) = forms("α", degree=1, bundle=E.bundle)
+    assert prove_projected_d_squared_associator(E, nabla, fr, P, alpha, u, v, w, registry=reg).steps
+    D = derived_algebroid(E, projected=True)
+
+    def bhat(p, q):
+        return projected_modified_bracket(E, nabla, fr, P, p, q)
+
+    node = MultiEval(d_derived(D, d_derived(D, alpha)), u, v, w, alternating=True, slot_kind="vector")
+    assoc = Sum(bhat(bhat(u, v), w), Neg(bhat(bhat(u, w), v)), bhat(bhat(v, w), u))
+    with pytest.raises(ProofFailure):
+        ExpandAndSimplify().prove(
+            node, Neg(Pairing(alpha, assoc)), registry=reg,
+            engine=derived_engine(E, D, nabla, fr, registry=reg, projector=P),
+        )

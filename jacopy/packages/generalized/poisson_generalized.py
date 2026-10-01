@@ -542,6 +542,15 @@ def _theta_jacobi_instances(engine, N, forms3, vectors, h, registry):
     return deep
 
 
+#: [C'1] (Leibniz-Jacobi of a Dorfman bracket, Uchino Remark 2.3) for the
+#: Poisson-generalized double of Watamura et al. §2.2 (no local PDF:
+#: that locator is unverified)
+THETA_JACOBI_SOURCE = (
+    cite("Uchino2002", "Remark 2.3, axiom [C'1]"),
+    cite("AsakawaMurakiSasaWatamura2015", "Section 2.2"),
+)
+
+
 def prove_theta_jacobi(
     N: NambuPoissonStructure,
     U: Expr,
@@ -642,6 +651,7 @@ def prove_theta_jacobi(
             "tilde-Dorfman + Koszul/tilde calculus definitions",
         ),
         notes="directive 14f / Watamura §2.2 — [C'1] closed 2026-09-10",
+        source=THETA_JACOBI_SOURCE,
     ).with_structural_requires()
     return chain, theorem
 

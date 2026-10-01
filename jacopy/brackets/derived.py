@@ -13,7 +13,7 @@ generator, the condition
     [Q, Q] = 0
 
 makes the derived bracket a LODAY (left-Leibniz-Jacobi) bracket
-[Kosmann-Schwarzbach 1996]. It is NOT automatically graded
+[Kosmann-Schwarzbach 1996 — year AMBIGUOUS: local sources list only "Derived brackets" (2004); docs/CITATIONS.md]. It is NOT automatically graded
 antisymmetric, and the cyclic Lie-form Jacobi holds only where the
 bracket is additionally skew (e.g. on suitable abelian subalgebras)
 — the proof layer's :class:`DerivedBracketStrategy` checks exactly

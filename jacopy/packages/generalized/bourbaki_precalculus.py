@@ -399,6 +399,11 @@ class Axiom914Declaration(Definition):
         )
 
 
+#: the law :func:`axiom_915_instance` instantiates (no rule object:
+#: (9.15) enters as a declared zero instance)
+AXIOM_915_SOURCE = cite("CatalOzerDereliDogan2022", "Definition 9.1, Eq. (9.15)")
+
+
 def axiom_915_instance(U: Expr, V: Expr, z: Expr) -> Expr:
     """The (9.15) axiom instance as a DECLARED ZERO:
     ``ι_U(ℒ^Z_V z − dι_V z) + ι_V(ℒ^Z_U z − dι_U z)``."""
@@ -605,6 +610,7 @@ def prove_standard_metric_invariance(
             rule="normalize ((9.14) opens ℒ^R; bilinearity)",
             justification="registered rules + declared (9.14)",
             provenance_tag="axiom",
+            source=Axiom914Declaration.source,
         )
     ]
     if residual != Integer(0):
@@ -646,6 +652,7 @@ def prove_standard_metric_invariance(
                                 "instance"
                             ),
                             provenance_tag="axiom",
+                            source=AXIOM_915_SOURCE,
                         )
                     )
                     residual = cand

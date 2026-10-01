@@ -25,6 +25,12 @@ Generated from `jacopy/bibliography.py`. Fields come from the local PDF's title 
 <!-- references:begin -->
 Asakawa, T., Muraki, H., Sasa, S., & Watamura, S. (2015). Poisson-generalized geometry and R-flux. *International Journal of Modern Physics A*, *30*, Article 1550097. [issue, DOI not in source] arXiv:1408.2649
 
+Çatal-Özer, A., Dereli, T., & Doğan, K. (2022). *Pre-metric-Bourbaki algebroids: Cartan calculus for M-theory* (arXiv:2210.00548). arXiv. https://doi.org/10.48550/arXiv.2210.00548
+
+Çatal-Özer, A., Doğan, K., & Yetişmişoğlu, C. (2024). Drinfel’d double of bialgebroids for string and M theories: Dual calculus framework. *Journal of High Energy Physics*, *2024*(7), Article 030. https://doi.org/10.1007/JHEP07(2024)030
+
+Çatal-Özer, A., Doğan, K., & Yetişmişoğlu, C. (2025). Drinfel’d doubles, twists and all that… in stringy geometry and M theory. *Journal of High Energy Physics*, *2025*(1), Article 192. https://doi.org/10.1007/JHEP01(2025)192
+
 Dereli, T., & Doğan, K. (2020). *Metric-connection geometries on pre-Leibniz algebroids: A search for geometrical structure in string models* (arXiv:2006.05957). arXiv. https://doi.org/10.48550/arXiv.2006.05957
 
 Dereli, T., & Doğan, K. (2023). ‘Anti-commutable’ local pre-Leibniz algebroids and admissible connections. *Journal of Geometry and Physics*, *186*, Article 104752. https://doi.org/10.1016/j.geomphys.2023.104752
@@ -35,36 +41,40 @@ Kosmann-Schwarzbach, Y. (2004). Derived brackets. *Letters in Mathematical Physi
 
 Liu, Z.-J., Weinstein, A., & Xu, P. (1997). Manin triples for Lie bialgebroids. *Journal of Differential Geometry*, *45*, 547–574. [issue, DOI not in source] arXiv:dg-ga/9508013
 
+*Math 595 – JacoPy* [Unpublished course project guidelines]. (n.d.).
+
 *Math 595 midterm, Spring 2026* [Unpublished course examination, Gebze Technical University]. (2026).
 
 Roytenberg, D. (1999). *Courant algebroids, derived brackets and even symplectic supermanifolds* [Doctoral dissertation, University of California, Berkeley]. arXiv. https://doi.org/10.48550/arXiv.math/9910078
 
-Uchino, K. (2002). *Remarks on the definition of a Courant algebroid* (arXiv:math/0204010). arXiv. https://doi.org/10.48550/arXiv.math/0204010
-
-Çatal-Özer, A., Dereli, T., & Doğan, K. (2022). *Pre-metric-Bourbaki algebroids: Cartan calculus for M-theory* (arXiv:2210.00548). arXiv. https://doi.org/10.48550/arXiv.2210.00548
-
-Çatal-Özer, A., Doğan, K., & Yetişmişoğlu, C. (2024). Drinfel’d double of bialgebroids for string and M theories: Dual calculus framework. *Journal of High Energy Physics*, *2024*(7), Article 030. https://doi.org/10.1007/JHEP07(2024)030
-
-Çatal-Özer, A., Doğan, K., & Yetişmişoğlu, C. (2025). Drinfel’d doubles, twists and all that… in stringy geometry and M theory. *Journal of High Energy Physics*, *2025*(1), Article 192. https://doi.org/10.1007/JHEP01(2025)192
-
 Ševera, P. (2017). *Letters to Alan Weinstein about Courant algebroids* (arXiv:1707.00265). arXiv. https://doi.org/10.48550/arXiv.1707.00265
+
+Uchino, K. (2002). *Remarks on the definition of a Courant algebroid* (arXiv:math/0204010). arXiv. https://doi.org/10.48550/arXiv.math/0204010
 <!-- references:end -->
 
-| key | alias | local PDF | fields taken from | missing fields |
-|---|---|---|---|---|
-| `AsakawaMurakiSasaWatamura2015` | Watamura | —  | Çatal-Özer et al. (2024) ref. [56]; Çatal-Özer et al. (2025) ref. [95] (no local PDF) | issue, doi |
-| `DereliDogan2020` | MC | metric-connection.pdf (arXiv v1, 10 Jun 2020) | PDF title page | — |
-| `DereliDogan2023` | ADM | admissible.pdf (journal version) | PDF title page | — |
-| `GrabowskiMarmo2001` | Grabowski-Marmo | —  | Uchino (2002) ref. [3] (no local PDF) | issue, doi |
-| `KosmannSchwarzbach2004` | Kosmann-Schwarzbach | —  | Çatal-Özer et al. (2025) ref. [67]; Çatal-Özer et al. (2024) ref. [90] (no local PDF) | issue, last page, doi |
-| `LiuWeinsteinXu1997` | LWX | —  | Uchino (2002) ref. [2]; Dereli & Doğan (2023) ref. [28] (no local PDF) | issue, doi |
-| `Math595Midterm2026` | Midterm | Math 595 - Midterm Spring 2026 GTU.pdf  | PDF title page | author |
-| `Roytenberg1999` | Roytenberg | —  | Uchino (2002) ref. [4]; Dereli & Doğan (2020) ref. [20] (no local PDF) | — |
-| `Uchino2002` | Uchino | uchino.pdf (arXiv v4, 27 Apr 2002) | PDF title page | — |
-| `CatalOzerDereliDogan2022` | B | pre-metric-bourbaki.pdf (arXiv v1, 2 Oct 2022) | PDF title page | — |
-| `CatalOzerDoganYetismisoglu2024` | DD | drinfeld double.pdf (journal version) | PDF title page | — |
-| `CatalOzerDoganYetismisoglu2025` | TW | drinfeld doubles twitss.pdf (journal version) | PDF title page | — |
-| `Severa2017` | Ševera | —  | Çatal-Özer et al. (2022) ref. [16] (no local PDF) | — |
+| key | alias | local PDF | fields taken from | missing fields | caveat |
+|---|---|---|---|---|---|
+| `AsakawaMurakiSasaWatamura2015` | Watamura | —  | Çatal-Özer et al. (2024) ref. [56]; Çatal-Özer et al. (2025) ref. [95] (no local PDF) | issue, doi | no local PDF: equation numbers cited from it are unverified |
+| `CatalOzerDereliDogan2022` | B | pre-metric-bourbaki.pdf (arXiv v1, 2 Oct 2022) | PDF title page | — | — |
+| `CatalOzerDoganYetismisoglu2024` | DD | drinfeld double.pdf (journal version) | PDF title page | — | — |
+| `CatalOzerDoganYetismisoglu2025` | TW | drinfeld doubles twitss.pdf (journal version) | PDF title page | — | — |
+| `DereliDogan2020` | MC | metric-connection.pdf (arXiv v1, 10 Jun 2020) | PDF title page | — | — |
+| `DereliDogan2023` | ADM | admissible.pdf (journal version) | PDF title page | — | — |
+| `GrabowskiMarmo2001` | Grabowski-Marmo | —  | Uchino (2002) ref. [3] (no local PDF) | issue, doi | — |
+| `KosmannSchwarzbach2004` | Kosmann-Schwarzbach | —  | Çatal-Özer et al. (2025) ref. [67]; Çatal-Özer et al. (2024) ref. [90] (no local PDF) | issue, last page, doi | AMBIGUOUS: the code cites 'Kosmann-Schwarzbach 1996' (derived brackets); no local source lists a 1996 work, only this 2004 one |
+| `LiuWeinsteinXu1997` | LWX | —  | Uchino (2002) ref. [2]; Dereli & Doğan (2023) ref. [28] (no local PDF) | issue, doi | — |
+| `Math595Guideline` | Guideline | Math 595 -JacoPy.pdf  | PDF title page | author, date, title (taken from the file name) | — |
+| `Math595Midterm2026` | Midterm | Math 595 - Midterm Spring 2026 GTU.pdf  | PDF title page | author | — |
+| `Roytenberg1999` | Roytenberg | —  | Uchino (2002) ref. [4]; Dereli & Doğan (2020) ref. [20] (no local PDF) | — | — |
+| `Severa2017` | Ševera | —  | Çatal-Özer et al. (2022) ref. [16] (no local PDF) | — | — |
+| `Uchino2002` | Uchino | uchino.pdf (arXiv v4, 27 Apr 2002) | PDF title page | — | — |
+
+## Open questions (owner decisions, 2026-10-01)
+
+- **"E6 paper"** — AÇIK: kaynak bulunacak (Oğuzhan, 2026-10-01). Every mention in the code stays marked as an unidentified source that is not in the repository; its equation numbers (4.10)–(4.15) are unverified and are NOT those of arXiv:2409.11973. No bibliography key until the paper is identified.
+- **Watamura et al., arXiv:1408.2649** — cited with the reference fields of the secondary sources (`AsakawaMurakiSasaWatamura2015`); no local PDF, so every section/equation number cited from it (§2.2, §3, (2.6)–(2.7)) is unverified.
+- **Kosmann-Schwarzbach 1996 vs 2004** — BELİRSİZ: `brackets/derived.py` and `proof/strategies.py` name "Kosmann-Schwarzbach 1996" for the derived-bracket theorem; no local source lists a 1996 work, only "Derived brackets" (2004, `KosmannSchwarzbach2004`). Left as written until the intended work is confirmed.
+- **Course guideline** (`Math 595 -JacoPy.pdf`) has a bibliography key (`Math595Guideline`): the PDF has no title, author or date, so the title is taken from the file name and the year is n.d.
 
 ## Lane A — Uchino (2002), LWX, Roytenberg and other works without a local PDF — generalized/Courant modules
 
