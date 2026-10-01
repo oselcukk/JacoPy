@@ -692,10 +692,12 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
         unchecked.extend(alg_unchecked)
         for name, fam, hit in counters:
             try:
-                w3, m3, v3, o3 = _run(lhs, rhs, base_seed=seed + 7, deadline=time.monotonic() + timeout,
+                w3, m3, v3, o3 = _run(lhs, rhs, base_seed=seed + 7, deadline=deadline,
                                       label=f"counter-model {name}:{fam[0]}",
                                       **dict(run, samples=1, override={name: [fam]}))
-            except (Unsupported, Budget) as exc:
+            except Budget:
+                return _leak_budget(base, t0, timeout, f"{name} ({fam[0]})", common)
+            except Unsupported as exc:
                 unchecked.append(f"{name} ({fam[0]}): counter-model {type(exc).__name__} {getattr(exc, 'kind', '')}".strip())
                 continue
             if not (v3 and o3):
@@ -716,9 +718,11 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
             fam = dict(families)
             fam[n] = "counter"
             try:
-                w3, m3, v3, o3 = _run(lhs, rhs, base_seed=seed + 7, deadline=time.monotonic() + timeout,
+                w3, m3, v3, o3 = _run(lhs, rhs, base_seed=seed + 7, deadline=deadline,
                                       label="counter-model", **dict(run, families=fam, samples=1))
-            except (Unsupported, Budget) as exc:
+            except Budget:
+                return _leak_budget(base, t0, timeout, n, common)
+            except Unsupported as exc:
                 unchecked.append(f"{n}: counter-model {type(exc).__name__} {getattr(exc, 'kind', '')}".strip())
                 continue
             if not (v3 and o3):
@@ -729,6 +733,16 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
                                     witnesses=witnesses + w3, **base)
     return OracleReport(AGREE, elapsed=time.monotonic() - t0, leak_unchecked="; ".join(unchecked) or None,
                         **common, **base)
+
+
+def _leak_budget(base, t0, timeout, what, common):
+    """The ASSUMPTION_LEAK counter-models share the check's deadline; when
+    it runs out the D-models agreed but the leak check is incomplete —
+    reported as UNSUPPORTED(budget[leak-check]), never a plain AGREE."""
+    return OracleReport(UNSUPPORTED, unsupported_type="budget[leak-check]", unsupported_path=(),
+                        detail=(f"sides agree in {common['samples']} D-model(s), but the assumption-leak "
+                                f"counter-model for {what} exceeded the {timeout}s budget"),
+                        elapsed=time.monotonic() - t0, **base)
 
 
 def check_chain(chain, **kw) -> ChainReport:
