@@ -24,6 +24,11 @@ violates its target); a mismatch raises :class:`OracleSelfCheckError`.
 * ``pre-leibniz-tm+R`` TM ⊕ R, generic bilinear ``b``   RL LL AM regular
 * ``courant-dorfman`` TM ⊕ T*M Dorfman, dH = 0          RL LL AM J SP MI regular
 * ``pre-courant-dorfman`` Dorfman, dH ≠ 0 (n ≥ 4)       RL LL AM SP MI regular
+* ``metric-no-AM``    Dorfman + g-skew trivector twist  RL LL SP MI regular
+* ``almost-courant-no-MI`` Dorfman + ω(X,Y)·s           RL LL SP regular
+* ``lwx-courant``     skew Courant bracket (LWX)        AS AM LL CI regular
+* ``leibniz-rho0``    ρ = 0, [u,v] = (Σ∂_i∂_j u⁰)v⁰ e₁   RL AM J regular
+* ``skew-rho0``       ρ = 0, its skew-symmetrization    AM AS J regular
 * ``almost-leibniz``  generic ρ, C, λ ≠ 1               RL LL
 * ``skew-almost``     generic skew (λ = 1, C skew)      RL LL AS
 * ``right-leibniz-only`` + second-derivative breaker    RL
@@ -57,12 +62,15 @@ from jacopy.oracle import values as V
 from jacopy.oracle.models.tangent import OracleSelfCheckError, TangentModel, _subseed
 from jacopy.oracle.values import EFormV, FormV, Ring, SecV, Unsupported, VecV
 
-RL, LL, AM, J, AS, SP, MI, REG = (
+RL, LL, AM, J, AS, SP, MI, CI, REG = (
     "right-leibniz", "left-leibniz", "anchor-morphism", "jacobi", "antisymmetric",
-    "symmetric-part", "metric-invariance", "regular",
+    "symmetric-part", "metric-invariance", "courant-invariance", "regular",
 )
-#: axioms checked numerically on every structure
-ALGEBRAIC = (RL, LL, AM, J, AS, SP, MI)
+#: axioms checked numerically on every structure. ``courant-invariance``
+#: is LWX [C5] (packages/generalized/courant_axioms.py):
+#: ``ρ(x)(y,z) = ([x,y] + D(x,y), z) + (y, [x,z] + D(x,z))`` with the
+#: LWX ``D = ½ g⁻¹ρ*d`` (``D(x,y) = ½ g⁻¹D g(x,y)`` here).
+ALGEBRAIC = (RL, LL, AM, J, AS, SP, MI, CI)
 #: declarations the models can satisfy (``regular`` by construction)
 MODELED = ALGEBRAIC + (REG,)
 
@@ -77,6 +85,11 @@ FAMILIES: Dict[str, Tuple[frozenset, int, object, bool]] = {
     "pre-leibniz-tm+R": (frozenset({RL, LL, AM, REG}), 2, "n+1", False),
     "courant-dorfman": (frozenset({RL, LL, AM, J, SP, MI, REG}), 3, "2n", True),
     "pre-courant-dorfman": (frozenset({RL, LL, AM, SP, MI, REG}), 4, "2n", True),
+    "metric-no-AM": (frozenset({RL, LL, SP, MI, REG}), 3, "2n", True),
+    "almost-courant-no-MI": (frozenset({RL, LL, SP, REG}), 3, "2n", True),
+    "lwx-courant": (frozenset({AS, AM, LL, CI, REG}), 3, "2n", True),
+    "leibniz-rho0": (frozenset({RL, AM, J, REG}), 2, "free", False),
+    "skew-rho0": (frozenset({AM, AS, J, REG}), 2, "free", False),
     "almost-leibniz": (frozenset({RL, LL}), 2, "free", False),
     "skew-almost": (frozenset({RL, LL, AS}), 2, "free", False),
     "right-leibniz-only": (frozenset({RL}), 2, "free", False),
@@ -400,9 +413,13 @@ def _generic(gen, rng, family: str, r: int) -> EStructure:
     for a in range(r):
         # affine anchor (degree 1): non-constant, but keeps nested
         # brackets of the Palais d_E² affordable
-        col = [_sparse_poly(gen, rng, 1, 0.3) for _ in range(n)]
-        if all(c.is_zero for c in col) or all(c.is_ground for c in col):
-            col[a % n] = col[a % n] + gen._poly(rng, 1)
+        # HOMOGENEOUS linear: ρ(0) = 0, so the rank jumps at the origin
+        # (a certificate that the anchor is NOT regular)
+        col = [R.zero() if rng.random() < 0.3 else
+               R.poly(sum(rng.choice([-2, -1, 1, 2]) * R.coords[i] for i in rng.sample(range(n), rng.randint(1, n))))
+               for _ in range(n)]
+        if all(c.is_zero for c in col):
+            col[a % n] = R.var(rng.randrange(n))
         rho.append(tuple(col))
     skew = family in ("skew-almost", "skew-only")
     lam = R.const(1) if skew else R.const(rng.choice([2, -1, 3, Fraction(1, 2)]))
@@ -474,6 +491,85 @@ def _generic(gen, rng, family: str, r: int) -> EStructure:
     return EStructure(family, family + f" (λ={lam.as_expr()})", R, rho, br, loc=loc, regular=False)
 
 
+def _metric_variant(gen, rng, family: str) -> EStructure:
+    """Variants of the (dH = 0) Dorfman structure with the same ``ρ`` and
+    ``g``:
+
+    * ``metric-no-AM``: ``+ T(u,v)`` with ``g(T(u,v), w) = Θ(ξ,η,ζ)`` for a
+      random trivector Θ — totally skew, so MI and SP still hold, while
+      ``ρT(u,v) = 2Θ(ξ,η,·) ≠ 0`` breaks the anchor morphism;
+    * ``almost-courant-no-MI``: ``+ ω(X,Y)·s`` (ω a random 2-form, ``s`` a
+      fixed random section) — skew, so SP holds; MI, AM, J break;
+    * ``lwx-courant``: the skew Courant bracket ``[u,v]_D − ½ g⁻¹D g(u,v)``
+      (LWX [C5] with ``D = ½g⁻¹ρ*d``, [C2] hold; left Leibniz with
+      ``L(ω,u,v) = ½ g(u,v) g⁻¹ω``)."""
+    R, n = gen.R, gen.n
+    base = _dorfman(gen, rng, "courant-dorfman")
+    r = base.r
+    if family == "metric-no-AM":
+        Theta = {I: gen._poly(rng, 2) for I in combinations(range(n), 3)}
+
+        def T(u, v):
+            xi, eta = u[n:], v[n:]
+            out = [R.zero()] * r
+            for k in range(n):
+                val = V.det_eval(R, Theta, [xi, eta, V.basis(R, k)])
+                out[k] = R.const(2) * val
+            return out
+    elif family == "almost-courant-no-MI":
+        om = {I: gen._poly(rng, 2) for I in combinations(range(n), 2)}
+        s_ = [gen._poly(rng, 1) for _ in range(r)]
+
+        def T(u, v):
+            w = V.det_eval(R, om, [u[:n], v[:n]])
+            return [w * c for c in s_]
+    else:
+        half = R.const(Fraction(1, 2))
+
+        def T(u, v):
+            return [-(half * c) for c in base.sharp(base.D(base.metric(u, v)))]
+
+    def br(u, v):
+        return tuple(x + y for x, y in zip(base.bracket(u, v), T(u, v)))
+
+    st = EStructure(family, family, R, base.rho, br, G=base.G, Ginv=base.Ginv, regular=True)
+    if family == "lwx-courant":
+        def loc(om_, u, v):
+            return V.sec_scale(R.const(Fraction(1, 2)) * st.metric(u, v), st.sharp(om_))
+    else:
+        def loc(om_, u, v):
+            return V.sec_scale(st.metric(u, v), st.sharp(om_))
+    st._loc = loc
+    return st
+
+
+def _rho0(gen, rng, family: str, r: int) -> EStructure:
+    """``ρ = 0`` and ``[u,v] = (Σ_{i≤j} ∂_i∂_j u⁰)·v⁰·e₁`` (coordinate derivatives, so
+    not C∞-linear in ``u``): right Leibniz (trivially, ρ = 0), anchor
+    morphism and Jacobi hold, left Leibniz breaks. ``skew-rho0`` uses
+    ``B(u,v) − B(v,u)``: skew, Jacobi, anchor morphism; both Leibniz
+    rules break."""
+    R, n = gen.R, gen.n
+    k = R.const(rng.choice([1, 2, -1]))
+
+    def B(u, v):
+        out = [R.zero()] * r
+        dd = R.zero()
+        for i in range(n):
+            for j in range(i, n):
+                dd = dd + R.diff(R.diff(u[0], i), j)
+        out[1] = k * dd * v[0]
+        return out
+
+    def br(u, v):
+        if family == "skew-rho0":
+            return tuple(x - y for x, y in zip(B(u, v), B(v, u)))
+        return tuple(B(u, v))
+
+    rho = [tuple(R.zero() for _ in range(n)) for _ in range(r)]
+    return EStructure(family, family, R, rho, br, loc=None, regular=True)
+
+
 # --------------------------------------------------------------------- #
 # Self-check                                                             #
 # --------------------------------------------------------------------- #
@@ -516,8 +612,16 @@ def _defects(st: EStructure, gen: TangentModel, rng) -> Dict[str, bool]:
         out[SP] = zero(sub(sym, st.sharp(st.D(st.metric(u, v)))))
         mi = st.act(u, st.metric(v, w)) - st.metric(br(u, v), w) - st.metric(v, br(u, w))
         out[MI] = mi.is_zero
+        half = R.const(Fraction(1, 2))
+
+        def Dc(a, b):  # LWX D(a,b) = ½ g⁻¹ρ*d g(a,b)
+            return V.sec_scale(half, st.sharp(st.D(st.metric(a, b))))
+
+        ci = (st.act(u, st.metric(v, w)) - st.metric(V.sec_add(R, br(u, v), Dc(u, v)), w)
+              - st.metric(v, V.sec_add(R, br(u, w), Dc(u, w))))
+        out[CI] = ci.is_zero
     else:
-        out[SP] = out[MI] = False
+        out[SP] = out[MI] = out[CI] = False
     return out
 
 
@@ -541,6 +645,10 @@ def build_structure(family: str, n: int, r: int, pool: int) -> EStructure:
         base = _so3(gen, rng, family)
     elif family in ("courant-dorfman", "pre-courant-dorfman"):
         base = _dorfman(gen, rng, family)
+    elif family in ("metric-no-AM", "almost-courant-no-MI", "lwx-courant"):
+        base = _metric_variant(gen, rng, family)
+    elif family in ("leibniz-rho0", "skew-rho0"):
+        base = _rho0(gen, rng, family, r)
     else:
         base = _generic(gen, rng, family, r)
     if base.r != r:
@@ -565,7 +673,10 @@ def build_structure(family: str, n: int, r: int, pool: int) -> EStructure:
         raise OracleSelfCheckError(f"{family}: axioms {not_violated} are not verifiably violated")
     st.satisfied = frozenset(claims)
     viol = set(a for a in ALGEBRAIC if a not in claims)
-    if REG not in claims and _rank_varies(st):
+    if REG not in claims:
+        # a family not claiming regularity must CERTIFY its violation
+        if not _rank_varies(st):
+            raise OracleSelfCheckError(f"{family}: non-regularity not certified (anchor rank constant)")
         viol.add(REG)
     st.violated = frozenset(viol)
     _CACHE[key] = st
