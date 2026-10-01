@@ -228,9 +228,10 @@ def _mentions(value: Any, atom: Expr) -> bool:
     return isinstance(value, Expr) and contains(value, atom)
 
 
-def wildcard_names(expr: Expr) -> set:
+@lru_cache(maxsize=4096)
+def wildcard_names(expr: Expr) -> frozenset:
     """Names of every Wildcard/SeqWildcard in ``expr`` — children and
-    non-child payload alike."""
+    non-child payload alike (cached: called on rule patterns)."""
     out: set = set()
 
     def walk(e):
@@ -251,7 +252,7 @@ def wildcard_names(expr: Expr) -> set:
                 walk_payload(k)
 
     walk(expr)
-    return out
+    return frozenset(out)
 
 
 def _match(
@@ -640,7 +641,7 @@ def _subst(pattern: Expr, bindings: Bindings, scope: frozenset) -> Expr:
     # so types whose __init__ diverges from children (BracketApply
     # carries its bracket outside children) reconstruct correctly.
     rebuilt = pattern._rebuild(tuple(new_children))
-    if _payload_has_wildcard(node_payload(pattern)):
+    if _payload_has_wildcard(_pattern_payload(pattern)):
         rebuilt = _substitute_payload(rebuilt, bindings)
     return rebuilt
 
@@ -748,12 +749,11 @@ def _payload_has_wildcard(pk: Any) -> bool:
 
 
 def _fill(e: Expr, bindings: Bindings) -> Expr:
-    out = substitute(e, bindings)
-    if has_wildcard(out):
+    if not wildcard_names(e) <= set(bindings):
         raise PayloadSubstitutionError(
-            f"unbound payload wildcard in {out._repr_inner()}"
+            f"unbound payload wildcard in {e._repr_inner()}"
         )
-    return out
+    return substitute(e, bindings)
 
 
 def _substitute_payload(node: Expr, bindings: Bindings) -> Expr:
