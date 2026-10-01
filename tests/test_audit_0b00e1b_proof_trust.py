@@ -748,3 +748,16 @@ class TestProofTrust2:
         assert len(names) == 2 and any("'jacobi'" in n for n in names)
         req2, _ = _classify((axiom, axiom))                       # exact duplicates still collapse
         assert len([a for a in req2 if a.kind == "structure"]) == 1
+
+    def test_shallow_copy_does_not_rederive(self, monkeypatch):
+        # main 75acc5a: copy.copy went through __reduce__ and re-derived
+        # every requirement; deepcopy / pickle still rebuild
+        import copy
+
+        import jacopy.proof.result as R
+
+        thm, *_ = _scalar_theorem()
+        calls = []
+        orig = R.structural_requires
+        monkeypatch.setattr(R, "structural_requires", lambda t: calls.append(1) or orig(t))
+        assert copy.copy(thm) is thm and calls == []
