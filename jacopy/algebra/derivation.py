@@ -186,14 +186,18 @@ def degree_of(
     # layer otherwise has no wedge dependency.
     from jacopy.core.wedge import Wedge  # noqa: WPS433
     if isinstance(expr, Wedge):
+        # Exterior grading: each child by its EXTERIOR degree (the
+        # ``wedge_degree`` lift of vector fields, kind_of's degree of
+        # forms / multivectors / [X,Y], certified operator shifts),
+        # so X ∧ Y is the bivector it is (degree 2, not 0). A child
+        # carrying vectors without a certified exterior type raises —
+        # its operator degree is the wrong grading here (audit 0b00e1b
+        # review: Wedge([X,Y], Z) used to get 0 + 1).
+        from jacopy.central.objects.kind import wedge_factor_degree  # noqa: WPS433 - layering: kind_of lives in central
+
         total = Degree.const(0)
         for c in expr.children:
-            # The Wedge lift: children exposing a ``wedge_degree``
-            # (vector fields, their brackets) contribute their
-            # multivector degree instead of their operator degree, so
-            # X ∧ Y is the bivector it is (degree 2, not 0).
-            lift = getattr(c, "wedge_degree", None)
-            total = total + (lift if isinstance(lift, Degree) else degree_of(c, registry))
+            total = total + wedge_factor_degree(c, registry)
         return total
     # Indexed sum: a finite sum of same-degree terms — the degree is
     # the body's (Phase 4.D.2; the bound index does not grade).

@@ -660,3 +660,126 @@ def test_review2_commutator_of_derivations():
     A, B = Symbol("A"), Symbol("B")
     node = Act(Commutator(A, B), Product(f, g))
     ActExpansionDefinition(reg).matches(node)  # must not raise
+
+
+# --------------------------------------------------------------------- #
+# Third code review (7212be6) — permanent regression probes              #
+# --------------------------------------------------------------------- #
+
+
+def _review3():
+    from jacopy.algebra.commutator import Commutator
+    from jacopy.central.objects import functions
+    from jacopy.core.registry import PropertyRegistry
+
+    reg = PropertyRegistry()
+    f, g, h = functions("f g h", registry=reg)
+    X, Y, Z, W = vector_fields("X Y Z W")
+    (alpha,) = forms("alpha", degree=1)
+    return reg, f, g, h, X, Y, Z, W, alpha, Commutator
+
+
+def test_review3_commutators_do_not_commute_in_products():
+    # (1) [X,Y] is an operator (a vector field) in a Product: no implicit
+    # Koszul swap. 7212be6 CLOSED all three (base/pre: ValueError):
+    #   [X,Y]·[Z,W] = [Z,W]·[X,Y]   (false: [[X,Y],[Z,W]] ≠ 0 in general)
+    #   [X,Y]·α = α·[X,Y],  [X,Y]·Z(W) = Z(W)·[X,Y]
+    from jacopy.core.expr import Product
+
+    reg, f, g, h, X, Y, Z, W, alpha, Commutator = _review3()
+    C1, C2 = Commutator(X, Y), Commutator(Z, W)
+    for a, b in ((C1, C2), (C1, alpha), (C1, Act(Z, W))):
+        with pytest.raises(ProofFailure):
+            show_equal(Product(a, b), Product(b, a), registry=reg)
+
+
+def test_review3_wedge_degree_from_exterior_children():
+    # (2) [X,Y] is a vector field: |[X,Y] ∧ Z| = 1 + 1 = 2 (7212be6: 0+1
+    # = 1, which CLOSED the false (([X,Y]∧Z)·α = −α·([X,Y]∧Z)).
+    from jacopy.algebra.derivation import degree_of
+    from jacopy.core.expr import Product
+    from jacopy.core.symbolic_degree import Degree
+
+    reg, f, g, h, X, Y, Z, W, alpha, Commutator = _review3()
+    WZ = Wedge(Commutator(X, Y), Z)
+    assert degree_of(WZ, reg) == Degree.const(2)
+    with pytest.raises(ProofFailure):
+        show_equal(Product(WZ, alpha), Neg(Product(alpha, WZ)), registry=reg)
+
+
+def test_review3_uncertified_operator_in_wedge_gets_no_sign():
+    # (3) V = ι_Λ(dh) (Λ a bivector) has no certified exterior type; the
+    # structural |D| + |a| was applied to every Derivation and gave
+    # |V| = −1 + 1 = 0, so d̃(V∧Y) = d̃V∧Y + V∧d̃Y CLOSED (base/pre too).
+    # Now the node stays inert: neither sign closes.
+    import jacopy.central.objects.multivector as mv
+    from jacopy.central.objects.interior import Interior
+    from jacopy.central.tangent import d as dfun
+
+    reg, f, g, h, X, Y, Z, W, alpha, _ = _review3()
+    D, _eng = _tilde()
+    V = Act(Interior(mv.bivector("Λ")), dfun(h))
+    node = Act(D, Wedge(V, Y))
+    assert product_rule(node, reg) == node
+    for sign in (lambda t: t, Neg):
+        with pytest.raises(ProofFailure):
+            show_equal(
+                node,
+                Sum(Wedge(Act(D, V), Y), sign(Wedge(V, Act(D, Y)))),
+                registry=reg,
+            )
+
+
+def test_review3_lie_and_covariant_need_vector_direction():
+    # (4) ℒ_Λ h, ℒ_W h (W undeclared), ∇_Λ h, ∇_{X∘Y} h are not typed as
+    # functions (7212be6/base: "function"); ℒ_X h, ∇_X h are.
+    import jacopy.central.objects.multivector as mv
+    from jacopy.central.calculus.bracket_calculus import LieDerivative
+    from jacopy.central.calculus.scalars import is_scalar_function
+    from jacopy.central.objects.connection import CovariantOp
+    from jacopy.core.expr import Product, Symbol
+
+    reg, f, g, h, X, Y, Z, W, alpha, _ = _review3()
+    lam = mv.bivector("Λ")
+    for bad in (lam, Symbol("Wsym"), Product(X, Y)):
+        assert not is_scalar_function(Act(LieDerivative("TM", bad), h), reg)
+        assert not is_scalar_function(Act(CovariantOp("∇", bad), h), reg)
+    assert is_scalar_function(Act(LieDerivative("TM", X), h), reg)
+    assert is_scalar_function(Act(CovariantOp("∇", X), h), reg)
+
+
+def test_review3_endovf_applied_to_vector_is_untyped():
+    # (5) m(X) applied to a vector Y is a composition, not a vector.
+    from jacopy.central.objects.endomorphism import EndoVF
+    from jacopy.central.objects.kind import kind_of
+
+    reg, f, g, h, X, Y, *_ = _review3()
+    assert kind_of(Act(EndoVF("m", X), Y), reg).kind == "unknown"
+    assert kind_of(Act(EndoVF("m", X), f), reg).kind == "function"
+
+
+def test_review3_multivector_interior_on_function_needs_certified_p():
+    # (8) ι_P f = 0 only for a certified p-vector P (p ≥ 1).
+    import jacopy.central.objects.multivector as mv
+    from jacopy.central.objects.kind import kind_of
+    from jacopy.central.objects.multivector_interior import MultivectorInterior
+
+    from jacopy.core.expr import Symbol
+    from jacopy.core.properties import Graded
+
+    reg, f, *_ = _review3()
+    assert kind_of(Act(MultivectorInterior(mv.bivector("Λ")), f), reg).kind == "zero"
+    # a Graded(2) symbol is typed like a 2-FORM, not a bivector:
+    # ι_P f is not certified zero (7212be6: "zero")
+    P = Symbol("P")
+    reg.declare(P, Graded(2))
+    op = MultivectorInterior(P, registry=reg)
+    assert kind_of(Act(op, f), reg).kind == "unknown"
+
+
+def test_review3_commutator_on_function_is_a_function():
+    # (9) [X,Y](f) = X(Y(f)) − Y(X(f)) is a function.
+    from jacopy.central.calculus.scalars import is_scalar_function
+
+    reg, f, g, h, X, Y, Z, W, alpha, Commutator = _review3()
+    assert is_scalar_function(Act(Commutator(X, Y), f), reg)

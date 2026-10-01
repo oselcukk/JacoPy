@@ -156,8 +156,10 @@ def _swap_behavior(
       (parity delta ``1``).
     * Both carry :class:`GradedCommutative`, swap produces
       ``(-1)^{|a||b|}``.
-    * Either factor is an OPERATOR (a :class:`Derivation` node) with
-      no explicit marker pair above: swap FORBIDDEN. A Product of
+    * Either factor is not a certified graded VALUE
+      (:func:`_swap_class`: a Derivation, a commutator, a vector /
+      multivector, a vector applied to a vector, …) with no explicit
+      marker pair above: swap FORBIDDEN. A Product of
       operators is a composition, and composition is not governed by
       the Koszul rule — degree alone would silently "prove"
       ``X∘Y = Y∘X`` for degree-0 operators (2026-09-07 audit,
@@ -175,13 +177,67 @@ def _swap_behavior(
         return (True, Degree.const(1))
     if registry.has(a, GradedCommutative) and registry.has(b, GradedCommutative):
         return (True, _degree_of(a, registry) * _degree_of(b, registry))
-    if isinstance(a, Derivation) or isinstance(b, Derivation):
-        # Operator composition: no implicit commutativity.
+    ca, cb = _swap_class(a, registry), _swap_class(b, registry)
+    if "op" in (ca, cb):
+        # Operator composition (a Derivation, a commutator, a vector
+        # field, a vector applied to a vector, …): no implicit
+        # commutativity — only certified VALUES swap.
         return (False, Degree.const(0))
-    # Implicit default: both Graded VALUES → Koszul. Matches the
-    # common case where the user declared grading without separately
-    # declaring the sign rule.
-    return (True, _degree_of(a, registry) * _degree_of(b, registry))
+    if "scalar" in (ca, cb):
+        return (True, Degree.const(0))  # a C∞ function commutes with values
+    if ca == "value" and cb == "value":
+        # Implicit default: both Graded VALUES → Koszul (operator and
+        # exterior gradings agree on vector-free values).
+        return (True, _degree_of(a, registry) * _degree_of(b, registry))
+    # a multivector-type element next to another non-scalar: the
+    # Product reading (wedge vs composition) and the grading are not
+    # certified — keep the order.
+    return (False, Degree.const(0))
+
+
+def _swap_class(e: Expr, registry: PropertyRegistry) -> str:
+    """Default-reject classification for the implicit swap (audit
+    0b00e1b review): ``scalar`` (kind_of function/zero), ``value``
+    (a form, or an untyped vector-free value such as ``D(x)`` for a
+    declared ``Graded`` x), ``elem`` (a multivector-type element with a
+    certified exterior degree, e.g. ``d̃X``), else ``op`` — vectors
+    and commutators read as operators in a Product, so they never
+    move."""
+    from jacopy.central.objects.kind import (  # noqa: WPS433
+        has_vector_content,
+        kind_of,
+        wedge_factor_degree,
+    )
+
+    k = kind_of(e, registry).kind
+    if k in ("function", "zero"):
+        return "scalar"
+    if k == "form":
+        return "value"
+    if k == "multivector":
+        return "elem"
+    if k != "unknown":
+        return "op"  # vector, operator, tensor, mismatch
+    if _has_operator_content(e):
+        if has_vector_content(e, registry):
+            try:
+                wedge_factor_degree(e, registry)
+                return "elem"
+            except ValueError:
+                return "op"
+        return "op"
+    return "value"
+
+
+def _has_operator_content(e: Expr) -> bool:
+    from jacopy.algebra.commutator import Commutator
+    from jacopy.algebra.derivation import Act
+
+    if isinstance(e, (Derivation, Commutator)):
+        return True
+    if isinstance(e, Act):
+        return _has_operator_content(e.arg)  # the op slot is an application
+    return any(_has_operator_content(c) for c in e.children)
 
 
 # --------------------------------------------------------------------- #

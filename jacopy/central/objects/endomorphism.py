@@ -87,11 +87,12 @@ class EndoForm(Atom):
     endomorphism pair named ``name`` (``m̃⁻¹(ω)`` when ``inverted``).
     Degree follows the argument."""
 
-    __slots__ = ("_endo_name", "_arg", "_inverted")
+    __slots__ = ("_endo_name", "_arg", "_inverted", "_degree_cache")
 
     def __init__(
         self, name: str, omega: Expr, *, inverted: bool = False
     ) -> None:
+        self._degree_cache = None
         if not isinstance(omega, Expr):
             raise TypeError("EndoForm requires an Expr form")
         self._endo_name = name
@@ -116,12 +117,15 @@ class EndoForm(Atom):
         # vector field's instance degree is its OPERATOR degree 0, so
         # reading it made m̃(X) a "0-form", i.e. a scalar function.
         # Anything not typed as a form (or a 0-form) has no degree here.
+        if self._degree_cache is not None:
+            return self._degree_cache  # the argument is immutable
         from jacopy.central.objects.kind import kind_of  # noqa: WPS433
 
         k = kind_of(self._arg, None)
         if k.kind in ("form", "function", "zero") and isinstance(
             k.degree, Degree
         ):
+            self._degree_cache = k.degree
             return k.degree
         raise AttributeError(
             "EndoForm degree undetermined: the argument is not a form"

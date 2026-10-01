@@ -318,70 +318,15 @@ def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
 
 
 def _wedge_factor_degree(fac: Expr, registry) -> Degree:
-    """Exterior degree of ``fac`` (a wedge factor, or the one
-    non-scalar factor of a scalar product), for Leibniz signs.
+    """Exterior degree of a wedge factor / the sole non-scalar factor
+    of a scalar product — the shared rule
+    :func:`jacopy.central.objects.kind.wedge_factor_degree` (also used
+    by ``degree_of`` of a Wedge). Raises :class:`ValueError` when not
+    determinable; never falls back to the operator degree of a
+    vector-carrying factor."""
+    from jacopy.central.objects.kind import wedge_factor_degree  # noqa: WPS433
 
-    Resolution (first determinable answer wins):
-
-    1. the node's own ``wedge_degree`` lift (vector fields, their
-       brackets, algebroid sections) — exactly what
-       :func:`degree_of` uses for a ``Wedge`` node, so the running
-       sign and ``|a₁∧…∧a_{i−1}|`` agree;
-    2. the exterior degree of :func:`~jacopy.algebra.grading.exterior_degree`
-       (``kind_of``: functions, forms, multivectors, ``f·X``, ``♯α``, …);
-    3. structural recursion for shapes ``kind_of`` leaves unknown:
-       ``Neg`` and a HOMOGENEOUS ``Sum`` keep the degree, ``Wedge``
-       adds, a scalar product ``f·a`` is ``|a|``, and ``D(a)`` for a
-       derivation ``D`` without a wedge lift (``d̃``, ``ι̃_ω``) is
-       ``|D| + |a|`` (so ``d̃X`` is a bivector, 2).
-
-    Anything else — a mixed sum (``X + u``), a composition of two
-    geometric factors (``X∘Y``), an operator — raises
-    :class:`ValueError`. There is deliberately NO fallback to the
-    operator degree (``degree_of``): that grading is the wrong one
-    here (code-review follow-up of audit 0b00e1b P0-1).
-    """
-    lift = getattr(fac, "wedge_degree", None)
-    if isinstance(lift, Degree):
-        return lift
-    from jacopy.algebra.grading import exterior_degree  # noqa: WPS433 - layering: kind_of lives in central
-    from jacopy.central.calculus.scalars import is_scalar_function
-    from jacopy.core.wedge import Wedge as _Wedge
-
-    ext = exterior_degree(fac, registry)
-    if isinstance(ext, Degree):
-        return ext
-    if isinstance(fac, Neg):
-        return _wedge_factor_degree(fac.arg, registry)
-    if (
-        isinstance(fac, Act)
-        and isinstance(fac.op, Derivation)
-        and not isinstance(getattr(fac.op, "wedge_degree", None), Degree)
-    ):
-        return degree_of(fac.op, registry) + _wedge_factor_degree(
-            fac.arg, registry
-        )
-    if isinstance(fac, _Wedge) and fac.children:
-        total = Degree.const(0)
-        for c in fac.children:
-            total = total + _wedge_factor_degree(c, registry)
-        return total
-    if isinstance(fac, Product) and fac.children:
-        geometric = [
-            c for c in fac.children if not is_scalar_function(c, registry)
-        ]
-        if not geometric:
-            return Degree.const(0)
-        if len(geometric) == 1:
-            return _wedge_factor_degree(geometric[0], registry)
-    if isinstance(fac, Sum) and fac.children:
-        degs = [_wedge_factor_degree(c, registry) for c in fac.children]
-        if all(d == degs[0] for d in degs[1:]):
-            return degs[0]
-    raise ValueError(
-        f"exterior degree of {fac!r} is not determinable (mixed sum, "
-        "composition or operator)"
-    )
+    return wedge_factor_degree(fac, registry)
 
 
 # --- factor classification (one pass per product) --------------------- #
@@ -411,17 +356,9 @@ def _classify(c: Expr, registry) -> Tuple[str, Optional[Degree]]:
 
 
 def _has_multivector_content(c: Expr, registry) -> bool:
-    """Does ``c`` contain a vector / multivector anywhere? Only then do
-    the operator grading (``degree_of``: a vector field counts 0) and
-    the exterior grading (it counts 1) disagree."""
-    from jacopy.central.objects.kind import kind_of  # noqa: WPS433
+    from jacopy.central.objects.kind import has_vector_content  # noqa: WPS433
 
-    for node in c.walk():
-        if isinstance(getattr(node, "wedge_degree", None), Degree):
-            return True
-        if kind_of(node, registry).kind in ("vector", "multivector"):
-            return True
-    return False
+    return has_vector_content(c, registry)
 
 
 def _product_degrees(
@@ -509,10 +446,17 @@ def _expand_leibniz(
     # declaring a grading for operand factors that don't have one.
     deg_op_is_zero = deg_op == Degree.const(0)
 
-    classes = [_classify(c, registry) for c in factors]
+    from jacopy.central.objects.kind import kind_cache  # noqa: WPS433
+
+    with kind_cache(registry):
+        classes = [_classify(c, registry) for c in factors]
+        found = (
+            None
+            if deg_op_is_zero
+            else _product_degrees(factors, classes, registry)
+        )
     degrees: List[Degree] = []
     if not deg_op_is_zero:
-        found = _product_degrees(factors, classes, registry)
         if found is None:
             distributed = _distribute_sum_factor(op, prod, registry)
             return distributed if distributed is not None else Act(op, prod)
