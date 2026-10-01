@@ -30,6 +30,7 @@ algorithms layer, which canonicalizes expressions before invoking
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from jacopy.core.expr import Atom, Expr
@@ -204,24 +205,45 @@ def _match(
     if pattern.is_atom:
         return pattern == target
 
+    from jacopy.core.indexed_sum import IndexedSum
+
+    if isinstance(pattern, IndexedSum):
+        return _match_indexed_sum(pattern, target, bindings, registry)
     # Non-child identity payload first (audit 0B00E1B-FULL M1X-6): two
     # nodes of the same class with the same children can still mean
     # different things (BracketApply's bracket, MultiEval's
-    # alternating flag, d's skew/calculus, an IndexedSum's dummy).
-    # A payload field holding a wildcard on the pattern side binds
-    # like any other hole; every other field must agree exactly.
-    snapshot = dict(bindings)
+    # alternating flag, d's skew/calculus, a Hodge metric). A payload
+    # field holding a wildcard on the pattern side binds like any other
+    # hole; every other field must agree exactly. (On failure the
+    # caller restores the bindings snapshot: match() discards them,
+    # _match_children_rec restores its own.)
     if not _match_payload(
-        node_payload(pattern), node_payload(target), bindings, registry
+        _pattern_payload(pattern), node_payload(target), bindings, registry
     ):
-        bindings.clear()
-        bindings.update(snapshot)
         return False
-    if _match_children(pattern.children, target.children, bindings, registry):
-        return True
-    bindings.clear()
-    bindings.update(snapshot)
-    return False
+    return _match_children(pattern.children, target.children, bindings, registry)
+
+
+def _match_indexed_sum(pattern, target, bindings, registry) -> bool:
+    """Σ_d body is a BINDER: compare the range, then match the bodies
+    up to α-renaming — the target is renamed to the pattern's dummy (a
+    wildcard dummy binds the target's). A renaming that would capture a
+    free occurrence of the pattern dummy in the target body is refused."""
+    from jacopy.core.indexed_sum import _range_key
+    from jacopy.core.traverse import contains
+
+    if _range_key(pattern.range_) != _range_key(target.range_):
+        return False
+    pd, td = pattern.dummy, target.dummy
+    body = target.body
+    if isinstance(pd, Wildcard):
+        if not _bind_wildcard(pd, td, bindings, registry):
+            return False
+    elif pd != td:
+        if contains(body, pd):
+            return False
+        body = target.with_dummy(pd).body
+    return _match(pattern.body, body, bindings, registry)
 
 
 # --------------------------------------------------------------------- #
@@ -267,25 +289,58 @@ def node_payload(expr: Expr) -> Any:
 
     if isinstance(expr, IndexedSum):
         return (expr.dummy, _range_key(expr.range_))
-    child_ids = {id(c) for c in expr.children}
-    return _strip_children(expr._key(), child_ids)
+    children = expr.children
+    key = expr._key()
+    stripped, used = _strip_in_order(key, children, 0)
+    if used == len(children):
+        return stripped
+    # _key lists the children in another order: fall back to identity
+    child_ids = {id(c) for c in children}
+    return _strip_by_identity(key, child_ids)
 
 
-def _strip_children(key: Any, child_ids: set) -> Any:
-    """Replace children (by identity) with one placeholder per RUN of
-    consecutive children, so a SeqWildcard pattern child that absorbs
-    several target children leaves the same payload shape."""
+def _collapse(items: List[Any]) -> Tuple[Any, ...]:
+    out: List[Any] = []
+    for item in items:
+        if item is _CHILD and out and out[-1] is _CHILD:
+            continue
+        out.append(item)
+    return tuple(out)
+
+
+def _strip_in_order(key: Any, children: Tuple[Expr, ...], i: int):
+    """Strip the children POSITIONALLY: walking the key left to right,
+    a leaf that is the next expected child (by identity) is replaced by
+    the placeholder. An object that is also a payload field (e.g.
+    ``HodgeStar(g, 3, metric=g)``) stays payload past its child slot.
+    Runs of consecutive children collapse to one placeholder (a
+    SeqWildcard absorbs several target children)."""
+    if isinstance(key, Expr):
+        if i < len(children) and key is children[i]:
+            return _CHILD, i + 1
+        return key, i
+    if type(key) is tuple:
+        items: List[Any] = []
+        for k in key:
+            item, i = _strip_in_order(k, children, i)
+            items.append(item)
+        return _collapse(items), i
+    return key, i
+
+
+def _strip_by_identity(key: Any, child_ids: set) -> Any:
     if isinstance(key, Expr) and id(key) in child_ids:
         return _CHILD
     if type(key) is tuple:
-        out: List[Any] = []
-        for k in key:
-            item = _strip_children(k, child_ids)
-            if item is _CHILD and out and out[-1] is _CHILD:
-                continue
-            out.append(item)
-        return tuple(out)
+        return _collapse([_strip_by_identity(k, child_ids) for k in key])
     return key
+
+
+@lru_cache(maxsize=4096)
+def _pattern_payload(pattern: Expr) -> Any:
+    """Cached :func:`node_payload` for the PATTERN side (patterns are
+    reused across many targets)."""
+    return node_payload(pattern)
 
 
 def _match_payload(

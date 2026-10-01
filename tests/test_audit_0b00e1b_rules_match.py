@@ -125,11 +125,21 @@ def test_exterior_derivative_skew_and_calculus_distinguish():
 
 def test_indexed_sum_dummy_and_payload_wildcard():
     # Σ_i ?B against Σ_j f(j): binding B = f(j) under the pattern's
-    # dummy i would rebuild Σ_i f(j) = n·f(j) ≠ Σ_j f(j)
+    # dummy i would rebuild Σ_i f(j) = n·f(j) ≠ Σ_j f(j). The binder is
+    # matched up to α-renaming instead (review of f02fa15: rejecting
+    # every differently-named dummy was a false reject): B = f(i), and
+    # the rebuild Σ_i f(i) is the target.
     i, j = Symbol("i"), Symbol("j")
     fj = Act(Derivation("f"), j)
     target = IndexedSum(j, None, fj)
-    assert match(IndexedSum(i, None, Wildcard("B")), target) is None
+    b = match(IndexedSum(i, None, Wildcard("B")), target)
+    assert b == {"B": Act(Derivation("f"), i)}
+    assert substitute(IndexedSum(i, None, Wildcard("B")), b) == target
+    # renaming j → i would capture the free i in Σ_j f(j)·i: refused
+    captured = IndexedSum(j, None, Product(fj, i))
+    assert match(IndexedSum(i, None, Wildcard("B")), captured) is None
+    assert alpha_equal(IndexedSum(i, None, Act(Derivation("f"), i)), target)
+    assert not alpha_equal(IndexedSum(i, None, Act(Derivation("f"), i)), captured)
     # a WILDCARD in the payload (the bound dummy) binds like any hole
     got = match(IndexedSum(Wildcard("d"), None, Wildcard("B")), target)
     assert got == {"d": j, "B": fj}
@@ -340,3 +350,22 @@ def test_payload_wildcard_is_substituted_not_left_literal():
     d, B = Wildcard("d"), Wildcard("B")
     b = match(IndexedSum(d, None, B), IndexedSum(j, None, fj))
     assert substitute(IndexedSum(d, None, B), b) == IndexedSum(j, None, fj)
+
+
+def test_object_shared_by_child_and_payload_still_matches():
+    # HodgeStar(g, 3, metric=g): the same object is the child and the
+    # metric. At 9aa7495 the identity strip removed both, so an equal
+    # but separately built node did not match / was not alpha-equal.
+    g1, g2 = Symbol("g"), Symbol("g")
+    a = HodgeStar(g1, 3, metric=g1)
+    b = HodgeStar(g2, 3, metric=Symbol("g"))
+    assert a == b
+    assert match(a, b) == {}
+    assert alpha_equal(a, b)
+    assert match(HodgeStar(Wildcard("A"), 3, metric=Wildcard("A")), b) == {"A": g2}
+
+
+def test_alpha_expr_type_is_order_insensitive():
+    assert alpha_equal(
+        Wildcard("A", expr_type=(Symbol, Sum)), Wildcard("B", expr_type=(Sum, Symbol))
+    )

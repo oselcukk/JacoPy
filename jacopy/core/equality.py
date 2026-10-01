@@ -28,6 +28,7 @@ from collections import Counter
 from typing import Dict
 
 from jacopy.core.expr import Expr, Sum
+from jacopy.core.indexed_sum import IndexedSum
 from jacopy.core.wildcards import _CHILD, SeqWildcard, Wildcard, node_payload
 
 
@@ -78,7 +79,7 @@ def _alpha(
             return False
         # The expr_type filter is part of what the hole accepts
         # (audit 0B00E1B-FULL K1-12): ?A<Symbol> ≠ ?A<Sum>.
-        if p.expr_type != q.expr_type:
+        if _type_set(p.expr_type) != _type_set(q.expr_type):
             return False
         return _bind_name(p.name, q.name, fwd, bwd)
     if isinstance(p, SeqWildcard) and isinstance(q, SeqWildcard):
@@ -93,6 +94,8 @@ def _alpha(
         return False
     if p.is_atom:
         return p == q
+    if isinstance(p, IndexedSum):
+        return _alpha_indexed_sum(p, q, fwd, bwd)
     # Non-child identity payload (audit 0B00E1B-FULL M1X-6): bracket,
     # alternating/skew flags, calculus, bound dummy, ... must agree
     # (up to the same wildcard renaming when a payload field is a hole).
@@ -104,6 +107,34 @@ def _alpha(
         if not _alpha(pc, qc, fwd, bwd):
             return False
     return True
+
+
+def _type_set(t):
+    # expr_type is an order-insensitive set of classes (Sym|Sum = Sum|Sym)
+    return None if t is None else frozenset(t)
+
+
+def _alpha_indexed_sum(p, q, fwd: Dict[str, str], bwd: Dict[str, str]) -> bool:
+    """Σ binders: equal ranges, dummies paired (two wildcard dummies by
+    renaming; concrete ones by α-renaming ``q`` to ``p``'s dummy, never
+    capturing a free occurrence), then the bodies."""
+    from jacopy.core.indexed_sum import _range_key
+    from jacopy.core.traverse import contains
+
+    if _range_key(p.range_) != _range_key(q.range_):
+        return False
+    pd, qd = p.dummy, q.dummy
+    qbody = q.body
+    if isinstance(pd, Wildcard) or isinstance(qd, Wildcard):
+        if not (isinstance(pd, Wildcard) and isinstance(qd, Wildcard)):
+            return False
+        if not _alpha(pd, qd, fwd, bwd):
+            return False
+    elif pd != qd:
+        if contains(qbody, pd):
+            return False
+        qbody = q.with_dummy(pd).body
+    return _alpha(p.body, qbody, fwd, bwd)
 
 
 def _alpha_payload(pk, qk, fwd: Dict[str, str], bwd: Dict[str, str]) -> bool:
