@@ -32,6 +32,8 @@ from jacopy.central.objects.frame import CoframeField, FrameField, FrameIndex, K
 from jacopy.central.tangent.anholonomy import AnholonomyCoefficient
 from jacopy.core.indexed_sum import IndexedSum
 
+import time
+
 from jacopy.oracle import values as V
 from jacopy.oracle.realize import (
     DomainError,
@@ -274,7 +276,14 @@ def _metric_sharp(e, env, path):
 # --------------------------------------------------------------------- #
 
 
-def e_d(st, b, val, ctx, path=()):
+def _tick(deadline):
+    """Lazy E-form evaluation runs outside ``Env.value``: honour the
+    check's time budget here too."""
+    if deadline is not None and time.monotonic() > deadline:
+        raise V.Budget("time budget exhausted (E-form evaluation)")
+
+
+def e_d(st, b, val, ctx, path=(), deadline=None):
     """Ordered Palais ``d_E`` (see module docstring)."""
     R = st.R
     if is_scalar(val):
@@ -288,6 +297,7 @@ def e_d(st, b, val, ctx, path=()):
     om = val.fn
 
     def fn(args):
+        _tick(deadline)
         total = R.zero()
         for i in range(p + 1):
             rest = args[:i] + args[i + 1:]
@@ -313,12 +323,12 @@ def _e_exterior_derivative(alg, env, path):
         if isinstance(a, (SecV, VecV, FormV, OpV)) or (isinstance(a, EFormV) and a.b != b) or not (
                 is_scalar(a) or isinstance(a, EFormV)):
             raise DomainError(f"d_E[on {kind(a)}]", path)
-        return e_d(st, b, a, model, path)
+        return e_d(st, b, a, model, path, env.deadline)
 
     return OpV(d, 1, f"d_{alg}")
 
 
-def e_lie(st, b, X, val, ctx, path=()):
+def e_lie(st, b, X, val, ctx, path=(), deadline=None):
     R = st.R
     if is_scalar(val):
         return st.act(X, val)
@@ -328,6 +338,7 @@ def e_lie(st, b, X, val, ctx, path=()):
         om, p = val.fn, val.deg
 
         def fn(args):
+            _tick(deadline)
             total = st.act(X, om(args))
             for i in range(p):
                 rep = list(args)
@@ -343,7 +354,7 @@ def _e_lie_derivative(alg, e, env, path):
     st, b = _structure(env, alg, path)
     X = _sec(env.value(e.vector, path + ("X",)), env, b, path)
     model = env.model
-    return OpV(lambda a: norm(e_lie(st, b, X, a, model, path), env.R), 0, f"L^{alg}")
+    return OpV(lambda a: norm(e_lie(st, b, X, a, model, path, env.deadline), env.R), 0, f"L^{alg}")
 
 
 def _e_interior(Xv: SecV, env, path):

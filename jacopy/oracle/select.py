@@ -389,7 +389,8 @@ def plan_algebroids(lhs, rhs, owners, requires, chain, need: int):
         req = target | ({LL} if "locality" in needs.get(name, ()) else set())
         cands = candidates(req, 3, need, dim, metric=need_metric)
         if not cands:
-            raise Unsupported(f"algebroid-model[{','.join(sorted(target)) or 'none'}]", (), name)
+            extra = "+metric" if need_metric else ""
+            raise Unsupported(f"algebroid-model[{','.join(sorted(req)) or 'none'}{extra}]", (), name)
         wanted = set(MODELED) - closure(target)
         chosen = cover(cands, wanted)
         # samples beyond the cover cycle through the other candidates
