@@ -209,6 +209,22 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         else:
             bump(assumptions, "declared", s.rule, owner, s.before, rkey)
 
+    def inherit(cited):
+        # every requirement kind of the cited record flows to the citing
+        # proof — "textual" from_axioms entries included (review
+        # 2026-10-01 rules-match); "structure" records are regenerated
+        # below from the inherited declared owners; an unknown kind is
+        # kept as legacy, never dropped
+        for a in getattr(cited, "requires", ()) or ():
+            kind = getattr(a, "kind", None)
+            if kind == "structure":
+                continue
+            if kind in ASSUMPTION_KINDS:
+                bump(assumptions, kind, a.name, a.owner, a.example, a.key)
+            else:
+                bump(assumptions, "legacy", f"unrecognized requirement kind {kind!r} of theorem "
+                     f"{getattr(cited, 'name', '?')}: {getattr(a, 'name', a)!r}", getattr(a, "owner", None))
+
     def visit(seq):
         for s in seq:
             tag, role = s.provenance_tag, getattr(s, "role", None)
@@ -224,16 +240,15 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                     # a TheoremBook record cited under its explicit
                     # ``unverified`` flag (audit dc44f79 F5)
                     bump(assumptions, "legacy", f"unverified citation (record marked unverified): {s.rule}", owner, s.before)
+                    if cited is not None:
+                        inherit(cited)
                 elif cited is not None:
-                    # TRANSITIVE requirements (Faz 8 step 3b): a verified
-                    # citation contributes its own requirements; an
-                    # unverified (legacy) one is itself a legacy assumption
+                    # TRANSITIVE requirements (Faz 8 step 3b): a citation
+                    # contributes ALL its own requirements; an unverified
+                    # (legacy) one is, in addition, a legacy assumption
                     if getattr(cited, "legacy", True):
                         bump(assumptions, "legacy", f"unverified citation: theorem {cited.name}", getattr(cited, "owner", None), s.before)
-                    else:
-                        for a in cited.requires:
-                            if a.kind in ("declared", "legacy", "scope", "registry", "unreplayed"):
-                                bump(assumptions, a.kind, a.name, a.owner, a.example, a.key)
+                    inherit(cited)
                 elif getattr(s, "key", None) is None and not s.children:
                     # a HAND-BUILT theorem claim with neither the cited object
                     # nor an attached derivation: not verifiable here (audit

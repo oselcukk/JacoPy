@@ -444,3 +444,33 @@ class TestReviewProbes:
 
         moves = _definition_moves(outer, Sum(b, c))
         assert moves and len(calls) == 2
+
+    def test_cited_textual_requirements_flow_to_the_citing_proof(self):
+        # 4b1cff9: _classify passed only declared/legacy/scope/registry/
+        # unreplayed of a cited record — its "textual" from_axioms entries
+        # (and everything of a legacy record) were dropped
+        y = Symbol("y")
+        r = prove(ExpansionEngine(), Sum(y, Neg(y)), Integer(0))
+        t = Theorem("ysub", "y - y = 0", Sum(y, Neg(y)), Integer(0), r.chain,
+                    from_axioms=("exactness ρ∘χ = 0 (8.5)",)).with_structural_requires()
+        assert [a.kind for a in t.requires] == ["textual"]
+        res = prove(ExpansionEngine([TheoremDefinition(t)]), Sum(y, Neg(y)), Integer(0))
+        assert res.closed and res.theorems_cited
+        assert any(a.kind == "textual" and "exactness" in a.name for a in res.requires)
+
+    def test_lemma_91_textual_requirements_reach_the_citation(self):
+        from jacopy.central.objects import functions
+        from jacopy.packages.generalized.bourbaki_exact import exact_bourbaki_context, prove_lemma_91
+        from jacopy.packages.generalized.bourbaki_precalculus import BourbakiPreCalculus
+
+        reg = PropertyRegistry()
+        (h,) = functions("h", registry=reg)
+        E = exact_bourbaki_context()
+        (z,) = BourbakiPreCalculus().z_sections("z")
+        (u,) = E.sections("u")
+        _, thm = prove_lemma_91(E, u, z, h, registry=reg)
+        assert any(a.kind == "textual" and "exactness" in a.name for a in thm.requires)
+        res = prove(ExpansionEngine([TheoremDefinition(thm, allow_legacy=True)]), thm.lhs, thm.rhs, registry=reg)
+        assert res.closed and res.theorems_cited
+        assert any(a.kind == "textual" and "exactness ρ∘χ = 0 (8.5)" in a.name for a in res.requires)
+        assert any(a.legacy and "unverified citation" in a.name for a in res.requires)
