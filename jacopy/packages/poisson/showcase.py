@@ -60,12 +60,13 @@ from jacopy.packages.poisson.koszul import (
 def _is_exact(expr: Expr) -> bool:
     from jacopy.central.calculus.bracket_calculus import (
         ExteriorDerivative,
+        belongs_to,
     )
 
     return (
         isinstance(expr, Act)
         and isinstance(expr.op, ExteriorDerivative)
-        and expr.op.calculus_name == CARTAN_TM.name
+        and belongs_to(expr.op, CARTAN_TM)
     )
 
 

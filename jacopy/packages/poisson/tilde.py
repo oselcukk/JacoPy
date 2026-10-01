@@ -268,20 +268,21 @@ class LieDCommutationDefinition(Definition):
         from jacopy.central.calculus.bracket_calculus import (
             ExteriorDerivative,
             LieDerivative,
+            belongs_to,
         )
         from jacopy.central.tangent.exterior import CARTAN_TM
 
         if not (
             isinstance(expr, Act)
             and isinstance(expr.op, LieDerivative)
-            and expr.op.calculus_name == CARTAN_TM.name
+            and belongs_to(expr.op, CARTAN_TM)
         ):
             return False
         arg = expr.arg
         return (
             isinstance(arg, Act)
             and isinstance(arg.op, ExteriorDerivative)
-            and arg.op.calculus_name == CARTAN_TM.name
+            and belongs_to(arg.op, CARTAN_TM)
             and is_scalar_function(arg.arg, self._registry)
         )
 

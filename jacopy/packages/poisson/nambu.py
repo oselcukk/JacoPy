@@ -675,15 +675,16 @@ class DSquaredZeroDefinition(Definition):
     def matches(self, expr: Expr) -> bool:
         from jacopy.central.calculus.bracket_calculus import (
             ExteriorDerivative,
+            belongs_to,
         )
 
         return (
             isinstance(expr, Act)
             and isinstance(expr.op, ExteriorDerivative)
-            and expr.op.calculus_name == CARTAN_TM.name
+            and belongs_to(expr.op, CARTAN_TM)
             and isinstance(expr.arg, Act)
             and isinstance(expr.arg.op, ExteriorDerivative)
-            and expr.arg.op.calculus_name == CARTAN_TM.name
+            and belongs_to(expr.arg.op, CARTAN_TM)
         )
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -731,12 +732,13 @@ class DWedgeLeibnizDefinition(Definition):
     def matches(self, expr: Expr) -> bool:
         from jacopy.central.calculus.bracket_calculus import (
             ExteriorDerivative,
+            belongs_to,
         )
 
         if not (
             isinstance(expr, Act)
             and isinstance(expr.op, ExteriorDerivative)
-            and expr.op.calculus_name == CARTAN_TM.name
+            and belongs_to(expr.op, CARTAN_TM)
             and isinstance(expr.arg, Wedge)
         ):
             return False

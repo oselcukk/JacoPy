@@ -78,6 +78,7 @@ class ExteriorDerivative(Derivation):
         skew: bool = False,
         calculus: Optional["BracketCalculus"] = None,
     ) -> None:
+        _check_owner(calculus_name, calculus)
         super().__init__(name, degree=1)
         self._calculus_name = calculus_name
         self._skew = bool(skew)
@@ -147,6 +148,7 @@ class LieDerivative(Derivation):
         display = (
             name if name is not None else f"{op_name}_{X._repr_inner()}"
         )
+        _check_owner(calculus_name, calculus)
         super().__init__(display, degree=0)
         self._calculus_name = calculus_name
         self._vector = X
@@ -260,6 +262,27 @@ def _guard_reserved_name(name: str) -> None:
         raise ValueError(
             f"BracketCalculus name {name!r} is reserved for "
             f"{spec[0]}.{spec[1]}; choose a distinct calculus name"
+        )
+
+
+def _check_owner(calculus_name: str, calculus) -> None:
+    """Operator construction contract (audit 0B00E1B-FULL M3-1 root):
+    an operator carrying a RESERVED calculus name must be built by that
+    calculus (the canonical instance — the name itself is reserved for
+    it, :func:`_guard_reserved_name`); an owner, when given, must carry
+    the operator's calculus name. Operator identity is name-based, so
+    an ownerless ``ExteriorDerivative("Cartan-TM")`` would compare
+    equal to the TM ``d`` and inherit every rule scoped to it."""
+    if calculus is not None and calculus.name != calculus_name:
+        raise ValueError(
+            f"operator calculus name {calculus_name!r} differs from its "
+            f"owning calculus {calculus.name!r}"
+        )
+    if calculus is None and calculus_name in _RESERVED_NAMES:
+        raise ValueError(
+            f"calculus name {calculus_name!r} is reserved: its operators "
+            "are built only by the canonical calculus (use CARTAN_TM.d / "
+            "CARTAN_TM.lie(X))"
         )
 
 

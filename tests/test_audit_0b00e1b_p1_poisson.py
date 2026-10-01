@@ -111,12 +111,13 @@ class TestM31ClosedFormScope:
         # evaluated-head path
         assert rule.matches(MultiEval(tm, e1, e2, e3))
         assert not rule.matches(MultiEval(foreign, e1, e2, e3))
-        # a hand-built d that merely COMPARES equal to the TM d (same
-        # name/degree/calculus name/skew) is not the TM calculus' d
-        spoof = ExteriorDerivative("Cartan-TM", skew=True)
-        assert spoof == CARTAN_TM.d
-        assert not belongs_to(spoof, CARTAN_TM)
-        assert not rule.matches(Act(spoof, S.omega))
+        # a hand-built d that would COMPARE equal to the TM d (same
+        # name/degree/calculus name/skew) cannot be built at all
+        with pytest.raises(ValueError, match="reserved"):
+            ExteriorDerivative("Cartan-TM", skew=True)
+        with pytest.raises(ValueError, match="differs"):
+            ExteriorDerivative("Cartan-TM", skew=True, calculus=A)
+        assert not belongs_to(Act(A.d, S.omega).op, CARTAN_TM)
         # the TM calculus' OTHER operator is not d: L_Y ω is not closed
         Y = vector_fields("Y")[0]
         assert not rule.matches(Act(CARTAN_TM.lie(Y), S.omega))
@@ -150,6 +151,28 @@ class TestM31ClosedFormScope:
             r = prove(eng, lhs, Integer(0), registry=reg)
             assert r.closed
             assert any("dω = 0" in n for n in _declared(r.requires))
+
+    def test_every_tm_scoped_rule_refuses_foreign_d(self):
+        # root of G10: d∘d = 0, the d-wedge Leibniz and the exactness
+        # test are TM statements too — a foreign skew d is not d_TM
+        from jacopy.packages.poisson.nambu import (
+            DSquaredZeroDefinition,
+            DWedgeLeibnizDefinition,
+        )
+        from jacopy.packages.poisson.showcase import _is_exact
+
+        reg = PropertyRegistry()
+        (g,) = functions("g", registry=reg)
+        a, b = forms("a b", degree=1)
+        S, A, _, _ = _so3_plus_r()
+        dd = DSquaredZeroDefinition()
+        wl = DWedgeLeibnizDefinition(reg)
+        assert dd.matches(Act(CARTAN_TM.d, Act(CARTAN_TM.d, g)))
+        assert not dd.matches(Act(A.d, Act(A.d, g)))
+        assert not dd.matches(Act(CARTAN_TM.d, Act(A.d, g)))
+        assert wl.matches(Act(CARTAN_TM.d, Wedge(a, b)))
+        assert not wl.matches(Act(A.d, Wedge(a, b)))
+        assert _is_exact(d(g)) and not _is_exact(Act(A.d, g))
 
     def test_tm_calculus_name_is_reserved(self):
         with pytest.raises(ValueError, match="reserved"):
@@ -188,9 +211,9 @@ class TestM32NambuFIScope:
             for calc, ok in ((B, False), (CARTAN_TM, True)):
                 e = Act(N.sharp_vf(Act(calc.lie(N.sharp_vf(om)), et)), x)
                 assert rule.matches(e) is ok
-        # an L that only COMPARES like the TM one (no owning calculus)
-        spoof = LieDerivative("Cartan-TM", x)
-        assert not belongs_to(spoof, CARTAN_TM)
+        # an L that would compare like the TM one cannot be built
+        with pytest.raises(ValueError, match="reserved"):
+            LieDerivative("Cartan-TM", x)
 
     def test_p2_foreign_and_tm_no_longer_share_a_normal_form(self):
         from jacopy.packages.poisson.nambu import (

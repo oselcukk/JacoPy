@@ -169,7 +169,7 @@ def _recipes():
         "Interior": Interior(X), "TildeInterior": TildeInterior(om),
         "MultivectorInterior": MultivectorInterior(N.pi),
         "LieDerivative": CARTAN_TM.lie(X),
-        "ExteriorDerivative": ExteriorDerivative("Cartan-TM"),
+        "ExteriorDerivative": CARTAN_TM.d,
         "CovariantOp": CovariantOp("∇", X),
         "EndoVF": EndoVF("A", X), "EndoForm": EndoForm("A", om, inverted=True),
         "AlgebroidBracket": E.bracket(u, v), "AnchoredVF": E.anchor(u),
