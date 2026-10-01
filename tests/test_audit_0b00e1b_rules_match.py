@@ -632,3 +632,99 @@ def test_sequence_binding_used_as_single_hole_never_fires():
     x = Symbol("x")
     rule = Rule(Sum(SeqWildcard("r"), x), Wildcard("r"))
     assert rule.try_at(Sum(Symbol("a"), Symbol("b"), x)) is None
+
+
+# --------------------------------------------------------------------- #
+# merge-gate review of 05b03b1: the binder design (module docstring)     #
+# --------------------------------------------------------------------- #
+
+
+def _sig():
+    i, j, k = Symbol("i"), Symbol("j"), Symbol("k")
+    mk = lambda n: (lambda *x: Act(Derivation(n), x[0] if len(x) == 1 else Product(*x)))  # noqa: E731
+    D, E, K, f, g, h = (Wildcard(n) for n in "DEKfgh")
+    S = lambda d, b: IndexedSum(d, None, b)  # noqa: E731
+    return i, j, k, mk("F"), mk("G"), mk("H"), D, E, K, f, g, h, S
+
+
+def test_marks_survive_backtracking():
+    # Q(Σ_i ?f · ?*r · Z(?h)) → Σ_i ?f · ?*r · Z(?h) (Q = id on this
+    # shape). At 05b03b1 the SeqWildcard backtracking dropped the marks:
+    # the false Q(..) = Σ_j F(i)·a·Z(b) CLOSED, the true one RESIDUAL.
+    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
+    Z = lambda x: Act(Derivation("Z"), x)  # noqa: E731
+    Q = lambda x: Act(Derivation("Q"), x)  # noqa: E731
+    a, b = Symbol("a"), Symbol("b")
+    body = Product(S(i, f), SeqWildcard("r"), Z(h))
+    rule = Rule(Q(body), body)
+    t = Q(Product(S(i, F(i)), a, Z(b)))
+    eng = ExpansionEngine([_RuleAdapter(rule)])
+    assert prove(eng, t, Product(S(i, F(i)), a, Z(b))).status == "CLOSED"
+    _closes_wrongly(rule, t, Product(S(j, F(i)), a, Z(b)))
+    # Σ_D(?f·?g)·?*r·Z(?h) → Σ_D ?f · ?g ·…: ?g = G(i) is bound by Σ
+    lhs = Product(S(D, Product(f, g)), SeqWildcard("r"), Z(h))
+    rhs = Product(S(D, f), g, SeqWildcard("r"), Z(h))
+    t2 = Product(S(i, Product(F(i), G(i))), a, Z(b))
+    _closes_wrongly(Rule(lhs, rhs), t2, Product(S(j, F(i)), G(i), a, Z(b)))
+
+
+def test_every_binder_of_a_value_must_enclose_it():
+    # Σ_{?D}(?f·Σ_{?E}?g) → Σ_{?D}?f · Σ_{?E}?g: on Σ_i(F(i)·Σ_j G(i·j))
+    # ?g depends on BOTH binders; 05b03b1 accepted one matching mark
+    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
+    pull = Rule(S(D, Product(f, S(E, g))), Product(S(D, f), S(E, g)))
+    t = S(i, Product(F(i), S(j, G(i, j))))
+    _closes_wrongly(pull, t, Product(S(i, F(i)), S(j, G(i, j))))
+    assert pull.try_at(S(i, Product(F(i), S(j, G(j))))) == Product(S(i, F(i)), S(j, G(j)))
+    fub = Rule(S(D, Product(f, S(E, g))), S(E, Product(g, S(D, f))))
+    assert fub.try_at(t) is None
+    assert fub.try_at(S(i, Product(F(i), S(j, G(j))))) == S(j, Product(G(j), S(i, F(i))))
+    pullc = Rule(S(i, Product(f, S(j, g))), Product(S(i, f), S(j, g)))
+    assert pullc.try_at(t) is None
+    drop = Rule(S(D, S(E, S(K, g))), S(K, S(E, g)))
+    assert drop.try_at(S(i, S(j, S(k, G(i, j, k))))) is None
+
+
+def test_fresh_name_avoids_unused_binder_dummies():
+    # Σ_{?D}?f·Σ_{?E}?g → Σ_{?D}Σ_{?E}(?f·?g) on
+    # Σ_i(F(i)·Σ_{i_1} H(i)) · Σ_i G(i): the fresh name must avoid the
+    # inner binder dummy i_1 although the body never uses it
+    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
+    i1 = Symbol("i_1")
+    r = Rule(Product(S(D, f), S(E, g)), S(D, S(E, Product(f, g))))
+    t = Product(S(i, Product(F(i), S(i1, H(i)))), S(i, G(i)))
+    good = S(k, S(i, Product(Product(F(k), S(i1, H(k))), G(i))))
+    assert r.try_at(t) == good
+    _closes_wrongly(r, t, S(i1, S(i, Product(Product(F(i1), S(i1, H(i1))), G(i)))))
+
+
+def test_fresh_dummy_wildcard_is_bound_not_free():
+    # Σ_{?D}?f → ?D·Σ_{?D}?f would move the bound dummy out (05b03b1:
+    # ?D counted as bound outside because `before` was taken late)
+    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
+    assert Rule(S(D, f), Product(D, S(D, f))).try_at(S(i, F(i))) is None
+    assert Rule(S(D, Product(D, f)), Product(D, S(D, f))).try_at(S(i, Product(i, F(i)))) is None
+
+
+def test_pattern_caches_are_identity_keyed():
+    # Σ_{?D} and Σ_{?E} patterns are α-EQUAL Exprs; an equality-keyed
+    # cache returned the other pattern's wildcard names
+    from jacopy.core.wildcards import wildcard_names
+
+    i, j, k, F, G, H, D, E, K, f, g, h, S = _sig()
+    a, b = S(D, Product(f, g)), S(E, Product(f, g))
+    assert a == b
+    assert wildcard_names(b) == {"E", "f", "g"} and wildcard_names(a) == {"D", "f", "g"}
+    r1 = Rule(Product(S(E, f), g), S(E, Product(f, g)))
+    r2 = Rule(Product(S(D, f), g), S(D, Product(f, g)))
+    t = Product(S(i, F(i)), j)
+    assert r1.try_at(t) == r2.try_at(t) == S(i, Product(F(i), j))
+
+
+def test_target_wildcard_with_rhs_name_is_legitimate():
+    # Z(?f) → ?f on Z(?f) (the target itself holds a wildcard): main
+    # rewrites it; 05b03b1's post-check refused
+    Z = lambda x: Act(Derivation("Z"), x)  # noqa: E731
+    r = Rule(Z(Wildcard("f")), Wildcard("f"))
+    assert r.try_at(Z(Wildcard("f"))) == Wildcard("f")
+    assert r.try_at(Z(Wildcard("g"))) == Wildcard("g")

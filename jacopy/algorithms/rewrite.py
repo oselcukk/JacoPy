@@ -93,14 +93,11 @@ class Rule:
         if not wildcard_names(self.rhs) <= set(bindings):
             return None
         try:
-            out = substitute(self.rhs, bindings)
+            return substitute(self.rhs, bindings)
         except PayloadSubstitutionError:
+            # a payload hole that cannot be filled, a sequence binding
+            # in a single hole, or a bound term escaping its Σ binder
             return None
-        # a pattern hole left literal (e.g. a sequence binding used as a
-        # single wildcard outside a Sum/Product) never fires
-        if wildcard_names.__wrapped__(out) & wildcard_names(self.rhs):
-            return None
-        return out
 
 
 # --------------------------------------------------------------------- #
