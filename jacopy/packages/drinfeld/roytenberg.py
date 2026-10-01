@@ -1,6 +1,6 @@
 """
 The general (8-component) Roytenberg bracket (Phase 6.F) —
-[2409.11973 eq (5.2)], concretely instantiated on ``A = TM``,
+[TW (5.2); TW = arXiv:2409.11973], concretely instantiated on ``A = TM``,
 ``Z = Λᵖ T*M``:
 
     [U+ω, V+η]_E = [U,V]_A + ℒ̃_ω V + 𝒦̃_η U + R(ω,η)
@@ -9,27 +9,30 @@ The general (8-component) Roytenberg bracket (Phase 6.F) —
 with the tilde calculus induced by a ``(p+1)``-vector Π (6.D), the
 H-twist ``H(U,V) = ι_V ι_U H`` of a ``(p+2)``-form and the R-twist
 ``R(ω,η) = [Πω,Πη] − Π[ω,η]_Kos`` (the 6.E ``r_twist`` — the
-NATURAL nonzero R of a non-integrable Π). Decompositions (5.4)/(5.5)
+NATURAL nonzero R of a non-integrable Π). Decompositions TW (5.4)/(5.5)
 into twisted Dorfman ⊕ twisted tilde-Dorfman are structural.
 
 Mechanical theorems:
 
-* **Twisted linearity (5.6)-(5.7)**: the concrete ``H`` is
+* **Twisted linearity TW (5.6)-(5.7)**: the concrete ``H`` is
   C∞-bilinear (interior tensoriality) — both symbols vanish; the
-  R-twist is C∞ in the second entry (6.E) with the (7.26) anomaly in
+  R-twist is C∞ in the second entry (6.E) with the TW (7.26) anomaly in
   the first.
-* **H-closure (5.13)**: THE new Jacobi requirement of the twisted
-  case. The defect of (5.13) is EXACTLY the ``dH`` evaluation:
+* **H-closure TW (5.13)**: THE new Jacobi requirement of the twisted
+  case. The defect of TW (5.13) is EXACTLY the ``dH`` evaluation:
 
       H(U,[V,W]) − H([U,V],W) − H(V,[U,W])
-        + ℒ_U H(V,W) − 𝒦_W H(U,V) − ℒ_V H(U,W) = −ι_W ι_V ι_U dH,
+        + ℒ_U H(V,W) − 𝒦_W H(U,V) − ℒ_V H(U,W) = +ι_W ι_V ι_U dH,
 
-  declaration-free — so the condition holds iff ``dH`` dies on the
-  triple; in particular ``H = dB`` (the Ševera image) satisfies it
+  declaration-free (sign as proved by
+  :func:`prove_h_closure_measures_dh`; the right side is the code's
+  theorem, not printed in TW) — so the condition holds iff ``dH`` dies
+  on the triple; in particular ``H = dB`` (the Ševera image) satisfies it
   mechanically (``d² = 0``).
-* **(5.16)**: the third twisted Jacobi compatibility — for the
+* **TW (5.16)**: the third twisted Jacobi compatibility — for the
   antisymmetric concrete ``H`` the ``g_H`` term vanishes and the
-  condition reduces to the proven (D.10); re-exported here in its
+  condition reduces to the proven DD (D.10) (arXiv:2312.06584);
+  re-exported here in its
   twisted reading.
 """
 
@@ -38,6 +41,7 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
@@ -70,7 +74,7 @@ def roytenberg_bracket(
     with_tilde: bool = True,
     with_r: bool = True,
 ) -> Tuple[Expr, Expr]:
-    """The concrete 8-component Roytenberg bracket [eq (5.2)] as a
+    """The concrete 8-component Roytenberg bracket [TW (5.2)] as a
     ``(vector, form)`` pair. ``with_tilde``/``with_r``/``H`` switch
     the tilde side, the R-twist and the H-twist independently — all
     off reproduces the standard Dorfman double."""
@@ -102,7 +106,7 @@ def prove_h_bilinearity(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> Tuple[ProofChain, ProofChain]:
-    """(5.6)-(5.7) for the concrete ``H(U,V) = ι_V ι_U H``: the
+    """TW (5.6)-(5.7) for the concrete ``H(U,V) = ι_V ι_U H``: the
     H-twist is C∞-linear in BOTH slots (interior tensoriality), so
     both symbol maps vanish — the twisted linearity conditions hold
     with zero anomaly. Returns the two chains (second slot, first
@@ -149,7 +153,7 @@ def prove_h_bilinearity(
 
 
 def h_closure_defect(H: Expr, U: Expr, V: Expr, W: Expr) -> Expr:
-    """The (5.13) defect,
+    """The TW (5.13) defect,
 
         H(U,[V,W]) − H([U,V],W) − H(V,[U,W])
           + ℒ_U H(V,W) − 𝒦_W H(U,V) − ℒ_V H(U,W)."""
@@ -174,14 +178,14 @@ def prove_h_closure_measures_dh(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """THE (5.13) theorem, declaration-free: the twisted-Jacobi
+    """THE TW (5.13) theorem, declaration-free: the twisted-Jacobi
     H-condition measures exactly the closedness of ``H``,
 
-        defect(5.13) = ι_W ι_V ι_U dH
+        defect[TW (5.13)] = ι_W ι_V ι_U dH
 
     (sign found by the engine via a full ± sweep — the unique closing
     combination), evaluated on the given slots. Corollary (tested
-    separately): ``H = dB`` — the Ševera image — satisfies (5.13) by
+    separately): ``H = dB`` — the Ševera image — satisfies TW (5.13) by
     ``d² = 0``."""
     from jacopy.proof.strategies import ExpandAndSimplify
     from jacopy.packages.drinfeld.double import _ev
@@ -218,7 +222,7 @@ def prove_h_closure_for_exact_h(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """Corollary: for ``H = dB`` the (5.13) condition HOLDS
+    """Corollary: for ``H = dB`` the TW (5.13) condition HOLDS
     mechanically (``d² = 0``) — the Ševera-twisted bracket keeps the
     Jacobi requirement. Declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -256,7 +260,7 @@ def prove_h_twisted_jacobi_measures_dh(
         form( [e₁,[e₂,e₃]]_H − [[e₁,e₂]_H,e₃]_H − [e₂,[e₁,e₃]]_H )
             = ι_W ι_V ι_U dH
 
-    (sign fixed by the engine, consistent with the (5.13) sweep),
+    (sign fixed by the engine, consistent with the TW (5.13) sweep),
     declaration-free (generalizes the 6.C Leibniz-Jacobi, which is
     the ``H = 0`` case; the vector components never see ``H``).
     Corollary: ``H = dB`` restores Jacobi (``d² = 0``) — the Ševera
@@ -306,8 +310,9 @@ def prove_fi_collapses_twisted_compat(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """The twisted Jacobi compatibility (5.14) differs from the
-    proven untwisted (D.8) by the single term ``−H(U, R(η,μ))``.
+    """The twisted Jacobi compatibility TW (5.14) differs from the
+    proven untwisted DD (D.8) (arXiv:2312.06584) by the single term
+    ``−H(U, R(η,μ))``.
     Under the declared FI the R-twist dies INSIDE the H-slot
     (the Interior slot protocol carries the node-face declaration
     into ``ι_{R(η,μ)}``), so the twisted family COLLAPSES to the
@@ -339,7 +344,7 @@ def _ev_forms(expr: Expr, slots) -> Expr:
 def twisted_calculus_obstruction_one(
     N, H: Expr, U: Expr, V: Expr, mu: Expr
 ) -> Expr:
-    """The RHS of the first twisted calculus condition (5.9) for the
+    """The RHS of the first twisted calculus condition TW (5.9) for the
     concrete data — the obstruction that must vanish for the twisted
     triplet to remain a calculus:
 
@@ -359,26 +364,42 @@ def twisted_calculus_obstruction_one(
 # ------------------------------------------------------------------- #
 #
 # The graded master equation {Θ,Θ} = 0 with Θ = μ + γ + φ + ψ splits
-# into (3.11)-(3.15). Bosonic reading for the concrete data
-# (A = TM: μ = Lie/de Rham; γ = Π; φ = H; ψ = 0 — quasi-Lie case):
+# into TW (3.11)-(3.15). Bosonic reading for the concrete data
+# (A = TM: μ = Lie/de Rham; γ = Π; φ = H; ψ = 0 — quasi-Lie case).
+# TW prints only the graded equations; the readings below are ours.
 #
-#   (3.14) {μ,φ} = 0        ⟺  dH = 0        — measured EXACTLY by
-#          the (5.13)/Jacobi theorems above (defect = ιιι dH);
-#   (3.11) ½{μ,μ} + {γ,φ}   ⟺  the H-TWISTED fundamental identity:
-#          [Πω,Πη] = Π[ω,η]_Kos + Π(H(Πω,Πη))  (twisted-Poisson);
-#          consumed as the opt-in TwistedFIDeclaration below;
-#   (3.12)/(3.13)/(3.15) need a free trivector ψ (an R-side 3-tensor
-#          independent of Π) — deferred until a consumer arrives
-#          (definition policy; our R is DERIVED: r_twist).
+#   TW (3.14) {μ,φ} = 0     ⟺  dH = 0        — measured EXACTLY by
+#          the TW (5.13)/Jacobi theorems above (defect = ιιι dH);
+#   TW (3.11) ½{μ,μ} + {γ,φ} = 0 lives in bi-degree (1,3) — the
+#          A-Jacobiator / A-anchor sector (TW (6.10): P_{ρ_A}(U,V) =
+#          ρ_Z H(U,V); TW (6.11)). For A = TM ({μ,μ} = 0) it reads
+#          Π H(U,V) = 0 on VECTOR arguments. It is NOT the twisted-
+#          Poisson identity (correction, audit 0b00e1b V-M4 / M4-1;
+#          earlier text mapped TW (3.11) to it).
+#   The H-TWISTED fundamental identity
+#          [Πω,Πη] = Π[ω,η]_Kos + Π(H(Πω,Πη))  (twisted-Poisson)
+#          has as left side the anchor predator of A* = T*M
+#          (TW (6.9)); in this dictionary that lives in the bi-degree
+#          (3,1)
+#          sector {γ,γ} of TW (3.12), where H (= φ) does not appear —
+#          so here it is no master-equation component (a role-swapped
+#          dictionary, A = T*M, is a different reading, not worked out).
+#          Its paper source is TW (7.25) with H: R′ = 0. It is
+#          consumed as the opt-in TwistedFIDeclaration below; the
+#          master-equation link is name-level only.
+#   TW (3.12)/(3.13)/(3.15) need a free trivector ψ (an R-side
+#          3-tensor independent of Π) — see the free-ψ block below
+#          (our R is DERIVED: r_twist).
 
 
 def r_twist_h(N, H: Expr, omega: Expr, eta: Expr) -> Expr:
-    """The H-corrected R-twist [eq (7.25) with H]:
+    """The H-corrected R-twist [TW (7.25) with H]:
 
         R′_H(ω,η) = [Πω,Πη] − Π[ω,η]_Kos − Π( H(Πω, Πη) ).
 
-    Its vanishing is the H-TWISTED fundamental identity — the
-    bosonic (3.11)."""
+    Its vanishing is the H-TWISTED fundamental identity (twisted
+    Poisson). Not the bosonic TW (3.11): see the dictionary comment
+    above — TW (3.11) is the bi-degree (1,3) A-sector."""
     return Sum(
         r_twist(N, omega, eta),
         Neg(
@@ -390,14 +411,20 @@ def r_twist_h(N, H: Expr, omega: Expr, eta: Expr) -> Expr:
 
 
 class TwistedFIDeclaration(Definition):
-    """DECLARED H-twisted fundamental identity (bosonic (3.11), the
-    twisted-Poisson condition):
+    """DECLARED H-twisted fundamental identity (the twisted-Poisson
+    condition ``R′ = 0`` of TW (7.25) with H; it is NOT the bosonic
+    TW (3.11) — see the dictionary comment above):
 
         [Πω, Πη]_Lie → Π[ω,η]_Kos + Π( ι_{Πη} ι_{Πω} H ).
 
     Opt-in; reduces to :class:`NambuMorphismDeclaration` at H = 0."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite(
+        "CatalOzerDoganYetismisoglu2025",
+        "Eq. (7.25)",
+        note="R′ = 0 with the H(Πω, Πη) term: the twisted-Poisson FI",
+    )
 
     anchor = None  # set in __init__ (LieBracketVF)
 
@@ -451,10 +478,11 @@ def prove_twisted_fi_kills_r_twist_h(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """Consistency of the bosonic (3.11): under the declared
-    H-twisted FI the corrected R-twist ``R′_H`` vanishes — acting on
-    the probe ``h``. (At H = 0 this is the 6.E statement "FI kills
-    the R-twist".)"""
+    """Consistency of the declared twisted-Poisson FI (TW (7.25) with
+    H; formerly labelled "bosonic (3.11)" — wrong sector, see the
+    dictionary comment above): under the declared H-twisted FI the
+    corrected R-twist ``R′_H`` vanishes — acting on the probe ``h``.
+    (At H = 0 this is the 6.E statement "FI kills the R-twist".)"""
     from jacopy.proof.strategies import ExpandAndSimplify
 
     from jacopy.packages.drinfeld.tilde_calculus import (
@@ -491,7 +519,8 @@ def prove_r_twist_h_correction_bilinear(
     """The H-correction ``Π H(Πω, Πη)`` of ``R′_H`` is C∞-BILINEAR
     (sharp + interior tensoriality) — hence the first-entry
     linearity anomaly of ``R′_H`` is exactly the H-INDEPENDENT
-    (7.26) anomaly ``−Π(df ∧ g_Z)``. Returns the two chains (first
+    TW (7.26) anomaly ``−Π(df ∧ g_Z)`` (``g_Z = ι_{Πω}η + ι_{Πη}ω``,
+    the code's normalisation = ½ of DD (6.17)). Returns the two chains (first
     slot, second slot); probe ``h``."""
     from jacopy.core.expr import Product
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -530,7 +559,7 @@ def prove_r_twist_h_correction_bilinear(
 def jacobiator_a_obstruction(
     N, H: Expr, U: Expr, V: Expr, W: Expr
 ) -> Expr:
-    """The RHS of the twisted Jacobiator requirement (5.12) for the
+    """The RHS of the twisted Jacobiator requirement TW (5.12) for the
     concrete data (the A-bracket is Lie, so its Jacobiator vanishes
     and the requirement forces this combination to vanish):
 
@@ -547,11 +576,11 @@ def jacobiator_a_obstruction(
 
 
 # ------------------------------------------------------------------- #
-# Free-ψ master equations (3.12)/(3.15) — the last 6.F.3 leftover      #
+# Free-ψ master equations TW (3.12)/(3.15) — the last 6.F.3 leftover      #
 # ------------------------------------------------------------------- #
 #
 # The proto-bialgebroid superfield Θ = μ + γ + φ + ψ needed a FREE
-# trivector ψ (independent of Π) for the (3.12)/(3.15) components —
+# trivector ψ (independent of Π) for the TW (3.12)/(3.15) components —
 # deferred by definition policy until a consumer arrived. The
 # consumer is here: ψ is hosted as an independent ``(2+1)``-vector
 # (a second :func:`nambu_structure` at p = 2), and its R-twist on
@@ -560,9 +589,9 @@ def jacobiator_a_obstruction(
 #     R_ψ(ω, η) := ψ(ω, η, ·) = ψ♯(ω ∧ η),
 #
 # buildable from the existing sharp + Wedge machinery. Bosonic
-# readings: (3.12) ``½{γ,γ} + {μ,ψ} = 0`` carries the QUASI-POISSON
+# readings: TW (3.12) ``½{γ,γ} + {μ,ψ} = 0`` carries the QUASI-POISSON
 # face ``[π♯ω, π♯η] = π♯[ω,η]_π + R_ψ(ω,η)`` (the ψ-twisted FI,
-# opt-in declaration below); (3.15) ``{γ,ψ} = 0`` is the [π,ψ]_SN
+# opt-in declaration below); TW (3.15) ``{γ,ψ} = 0`` is the [π,ψ]_SN
 # compatibility (structural node; its full eval theory stays with
 # the SN layer).
 
@@ -577,7 +606,7 @@ def r_twist_psi(psi_host, omega: Expr, eta: Expr) -> Expr:
 
 
 class PsiTwistedFIDeclaration(Definition):
-    """DECLARED ψ-twisted fundamental identity (the bosonic (3.12)
+    """DECLARED ψ-twisted fundamental identity (the bosonic TW (3.12)
     quasi-Poisson face):
 
         [π♯ω, π♯η]_Lie → π♯[ω,η]_π + ψ♯(ω ∧ η).
@@ -673,7 +702,7 @@ def prove_psi_twisted_fi_consistency(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """Consistency of the bosonic (3.12): under the declared
+    """Consistency of the bosonic TW (3.12): under the declared
     ψ-twisted FI, ``r_twist(ω,η) − R_ψ(ω,η) → 0`` (the Poisson
     anchor defect IS the free R-twist). Probe ``h``."""
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -712,7 +741,7 @@ def prove_psi_twisted_fi_consistency(
 
 
 def sn_compat_node(P, psi_host) -> Expr:
-    """The (3.15) ``{γ,ψ}`` compatibility carrier: the
+    """The TW (3.15) ``{γ,ψ}`` compatibility carrier: the
     Schouten-Nijenhuis bracket ``[π, ψ]_SN`` (a 4-vector) —
     structural; declaring it zero is the quasi-Lie bialgebroid's
     last condition (its eval theory lives with the SN layer)."""

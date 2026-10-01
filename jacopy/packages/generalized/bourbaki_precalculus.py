@@ -1,7 +1,8 @@
 """
 The Bourbaki pre-calculus quintet (Phase 7.B.2f.1; PDF item 10h /
-7.B Bourbaki targets), from the PRIMARY paper pre-metric-bourbaki.pdf
-[arXiv:2210.00548] — Definition 9.1 and Theorem 9.1, mechanized.
+7.B Bourbaki targets), from the PRIMARY paper Çatal-Özer, Dereli &
+Doğan (2022) [arXiv:2210.00548] — Definition 9.1 and Theorem 9.1,
+mechanized. Bare equation numbers in this module are that paper's.
 
 **Definition 9.1**: on a pair of vector bundles ``(R, Z)`` the
 quintet ``(ι, d, l, ℒ^R, ℒ^Z)`` is a Bourbaki pre-calculus if
@@ -55,6 +56,7 @@ from jacopy.proof.expansion import Definition, ExpansionEngine
 from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import ProofFailure
 from jacopy.proof.theorems import Theorem
+from jacopy.bibliography import cite
 from jacopy.central.calculus.scalars import is_scalar_function
 from jacopy.central.objects.bundle import Bundle
 from jacopy.central.objects.vector_field import vector_fields
@@ -255,6 +257,7 @@ class BIotaBilinearityDefinition(_BilinearSlots):
     node_cls = BIota
     scalar_slots = (0, 1)
     name = "ι C∞-bilinearity (Def 9.1)"
+    source = cite("CatalOzerDereliDogan2022", "Definition 9.1")
 
     anchor = BIota
 
@@ -263,6 +266,7 @@ class BSymbolBilinearityDefinition(_BilinearSlots):
     node_cls = BSymbol
     scalar_slots = (1,)
     name = "l C∞-bilinearity (Def 9.1)"
+    source = cite("CatalOzerDereliDogan2022", "Definition 9.1 (symbol map, Eq. (6.10))")
 
     anchor = BSymbol
 
@@ -271,6 +275,7 @@ class BLieRAdditivityDefinition(_BilinearSlots):
     node_cls = BLieR
     scalar_slots = ()  # ℝ-bilinear ONLY
     name = "ℒ^R ℝ-bilinearity (Def 9.1 — no C∞ law)"
+    source = cite("CatalOzerDereliDogan2022", "Definition 9.1")
 
     anchor = BLieR
 
@@ -279,6 +284,7 @@ class BLieZAdditivityDefinition(_BilinearSlots):
     node_cls = BLieZ
     scalar_slots = ()  # the C∞ behaviour is laws (1)-(2) below
     name = "ℒ^Z ℝ-additivity (first-order operator)"
+    source = cite("CatalOzerDereliDogan2022", "Definition 9.1")
 
     anchor = BLieZ
 
@@ -288,6 +294,7 @@ class BDFirstOrderDefinition(Definition):
     first-order with symbol ``l`` (Def 9.1)."""
 
     name = "d first-order with symbol l: d(f·r) = f·dr + l_df r"
+    source = cite("CatalOzerDereliDogan2022", "Definition 9.1")
     anchor = BD
 
     def __init__(
@@ -326,6 +333,7 @@ class BLieZLawsDefinition(Definition):
         "ℒ^Z first-order laws: ℒ^Z_V(fz) = fℒ^Z_Vz + V(f)z, "
         "ℒ^Z_{fV}z = fℒ^Z_Vz + l_df ι_Vz"
     )
+    source = cite("CatalOzerDereliDogan2022", "Definition 9.1, laws 1–2 of ℒ^Z")
     anchor = BLieZ
 
     def __init__(
@@ -366,6 +374,7 @@ class Axiom914Declaration(Definition):
     the quintet never assumed A = TM structurally)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite("CatalOzerDereliDogan2022", "Definition 9.1, Eq. (9.14)")
 
     anchor = BLieR
 
@@ -551,7 +560,8 @@ def prove_standard_symmetric_part(
             "standard bracket/metric definitions (9.17)-(9.18)",
             "d ℝ-additivity (first-order operator)",
         ),
-        notes="pre-metric-bourbaki.pdf Thm 9.1",
+        notes="arXiv:2210.00548 Theorem 9.1, proof, check 1",
+        source=cite("CatalOzerDereliDogan2022", "Theorem 9.1, Eqs. (9.17)–(9.18), proof check 1"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -665,7 +675,8 @@ def prove_standard_metric_invariance(
             "declared (9.15) (cited instances)",
             "quintet definitional rules (Def 9.1)",
         ),
-        notes="pre-metric-bourbaki.pdf Thm 9.1",
+        notes="arXiv:2210.00548 Theorem 9.1, proof, check 2",
+        source=cite("CatalOzerDereliDogan2022", "Theorem 9.1, proof check 2 (Eq. (7.8) from Eqs. (9.14)–(9.15))"),
     ).with_structural_requires()
     return chain, theorem
 

@@ -9,7 +9,7 @@ hierarchy (right-Leibniz etc., Phase 3.B) appears here:
   hence ``C^∞``-linear: ``ρ(u + v) = ρ(u) + ρ(v)``,
   ``ρ(fu) = f·ρ(u)``, ``ρ(−u) = −ρ(u)``, ``ρ(0) = 0``.
 * :class:`BracketBilinearityDefinition` — ``[·,·]_E`` is ℝ-bilinear
-  [B Def 4.1]: sums, negations and *numeric* scalars pull out of both
+  [B Definition 4.1]: sums, negations and *numeric* scalars pull out of both
   slots. ``C^∞`` factors do **not** — ``[u, fv]`` and ``[fu, v]``
   stay inert until right-/left-Leibniz is declared (3.B). This
   distinction is the whole point of the layer split.
@@ -33,6 +33,7 @@ from __future__ import annotations
 from typing import Optional
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Product, Rational, Sum
 from jacopy.core.pairing import Pairing
 from jacopy.core.registry import PropertyRegistry
@@ -75,6 +76,10 @@ class AnchorLinearityDefinition(Definition):
     (``C^∞``) coefficients."""
 
     name = "anchor linearity: ρ(fu + v) = f·ρ(u) + ρ(v)"
+    source = (
+        cite("CatalOzerDereliDogan2022", "Definition 3.1"),
+        cite("DereliDogan2020", "Section 3, paragraph before Definition 3.2"),
+    )
     anchor = AnchoredVF
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
@@ -124,6 +129,7 @@ class BracketBilinearityDefinition(Definition):
     ``[u, fv]`` is right-Leibniz territory (declared in 3.B)."""
 
     name = "bracket ℝ-bilinearity: [u + cv, w] = [u,w] + c[v,w] (c ∈ ℝ)"
+    source = cite("CatalOzerDereliDogan2022", "Definition 4.1")
     anchor = AlgebroidBracket
 
     def matches(self, expr: Expr) -> bool:
@@ -167,6 +173,10 @@ class CoboundaryPairingDefinition(Definition):
     needs the context to build the anchor)."""
 
     anchor = Pairing
+    source = (
+        cite("DereliDogan2020", "Definition 3.5"),
+        cite("CatalOzerDereliDogan2022", "Section 3, remark after Definition 3.1"),
+    )
 
     def __init__(self, alg: Algebroid) -> None:
         if not isinstance(alg, Algebroid):
@@ -195,6 +205,7 @@ class LocalityMultilinearityDefinition(Definition):
     two section slots."""
 
     name = "locality multilinearity: L(fω+Υ, u, v) = f·L(ω,u,v) + L(Υ,u,v) (all slots)"
+    source = cite("DereliDogan2020", "Definition 3.5")
     anchor = LocalityOperator
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
@@ -245,6 +256,7 @@ class MetricBilinearityDefinition(Definition):
     smooth-function factors pull out of both slots."""
 
     name = "metric bilinearity: g(fu + w, v) = f·g(u,v) + g(w,v) (both slots)"
+    source = cite("DereliDogan2020", "Definition 3.1")
     anchor = EMetric
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
@@ -321,6 +333,7 @@ class MetricSymmetryDefinition(Definition):
     family, so proofs never stall on slot order)."""
 
     name = "metric symmetry: g(v, u) = g(u, v) (canonical order)"
+    source = cite("DereliDogan2020", "Definition 3.1")
     anchor = EMetric
 
     def matches(self, expr: Expr) -> bool:
@@ -338,6 +351,7 @@ class MetricSharpEvaluationDefinition(Definition):
     inverse metric (either slot; well-defined by non-degeneracy)."""
 
     name = "inverse metric: g(g⁻¹(ω), w) = ⟨ω, w⟩"
+    source = cite("DereliDogan2020", "Section 3, remark after Definition 3.1")
     anchor = EMetric
 
     def matches(self, expr: Expr) -> bool:

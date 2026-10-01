@@ -1,7 +1,8 @@
 """
 Theorem 9.2 + Corollary 9.1 — the Ševera-lite CLASSIFICATION of
 exact pre-metric-Bourbaki algebroids (Phase 7.B.2f.4; primary paper
-§9): every exact pre-metric-Bourbaki algebroid with g-isotropic
+Çatal-Özer, Dereli & Doğan (2022) [arXiv:2210.00548] §9 — bare equation
+numbers below are that paper's): every exact pre-metric-Bourbaki algebroid with g-isotropic
 ``χ`` is the STANDARD one twisted by a pair ``(F, H)``,
 
     g((φ⊕χ)(U+z), (φ⊕χ)(V+y)) = g_S(U+z, V+y) + F(U,V),   (9.19)
@@ -44,6 +45,7 @@ from jacopy.proof.expansion import Definition, ExpansionEngine
 from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import ProofFailure
 from jacopy.proof.theorems import Theorem
+from jacopy.bibliography import cite
 from jacopy.central.calculus.scalars import is_scalar_function
 from jacopy.central.algebroid.context import (
     Algebroid,
@@ -85,6 +87,7 @@ class SplitLinearityDefinition(Definition):
     sums, negations, zeros and scalar factors pull out."""
 
     name = "φ/χ C∞-linearity (bundle morphisms)"
+    source = cite("CatalOzerDereliDogan2022", "Definition 8.1 and Section 8 (χ, φ vector bundle morphisms)")
     anchor = (PhiSec, ChiSec)
 
     def __init__(
@@ -144,6 +147,7 @@ class RightLeibnizTheoremRule(CitedTheoremMixin, Definition):
         self.name = (
             "cite (7.2) right-Leibniz: [u, fv] = f[u,v] + ρ(u)f·v"
         )
+        self.source = cite("CatalOzerDereliDogan2022", "Section 7, discussion around Eq. (7.2)")
 
     def _prove_cited(self):
         # (7.2) is proved FROM the (7.8) invariance: the structure must
@@ -212,6 +216,10 @@ class LeftLeibnizTheoremRule(CitedTheoremMixin, Definition):
             "cite left-Leibniz: [fu, v] = f[u,v] − ρ(v)f·u "
             "+ 𝕃_df g(u,v)"
         )
+        self.source = (
+            cite("CatalOzerDereliDogan2022", "Proposition 6.1 (2 ⟹ 1)"),
+            cite("CatalOzerDereliDogan2022", "Corollary 6.1"),
+        )
 
     def _prove_cited(self):
         # rests on (7.2), hence on the declared (7.8) invariance
@@ -258,6 +266,10 @@ class LSymbolViaChiDefinition(Definition):
     """(8.3): the symbol decomposes as ``𝕃_{df} r → χ(l_{df} r)``."""
 
     name = "(8.3): 𝕃 = χ∘l"
+    source = (
+        cite("CatalOzerDereliDogan2022", "Eq. (8.3)"),
+        cite("CatalOzerDereliDogan2022", "Definition 8.1 (L = χl)"),
+    )
     anchor = BSymbolL
 
     def matches(self, expr: Expr) -> bool:
@@ -277,6 +289,7 @@ class SymPartCollectDeclaration(Definition):
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
 
     name = "(6.11) collect: [a,b] + [b,a] → 𝔻g(a,b)"
+    source = cite("CatalOzerDereliDogan2022", "Definition 6.2, Eq. (6.11)")
     anchor = Sum
 
     def __init__(self, alg: Algebroid) -> None:
@@ -340,6 +353,7 @@ class PhiIsotropyDeclaration(Definition):
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
 
     name = "declared g-isotropic splitting: F(U,V) = g(φU,φV) = 0"
+    source = cite("CatalOzerDereliDogan2022", "Corollary 9.1")
     anchor = BMetric
 
     def matches(self, expr: Expr) -> bool:
@@ -413,6 +427,7 @@ def _zero_theorem(
     from_axioms,
     notes,
     label,
+    source=None,
 ) -> Tuple[ProofChain, Theorem]:
     # keep the engine steps as the step's children: the rules that
     # fired — in particular the theorem-citing Leibniz rules — must
@@ -441,6 +456,7 @@ def _zero_theorem(
         generality="generic-function",
         from_axioms=from_axioms,
         notes=notes,
+        source=source,
     ).with_structural_requires()
     return chain, theorem
 
@@ -477,7 +493,8 @@ def prove_chi_phi_bracket(
             "(6.11) symmetric part (declared, χ-φ orientation)",
             "(9.7)/(9.9)/(8.3) definitions",
         ),
-        notes="pre-metric-bourbaki.pdf Thm 9.2 proof",
+        notes="arXiv:2210.00548 Theorem 9.2, proof",
+        source=cite("CatalOzerDereliDogan2022", "Theorem 9.2, proof"),
         label="χ-φ leg normalizes to 0",
     )
 
@@ -572,7 +589,8 @@ def prove_chi_chi_bracket_vanishes(
             f"anchor morphism ({alg.name}, declared)",
             "non-degeneracy of the R-valued metric",
         ),
-        notes="pre-metric-bourbaki.pdf Thm 9.2 proof",
+        notes="arXiv:2210.00548 Theorem 9.2, proof",
+        source=cite("CatalOzerDereliDogan2022", "Theorem 9.2, proof"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -603,7 +621,8 @@ def prove_delta_tensorial_second_slot(
             "(7.2) right-Leibniz (proven, cited as a rule)",
             "φ C∞-linearity (bundle morphism)",
         ),
-        notes="pre-metric-bourbaki.pdf Thm 9.2 proof / (9.21)",
+        notes="arXiv:2210.00548 Theorem 9.2, proof, Eq. (9.21)",
+        source=cite("CatalOzerDereliDogan2022", "Theorem 9.2, Eq. (9.21) and proof"),
         label="second-slot tensoriality normalizes to 0",
     )
 
@@ -640,7 +659,8 @@ def prove_delta_first_slot_anomaly(
             "(8.3) 𝕃 = χ∘l",
             "φ C∞-linearity (bundle morphism)",
         ),
-        notes="pre-metric-bourbaki.pdf Thm 9.2 proof / (9.21)",
+        notes="arXiv:2210.00548 Theorem 9.2, proof, Eq. (9.21)",
+        source=cite("CatalOzerDereliDogan2022", "Theorem 9.2, Eq. (9.21) and proof"),
         label="first-slot anomaly normalizes to 0",
     )
 
@@ -670,7 +690,8 @@ def prove_delta_lands_in_chi(
             f"anchor morphism ({alg.name}, declared)",
             "exact splitting ρφ = id",
         ),
-        notes="pre-metric-bourbaki.pdf Thm 9.2 proof",
+        notes="arXiv:2210.00548 Theorem 9.2, proof",
+        source=cite("CatalOzerDereliDogan2022", "Theorem 9.2, proof"),
         label="anchor of Δ normalizes to 0",
     )
 
@@ -731,6 +752,7 @@ def prove_h_antisymmetric_for_isotropic_phi(
             if isotropic_phi
             else ()
         ),
-        notes="pre-metric-bourbaki.pdf Cor 9.1",
+        notes="arXiv:2210.00548 Corollary 9.1 and its proof",
+        source=cite("CatalOzerDereliDogan2022", "Corollary 9.1"),
         label=label,
     )

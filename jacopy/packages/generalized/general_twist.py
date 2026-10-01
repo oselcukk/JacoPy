@@ -1,6 +1,6 @@
 """
-The GENERAL Ψ-twist procedure (PDF item 13j — "This is really
-important!"): given ANY bracket on ``E`` satisfying a set of
+The GENERAL Ψ-twist procedure (project directive item 13j — "This is
+really important!"): given ANY bracket on ``E`` satisfying a set of
 algebroid properties and ANY invertible bundle morphism
 ``Ψ : E → E``, the twisted bracket
 
@@ -28,7 +28,9 @@ Property-transport theorems:
 
 The 6.E/7.B concrete twists (Ψ_Π, Ψ_B, Ψ_m, H/R) are instances;
 this module is the missing GENERAL procedure of 13j, with each
-primed operator separated exactly as the PDF asks.
+primed operator separated exactly as the directive asks. The
+procedure itself is TW Eq. (7.3) (arXiv 2409.11973,
+``[u,v]_Roy′ = Ψ⁻¹[Ψu, Ψv]_Roy``), here for an arbitrary bracket.
 """
 
 from __future__ import annotations
@@ -414,7 +416,7 @@ def prove_general_twist_bilinearity(
             "Ψ/Ψ⁻¹ C∞-linearity",
             "bracket ℝ-bilinearity (definitional)",
         ),
-        notes="PDF 13j general procedure",
+        notes="directive 13j general procedure",
         label="bilinearity defect normalizes to 0",
     )
 
@@ -460,7 +462,7 @@ def prove_general_twist_right_leibniz(
             "initial bracket)",
             "Ψ/Ψ⁻¹ C∞-linearity + invertibility",
         ),
-        notes="PDF 13j: the primed operator ρ' = ρ∘Ψ",
+        notes="directive 13j: the primed operator ρ' = ρ∘Ψ",
         label="right-Leibniz defect normalizes to 0",
     )
 
@@ -536,7 +538,7 @@ def prove_general_twist_jacobi(
             generality="generic-function",
             from_axioms=("Ψ/Ψ⁻¹ invertibility + linearity",),
             notes=(
-                "PDF 13j general procedure — conditional form; "
+                "directive 13j general procedure — conditional form; "
                 "declare 'jacobi' for the full theorem"
             ),
         ).with_structural_requires()
@@ -559,7 +561,7 @@ def prove_general_twist_jacobi(
             "(Ψu,Ψv,Ψw))",
             "Ψ/Ψ⁻¹ invertibility",
         ),
-        notes="PDF 13j general procedure",
+        notes="directive 13j general procedure",
         label=label,
         owner=alg,
         key=JacobiDeclaration(alg).key,  # licensed by the declared Leibniz-Jacobi of the initial bracket
@@ -579,14 +581,14 @@ def prove_general_twist_symmetric_part(
     ``[u,v]' + [v,u]' = 𝔻'g'(u,v)``,
     ``𝔻' = Ψ⁻¹∘𝔻``, ``g'(u,v) = g(Ψu, Ψv)``.
 
-    The cited (6.11) instance lives in the R-VALUED layer
+    The cited B (6.11) instance lives in the R-VALUED layer
     (``BMetric``/``BDop``), which NO central declaration certifies —
     the scalar ``symmetric-part`` flag speaks about ``EMetric``, a
     different node family with no verified identification between
     the two data sets (2026-09-09 recheck, finding A). Hence:
 
     * ``declare_r_axioms=True`` — the caller EXPLICITLY declares
-      (6.11) for the R-valued data ``(g, 𝔻)`` used here; the full
+      B (6.11) for the R-valued data ``(g, 𝔻)`` used here; the full
       zero theorem is minted with that declaration on record;
     * default — only the CONDITIONAL/structural identity is
       returned (``lhs = target``, ``rhs`` = the Ψ-carried instance,
@@ -617,9 +619,9 @@ def prove_general_twist_symmetric_part(
         return _conditional_transport_theorem(
             name,
             "STRUCTURAL identity only: [u,v]' + [v,u]' − "
-            "𝔻'g'(u,v) = Ψ⁻¹ of the initial (6.11) combination "
+            "𝔻'g'(u,v) = Ψ⁻¹ of the initial B (6.11) combination "
             "at (Ψu, Ψv), with 𝔻' = Ψ⁻¹∘𝔻 and g' = g(Ψ·,Ψ·). "
-            "The zero conclusion needs (6.11) FOR THE R-VALUED "
+            "The zero conclusion needs B (6.11) FOR THE R-VALUED "
             "data (g = BMetric, 𝔻 = BDop) — no central scalar "
             "declaration certifies it and it is NOT established "
             "here; pass declare_r_axioms=True to declare it "
@@ -629,7 +631,7 @@ def prove_general_twist_symmetric_part(
             engine,
             registry,
             notes=(
-                "PDF 13j: the primed operators 𝔻', g' — "
+                "directive 13j: the primed operators 𝔻', g' — "
                 "conditional form (2026-09-09 recheck, finding A)"
             ),
             label=label,
@@ -642,18 +644,18 @@ def prove_general_twist_symmetric_part(
         target,
         instance,
         (
-            "cite the initial (6.11) symmetric part at "
+            "cite the initial B (6.11) symmetric part at "
             "(Ψu, Ψv), carried through Ψ⁻¹"
         ),
         engine,
         registry,
         from_axioms=(
-            "(6.11) symmetric part for the R-VALUED data — "
+            "B (6.11) symmetric part for the R-VALUED data — "
             "EXPLICITLY declared by the caller "
             "(declare_r_axioms=True); instance at (Ψu, Ψv)",
             "Ψ/Ψ⁻¹ invertibility + linearity",
         ),
-        notes="PDF 13j: the primed operators 𝔻', g'",
+        notes="directive 13j: the primed operators 𝔻', g'",
         label=label,
         owner=alg,
     )
@@ -675,13 +677,13 @@ def prove_general_twist_invariance(
     — the ℒ^R operator itself is unchanged (it reads only the
     anchor direction, and ``ρ'(u) = ρ(Ψu)``).
 
-    The cited (7.8) instance lives in the R-VALUED layer
+    The cited B (7.8) instance lives in the R-VALUED layer
     (``BLieRE``/``BMetric``), which NO central declaration
     certifies — the scalar ``metric-invariance`` flag speaks about
     ``EMetric`` (2026-09-09 recheck, finding A). Hence:
 
     * ``declare_r_axioms=True`` — the caller EXPLICITLY declares
-      (7.8) for the R-valued data ``(g, ℒ^R)`` used here; the full
+      B (7.8) for the R-valued data ``(g, ℒ^R)`` used here; the full
       zero theorem is minted with that declaration on record;
     * default — only the CONDITIONAL/structural identity is
       returned (``rhs`` = the instance, NOT zero)."""
@@ -721,9 +723,9 @@ def prove_general_twist_invariance(
             name,
             "STRUCTURAL identity only: ℒ^R_{ρ'(u)} g'(v,w) − "
             "g'([u,v]', w) − g'(v, [u,w]') equals the initial "
-            "(7.8) combination at (Ψu, Ψv, Ψw), with "
+            "B (7.8) combination at (Ψu, Ψv, Ψw), with "
             "g' = g(Ψ·,Ψ·) and ρ' = ρ∘Ψ. The zero conclusion "
-            "needs (7.8) FOR THE R-VALUED data (g = BMetric, "
+            "needs B (7.8) FOR THE R-VALUED data (g = BMetric, "
             "ℒ^R = BLieRE) — no central scalar declaration "
             "certifies it and it is NOT established here; pass "
             "declare_r_axioms=True to declare it explicitly (13j)",
@@ -732,7 +734,7 @@ def prove_general_twist_invariance(
             engine,
             registry,
             notes=(
-                "PDF 13j: g' = g(Ψ·,Ψ·), ρ' = ρ∘Ψ — conditional "
+                "directive 13j: g' = g(Ψ·,Ψ·), ρ' = ρ∘Ψ — conditional "
                 "form (2026-09-09 recheck, finding A)"
             ),
             label=label,
@@ -745,17 +747,17 @@ def prove_general_twist_invariance(
         target,
         instance,
         (
-            "cite the initial (7.8) invariance at (Ψu, Ψv, Ψw)"
+            "cite the initial B (7.8) invariance at (Ψu, Ψv, Ψw)"
         ),
         engine,
         registry,
         from_axioms=(
-            "(7.8) metric invariance for the R-VALUED data — "
+            "B (7.8) metric invariance for the R-VALUED data — "
             "EXPLICITLY declared by the caller "
             "(declare_r_axioms=True); instance at (Ψu, Ψv, Ψw)",
             "Ψ/Ψ⁻¹ invertibility",
         ),
-        notes="PDF 13j: g' = g(Ψ·,Ψ·), ρ' = ρ∘Ψ",
+        notes="directive 13j: g' = g(Ψ·,Ψ·), ρ' = ρ∘Ψ",
         label=label,
         owner=alg,
     )

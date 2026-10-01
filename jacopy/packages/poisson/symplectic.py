@@ -41,6 +41,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple
 
 from jacopy.algebra.derivation import Act, Derivation, degree_of
+from jacopy.bibliography import cite as bib_cite
 from jacopy.core.expr import Expr, Integer, Neg, Sum
 from jacopy.core.multi_eval import MultiEval
 from jacopy.core.pairing import Pairing
@@ -169,6 +170,7 @@ class SymplecticHamiltonianDefinition(Definition):
       slots the FIRST fires (deterministic)."""
 
     anchor = (Act, MultiEval)
+    source = bib_cite("Math595Midterm2026", "Question 2")
 
     def __init__(self, structure: SymplecticStructure) -> None:
         self._S = structure
@@ -224,6 +226,7 @@ class SymplecticClosedDeclaration(Definition):
     (node form and evaluated head form)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = bib_cite("Math595Midterm2026", "Question 2")
 
     anchor = (Act, MultiEval)
 
@@ -261,6 +264,7 @@ class SharpFlatIdentityDeclaration(Definition):
     compatibility ``π = ω⁻¹`` (sharp ∘ flat = id)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = bib_cite("Math595Midterm2026", "Question 2")
 
     anchor = SharpVF
 

@@ -1,6 +1,6 @@
 """
 The H-TWISTED standard Courant algebroid on ``TM ⊕ T*M`` (Phase
-7.B.2; PDF item 14e): the H-twisted Dorfman bracket's Courant-axiom
+7.B.2; project directive item 14e): the H-twisted Dorfman bracket's Courant-axiom
 suite, the H-twisted Courant (skew) bracket, and the dH-defect
 Jacobi, concrete — parallel to :mod:`standard_courant` (the H = 0
 case) and built on the Phase 6.E/6.F machinery
@@ -20,7 +20,9 @@ is C∞-TENSORIAL and ANTISYMMETRIC in ``U, V``; consequently:
   is exactly ``−ι_W ι_V ι_U dH`` (proved in 6.F degree-generally;
   here instantiated concretely at p = 1), so the twisted bracket is
   Courant ⟺ ``dH = 0``, and ``H = dB`` (a Ševera B-transform)
-  always restores Jacobi.
+  always restores Jacobi. (Ševera 2017, arXiv 1707.00265: no local
+  PDF; B §4, text after Eq. (4.12), recalls his classification of
+  exact Courant algebroids by the closed twist H.)
 
 Everything engine-normalized on components; honest-fail throughout.
 """
@@ -98,7 +100,7 @@ def prove_twisted_anchor_morphism(
             "H-twisted Dorfman definition (vector component)",
             "ρ(U+ω) = U (anchor definition)",
         ),
-        notes="PDF 14e; the H = 0 case is standard_courant [C'2]",
+        notes="directive 14e; the H = 0 case is standard_courant [C'2]",
         rule_labels=("anchor defect normalizes to 0",),
     )
 
@@ -156,7 +158,7 @@ def prove_twisted_right_leibniz(
             "H-twisted Dorfman + pairing definitions",
             "Cartan calculus (interior C∞-linearity)",
         ),
-        notes="PDF 14e",
+        notes="directive 14e",
     )
 
 
@@ -207,7 +209,7 @@ def prove_twisted_symmetric_part(
             "H-twisted Dorfman + pairing + D definitions",
             "antisymmetry of the interior contraction",
         ),
-        notes="PDF 14e",
+        notes="directive 14e",
     )
 
 
@@ -249,7 +251,7 @@ def prove_twisted_invariance(
             "Cartan calculus (magic formula, [ℒ,ι] commutator, "
             "interior antisymmetry)",
         ),
-        notes="PDF 14e",
+        notes="directive 14e",
         rule_labels=("invariance defect normalizes to 0",),
     )
 
@@ -275,7 +277,7 @@ def prove_twisted_courant_dorfman_relation(
     return _component_theorem(
         "twisted_courant_dorfman_relation",
         "[x,y]_{C,H} = [x,y]_{D,H} − D⟨x,y⟩₊ on TM ⊕ T*M "
-        "(PDF 14d-e; the twist commutes with the "
+        "(directive 14d-e; the twist commutes with the "
         "skew-symmetrization)",
         [
             Sum(c_vec, Neg(d_vec), D_vec),
@@ -286,7 +288,7 @@ def prove_twisted_courant_dorfman_relation(
         from_axioms=(
             "H-twisted Courant/Dorfman + pairing + D definitions",
         ),
-        notes="PDF 14e",
+        notes="directive 14e",
     )
 
 
@@ -315,7 +317,7 @@ def prove_twisted_jacobi_dh_defect(
     ``H`` — the VF Jacobi closes them as in the untwisted case).
     Corollary (Ševera): ``H = dB`` gives ``dH = d²B = 0``, so a
     B-transform of a Courant structure is again Courant; general
-    ``H`` is Courant ⟺ ``dH = 0`` (PDF 14e / the concrete p = 1
+    ``H`` is Courant ⟺ ``dH = 0`` (directive 14e / the concrete p = 1
     face of the 6.F degree-general theorem)."""
     from jacopy.central.tangent.cartan import (
         prove_with_bracket_identities,
@@ -362,7 +364,7 @@ def prove_severa_twist_is_courant(
     (a B-transform) the Leibniz-Jacobi of the twisted Dorfman
     bracket closes EXACTLY — ``dH = d²B = 0`` kills the defect, so
     the B-transform of the standard Courant structure is again a
-    Courant algebroid (PDF 14e)."""
+    Courant algebroid (directive 14e)."""
     from jacopy.central.tangent.cartan import (
         prove_with_bracket_identities,
     )

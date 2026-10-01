@@ -1,6 +1,7 @@
 """
 Modified E-torsion and projected E-curvature (Phase 4.E.2)
-[MC Prop 3.2, Def 3.7, Prop 3.3-3.4, Cor 3.3, Def 3.11].
+[MC Corollary 3.2, Definition 3.7, Propositions 3.3–3.4, Corollary 3.3,
+Definition 3.11].
 
 The pseudo tensors of 4.E.1 carry locality defects; the MC corrections
 repair them:
@@ -37,6 +38,7 @@ from __future__ import annotations
 from typing import Optional
 
 from jacopy.algebra.derivation import Act, Derivation
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Neg, Product, Sum, Symbol
 from jacopy.core.indexed_sum import IndexedSum
 from jacopy.core.multi_eval import MultiEval
@@ -373,6 +375,7 @@ class CoframeRecombinationDefinition(Definition):
     """
 
     anchor = IndexedSum
+    source = cite("DereliDogan2020", "proof of Corollary 3.2")
 
     def __init__(
         self,
@@ -586,7 +589,7 @@ def prove_modified_torsion_tensorial(
 ) -> tuple:
     """``ᴸT(f·u, v) = f·ᴸT(u, v)`` AND ``ᴸT(u, f·v) = f·ᴸT(u, v)`` —
     the modified torsion is a genuine tensor on a local algebroid
-    [MC Prop 3.2/Def 3.7]: the recombined ``L(Df,u,v)`` cancels the
+    [MC Corollary 3.2 / Definition 3.7]: the recombined ``L(Df,u,v)`` cancels the
     pseudo defect."""
     first = ExpandAndSimplify().prove(
         modified_torsion(alg, conn, fr, Product(f, u), v),

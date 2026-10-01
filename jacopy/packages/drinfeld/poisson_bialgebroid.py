@@ -1,21 +1,27 @@
 """
 The Poisson Lie-bialgebroid compatibility conditions (Phase 6.B) —
-drinfeld paper [arXiv:2312.06584] eqs (4.36)-(4.38), instantiated on
+drinfeld paper [DD = arXiv:2312.06584] eqs DD (4.36)-(4.38), instantiated on
 ``(A, Z) = (TM, T*M_π)`` with the Koszul bracket on ``Z`` and
 
     ℒ_U η          (usual Lie derivative),   ι_U η = ⟨η, U⟩,
     d              (usual exterior d),        𝒦_W = −ι_W d,
     ℒ̃_ω V = [π♯ω, V] + π♯ ι_V dω,           ι̃_ω V = ⟨ω, V⟩,
-    d̃ = −π♯ d     [paper §6, Π = π].
+    d̃ = −π♯ d     [DD (6.7), Π = π].
 
-* **(4.37)** ``ℒ_{d̃ι̃_η U} μ = −[dι_U η, μ]_π`` — closes BARE
+(Here ``ℒ̃`` is written as in DD (4.41); DD (6.6) gives the same
+operator through ``𝒦_V = −ι_V d``.)
+
+* **DD (4.37)** ``ℒ_{d̃ι̃_η U} μ = −[dι_U η, μ]_π`` — closes BARE
   (27 steps): pure magic + Koszul mechanics.
-* **(4.36)** ``𝒟^Z_{ℒ_U}(η, μ) = ℒ_{𝒦̃_η U} μ + 𝒦_{𝒦̃_μ U} η``
+* **DD (4.36)** ``𝒟^Z_{ℒ_U}(η, μ) = ℒ_{𝒦̃_η U} μ + 𝒦_{𝒦̃_μ U} η``
   (the derivator condition, PDF item 10f in action) — closes with
   cited VF-Jacobi instances (Sum-subset) + a Y-lifted scalar
   identity citation (mechanical core + labeled congruence).
-* **(4.38)** at p = 1 the ``𝔻_Z g_Z``-side vanishes
-  (``g_Z(ω,η) = 2(π(ω,η) + π(η,ω)) = 0`` by alternation) and the
+* **DD (4.38)** at p = 1 the ``𝔻_Z g_Z``-side vanishes
+  (``g_Z(ω,η) = 2(π(ω,η) + π(η,ω)) = 0`` by alternation — the
+  paper's DD (6.17) normalisation ``g_Z = 2(…)``, ``D_Z = ½ d``;
+  :mod:`.double` and :mod:`.tilde_calculus` use ``g_Z = ½ g_Z^DD``
+  with ``D_Z = d``, same product ``D_Z g_Z``) and the
   three-term left side closes.
 """
 
@@ -50,7 +56,8 @@ def kappa_cartan(W: Expr, omega: Expr) -> Expr:
 
 
 def kappa_tilde(P: PoissonStructure, eta: Expr, V: Expr) -> Expr:
-    """``𝒦̃_η V = [V, π♯η] − π♯(ℒ_V η)`` [paper eq (4.41)]."""
+    """``𝒦̃_η V = [V, π♯η] − π♯(ℒ_V η)`` [DD (6.6), second line;
+    DD (4.41) is the ℒ̃ formula]."""
     return Sum(
         LieBracketVF(V, SharpVF(P.pi, eta)),
         Neg(SharpVF(P.pi, _L(V, eta))),
@@ -58,7 +65,8 @@ def kappa_tilde(P: PoissonStructure, eta: Expr, V: Expr) -> Expr:
 
 
 def lie_tilde_vf(P: PoissonStructure, omega: Expr, V: Expr) -> Expr:
-    """``ℒ̃_ω V = [π♯ω, V] + π♯(ι_V dω)`` [paper eq (6.6)]."""
+    """``ℒ̃_ω V = [π♯ω, V] + π♯(ι_V dω)`` [DD (4.41) verbatim;
+    equivalently DD (6.6), first line, with ``𝒦_V = −ι_V d``]."""
     return Sum(
         LieBracketVF(SharpVF(P.pi, omega), V),
         SharpVF(P.pi, Act(Interior(V), d(omega))),
@@ -74,7 +82,7 @@ def prove_compat_condition_two(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """[eq (4.37)]: ``ℒ_{d̃ι̃_η U} μ + [dι_U η, μ]_π = 0`` evaluated
+    """[DD (4.37)]: ``ℒ_{d̃ι̃_η U} μ + [dι_U η, μ]_π = 0`` evaluated
     on ``Y`` — declaration-free."""
     from jacopy.packages.poisson.showcase import showcase_engine
 
@@ -128,6 +136,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
                     rhs=thm.rhs,
                     proof=thm.proof,
                     generality="instance",
+                    source=thm.source,  # copied from the cited record
                 ).with_structural_requires()
             )
             names.append(nm)
@@ -360,7 +369,7 @@ def prove_compat_condition_one(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """[eq (4.36), the DERIVATOR condition — PDF item 10f]:
+    """[DD (4.36), the DERIVATOR condition — PDF item 10f]:
 
         𝒟^Z_{ℒ_U}(η, μ) = ℒ_{𝒦̃_η U} μ + 𝒦_{𝒦̃_μ U} η
 
@@ -399,7 +408,7 @@ def prove_compat_condition_three_p1(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """[eq (4.38) at p = 1]: the ``𝔻_Z g_Z`` side vanishes by
+    """[DD (4.38) at p = 1]: the ``𝔻_Z g_Z`` side vanishes by
     alternation, leaving
 
         dι_{ℒ̃_ω W} η − dι_{d̃ι̃_η W} ω + dι_W [ω,η]_π = 0

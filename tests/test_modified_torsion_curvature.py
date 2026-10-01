@@ -1,5 +1,5 @@
 """Metric-affine package — Phase 4.E.2: the modified E-torsion ᴸT and
-the projected E-curvature ᴸ̂R [MC Def 3.7/3.11, Prop 3.2-3.4, Cor 3.3]
+the projected E-curvature ᴸ̂R [MC Def 3.7/3.11, Cor 3.2, Prop 3.3-3.4, Cor 3.3]
 — the main consumers of the Phase 3.E locality/projector machinery."""
 
 import pytest

@@ -1,7 +1,7 @@
 """Algebroid case — the flagship theorem (Phase 3.D):
 right-Leibniz + Leibniz-Jacobi ⇒ anchor morphism
-("every Leibniz algebroid is a pre-Leibniz algebroid", Bourbaki
-Thm 4.1)."""
+("every Leibniz algebroid is a pre-Leibniz algebroid", B Section 4,
+remark after Definition 4.1, via (4.4)+(4.6))."""
 
 import pytest
 

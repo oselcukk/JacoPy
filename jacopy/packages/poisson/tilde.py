@@ -32,6 +32,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple
 
 from jacopy.algebra.derivation import Act, degree_of
+from jacopy.bibliography import cite as bib_cite
 from jacopy.core.expr import Atom, Expr, Integer, Neg, Product, Sum
 from jacopy.core.multi_eval import MultiEval
 from jacopy.core.pairing import Pairing
@@ -165,6 +166,7 @@ class TildeInteriorActDefinition(Definition):
     ``ι̃_α f → 0``, ``ι̃_α X → ⟨X, α⟩``."""
 
     anchor = Act
+    source = bib_cite("Math595Midterm2026", "Question 3")
 
     def __init__(
         self,

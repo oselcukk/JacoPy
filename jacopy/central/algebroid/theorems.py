@@ -2,7 +2,7 @@
 Algebroid theorems (Phases 3.D + 3.E.3) — relations BETWEEN declared
 axioms.
 
-Phase 3.E.3 adds the metric-family results [B 4.11]:
+Phase 3.E.3 adds the metric-family results [B (4.11)]:
 
 * :func:`prove_right_leibniz_from_metric` — metric invariance (C1) +
   the E-metric's definitional non-degeneracy ⇒ right-Leibniz
@@ -15,7 +15,8 @@ Phase 3.E.3 adds the metric-family results [B 4.11]:
   locality term ``L(Df, u, v) = g(u, v)·g⁻¹(Df)``:
   ``[f·u, v] = f·[u,v] − ρ(v)(f)·u + g(u,v)·g⁻¹(Df)``.
 
-The flagship result of 3.D [B Thm 4.1]:
+The flagship result of 3.D [B Section 4, remark after Definition 4.1,
+via (4.4)+(4.6)]:
 
     **right-Leibniz + Leibniz-Jacobi  ⇒  anchor morphism**
     ("every Leibniz algebroid is a pre-Leibniz algebroid")
@@ -65,6 +66,7 @@ from jacopy.proof.expansion import ExpansionEngine
 from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import ExpandAndSimplify, ProofFailure
 from jacopy.proof.theorems import Theorem, TheoremBook, cite
+from jacopy.bibliography import cite as bib_cite
 from jacopy.central.algebroid.context import Algebroid, algebroid
 from jacopy.central.algebroid.engine import algebroid_engine
 from jacopy.central.algebroid.operators import jacobiator
@@ -395,8 +397,13 @@ name=f"anchor_morphism_{alg.name}_{u_name}_{v_name}",
             f"Leibniz-Jacobi ({alg.name})",
         ),
         notes=(
-            "Bourbaki Thm 4.1 route: J(u,v,f·w) = 0 expanded against "
-            "generic f and auxiliary section w"
+            "B Section 4, remark after Definition 4.1, via (4.4)+(4.6): "
+            "J(u,v,f·w) = 0 expanded against generic f and auxiliary "
+            "section w"
+        ),
+        source=bib_cite(
+            "CatalOzerDereliDogan2022",
+            "Section 4, remark after Definition 4.1",
         ),
     )
     theorem = theorem.with_structural_requires()  # Faz 8 step 3b: structural requirements
@@ -459,7 +466,7 @@ def prove_right_leibniz_from_metric(
     w: Optional[Expr] = None,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """[B 4.11, first identity] Prove
+    """[B (4.11), first identity] Prove
     ``[u, f·v] = ρ(u)(f)·v + f·[u,v]`` from metric invariance (C1)
     and the E-metric's definitional non-degeneracy.
 
@@ -528,6 +535,7 @@ def prove_right_leibniz_from_metric(
         owner=c1.owner,
         role=c1.role,
         key=c1.key,
+        source=c1.source,
     )
     n_a, steps_a = _normalize(after_c1, engine, registry)
     step_leg_a = ProofStep(
@@ -663,8 +671,11 @@ name=f"right_leibniz_{alg.name}_{u_name}_{v_name}_{f_name}",
             "non-degeneracy of g (agreement on generic section w)",
         ),
         notes=(
-            "B 4.11 first identity: ρ(u)(g(f·v, w)) expanded two ways "
+            "B (4.11) first identity: ρ(u)(g(f·v, w)) expanded two ways "
             "against a generic auxiliary section w"
+        ),
+        source=bib_cite(
+            "CatalOzerDereliDogan2022", "Eq. (4.11), first identity"
         ),
     )
     theorem = theorem.with_structural_requires()  # Faz 8 step 3b: structural requirements
@@ -680,18 +691,22 @@ def prove_left_leibniz_from_metric(
     w: Optional[Expr] = None,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """[B 4.11, second identity] Prove
+    """[B (4.11), second identity] Prove
     ``[f·u, v] = f·[u,v] − ρ(v)(f)·u + g(u,v)·g⁻¹(Df)`` on a metric
     algebroid — the left-Leibniz rule with the CONCRETE locality term
     ``L(Df, u, v) = g(u,v)·g⁻¹(Df)``.
 
     Route: (1) the symmetric part (C2) in equation form,
     ``[f·u, v] = −[v, f·u] + g⁻¹D g(f·u, v)`` (closes mechanically);
-    (2) the first [B 4.11] identity for ``[v, f·u]`` (derived and
+    (2) the first [B (4.11)] identity for ``[v, f·u]`` (derived and
     cited); (3) the final identity closes with both cited — the
     ``f``-cofactor bracket pair collects by C2 and the coboundary
     Leibniz splits ``g⁻¹D(f·g(u,v))``.
     """
+    from jacopy.central.algebroid.declarations import (
+        SymmetricPartDeclaration,
+    )
+
     if not isinstance(alg, Algebroid):
         raise TypeError(
             "prove_left_leibniz_from_metric expects an Algebroid"
@@ -738,6 +753,7 @@ name=f"symmetric_part_swap_{alg.name}_{f._repr_inner()}"
         proof=chain_c2,
         generality="generic-function",
         from_axioms=(f"symmetric part ({alg.name})",),
+        source=SymmetricPartDeclaration.source,
     )
     t_c2 = t_c2.with_structural_requires()  # Faz 8 step 3b: structural requirements
     step_c2 = ProofStep(
@@ -745,6 +761,7 @@ name=f"symmetric_part_swap_{alg.name}_{f._repr_inner()}"
         t_c2.rhs,
         rule="symmetric part (C2), equation form",
         justification="collection of the transposed bracket pair",
+        source=t_c2.source,
     )
     for s in chain_c2:
         step_c2.add_child(s)
@@ -757,8 +774,9 @@ name=f"symmetric_part_swap_{alg.name}_{f._repr_inner()}"
         t_rl.lhs,
         t_rl.rhs,
         rule=f"cite theorem: {t_rl.statement}",
-        justification="B 4.11 first identity, derived above",
+        justification="B (4.11) first identity, derived above",
         provenance_tag="theorem",
+        source=t_rl.source,
     )
     for s in chain_rl:
         step_rl.add_child(s)
@@ -817,7 +835,13 @@ name=f"left_leibniz_{alg.name}_{f_name}_{u_name}_{v_name}",
             f"metric invariance ({alg.name})",
             "non-degeneracy of g (agreement on generic section w)",
         ),
-        notes="B 4.11 second identity",
+        notes="B (4.11) second identity",
+        source=(
+            bib_cite(
+                "CatalOzerDereliDogan2022", "Eq. (4.11), second identity"
+            ),
+            bib_cite("DereliDogan2020", "Proposition 4.1"),
+        ),
     )
     theorem = theorem.with_structural_requires()  # Faz 8 step 3b: structural requirements
     return chain, theorem
@@ -832,7 +856,7 @@ def prove_locality_anchor_annihilation(
     h: Optional[Expr] = None,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """[MC §3] Prove ``ρ(L(Df, u, v)) = 0`` on a local pre-Leibniz
+    """[MC Section 3, remark before Definition 3.10] Prove ``ρ(L(Df, u, v)) = 0`` on a local pre-Leibniz
     algebroid — the locality values at coboundary forms lie in the
     anchor's kernel (the consistency fact behind the locality
     projector's ``Df`` case).
@@ -905,6 +929,7 @@ def prove_locality_anchor_annihilation(
         owner=am.owner,
         role=am.role,
         key=am.key,
+        source=am.source,
     )
     n_a, steps_a = _normalize(Act(after_am, h), _engine(), registry)
     step_leg_a = ProofStep(
@@ -1008,7 +1033,13 @@ name=(
             f"left-Leibniz ({alg.name})",
             f"anchor morphism ({alg.name})",
         ),
-        notes="MC §3: (ρ ∘ L)(Df, u, v) = 0 on local pre-Leibniz",
+        notes=(
+            "MC Section 3, remark before Definition 3.10: "
+            "(ρ ∘ L)(Df, u, v) = 0 on local pre-Leibniz"
+        ),
+        source=bib_cite(
+            "DereliDogan2020", "Section 3, remark before Definition 3.10"
+        ),
     )
     theorem = theorem.with_structural_requires()  # Faz 8 step 3b: structural requirements
     return chain, theorem

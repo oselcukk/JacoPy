@@ -17,7 +17,8 @@ Theorems mechanized here:
   almost-Leibniz with locality operator ``L(df,u,v) =
   𝕃_{df}(g(u,v))``: the C∞-defect of ``S = 𝔻g`` is exactly the
   symbol term (pure ``𝔻``-first-order + ``g``-bilinearity);
-* **(7.2)** — the R-VALUED generalization of the B 4.11 tactic:
+* **(7.2)** — the R-VALUED generalization of the [B (4.11)] tactic
+  (its first line: right-Leibniz from metric invariance + non-degeneracy):
   metric invariance (7.8) + the derivation law (7.3) + the
   non-degeneracy of ``g`` imply the RIGHT-LEIBNIZ rule
   ``[u, f·v] = f[u,v] + ρ(u)(f)·v`` (defect-free);
@@ -46,6 +47,7 @@ from jacopy.proof.expansion import Definition, ExpansionEngine
 from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import ProofFailure
 from jacopy.proof.theorems import Theorem
+from jacopy.bibliography import cite
 from jacopy.central.calculus.scalars import is_scalar_function
 from jacopy.central.algebroid.context import Algebroid, algebroid
 from jacopy.central.algebroid.engine import algebroid_engine
@@ -151,6 +153,7 @@ class BMetricBilinearityDefinition(Definition):
     """C∞-bilinearity of the R-valued metric (both slots)."""
 
     name = "R-valued metric bilinearity: g(fu+w, v) = f·g(u,v) + g(w,v)"
+    source = cite("CatalOzerDereliDogan2022", "Section 3, definition of an R-valued E-metric")
     anchor = BMetric
 
     def __init__(
@@ -192,6 +195,7 @@ class BMetricSymmetryDefinition(Definition):
     """``g(v, u) → g(u, v)`` (canonical slot order by repr)."""
 
     name = "R-valued metric symmetry: g(v,u) = g(u,v)"
+    source = cite("CatalOzerDereliDogan2022", "Section 3, definition of an R-valued E-metric")
     anchor = BMetric
 
     def matches(self, expr: Expr) -> bool:
@@ -212,6 +216,7 @@ class BDopFirstOrderDefinition(Definition):
     """``𝔻(f·r) = f·𝔻r + 𝕃_{df} r`` (+ ℝ-additivity) — eq (6.8)."""
 
     name = "𝔻 first-order with symbol 𝕃: 𝔻(fr) = f𝔻r + 𝕃_df r"
+    source = cite("CatalOzerDereliDogan2022", "Eq. (6.8)")
     anchor = BDop
 
     def __init__(
@@ -245,6 +250,7 @@ class BSymbolLLinearityDefinition(Definition):
     """C∞-linearity of ``𝕃_{df}`` in its R-slot."""
 
     name = "𝕃 C∞-linearity: 𝕃_df(fr + s) = f·𝕃_df r + 𝕃_df s"
+    source = cite("CatalOzerDereliDogan2022", "Section 6, text after Eq. (6.8)")
     anchor = BSymbolL
 
     def __init__(
@@ -283,6 +289,10 @@ class BLieREDerivationDefinition(Definition):
     name = (
         "ℒ^R derivation with anchor symbol (7.3): "
         "ℒ^R_ρu(fr) = fℒ^R_ρu r + ρ(u)(f)·r"
+    )
+    source = (
+        cite("CatalOzerDereliDogan2022", "Eq. (7.3)"),
+        cite("CatalOzerDereliDogan2022", "Definition 7.1"),
     )
     anchor = BLieRE
 
@@ -330,6 +340,7 @@ class BourbakiInvarianceDeclaration(Definition):
     (the ℒ^R node disappears)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite("CatalOzerDereliDogan2022", "Definition 7.1, Eq. (7.8)")
 
     anchor = BLieRE
 
@@ -478,7 +489,8 @@ def prove_locality_is_symbol(
             "R-valued metric C∞-bilinearity (definitional)",
             "𝔻 first-order with symbol 𝕃 (6.8)",
         ),
-        notes="pre-metric-bourbaki.pdf Cor 6.1",
+        notes="arXiv:2210.00548 Corollary 6.1, Eq. (6.12)",
+        source=cite("CatalOzerDereliDogan2022", "Corollary 6.1, Eq. (6.12)"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -541,7 +553,7 @@ def prove_right_leibniz_from_r_invariance(
     w: Optional[Expr] = None,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """(7.2) — the R-VALUED generalization of B 4.11: the declared
+    """(7.2) — the R-VALUED generalization of [B (4.11)]: the declared
     invariance (7.8) + the derivation law (7.3) + non-degeneracy of
     ``g`` imply the defect-free RIGHT-LEIBNIZ rule
 
@@ -642,7 +654,7 @@ def prove_right_leibniz_from_r_invariance(
             "[u, f·v] = f·[u,v] + ρ(u)(f)·v on "
             f"{alg.name} ((7.2): R-valued metric invariance + "
             "anchor-symbol derivation + non-degeneracy imply "
-            "right-Leibniz — the generalized B 4.11)"
+            "right-Leibniz — the generalized B (4.11))"
         ),
         lhs=target,
         rhs=rhs,
@@ -654,7 +666,8 @@ def prove_right_leibniz_from_r_invariance(
             "non-degeneracy of the R-valued metric "
             "(definitional)",
         ),
-        notes="pre-metric-bourbaki.pdf eq (7.2)",
+        notes="arXiv:2210.00548 Section 7, discussion around Eq. (7.2)",
+        source=cite("CatalOzerDereliDogan2022", "Section 7, discussion around Eq. (7.2)"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -815,6 +828,13 @@ def prove_left_leibniz_bourbaki(
             "(7.2) right-Leibniz (proven)",
             "Cor 6.1 (proven)",
         ),
-        notes="pre-metric-bourbaki.pdf Prop 6.1 / (7.9) route",
+        notes=(
+            "arXiv:2210.00548 Proposition 6.1 (2 ⟹ 1) route; Eq. (7.9) "
+            "USES the left-Leibniz rule and is not its derivation"
+        ),
+        source=(
+            cite("CatalOzerDereliDogan2022", "Proposition 6.1 (2 ⟹ 1)"),
+            cite("CatalOzerDereliDogan2022", "Corollary 6.1"),
+        ),
     ).with_structural_requires()
     return chain, theorem

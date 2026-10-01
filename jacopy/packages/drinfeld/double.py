@@ -1,10 +1,10 @@
 """
 The Drinfel'd double bracket on ``E = A ⊕ Z`` (Phase 6.C) —
-drinfeld paper [arXiv:2312.06584] eqs (4.11), (4.17); PDF items 13
+drinfeld paper [DD = arXiv:2312.06584] eqs DD (4.11), (4.17); PDF items 13
 and 14 (the Dorfman bracket is BORN here as the standard double).
 
 Sections of ``E = TM ⊕ T*M`` are represented component-wise as pairs
-``(U, ω)``; the doubled bracket [eq (4.17)] splits into a vector and
+``(U, ω)``; the doubled bracket [DD (4.17)] splits into a vector and
 a form component. Two instantiations:
 
 * **Standard double** (zero tilde side — the trivial Lie-bialgebroid
@@ -73,13 +73,14 @@ def dorfman_double(
 def poisson_double(
     P, U: Expr, omega: Expr, V: Expr, eta: Expr
 ) -> Tuple[Expr, Expr]:
-    """The POISSON (triangular/LWX) double [eq (4.17) with the
+    """The POISSON (triangular/LWX) double [DD (4.17) with the
     π-induced tilde calculus]:
 
         vector: [U,V] + ℒ̃_ω V − ℒ̃_η U + d̃ι̃_η U,
         form:   [ω,η]_π + ℒ_U η − ℒ_V ω + dι_V ω,
 
-    with ``ℒ̃_ω V = [π♯ω, V] + π♯(ι_V dω)`` and ``d̃ = −π♯d``."""
+    with ``ℒ̃_ω V = [π♯ω, V] + π♯(ι_V dω)`` [DD (4.41)] and
+    ``d̃ = −π♯d`` [DD (6.7) at p = 1]."""
     from jacopy.packages.drinfeld.poisson_bialgebroid import (
         lie_tilde_vf,
     )
@@ -274,7 +275,9 @@ def _poisson_double_engine(P, registry):
 
 def poisson_double_anchor_action(P, U: Expr, omega: Expr, f: Expr) -> Expr:
     """``ρ(U+ω)(f) = U(f) + (π♯ω)(f)`` — the anchor of the LWX double
-    is the SUM of the two anchors [eq (4.19)]."""
+    is the SUM of the two anchors [DD (4.8): ρ_E = ρ_A ⊕ ρ_Z; explicit
+    form ρ_E(U+ω) = U + Πω in DD (6.25)]. (DD (4.19) is the double's
+    metric, not its anchor.)"""
     from jacopy.packages.poisson.core import SharpVF
 
     return Sum(Act(U, f), Act(SharpVF(P.pi, omega), f))
@@ -416,7 +419,8 @@ def prove_poisson_double_right_leibniz_vec(
 
 def lie_tilde_nambu(N, omega: Expr, W: Expr) -> Expr:
     """``ℒ̃_ω W = [Πω, W]_Lie + Π(ι_W dω)`` — the Nambu tilde Lie
-    derivative on vector fields [drinfeld eq (6.6); the p ≥ 2
+    derivative on vector fields [DD (6.6) with 𝒦_V ω = −ι_V dω
+    (DD footnote 8), written as in DD (4.41); the p ≥ 2
     generalization of :func:`lie_tilde_vf`]."""
     return Sum(
         lie_bracket(N.sharp_vf(omega), W),
@@ -427,8 +431,8 @@ def lie_tilde_nambu(N, omega: Expr, W: Expr) -> Expr:
 def nambu_double(
     N, U: Expr, omega: Expr, V: Expr, eta: Expr
 ) -> Tuple[Expr, Expr]:
-    """The NAMBU double ``[U+ω, V+η]`` on ``TM ⊕ Λᵖ T*M`` [eq (4.17)
-    with the Π-induced tilde calculus (6.6)-(6.7)]:
+    """The NAMBU double ``[U+ω, V+η]`` on ``TM ⊕ Λᵖ T*M`` [DD (4.17)
+    with the Π-induced tilde calculus DD (6.6)-(6.7)]:
 
         vector: [U,V] + ℒ̃_ω V − ℒ̃_η U + d̃ι̃_η U,
         form:   [ω,η]_Kos + ℒ_U η − ℒ_V ω + dι_V ω,
@@ -476,8 +480,8 @@ def _nambu_double_engine(N, registry):
 
 def nambu_double_anchor_action(N, U: Expr, omega: Expr, f: Expr) -> Expr:
     """``ρ(U+ω)(f) = U(f) + (Πω)(f)`` — the anchor of the Nambu
-    double is the sum of the two anchors [eq (D.4): Π as a map from
-    p-forms to TM is the Z-side anchor]."""
+    double is the sum of the two anchors [DD (D.4): Π as a map from
+    p-forms to TM is the Z-side anchor; explicit form DD (6.25)]."""
     return Sum(Act(U, f), Act(N.sharp_vf(omega), f))
 
 
@@ -523,8 +527,17 @@ def prove_nambu_double_symmetric_part_form(
 ) -> ProofChain:
     """Form component of the same identity. For p ≥ 2 the Z-side
     (higher Koszul) bracket is Leibniz, not Lie — its symmetric part
-    contributes ``d g_Z(ω,η)`` with ``g_Z(ω,η) = ι_{Πω}η + ι_{Πη}ω``
-    [eq (6.17)]:
+    contributes ``d g_Z(ω,η)`` with ``g_Z(ω,η) = ι_{Πω}η + ι_{Πη}ω``.
+
+    NORMALISATION vs DD (6.17): the paper identifies
+    ``D_Z = ½ d`` and ``g_Z(ω,η) = 2(ι_{Πω}η + ι_{Πη}ω)`` ("the
+    factors ½ and 2 ... are crucial for the metric invariance
+    property"). The code absorbs both factors: ``D_Z = d`` and
+    ``g_Z = ½ g_Z^DD``, so the product ``D_Z g_Z`` (the symmetric part
+    proved here) is the paper's. A ``g_Z`` used ALONE is half the
+    paper's. In-repo inconsistency: :mod:`.poisson_bialgebroid` writes
+    the paper's ``g_Z = 2(…)`` (at p = 1 both vanish). Same convention
+    as :func:`~jacopy.packages.drinfeld.tilde_calculus.g_z_pairing`:
 
         form([e₁,e₂] + [e₂,e₁]) = d(ι_Uη + ι_Vω) + d g_Z(ω,η).
 
@@ -565,9 +578,9 @@ def prove_nambu_double_right_leibniz_vec(
 ) -> ProofChain:
     """Vector component of ``[e₁, f·e₂] = f[e₁,e₂] + (ρ(e₁)f)·e₂``
     with ``ρ(U+ω) = U + Πω``, acting on the probe function ``h``.
-    The mechanical content of (D.1)-(D.4): the ``Π(df ∧ ι_Uη)``
-    anomalies of ``ℒ̃_{fη}`` and ``d̃ι̃_{fη}`` cancel (D.3), and
-    ``ℒ̃_ω(fV)`` produces the ``(Πω)(f)·V`` anchor term (D.4).
+    The mechanical content of DD (D.1)-(D.4): the ``Π(df ∧ ι_Uη)``
+    anomalies of ``ℒ̃_{fη}`` and ``d̃ι̃_{fη}`` cancel (DD (D.3)), and
+    ``ℒ̃_ω(fV)`` produces the ``(Πω)(f)·V`` anchor term (DD (D.4)).
     Declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
 

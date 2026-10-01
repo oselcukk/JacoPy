@@ -1,6 +1,6 @@
 """
-The STANDARD Courant algebroid on ``TM ⊕ T*M`` (Phase 7.B; PDF item
-14b-d): the Dorfman bracket's remaining Courant axioms, the Courant
+The STANDARD Courant algebroid on ``TM ⊕ T*M`` (Phase 7.B; project
+directive item 14b-d): the Dorfman bracket's remaining Courant axioms, the Courant
 (skew) bracket, and the Dorfman↔Courant relation — all CONCRETE
 (component-wise on ``(vector, form)`` pairs), closing the loop with
 the ABSTRACT axiomatics of Phase 7.A.
@@ -14,7 +14,7 @@ right-Leibniz [C'3], the exact symmetric part ``x∘x = D(x,x)``
 * **[C'5]** invariance of the canonical pairing,
 * the **Courant bracket** ``[x,y]_C = [x,y]_D − D⟨x,y⟩₊`` with
   ``D(h) = (0, ½·dh)`` (the ``½`` is exactly Uchino's Remark 1 /
-  Prop 2.2 value: ``⟨Dh, V+η⟩₊ = ½ι_V dh = ½ρ(V+η)(h)``),
+  Proposition 2.2 value: ``⟨Dh, V+η⟩₊ = ½ι_V dh = ½ρ(V+η)(h)``),
 * its skew-symmetry and the relation theorem,
 * the LWX axiom **[C3]** for the Courant bracket — the Leibniz rule
   with the pairing defect ``−⟨x,y⟩·Df``, concrete here after being
@@ -38,6 +38,7 @@ from jacopy.core.expr import (
     Rational,
     Sum,
 )
+from jacopy.bibliography import cite
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.step import ProofStep
@@ -63,8 +64,8 @@ def _iota(X: Expr, x: Expr) -> Expr:
 
 def d_operator_std(h: Expr) -> Tuple[Expr, Expr]:
     """``D(h) = (0, ½·dh)`` — the standard double's coboundary,
-    normalized so that ``⟨Dh, x⟩₊ = ½ρ(x)(h)`` (Uchino Rem 1 /
-    Prop 2.2)."""
+    normalized so that ``⟨Dh, x⟩₊ = ½ρ(x)(h)`` (Uchino Remark 1 /
+    Proposition 2.2)."""
     return (Integer(0), Product(Rational(1, 2), d(h)))
 
 
@@ -103,6 +104,7 @@ def _component_theorem(
     *,
     from_axioms: Tuple[str, ...],
     notes: str,
+    source=None,
     rule_labels: Tuple[str, str] = (
         "vector component normalizes to 0",
         "form component normalizes to 0",
@@ -139,6 +141,7 @@ def _component_theorem(
         generality="generic-function",
         from_axioms=from_axioms,
         notes=notes,
+        source=source,
     ).with_structural_requires()
     return chain, theorem
 
@@ -173,6 +176,10 @@ def prove_anchor_morphism_std(
         notes=(
             "the vector component of the standard double is the "
             "Lie bracket by construction"
+        ),
+        source=(
+            cite("CatalOzerDereliDogan2022", "Eq. (4.2)"),
+            cite("Uchino2002", "Remark 2.3, axiom [C'2]"),
         ),
         rule_labels=(
             "anchor defect normalizes to 0",
@@ -219,8 +226,13 @@ def prove_dorfman_invariance_std(
             "Cartan calculus (magic formula, [ℒ,ι] commutator)",
         ),
         notes=(
-            "uchino.pdf [C'5]; the invariance that makes the "
-            "standard double a Courant algebroid"
+            "Uchino (2002) Remark 2.3, axiom [C'5]; B Eq. (4.2); the "
+            "invariance that makes the standard double a Courant "
+            "algebroid"
+        ),
+        source=(
+            cite("CatalOzerDereliDogan2022", "Eq. (4.2)"),
+            cite("Uchino2002", "Remark 2.3, axiom [C'5]"),
         ),
         rule_labels=(
             "invariance defect normalizes to 0",
@@ -236,7 +248,8 @@ def prove_courant_dorfman_relation(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """PDF 14d — the relation:
+    """Directive item 14d — the relation (Uchino Remark 2.2 writes it
+    as ``x∘y := [x,y] + D(x,y)``):
 
     ``[x, y]_C = [x, y]_D − D⟨x, y⟩₊``
 
@@ -251,7 +264,7 @@ def prove_courant_dorfman_relation(
     )
     return _component_theorem(
         "standard_courant_dorfman_relation",
-        "[x,y]_C = [x,y]_D − D⟨x,y⟩₊ on TM ⊕ T*M (PDF 14d)",
+        "[x,y]_C = [x,y]_D − D⟨x,y⟩₊ on TM ⊕ T*M (directive 14d)",
         [
             Sum(c_vec, Neg(d_vec), D_vec),
             Sum(c_form, Neg(d_form), D_form),
@@ -262,8 +275,13 @@ def prove_courant_dorfman_relation(
             "Courant/Dorfman bracket + pairing + D definitions",
         ),
         notes=(
-            "with D(h) = (0, ½dh); the ½ is the Uchino Rem 1 "
-            "normalization"
+            "with D(h) = (0, ½dh); the ½ is the Uchino Remark 1 "
+            "normalization; x∘y := [x,y] + D(x,y) as in Uchino "
+            "Remark 2.2"
+        ),
+        source=(
+            cite("Uchino2002", "Remark 1"),
+            cite("Uchino2002", "Remark 2.2"),
         ),
     )
 
@@ -292,7 +310,14 @@ def prove_courant_skew_std(
             "Courant bracket definition",
             "Cartan calculus",
         ),
-        notes="the LWX [C1]-side skew-symmetry, concrete",
+        notes=(
+            "the skew-symmetry of the LWX bracket (Uchino Section 1, "
+            "definition of a Courant algebroid), concrete"
+        ),
+        source=(
+            cite("Uchino2002", "Section 1, definition of a Courant algebroid"),
+            cite("LiuWeinsteinXu1997"),
+        ),
     )
 
 
@@ -361,6 +386,11 @@ def prove_courant_c3_lwx_std(
         notes=(
             "matches Uchino Prop 2.1(i) on the standard double"
         ),
+        source=(
+            cite("Uchino2002", "Section 1, axiom [C3]"),
+            cite("Uchino2002", "Proposition 2.1(i)"),
+            cite("LiuWeinsteinXu1997"),
+        ),
     )
 
 
@@ -399,7 +429,7 @@ def courant_t_scalar_std(
     mu: Expr,
 ) -> Expr:
     """``T(x,y,z) = ⅓·Σcyc ⟨[x,y]_C, z⟩₊`` — the LWX Jacobi
-    defect scalar."""
+    defect scalar (Uchino Section 1, after [C5])."""
     terms = []
     for (a, b, c, d_, e, g) in (
         (U, omega, V, eta, W, mu),
@@ -424,8 +454,8 @@ def prove_courant_jacobi_dt_std(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> Tuple[ProofChain, List[Theorem]]:
-    """The LWX axiom [C1] for the standard Courant bracket,
-    concretely:
+    """The LWX axiom [C1] (Uchino Section 1) for the standard Courant
+    bracket, concretely:
 
     ``[[x,y]_C, z]_C + [[y,z]_C, x]_C + [[z,x]_C, y]_C =
     D T(x,y,z)``

@@ -1,5 +1,5 @@
 """Phase 7.B.2f.1 — the Bourbaki pre-calculus quintet from the
-PRIMARY paper (pre-metric-bourbaki.pdf Def 9.1, Thm 9.1, Def 9.2
+PRIMARY paper (arXiv:2210.00548 Def 9.1, Thm 9.1, Def 9.2
 remark): abstract (R, Z) with R-valued structure, the standard
 construction's checks, and the Cartan instantiation."""
 

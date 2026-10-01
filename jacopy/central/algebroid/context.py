@@ -2,12 +2,15 @@
 The algebroid context: anchored vector bundles, the opaque algebroid
 bracket, and the coboundary map (PDF item 10a-c; Phase 3.A).
 
-Source papers (in-repo): ``metric-connection.pdf`` (MC; Dereli-Doğan,
-arXiv:2006.05957) and ``pre-metric-bourbaki.pdf`` (B; Çatal-Özer-
-Dereli-Doğan, arXiv:2210.00548). Definitions follow them exactly.
+Source papers (bibliography keys in :mod:`jacopy.bibliography`;
+the PDFs are local, untracked copies): MC = Dereli & Doğan,
+arXiv:2006.05957 (``DereliDogan2020``) and B = Çatal-Özer, Dereli &
+Doğan, arXiv:2210.00548 (``CatalOzerDereliDogan2022``). Definitions
+follow them exactly.
 
 An **anchored vector bundle** is a pair ``(E, ρ)`` with a bundle
-morphism ``ρ: E → TM`` [MC Def before 3.2]. Being a bundle morphism,
+morphism ``ρ: E → TM`` [MC Section 3, paragraph before Definition
+3.2; B Definition 3.1]. Being a bundle morphism,
 ``ρ`` is ``C^∞(M)``-linear **by definition** — that linearity is a
 definitional rule here, not a declared axiom. The anchor lets
 sections of ``E`` act on functions:
@@ -509,11 +512,12 @@ class MetricSharp(Derivation):
 #: rule that cites a theorem proved from one of these axioms fires only
 #: on a structure that declares the axiom.
 #:
-#: * ``bourbaki-invariance``: the R-valued metric invariance (7.8)
-#:   [pre-metric-Bourbaki Def 7.1].
-#: * ``courant-invariance``: the LWX pairing invariance [C5] [Uchino].
-#: * ``exact``: the sequence 0 → Z → E → TM → 0 (8.5) is exact, i.e.
-#:   ker ρ = im χ [pre-metric-Bourbaki Def 8.1].
+#: * ``bourbaki-invariance``: the R-valued metric invariance
+#:   [B Definition 7.1, Eq. (7.8)].
+#: * ``courant-invariance``: the LWX pairing invariance
+#:   [Uchino Section 1, axiom [C5]; original definition LWX 1997].
+#: * ``exact``: the sequence 0 → Z → E → TM → 0 is exact, i.e.
+#:   ker ρ = im χ [B Definition 8.1, Eq. (8.5)].
 DECLARATIONS = (
     "right-leibniz",
     "left-leibniz",
@@ -537,9 +541,9 @@ DECLARATIONS = (
 #:   right-Leibniz + Jacobi (the Phase 3.D theorem).
 #: * "metric" / "pre-courant" / "courant" do NOT include
 #:   "right-leibniz" — it follows from metric invariance + the
-#:   E-metric's definitional non-degeneracy [B 4.11, Phase 3.E.3].
+#:   E-metric's definitional non-degeneracy [B (4.11), Phase 3.E.3].
 #: * "courant" does NOT include "anchor-morphism" — it follows via
-#:   [B 4.11] + the 3.D theorem.
+#:   [B (4.11)] + the 3.D theorem.
 #:
 #: The metric family [B Def 4.2-4.4]: almost-Courant = almost-Leibniz
 #: + E-metric + symmetric part; metric = anchored + ℝ-bilinear +

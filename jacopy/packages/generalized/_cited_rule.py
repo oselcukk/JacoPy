@@ -1,9 +1,9 @@
 """
 Theorem-citing rewrite rules (audit 0B00E1B-FULL M1-4).
 
-A rule that rewrites by a PROVEN result (Uchino Prop 2.2, the (7.2)
-right-Leibniz, ...) is a citation, not a definitional unfolding: its
-steps must carry the cited :class:`~jacopy.proof.theorems.Theorem` so
+A rule that rewrites by a PROVEN result (Uchino Prop 2.2, the
+right-Leibniz of B Eq. (7.2), ...) is a citation, not a definitional
+unfolding: its steps must carry the cited :class:`~jacopy.proof.theorems.Theorem` so
 the theorem's own requirements (the declared axioms it was proved
 from) flow transitively into every result that uses the rule.
 

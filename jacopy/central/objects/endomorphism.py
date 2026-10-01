@@ -1,7 +1,7 @@
 """
 Invertible bundle endomorphisms (Phase 6.E.3) — the primitive behind
-the frame-change twist ``Ψ_m = [[m, 0], [0, m̃]]`` [2409.11973 eq
-(7.11)].
+the frame-change twist ``Ψ_m = [[m, 0], [0, m̃]]`` [TW (7.11),
+arXiv:2409.11973].
 
 An endomorphism pair is identified by NAME: ``EndoVF("m", X)`` is
 ``m(X) ∈ TM`` and ``EndoForm("m", ω)`` is ``m̃(ω) ∈ Λᵖ``; the
@@ -16,7 +16,7 @@ families give them semantics:
   ``m(m⁻¹(x)) → x`` (same name, opposite flags), on both sides.
 
 Everything else about ``Ψ_m`` (the conjugated brackets and calculus,
-(7.13)-(7.16)) is a theorem in :mod:`jacopy.packages.drinfeld.twist`.
+TW (7.13)-(7.16)) is a theorem in :mod:`jacopy.packages.drinfeld.twist`.
 The atoms are inert otherwise — an opaque automorphism has nothing
 more to expand into (honest-fail policy)."""
 

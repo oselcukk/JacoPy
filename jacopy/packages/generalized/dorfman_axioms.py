@@ -1,6 +1,7 @@
 """
 The ALTERNATIVE (Dorfman/Roytenberg) Courant axiomatics and its
-redundancies (Phase 7.A.2) [uchino.pdf Rem 2.3].
+redundancies (Phase 7.A.2) [Uchino 2002, Remark 2.3 — the
+alternative definition quoted from his ref. [4] = Roytenberg 1999].
 
 The non-skew form: a bilinear ``∘`` on ``ΓE`` with [C'1] (left
 Leibniz-Jacobi), [C'2] (anchor morphism), [C'3] (right Leibniz with
@@ -11,8 +12,8 @@ similar way"* — is stated WITHOUT proof in the paper. This module
 writes those proofs mechanically:
 
 * **[C'3]** — since [C'5] carries no D-terms it IS the Phase 3
-  metric-invariance axiom C1 [B 4.10], and the derivation is
-  literally the [B 4.11] tactic
+  metric-invariance axiom C1 [B Eq. (4.10)], and the derivation is
+  literally the [B Eq. (4.11)] tactic
   (:func:`~jacopy.central.algebroid.theorems.prove_right_leibniz_from_metric`):
   every metric algebroid is almost-Courant. The wrapper below only
   adds the Uchino framing.
@@ -34,6 +35,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
@@ -72,7 +74,7 @@ def prove_dorfman_c3_redundant(
 ) -> Tuple[ProofChain, Theorem]:
     """[C'3] is redundant: ``x∘(f·y) = f·(x∘y) + ρ(x)(f)·y`` from
     [C'5] + non-degeneracy — the defect-free Leibniz rule, because
-    [C'5] carries no D-terms. Mechanically this IS the [B 4.11]
+    [C'5] carries no D-terms. Mechanically this IS the [B Eq. (4.11)]
     two-leg tactic; Uchino's "in a similar way", already in the
     Phase 3 library."""
     chain, thm = prove_right_leibniz_from_metric(
@@ -95,9 +97,13 @@ def prove_dorfman_c3_redundant(
             "non-degeneracy of the pairing (definitional)",
         ),
         notes=(
-            "uchino.pdf Rem 2.3 closing remark; the derivation is "
-            "the B 4.11 tactic verbatim (every metric algebroid is "
+            "Uchino (2002) Remark 2.3 closing remark; the derivation is "
+            "the B Eq. (4.11) tactic verbatim (every metric algebroid is "
             "almost-Courant)"
+        ),
+        source=(
+            cite("Uchino2002", "Remark 2.3"),
+            cite("CatalOzerDereliDogan2022", "Eq. (4.11)"),
         ),
     ).with_structural_requires()
     return chain, theorem
@@ -127,8 +133,8 @@ def prove_dorfman_c2_redundant(
 ) -> Tuple[ProofChain, Theorem]:
     """[C'2] is redundant: ``ρ(x∘y)(f) = [ρ(x), ρ(y)](f)`` from
     [C'1] + the proven [C'3] + agreement on generators (the
-    Grabowski-Marmo pattern for the non-skew form; Uchino Rem 2.2
-    cites their Lie-algebroid result — here the engine writes the
+    Grabowski-Marmo pattern for the non-skew form; Uchino Remark 2.2
+    cites their Lie-algebroid result (his ref. [3]) — here the engine writes the
     Courant-side derivation):
 
     1. cite the [C'1] instance
@@ -365,8 +371,9 @@ def prove_dorfman_c2_redundant(
             "agreement on generators (generic section z)",
         ),
         notes=(
-            "uchino.pdf Rem 2.3 closing remark, written out: the "
+            "Uchino (2002) Remark 2.3 closing remark, written out: the "
             "paper says 'in a similar way' without proof"
         ),
+        source=cite("Uchino2002", "Remark 2.3"),
     ).with_structural_requires()
     return chain, theorem

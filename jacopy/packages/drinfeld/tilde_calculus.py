@@ -1,16 +1,16 @@
 """
 The Nambu tilde calculus IS a calculus — App D instantiation of the
-drinfeld paper [arXiv:2312.06584], eqs (D.5)-(D.13).
+drinfeld paper [DD = arXiv:2312.06584], eqs DD (D.5)-(D.13).
 
 The 6.D/6.E layers built the tilde elements ``ℒ̃`` (:func:`~jacopy.
 packages.drinfeld.double.lie_tilde_nambu`), ``ι̃_ω V = ι_V ω`` and
 ``d̃ = −Πd`` from a ``(p+1)``-vector Π. Here they are shown to
-satisfy the CALCULUS conditions (C.1)-(C.3)/(4.34) in their tilde
+satisfy the CALCULUS conditions DD (C.1)-(C.3)/(4.34) in their tilde
 instantiation:
 
-    (D.5)  ℒ̃_ω ℒ̃_η W − ℒ̃_η ℒ̃_ω W − ℒ̃_{[ω,η]_Kos} W = 0,
-    (D.6)  ℒ̃_ω 𝒦̃_η W − 𝒦̃_η ℒ̃_ω W − 𝒦̃_{[ω,η]_Kos} W = 0,
-    (D.7)  ℒ̃_ω 𝒦̃_η W + 𝒦̃_η 𝒦̃_ω W − 𝒦̃_{[ω,η]_Kos} W = 0,
+    DD (D.5)  ℒ̃_ω ℒ̃_η W − ℒ̃_η ℒ̃_ω W − ℒ̃_{[ω,η]_Kos} W = 0,
+    DD (D.6)  ℒ̃_ω 𝒦̃_η W − 𝒦̃_η ℒ̃_ω W − 𝒦̃_{[ω,η]_Kos} W = 0,
+    DD (D.7)  ℒ̃_ω 𝒦̃_η W + 𝒦̃_η 𝒦̃_ω W − 𝒦̃_{[ω,η]_Kos} W = 0,
 
 with ``𝒦̃_η = −ℒ̃_η + d̃ ι̃_η``. THE assumption is the fundamental
 identity in its bracket-morphism face (the paper: "Π is a morphism
@@ -22,7 +22,7 @@ of brackets"), consumed as the opt-in declaration
 — exactly ``R′ = 0`` (the 6.E R-twist). Without the declaration the
 conditions honestly FAIL with the R-twist as the residual; the Lie
 side enters through cited vector-field Jacobi instances (the repair
-loop). The simple Jacobi compatibility conditions (D.9), (D.12),
+loop). The simple Jacobi compatibility conditions DD (D.9), (D.12),
 (D.13) — the ones the paper closes by ``d² = 0`` / Cartan relations
 alone — are declaration-free.
 """
@@ -33,6 +33,7 @@ from typing import List, Optional, Tuple
 
 from jacopy.algebra.derivation import Act
 from jacopy.algebra.lie_bracket_vf import LieBracketVF
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
@@ -49,18 +50,18 @@ from jacopy.packages.poisson.nambu import (
 
 
 def iota_tilde(U: Expr, eta: Expr) -> Expr:
-    """``ι̃_η U := ι_U η`` — the tilde interior [eq (6.7)]."""
+    """``ι̃_η U := ι_U η`` — the tilde interior [DD (6.7)]."""
     return Act(Interior(U), eta)
 
 
 def d_tilde(N, x: Expr) -> Expr:
-    """``d̃ x := −Π d x`` — the tilde differential [eq (6.7)]."""
+    """``d̃ x := −Π d x`` — the tilde differential [DD (6.7)]."""
     return Neg(N.sharp_vf(d(x)))
 
 
 def kappa_tilde_nambu(N, eta: Expr, W: Expr) -> Expr:
-    """``𝒦̃_η W := −ℒ̃_η W + d̃ ι̃_η W`` [the (4.14) pattern on the
-    tilde side]."""
+    """``𝒦̃_η W := −ℒ̃_η W + d̃ ι̃_η W`` [DD (4.16), the tilde-side
+    counterpart of DD (4.14)]."""
     return Sum(
         Neg(lie_tilde_nambu(N, eta, W)),
         d_tilde(N, iota_tilde(W, eta)),
@@ -69,7 +70,7 @@ def kappa_tilde_nambu(N, eta: Expr, W: Expr) -> Expr:
 
 class NambuMorphismDeclaration(Definition):
     """DECLARED fundamental identity, bracket-morphism face
-    [drinfeld eq (6.9) / the vanishing of the 6.E R-twist]:
+    [DD (6.9) / the vanishing of the 6.E R-twist]:
 
         [Πω, Πη]_Lie → Π [ω, η]_Kos.
 
@@ -79,6 +80,7 @@ class NambuMorphismDeclaration(Definition):
     becomes a single sharp."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite("CatalOzerDoganYetismisoglu2024", "Eq. (6.9)")
 
     anchor = LieBracketVF
 
@@ -228,7 +230,7 @@ class FISharpPairingSwapDefinition(Definition):
     with [Πb,Πa] = −[Πa,Πb] and the Koszul symmetric part
     [a,b] + [b,a] = d g_Z(a,b) this forces Π(d g_Z(a,b)) = 0, i.e.
     Π(dι_{Πa}b) = −Π(dι_{Πb}a). THIS is the g_Z-family residual of
-    the (D.5)-(D.7) diagnosis — not an extra assumption, a derivable
+    the DD (D.5)-(D.7) diagnosis — not an extra assumption, a derivable
     face of the FI itself (found 2026-08-05 via the twisted-FI
     consistency residual)."""
 
@@ -317,7 +319,9 @@ class NambuSharpPairingEvalDefinition(Definition):
     At p = 1 it lets the canonical alternating sort merge ``⟨η,Πω⟩``
     with ``−⟨ω,Πη⟩`` (the g_Z degeneration); at p ≥ 2 on a
     decomposable coframe wedge it produces the multivector's frame
-    components (the (4.13) ↔ ⊛ bridge, 2026-09-10). Opaque p-forms
+    components (the E6-paper (4.13) ↔ ⊛ bridge, 2026-09-10; that paper
+    is not in the repository, label unverified — NOT DD (4.13), which
+    is the symmetric-part decomposition). Opaque p-forms
     stay inert (honest)."""
 
     anchor = None  # Pairing (set in __init__)
@@ -431,6 +435,8 @@ def _cite_fi_instances(engine, N, omega, eta, W, h, registry):
     from jacopy.packages.poisson.tilde import _normalized_by
 
     fi_key = _fi_key(engine, N)
+    # metadata of the licensing declaration (copied, never hand-typed)
+    fi_source = NambuMorphismDeclaration.source if fi_key is not None else None
     book = TheoremBook()
     names = []
     Pw = N.sharp_vf(omega)
@@ -477,10 +483,12 @@ def _cite_fi_instances(engine, N, omega, eta, W, h, registry):
                                     owner=N,
                                     role="assumption",
                                     key=fi_key,
+                                    source=fi_source,
                                 )
                             ]
                         ),
                         generality="instance",
+                        source=fi_source,
                     ).with_structural_requires(),
                     # a hand-built axiom-instance step (+ congruence) whose
                     # endpoints are not the record's sides: not a proof
@@ -548,7 +556,7 @@ def prove_tilde_calculus_condition_one(
     declare_fi: bool = True,
     max_steps: int = 30000,
 ) -> Tuple[ProofChain, List[Theorem]]:
-    """(D.5): ``ℒ̃_ω ℒ̃_η W − ℒ̃_η ℒ̃_ω W = ℒ̃_{[ω,η]_Kos} W`` —
+    """DD (D.5): ``ℒ̃_ω ℒ̃_η W − ℒ̃_η ℒ̃_ω W = ℒ̃_{[ω,η]_Kos} W`` —
     the tilde Lie derivatives represent the Koszul bracket. Needs
     the declared FI (``declare_fi=False`` fails honestly with the
     R-twist residual); the Lie side enters as cited VF-Jacobi
@@ -592,8 +600,8 @@ def prove_tilde_calculus_condition_two(
     declare_fi: bool = True,
     max_steps: int = 30000,
 ) -> Tuple[ProofChain, List[Theorem]]:
-    """(D.6): ``ℒ̃_ω 𝒦̃_η W − 𝒦̃_η ℒ̃_ω W = 𝒦̃_{[ω,η]_Kos} W``.
-    Same assumption structure as (D.5)."""
+    """DD (D.6): ``ℒ̃_ω 𝒦̃_η W − 𝒦̃_η ℒ̃_ω W = 𝒦̃_{[ω,η]_Kos} W``.
+    Same assumption structure as DD (D.5)."""
     node = Act(
         Sum(
             lie_tilde_nambu(
@@ -635,8 +643,8 @@ def prove_tilde_calculus_condition_three(
     declare_fi: bool = True,
     max_steps: int = 30000,
 ) -> Tuple[ProofChain, List[Theorem]]:
-    """(D.7): ``ℒ̃_ω 𝒦̃_η W + 𝒦̃_η 𝒦̃_ω W = 𝒦̃_{[ω,η]_Kos} W``.
-    Same assumption structure as (D.5)."""
+    """DD (D.7): ``ℒ̃_ω 𝒦̃_η W + 𝒦̃_η 𝒦̃_ω W = 𝒦̃_{[ω,η]_Kos} W``.
+    Same assumption structure as DD (D.5)."""
     node = Act(
         Sum(
             lie_tilde_nambu(
@@ -679,7 +687,7 @@ def prove_jacobi_compat_d9(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """(D.9) [the second Jacobi compatibility (4.37) in tilde
+    """DD (D.9) [the second Jacobi compatibility DD (4.37) in tilde
     instantiation]:
 
         ℒ_{d̃ι̃_η U} μ + [dι_U η, μ]_Kos + 𝒦_{Πμ}(dι_U η) = 0
@@ -719,7 +727,7 @@ def prove_jacobi_compat_d12(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """(D.12) [the second dual condition in (4.40)]:
+    """DD (D.12) [the second dual condition in DD (4.40)]:
 
         ℒ̃_{dι_V ω} W + [d̃ι̃_ω V, W]_Lie = 0
 
@@ -756,7 +764,7 @@ def prove_jacobi_compat_d13(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """(D.13) [the third dual condition in (4.40), ``g_A = 0``]:
+    """DD (D.13) [the third dual condition in DD (4.40), ``g_A = 0``]:
 
         d̃ι̃_{ℒ_U μ} V − d̃ι̃_{dι_V μ} U + d̃ι̃_μ [U,V]_Lie = 0
 
@@ -802,7 +810,7 @@ def prove_jacobi_compat_d11(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> Tuple[ProofChain, List[Theorem]]:
-    """(D.11) [the first dual Jacobi compatibility in (4.40)]: the
+    """DD (D.11) [the first dual Jacobi compatibility in DD (4.40)]: the
     derivator of ``ℒ̃_ω`` over the Lie bracket is measured by the
     ``𝒦``-twisted tilde operators,
 
@@ -843,8 +851,13 @@ def prove_jacobi_compat_d11(
 
 
 def g_z_pairing(N, a: Expr, b: Expr) -> Expr:
-    """``g_Z(a, b) := ι_{Πa} b + ι_{Πb} a`` — the symmetric Z-metric
-    [eq (6.17)]."""
+    """``g_Z(a, b) := ι_{Πa} b + ι_{Πb} a`` — the symmetric Z-metric,
+    HALF of DD (6.17)'s ``g_Z = 2(ι_{Πω}η + ι_{Πη}ω)``: the code pairs it
+    with ``D_Z = d`` instead of the paper's ``D_Z = ½ d`` (DD (6.17)),
+    so every ``D_Z g_Z`` product agrees with the paper while a bare
+    ``g_Z`` is ½ of it. :mod:`.poisson_bialgebroid` uses the paper's
+    factor 2 (in-repo inconsistency, harmless at p = 1 where both
+    vanish)."""
     return Sum(
         Act(Interior(N.sharp_vf(a)), b),
         Act(Interior(N.sharp_vf(b)), a),
@@ -860,7 +873,7 @@ def prove_jacobi_compat_d8(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(D.8) [the first Jacobi compatibility (4.36) in tilde
+    """DD (D.8) [the first Jacobi compatibility DD (4.36) in tilde
     instantiation]: the Z-derivator of ``ℒ_U`` over the higher
     Koszul bracket is measured by the ``𝒦̃``-twisted operators,
 
@@ -902,8 +915,10 @@ def prove_jacobi_compat_d10(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(D.10) [the third Jacobi compatibility (4.38) in tilde
-    instantiation, with the ``g_Z`` metric and ``𝔻_Z = d``]:
+    """DD (D.10) [the third Jacobi compatibility DD (4.38) in tilde
+    instantiation, with the ``g_Z`` metric and ``𝔻_Z = d`` — the code's
+    normalisation; the product ``𝔻_Z g_Z`` equals the paper's
+    ``D_Z g_Z`` with DD (6.17) ``D_Z = ½ d``, ``g_Z = 2(…)``]:
 
         dι_{ℒ̃_ω W} η − dι_{d̃ι̃_η W} ω + dι_W [ω,η]_Kos
           + d g_Z(𝒦_W ω, η) − d g_Z(dι_W η, ω) = 0.

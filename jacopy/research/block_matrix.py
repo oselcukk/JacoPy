@@ -14,8 +14,14 @@ structure (sums, scalar multiples, negation, composition); ``0`` and
 Inverses are computed exactly for UNIPOTENT block matrices
 (identity diagonal, strictly block-triangular off-diagonal): with
 ``N = Ψ − 1`` nilpotent, ``Ψ⁻¹ = 1 − N + N² − … ± N^{n−1}``. This covers
-every twist of [2409.11973 §7] and the E₆ rotation (4.10)–(4.12); a
-non-unipotent matrix must be inverted by the user (``inverse=``).
+the UNIPOTENT twists of TW §7 [arXiv:2409.11973] — the B-type (lower)
+and Π/β-type (upper) shapes Ψ_B, Ψ_Π of TW (7.11) and products of
+shapes on the SAME side (a mixed product Ψ_Π Ψ_B has diagonal 1 + ΠB
+and is not unipotent) — and the E₆ rotation [E6 paper (4.10)–(4.12);
+unidentified paper, not in the repository, unverified]. It does NOT cover every
+twist of TW §7: the frame change Ψ_m = diag(m, m̃) of TW (7.11) and a
+general Ψ of TW (7.4) are not unipotent; such a matrix must be
+inverted by the user (``inverse=``).
 """
 
 from __future__ import annotations

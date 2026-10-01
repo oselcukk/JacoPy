@@ -5,9 +5,12 @@
 (incl. the Cartan magic formula), while the conditional ones close
 exactly under their axioms: ``d_E²=0`` on functions ⟺ anchor
 morphism; on 1-forms it is the LIE algebroid theorem (antisymmetric +
-Jacobi + morphism). BC numbering follows the Bourbaki pre-calculus
-axiom sheet (BC4 checked against the original arXiv:2210.00548
-Def 9.1, not the transcription)."""
+Jacobi + morphism). The labels BC1–BC9 are a PROJECT-INTERNAL numbering
+taken from the literatur2.pdf transcription; they do NOT occur in
+Çatal-Özer, Dereli & Doğan (2022) [arXiv:2210.00548], which has no
+"Bourbaki calculus" (only a pre-calculus, Definition 9.1; footnote 13)
+and no Theorem 9.3 (audit M8-3). Only BC4's content was checked against
+the paper: it is law 2 of ℒ^Z in Definition 9.1."""
 
 import pytest
 

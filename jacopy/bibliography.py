@@ -229,7 +229,7 @@ BIBLIOGRAPHY = {
             volume="69",
             pages="61",
             arxiv="math/0312524",
-            secondary="Çatal-Özer et al. (2025) ref. [90] (no local PDF)",
+            secondary="Çatal-Özer et al. (2025) ref. [67]; Çatal-Özer et al. (2024) ref. [90] (no local PDF)",
             missing=("issue", "last page", "doi"),
         ),
         _r(
@@ -243,7 +243,7 @@ BIBLIOGRAPHY = {
             volume="30",
             article_number="1550097",
             arxiv="1408.2649",
-            secondary="Çatal-Özer et al. (2025) ref. [56]; Çatal-Özer et al. (2024) ref. [95] (no local PDF)",
+            secondary="Çatal-Özer et al. (2024) ref. [56]; Çatal-Özer et al. (2025) ref. [95] (no local PDF)",
             missing=("issue", "doi"),
         ),
         _r(

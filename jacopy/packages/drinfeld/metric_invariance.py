@@ -1,39 +1,40 @@
 """
-Metric-invariance compatibility conditions (Phase 6.I.1) — App D
-eqs (D.14)-(D.19) [the (4.44)-(4.50) family in tilde
-instantiation]: the ``g_Z`` metric layer born in 6.D/6.F closes the
-metric-invariance axis of the bialgebroid programme.
+Metric-invariance compatibility conditions (Phase 6.I.1) — DD App D
+[DD = arXiv:2312.06584] eqs DD (D.14)-(D.19) [the DD (4.44)-(4.50)
+family in tilde instantiation]: the ``g_Z`` metric layer born in
+6.D/6.F closes the metric-invariance axis of the bialgebroid programme.
 
-* **(D.14)** — the Z-side invariance: the metric-invariance operator
+* **DD (D.14)** — the Z-side invariance: the metric-invariance operator
   of ``Z = Λᵖ T*M`` is ``ℒ̃_ω = ℒ_{ρ_Z(ω)} = ℒ_{Πω}``,
 
       g_Z([ω,η]_Kos, μ) + g_Z(η, [ω,μ]_Kos) = ℒ_{Πω} g_Z(η,μ).
 
-* **(D.16)** — the A-side mixing condition is the lie-iota Cartan
+* **DD (D.16)** — the A-side mixing condition is the lie-iota Cartan
   relation: ``ℒ_U ι_V μ = ι_{[U,V]} μ + ι_V ℒ_U μ``.
 
-* **(D.17)** — the A-invariance of ``g_Z`` carries exact ``𝒦̃``
+* **DD (D.17)** — the A-invariance of ``g_Z`` carries exact ``𝒦̃``
   corrections:
 
       ℒ_U g_Z(η,μ) = g_Z(ℒ_Uη, μ) + g_Z(η, ℒ_Uμ)
                      + ι_{𝒦̃_η U} μ + ι_{𝒦̃_μ U} η.
 
-* **(D.18)** — the dual mixing condition with the tilde Lie
+* **DD (D.18)** — the dual mixing condition with the tilde Lie
   derivative:
 
       ℒ_{Πω} ι_W η = ι_W ℒ_{Πω} η + ι_{ℒ̃_ω W} η
                      − ι_{Π(ι_W dω)} η.
 
-* **(D.19) / Claim 6** — the DOUBLE-level metric invariance: the
+* **DD (D.19) / Claim 6** — the DOUBLE-level metric invariance: the
   operator is the Lie derivative along the TOTAL anchor,
 
       ℒ_{U₁+Πω₁} g_E(e₂, e₃) = g_E([e₁,e₂], e₃) + g_E(e₂, [e₁,e₃]),
 
-  with ``g_E(e₂,e₃) = ι_{U₂}η₃ + ι_{U₃}η₂ + g_Z(η₂,η₃)`` and
-  ``[·,·]`` the Nambu double. The declared FI enters exactly where
-  the paper's derivation invokes the bracket morphism (sharp-sharp
-  brackets in the cross terms); the FISharpPairingSwap consequence
-  handles the ``Π(d g_Z)`` faces.
+  with ``g_E(e₂,e₃) = ι_{U₂}η₃ + ι_{U₃}η₂ + g_Z(η₂,η₃)`` (½ of the
+  summed DD (6.20) components in the code's ``g_Z`` normalisation —
+  see :func:`double_metric`) and ``[·,·]`` the Nambu double. The
+  declared FI enters exactly where the paper's derivation invokes
+  the bracket morphism (sharp-sharp brackets in the cross terms); the
+  FISharpPairingSwap consequence handles the ``Π(d g_Z)`` faces.
 """
 
 from __future__ import annotations
@@ -95,9 +96,9 @@ def prove_z_metric_invariance(
     declare_fi: bool = True,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(D.14): ``g_Z([ω,η]_Kos, μ) + g_Z(η, [ω,μ]_Kos) =
+    """DD (D.14): ``g_Z([ω,η]_Kos, μ) + g_Z(η, [ω,μ]_Kos) =
     ℒ_{Πω} g_Z(η,μ)`` — the Z-side metric-invariance operator is
-    ``ℒ_{Πω}`` (D.15). Uses the declared FI where the paper invokes
+    ``ℒ_{Πω}`` DD (D.15). Uses the declared FI where the paper invokes
     the bracket morphism. Evaluated on ``p−1`` slots (scalar at
     p = 1: pass ``slots=[]`` … handled by the ``_ev`` helper via a
     single probe)."""
@@ -128,7 +129,7 @@ def prove_a_mixing_condition(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """(D.16): ``ℒ_U ι_V μ = ι_{[U,V]} μ + ι_V ℒ_U μ`` — the A-side
+    """DD (D.16): ``ℒ_U ι_V μ = ι_{[U,V]} μ + ι_V ℒ_U μ`` — the A-side
     mixing condition IS the lie-iota Cartan relation.
     Declaration-free."""
     from jacopy.central.tangent.lie_bracket import lie_bracket
@@ -154,7 +155,7 @@ def prove_a_invariance_of_gz(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(D.17): the A-invariance of ``g_Z`` with its exact ``𝒦̃``
+    """DD (D.17): the A-invariance of ``g_Z`` with its exact ``𝒦̃``
     corrections,
 
         ℒ_U g_Z(η,μ) = g_Z(ℒ_Uη, μ) + g_Z(η, ℒ_Uμ)
@@ -185,12 +186,20 @@ def prove_dual_mixing_condition(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(D.18): the dual mixing condition,
+    """DD (D.18): the dual mixing condition,
 
         ℒ_{Πω} ι_W η = ι_W ℒ_{Πω} η + ι_{ℒ̃_ω W} η
                        − ι_{Π(ι_W dω)} η.
 
-    Declaration-free (lie-iota + the ℒ̃ definition)."""
+    Declaration-free (lie-iota + the ℒ̃ definition).
+
+    Citation caveat: the printed DD (D.18) mixes ``V`` and ``W`` (its
+    left side contracts with ``ι_V``, its right side is
+    ``2ℒ_{Πω} ι_W η``) and carries the paper's ``g_Z`` factor 2, so it
+    does not match this identity term by term. Expanding ``ℒ̃_ω W``
+    (DD (6.6)) the statement here is the standard Cartan identity
+    ``ℒ_{Πω} ι_W η = ι_W ℒ_{Πω} η + ι_{[Πω,W]} η`` — the content the
+    first dual condition of DD (4.50) needs."""
     node = _maybe_ev(
         Sum(
             _L(N.sharp_vf(omega), _iota(W, eta)),
@@ -207,8 +216,14 @@ def double_metric(
     N, U2: Expr, eta2: Expr, U3: Expr, eta3: Expr
 ) -> Expr:
     """``g_E(e₂, e₃) = ι_{U₂}η₃ + ι_{U₃}η₂ + g_Z(η₂, η₃)`` — the
-    form-valued metric of the Nambu double [the (5.22) components
-    that survive on ``TM ⊕ Λᵖ``]."""
+    form-valued metric of the Nambu double. Source: DD (6.20),
+    ``g_E = 0 ⊕ (ι̃_ωV + ι̃_ηU) ⊕ 2(ι_{Πω}η + ι_{Πη}ω) ⊕ (ι_Uη + ι_Vω)``
+    (equivalently TW (5.22) with ``g_A = g_R = g_H = 0``; "(5.22)" is a
+    TW label — DD has no equation (5.22)). The code keeps ONE form,
+    not the four bundle components: since ``ι̃_ωV = ι_Vω`` the two pairing
+    components coincide, and with the code's ``g_Z`` (½ of DD (6.17))
+    this ``g_E`` is exactly ½ × (sum of the four DD (6.20)
+    components). Invariance is homogeneous, so the factor is harmless."""
     return Sum(
         _iota(U2, eta3),
         _iota(U3, eta2),
@@ -230,7 +245,7 @@ def prove_double_metric_invariance(
     declare_fi: bool = True,
     max_steps: int = 90000,
 ) -> ProofChain:
-    """(D.19) / **Claim 6**: the metric-invariance operator of the
+    """DD (D.19) / **Claim 6**: the metric-invariance operator of the
     double is the Lie derivative along the TOTAL anchor,
 
         ℒ_{U₁+Πω₁} g_E(e₂,e₃)

@@ -17,7 +17,7 @@ defining properties:
 
 For ``ω = Df`` the two compose to ``ρ(L(Df,u,v)) = 0`` — which is NOT
 an extra assumption: on a local pre-Leibniz algebroid it is a theorem
-[MC §3], mechanized as
+[MC Section 3, remark before Definition 3.10], mechanized as
 :func:`~jacopy.central.algebroid.theorems.prove_locality_anchor_annihilation`
 and enterable by citation. The projector context therefore requires
 the ``regular`` declaration (its literal precondition) and nothing
@@ -29,6 +29,7 @@ machinery, so ``C^∞``-linearity of ``𝒫`` is already definitional.
 
 from __future__ import annotations
 
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer
 from jacopy.proof.expansion import Definition
 from jacopy.central.algebroid.context import (
@@ -48,8 +49,8 @@ class LocalityProjector(SectionMap):
 
     DEFINITION VARIANTS (literature audit 2026-07-31): the
     metric-connection paper [MC Def 3.10] requires only absorption +
-    kernel; the admissible-connections paper (Dereli-Doğan, JGP 186)
-    Def 3.8 additionally requires ``𝒫|_{ker ρ} = id``. The only
+    kernel; the admissible-connections paper [ADM Def 3.8] (Dereli-Doğan,
+    JGP 186 (2023)) additionally requires ``𝒫|_{ker ρ} = id``. The only
     ker-ρ membership the engine can certify structurally is
     ``im(𝒫L)`` itself, so the mechanizable content of the extra
     condition is IDEMPOTENCE on projected locality values,
@@ -120,6 +121,10 @@ class LocalityProjectorAbsorptionDefinition(Definition):
     coboundary forms is exactly the equivalence [MC Def 3.6])."""
 
     anchor = MappedSection
+    source = (
+        cite("DereliDogan2020", "Definition 3.10"),
+        cite("DereliDogan2020", "Definition 3.6"),
+    )
 
     def __init__(self, projector: LocalityProjector) -> None:
         self._projector = projector
@@ -156,6 +161,7 @@ class LocalityProjectorIdempotenceDefinition(Definition):
     for projectors created with ``admissible=True``."""
 
     anchor = MappedSection
+    source = cite("DereliDogan2023", "Definition 3.8, condition 2")
 
     def __init__(self, projector: LocalityProjector) -> None:
         self._projector = projector
@@ -191,6 +197,10 @@ class LocalityProjectorKernelDefinition(Definition):
     vanishing is the cited pre-Leibniz theorem instead.)"""
 
     anchor = AnchoredVF
+    source = (
+        cite("DereliDogan2020", "Definition 3.10"),
+        cite("DereliDogan2023", "Definition 3.8, condition 1"),
+    )
 
     def __init__(self, projector: LocalityProjector) -> None:
         self._projector = projector

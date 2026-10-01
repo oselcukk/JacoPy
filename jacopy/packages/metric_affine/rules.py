@@ -24,6 +24,7 @@ from __future__ import annotations
 from typing import Optional
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Product, Rational, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.expansion import Definition
@@ -37,6 +38,10 @@ class ConnectionDirectionLinearityDefinition(Definition):
     and ``∇_0 T → 0``."""
 
     name = "connection direction linearity: ∇_{fX+Y}T = f·∇_X T + ∇_Y T"
+    source = (
+        cite("DereliDogan2020", "Eq. (2.3)"),
+        cite("DereliDogan2020", "Definition 3.2, Eq. (3.2)"),
+    )
     anchor = Act
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
@@ -89,6 +94,10 @@ class ConnectionArgumentLeibnizDefinition(Definition):
     Confluent with the tree-position ``product_rule`` route."""
 
     name = "connection argument Leibniz: ∇_X(fT) = X(f)·T + f·∇_X T"
+    source = (
+        cite("DereliDogan2020", "Eq. (2.3)"),
+        cite("DereliDogan2020", "Definition 3.2, Eq. (3.2)"),
+    )
     anchor = Act
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:

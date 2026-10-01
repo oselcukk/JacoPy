@@ -1,6 +1,7 @@
 """
-The R-TWISTED tilde-Dorfman bracket (Phase 7.B.2c; PDF item 14f.iii,
-Watamura et al.): the R-flux deformation of the Poisson generalized
+The R-TWISTED tilde-Dorfman bracket (Phase 7.B.2c; project directive item
+14f.iii, Watamura et al., arXiv 1408.2649 — no local PDF): the
+R-flux deformation of the Poisson generalized
 double ``(TM)₀ ⊕ (T*M)_θ`` — the exact DUAL of the H-twist
 (:mod:`twisted_courant`), with the roles of forms and vectors
 swapped: a trivector ``R`` contracts the two FORM parts and lands in
@@ -56,6 +57,7 @@ from jacopy.core.expr import (
     Product,
     Sum,
 )
+from jacopy.bibliography import cite
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import Definition, ExplicitAssumption
@@ -271,6 +273,7 @@ def _zero_theorem(
     from_axioms,
     notes: str,
     labels,
+    source=None,
 ) -> Tuple[ProofChain, Theorem]:
     steps: List[ProofStep] = []
     for label, diff in zip(labels, diffs):
@@ -300,6 +303,7 @@ def _zero_theorem(
         generality="generic-function",
         from_axioms=from_axioms,
         notes=notes,
+        source=source,
     ).with_structural_requires()
     return chain, theorem
 
@@ -336,7 +340,7 @@ def prove_r_twisted_right_leibniz(
         from_axioms=(
             "tilde-interior C∞-tensoriality (definitional)",
         ),
-        notes="PDF 14f.iii / Watamura R-flux",
+        notes="directive 14f.iii / Watamura R-flux",
         labels=("R-term Leibniz defect normalizes to 0",),
     )
 
@@ -370,7 +374,7 @@ def prove_r_twisted_symmetric_part(
         from_axioms=(
             "tilde-interior anticommutation (alternation)",
         ),
-        notes="PDF 14f.iii / Watamura R-flux",
+        notes="directive 14f.iii / Watamura R-flux",
         labels=("R-term symmetric part normalizes to 0",),
     )
 
@@ -760,7 +764,7 @@ def prove_r_twisted_jacobi_defect_is_dtheta_r(
             "R-twisted / tilde-Dorfman + Lichnerowicz d_θ (intrinsic Palais) definitions",
             "tilde-contraction = evaluation (definitional)",
         ),
-        notes="PDF 14f.iii / Watamura §3 — the R-flux dual of dH = 0",
+        notes="directive 14f.iii / Watamura §3 — the R-flux dual of dH = 0",
     ).with_structural_requires()
     return chain, theorem
 
@@ -892,7 +896,7 @@ def prove_r_twisted_jacobi(
         proof=chain,
         generality="generic-function",
         from_axioms=assumptions + (thm_d.name,),
-        notes="PDF 14f.iii / Watamura §3; lhs is the vector Jacobiator on the probe, "
+        notes="directive 14f.iii / Watamura §3; lhs is the vector Jacobiator on the probe, "
         "the form Jacobiator is carried in the chain",
     ).with_structural_requires()
     return chain, theorem
@@ -906,7 +910,9 @@ def prove_derived_r_vanishes_under_poisson(
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
     """The DERIVED twist ``R′(ω,η) = [θ♯ω, θ♯η] − θ♯[ω,η]_θ``
-    (eq (7.25)) vanishes under the declared Poisson condition — the
+    [TW (7.25), arXiv 2409.11973] vanishes under the declared Poisson
+    condition (TW, remark after Eq. (7.25): "the R′-twist vanishes
+    due to the Nambu-Poisson condition") — the
     R-flux of a genuine Poisson structure is zero, so the R-twisted
     family deforms AWAY from generalized geometry exactly when
     ``[θ,θ] ≠ 0`` [Watamura §3]."""
@@ -927,8 +933,12 @@ def prove_derived_r_vanishes_under_poisson(
             "declared Poisson condition (FI bracket-morphism "
             "face)",
         ),
-        notes="PDF 14f.iii; eq (7.25) at p = 1",
+        notes="directive 14f.iii; TW Eq. (7.25) at p = 1",
         labels=("derived R-twist normalizes to 0",),
+        source=cite(
+            "CatalOzerDoganYetismisoglu2025",
+            "Eq. (7.25) and the remark after it",
+        ),
     )
 
 
@@ -973,7 +983,7 @@ def prove_r_twisted_courant_relation(
         from_axioms=(
             "R-twisted bracket + pairing + D_θ definitions",
         ),
-        notes="PDF 14f.iii",
+        notes="directive 14f.iii",
         labels=(
             "vector component normalizes to 0",
             "form component normalizes to 0",

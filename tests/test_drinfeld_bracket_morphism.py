@@ -1,6 +1,6 @@
 """Drinfeld package — Phase 6.I.2: bracket-morphism compatibility
-(paper (4.18)-(4.20)) for φ = id ⊕ Π, i.e. the total anchor of the
-Nambu double."""
+(TW (4.18)-(4.20) = DD (4.51)-(4.52)) for φ = id ⊕ Π, i.e. the total
+anchor of the Nambu double."""
 
 import pytest
 
@@ -22,14 +22,14 @@ def _setup(p):
 @pytest.mark.parametrize("p", [1, 2])
 class TestBracketMorphismCompat:
     def test_compat_condition(self, p):
-        """(4.20): 𝒦̃_ηU + Π(ℒ_Uη) = [U,Πη] — declaration-free."""
+        """TW (4.20): 𝒦̃_ηU + Π(ℒ_Uη) = [U,Πη] — declaration-free."""
         reg, h, U, V, om, et, N = _setup(p)
         assert bm.prove_morphism_compat_condition(
             N, U, et, h, registry=reg
         ).steps
 
     def test_compat_condition_dual(self, p):
-        """(4.20)-dual: ℒ̃_ωV + Π(𝒦_Vω) = [Πω,V] — magic."""
+        """TW (4.20)-dual: ℒ̃_ωV + Π(𝒦_Vω) = [Πω,V] — magic."""
         reg, h, U, V, om, et, N = _setup(p)
         assert bm.prove_morphism_compat_condition_dual(
             N, om, V, h, registry=reg
@@ -42,7 +42,7 @@ class TestBracketMorphismCompat:
         ).steps
 
     def test_total_anchor_is_bracket_morphism(self, p):
-        """(4.19): ρ([e₁,e₂]_double) = [ρe₁, ρe₂]_Lie under FI —
+        """TW (4.19): ρ([e₁,e₂]_double) = [ρe₁, ρe₂]_Lie under FI —
         the double-level Hamiltonian anchor-morphism (p = 3 offline:
         47 steps)."""
         reg, h, U, V, om, et, N = _setup(p)

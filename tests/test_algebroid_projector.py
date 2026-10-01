@@ -1,6 +1,7 @@
 """Algebroid case — Phase 3.E.4: the regularity assumption and the
 locality projector [MC Def 3.9-3.10], plus the annihilation theorem
-ρ(L(Df,u,v)) = 0 on local pre-Leibniz algebroids [MC §3]."""
+ρ(L(Df,u,v)) = 0 on local pre-Leibniz algebroids [MC Section 3, remark before
+Definition 3.10]."""
 
 import pytest
 

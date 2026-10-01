@@ -1,9 +1,10 @@
 """
-Roytenberg → Courant (Phase 7.B.2d; PDF item 14g): the general
-8-component Roytenberg bracket of the Poisson case
+Roytenberg → Courant (Phase 7.B.2d; project directive item 14g):
+the general 8-component Roytenberg bracket of the Poisson case
 (:func:`~jacopy.packages.drinfeld.roytenberg.roytenberg_bracket`,
-eq (5.2) at p = 1) IDENTIFIED, switch by switch, with the Courant
-structures whose axiom suites Phase 7.B already verified:
+[TW (5.2)], arXiv 2409.11973, at p = 1) IDENTIFIED, switch by
+switch, with the Courant structures whose axiom suites Phase 7.B
+already verified:
 
 * all switches off      → the STANDARD Dorfman bracket
   (:mod:`standard_courant` — Courant axioms verified in 7.B.1);
@@ -17,7 +18,7 @@ structures whose axiom suites Phase 7.B already verified:
 * H on (tilde/R off)    → the H-TWISTED Dorfman bracket
   (:mod:`twisted_courant` — Courant ⟺ dH = 0, 7.B.2a).
 
-This is the PDF 14g statement "the Roytenberg bracket from the
+This is the directive-14g statement "the Roytenberg bracket from the
 Poisson geometry case yields a Courant algebroid", mechanized as
 identification theorems: each Roytenberg configuration IS one of the
 verified Courant structures, so its axioms are inherited from the
@@ -39,6 +40,7 @@ from jacopy.core.expr import (
     Rational,
     Sum,
 )
+from jacopy.bibliography import cite
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.chain import ProofChain
 from jacopy.proof.step import ProofStep
@@ -74,6 +76,7 @@ def _zero_theorem(
     from_axioms,
     notes: str,
     labels,
+    source=None,
 ) -> Tuple[ProofChain, Theorem]:
     steps: List[ProofStep] = []
     for label, diff in zip(labels, diffs):
@@ -103,6 +106,7 @@ def _zero_theorem(
         generality="generic-function",
         from_axioms=from_axioms,
         notes=notes,
+        source=source,
     ).with_structural_requires()
     return chain, theorem
 
@@ -129,17 +133,22 @@ def prove_roytenberg_reduces_to_dorfman(
     return _zero_theorem(
         "roytenberg_reduces_to_dorfman",
         "Roytenberg(all off) = standard Dorfman on TM ⊕ T*M — "
-        "the 7.B.1 Courant suite applies verbatim (PDF 14g)",
+        "the 7.B.1 Courant suite applies verbatim (directive 14g)",
         [Sum(r_vec, Neg(d_vec)), Sum(r_form, Neg(d_form))],
         engine,
         registry,
         from_axioms=(
-            "Roytenberg (5.2) + Dorfman definitions (𝒦 = −ℒ + dι)",
+            "Roytenberg bracket [TW (5.2)] + Dorfman definitions "
+            "(𝒦 = −ℒ + dι)",
         ),
-        notes="decomposition (5.4) at the trivial switch point",
+        notes="TW decomposition (5.4) at the trivial switch point",
         labels=(
             "vector component normalizes to 0",
             "form component normalizes to 0",
+        ),
+        source=(
+            cite("CatalOzerDoganYetismisoglu2025", "Eq. (5.2)"),
+            cite("CatalOzerDoganYetismisoglu2025", "Eq. (5.4)"),
         ),
     )
 
@@ -154,7 +163,7 @@ def prove_roytenberg_is_theta_double_under_poisson(
     registry: Optional[PropertyRegistry] = None,
     declare_poisson: bool = True,
 ) -> Tuple[ProofChain, Theorem]:
-    """THE 14g statement: with tilde + R on and the DECLARED Poisson
+    """THE directive-14g statement: with tilde + R on and the DECLARED Poisson
     condition, the Roytenberg bracket IS the TRIANGULAR θ-double
     (the LWX double of the Poisson Lie bialgebroid,
     :func:`~jacopy.packages.drinfeld.double.nambu_double` at
@@ -190,19 +199,26 @@ def prove_roytenberg_is_theta_double_under_poisson(
         "Roytenberg(tilde, R) = the TRIANGULAR θ-double (LWX / "
         "nambu_double at p = 1) under the declared Poisson "
         "condition — the Poisson-case Roytenberg bracket yields "
-        "the verified Courant structure (PDF 14g)",
+        "the verified Courant structure (directive 14g)",
         diffs,
         engine,
         registry,
         from_axioms=(
-            "Roytenberg (5.2) + θ-double definitions",
+            "Roytenberg bracket [TW (5.2)] + θ-double definitions",
             "declared Poisson condition (kills the derived "
             "R-twist — 7.B.2c)",
         ),
-        notes="decomposition (5.5) at p = 1 / Watamura §2-3",
+        notes=(
+            "TW decomposition (5.5) at p = 1 / Watamura §2-3 "
+            "(arXiv 1408.2649; no local PDF, unverified)"
+        ),
         labels=(
             "vector component normalizes to 0",
             "form component normalizes to 0",
+        ),
+        source=(
+            cite("CatalOzerDoganYetismisoglu2025", "Eq. (5.2)"),
+            cite("CatalOzerDoganYetismisoglu2025", "Eq. (5.5)"),
         ),
     )
 
@@ -236,17 +252,22 @@ def prove_roytenberg_h_is_twisted_dorfman(
         "roytenberg_h_is_twisted_dorfman",
         "Roytenberg(H) = the H-twisted Dorfman bracket — the "
         "7.B.2a suite (Courant ⟺ dH = 0, Ševera) applies "
-        "verbatim (PDF 14g / 14e)",
+        "verbatim (directive 14g / 14e)",
         [Sum(r_vec, Neg(d_vec)), Sum(r_form, Neg(d_form))],
         engine,
         registry,
         from_axioms=(
-            "Roytenberg (5.2) + H-twisted Dorfman definitions",
+            "Roytenberg bracket [TW (5.2)] + H-twisted Dorfman "
+            "definitions",
         ),
-        notes="decomposition (5.4) with the H-switch",
+        notes="TW decomposition (5.4) with the H-switch",
         labels=(
             "vector component normalizes to 0",
             "form component normalizes to 0",
+        ),
+        source=(
+            cite("CatalOzerDoganYetismisoglu2025", "Eq. (5.2)"),
+            cite("CatalOzerDoganYetismisoglu2025", "Eq. (5.4)"),
         ),
     )
 
@@ -289,7 +310,7 @@ def prove_full_roytenberg_symmetric_part(
         "[x,y]_Roy + [y,x]_Roy = 2·𝒟_θ⟨x,y⟩₊ for the FULL "
         "Roytenberg bracket, 𝒟_θ = ½(d̃ + d) the triangular "
         "coboundary — it survives the H- and R-twists ([C'4]; "
-        "PDF 14g)",
+        "directive 14g)",
         [
             Sum(
                 ab_vec,
@@ -305,7 +326,8 @@ def prove_full_roytenberg_symmetric_part(
         engine,
         registry,
         from_axioms=(
-            "Roytenberg (5.2) + pairing + D_θ definitions",
+            "Roytenberg bracket [TW (5.2)] + pairing + D_θ "
+            "definitions",
             "interior/tilde-interior anticommutation "
             "(H- and R-terms antisymmetric)",
         ),

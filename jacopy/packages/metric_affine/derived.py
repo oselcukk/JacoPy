@@ -33,6 +33,7 @@ from __future__ import annotations
 from typing import Optional
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.core.expr import Expr, Integer, Neg, Sum
 from jacopy.core.multi_eval import MultiEval
 from jacopy.core.registry import PropertyRegistry
@@ -81,6 +82,11 @@ class DerivedBracketBridgeDefinition(Definition):
         self._fr = fr
         self._projector = projector
         hat = "̂" if projector is not None else ""
+        # the (projected) modified bracket [ADM (3.22) / (3.12)]
+        self.source = cite(
+            "DereliDogan2023",
+            "Eq. (3.22)" if projector is not None else "Eq. (3.12)",
+        )
         self.name = (
             f"derived bracket ({derived.name}): "
             f"[u,v] = [u,v]_{base.name} − Λ{hat}(u,v)"
@@ -341,7 +347,19 @@ def prove_projected_d_squared_associator(
     (under the base ``anchor-morphism`` declaration, which kills the
     predator part). Identity form — ARBITRARY connection; the
     combination is exactly the Phase 3.F ``d²α`` obstruction shape,
-    now for ``b̂``."""
+    now for ``b̂``.
+
+    Sign note (lane-C citation check, 2026-10-01): ADM (3.44) prints
+    ``d̂(∇)²Ω(u,v,w) = Ω(Assoc(u,v,w))`` with the associator (3.45)
+    ``[u,[v,w]] − [[u,v],w] − [v,[u,w]]``. For an admissible ``∇``
+    (``b̂`` anti-symmetric) that associator equals MINUS the
+    combination above, so the printed (3.44) has the opposite overall
+    sign. The combination here follows from the Palais formula (3.42)
+    itself — at ``ρ = 0`` (a Lie algebra) ``d(dα)(u,v,w) =
+    α([[u,v],w] − [[u,w],v] + [[v,w],u])`` — and agrees with
+    [TW (A.5), arXiv:2409.11973]: ``d²μ(U,V,W) = … − μ(J(U,V,W))``.
+    The ADM citation is for the statement's structure, not its
+    printed sign."""
     from jacopy.core.pairing import Pairing
     from jacopy.packages.metric_affine.e_bianchi import (
         projected_modified_bracket,

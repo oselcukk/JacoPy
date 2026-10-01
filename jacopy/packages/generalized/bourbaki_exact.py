@@ -1,6 +1,8 @@
 """
 EXACT pre-metric-Bourbaki algebroids and the INDUCED pre-calculus
-(Phase 7.B.2f.3), from the PRIMARY paper §8-9: the splitting data
+(Phase 7.B.2f.3), from the PRIMARY paper Çatal-Özer, Dereli & Doğan
+(2022) [arXiv:2210.00548] §8-9 (bare equation numbers below are that
+paper's): the splitting data
 ``φ : T(M) → E``, ``χ : Z → E`` with
 
     ρ∘φ = id,   ρ∘χ = 0   (exactness, 8.5),
@@ -13,8 +15,9 @@ mechanized as engine rules on top of the 7.B.2f.2 structure layer
 (``BIota``, ``BD``, ``BLieZ``). Theorems:
 
 * **Lemma 9.1** — ``[u, χz]_E`` is in the image of ``χ``:
-  mechanized as ``ρ([u, χz]) = 0`` (anchor morphism + exactness),
-  probed on a generic scalar;
+  mechanized as ``ρ([u, χz]) = 0`` (anchor morphism + ``ρχ = 0``,
+  the computation in the paper's proof), probed on a generic scalar;
+  the step to ``im χ`` is the exactness ``ker ρ = im χ`` (8.5);
 * **Prop 9.1 (9.11)** — the induced quintet satisfies the axiom
   (9.15): the metric-invariance instance at ``(χz, φU, φV)`` has a
   VANISHING left side (exactness kills ``ℒ^R`` in a ``ρ∘χ = 0``
@@ -47,6 +50,7 @@ from jacopy.proof.expansion import Definition, ExpansionEngine
 from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import ProofFailure
 from jacopy.proof.theorems import Theorem
+from jacopy.bibliography import cite
 from jacopy.central.algebroid.context import (
     Algebroid,
     AlgebroidBracket,
@@ -114,6 +118,10 @@ class SplitAnchorDefinition(Definition):
     stays symbolic instead of inheriting the splitting equations
     (2026-09-09 audit, finding 5)."""
 
+    source = (
+        cite("CatalOzerDereliDogan2022", "Definition 8.1, Eq. (8.5)"),
+        cite("CatalOzerDereliDogan2022", "Section 8, splitting ρ_E φ = id after Eq. (8.5)"),
+    )
     anchor = AnchoredVF
 
     def __init__(
@@ -158,8 +166,10 @@ class LieZDefinitionRule(CitedTheoremMixin, Definition):
     its own structure (:func:`prove_lemma_91`) and every step cites
     it, so the lemma's requirements (the declared anchor morphism)
     flow into the result; without the lemma the rule never fires.
-    Lemma 9.1 only gives ρ([φV, χz]) = 0: membership in im χ also needs
-    exactness ker ρ = im χ (8.5). The rule therefore fires only on a
+    The mechanized lemma (:func:`prove_lemma_91`) proves only
+    ρ([φV, χz]) = 0 (the computation in the paper's proof); the paper's
+    conclusion "in the image of χ" then uses exactness ker ρ = im χ
+    (8.5), a hypothesis of Lemma 9.1 ("exact pre-Bourbaki"). The rule therefore fires only on a
     structure declaring ``anchor-morphism`` and ``exact``, and the cited
     record carries the exactness as an explicit requirement
     (:func:`_liez_well_defined_theorem`).
@@ -177,6 +187,10 @@ class LieZDefinitionRule(CitedTheoremMixin, Definition):
             self._algebroid = None
             self._alg = alg
         self.name = "(9.7): [φV, χz]_E = χ(ℒ^Z_V z)"
+        self.source = (
+            cite("CatalOzerDereliDogan2022", "Eq. (9.7)"),
+            cite("CatalOzerDereliDogan2022", "Lemma 9.1"),
+        )
 
     def _prove_cited(self):
         alg = self._algebroid
@@ -227,7 +241,12 @@ def _liez_well_defined_theorem(alg: Algebroid) -> Theorem:
         from_axioms=lemma.from_axioms + (
             f"exactness (8.5) ({alg.name}, declared): ker ρ = im χ",
         ),
-        notes="pre-metric-bourbaki.pdf Lemma 9.1, (8.5), (9.7)",
+        notes="arXiv:2210.00548 Lemma 9.1, Eq. (8.5), Eq. (9.7)",
+        source=(
+            cite("CatalOzerDereliDogan2022", "Lemma 9.1"),
+            cite("CatalOzerDereliDogan2022", "Definition 8.1, Eq. (8.5)"),
+            cite("CatalOzerDereliDogan2022", "Eq. (9.7)"),
+        ),
     ).with_structural_requires()
 
 
@@ -239,6 +258,7 @@ class SymPartChiSwapDeclaration(Definition):
     (2026-09-09 audit, finding 5 — no hardcoded ``"E"``)."""
 
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    source = cite("CatalOzerDereliDogan2022", "Definition 6.2, Eq. (6.11)")
 
     anchor = AlgebroidBracket
 
@@ -276,6 +296,10 @@ class DopViaChiDefinition(Definition):
     """(8.3): ``𝔻r → χ(d r)`` — the exact decomposition of 𝔻."""
 
     name = "(8.3): 𝔻 = χ∘d"
+    source = (
+        cite("CatalOzerDereliDogan2022", "Eq. (8.3)"),
+        cite("CatalOzerDereliDogan2022", "Definition 8.1 (D = χd)"),
+    )
     anchor = BDop
 
     def matches(self, expr: Expr) -> bool:
@@ -291,6 +315,7 @@ class Iota99Definition(Definition):
     symmetric)."""
 
     name = "(9.9): g(χz, φV) = ι_V z"
+    source = cite("CatalOzerDereliDogan2022", "Eq. (9.9)")
     anchor = BMetric
 
     def _parts(self, expr: Expr):
@@ -321,6 +346,7 @@ class IsotropyDeclaration(Definition):
     role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
 
     name = "declared g-isotropy: g(χz, u) = ι_ρ(u) z, g(χz, χy) = 0"
+    source = cite("CatalOzerDereliDogan2022", "Proposition 9.1, proof (g-isotropy of χ)")
     anchor = BMetric
 
     def _chi_other(self, expr: Expr):
@@ -375,6 +401,7 @@ class BLieREChiDirectionVanishes(Definition):
     ``ℒ^R_{ρ(χz)} r = ℒ^R_0 r = 0``."""
 
     name = "exactness: ℒ^R_{ρχz} = 0 (ℝ-linearity in the direction)"
+    source = cite("CatalOzerDereliDogan2022", "Proposition 9.1, proof (exactness and ℝ-linearity of ℒ^R)")
     anchor = BLieRE
 
     def matches(self, expr: Expr) -> bool:
@@ -484,7 +511,8 @@ def prove_lemma_91(
 ) -> Tuple[ProofChain, Theorem]:
     """Lemma 9.1: ``[u, χz]_E`` lies in the image of ``χ`` —
     mechanized as ``ρ([u, χz]) = 0`` probed on the generic scalar
-    ``h`` (anchor morphism + ``ρχ = 0``)."""
+    ``h`` (anchor morphism + ``ρχ = 0``: the computation in the
+    paper's proof; ``ker ρ = im χ`` (8.5) gives the image)."""
     engine = exact_bourbaki_engine(alg, registry)
     node = Act(
         alg.anchor(alg.bracket(u, ChiSec(z))), h
@@ -515,7 +543,8 @@ def prove_lemma_91(
             "pre-Bourbaki level)",
             "exactness ρ∘χ = 0 (8.5)",
         ),
-        notes="pre-metric-bourbaki.pdf Lemma 9.1",
+        notes="arXiv:2210.00548 Lemma 9.1",
+        source=cite("CatalOzerDereliDogan2022", "Lemma 9.1"),
     ).with_structural_requires()
     return chain, theorem
 
@@ -536,6 +565,7 @@ def _cited_zero_proof(
     *,
     from_axioms,
     notes: str,
+    source=None,
 ) -> Tuple[ProofChain, Theorem]:
     """Close ``target = 0`` by citing ONE declared-zero instance:
     ``NF(target ± instance) = 0`` (the sign is searched; both
@@ -572,6 +602,7 @@ def _cited_zero_proof(
                 generality="generic-function",
                 from_axioms=from_axioms,
                 notes=notes,
+                source=source,
             ).with_structural_requires()
             return chain, theorem
     nf = _normalize(engine, target, registry)
@@ -621,7 +652,8 @@ def prove_911(
             "exactness ρχ = 0 + ℝ-linearity of ℒ^R",
             "(9.7)/(9.9)/(8.3) — definitions of ℒ^Z, ι, 𝔻 = χd",
         ),
-        notes="pre-metric-bourbaki.pdf Prop 9.1, first identity",
+        notes="arXiv:2210.00548 Proposition 9.1, Eq. (9.11)",
+        source=cite("CatalOzerDereliDogan2022", "Proposition 9.1, Eq. (9.11)"),
     )
 
 
@@ -666,5 +698,6 @@ def prove_912(
             f"anchor morphism ({alg.name}, declared)",
             "(9.7)/(9.9) — definitions of ℒ^Z, ι",
         ),
-        notes="pre-metric-bourbaki.pdf Prop 9.1, second identity",
+        notes="arXiv:2210.00548 Proposition 9.1, Eq. (9.12)",
+        source=cite("CatalOzerDereliDogan2022", "Proposition 9.1, Eq. (9.12)"),
     )

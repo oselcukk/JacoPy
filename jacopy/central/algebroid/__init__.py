@@ -3,7 +3,8 @@
 Anchored vector bundles, the opaque algebroid bracket and coboundary
 (3.A); the declared property hierarchy, Jacobiator/Derivator/Predator,
 locality and the algebroid calculus arrive with 3.B-3.F. Sources:
-in-repo ``pre-metric-bourbaki.pdf`` and ``metric-connection.pdf``.
+B = arXiv:2210.00548 and MC = arXiv:2006.05957 (keys in
+:mod:`jacopy.bibliography`).
 """
 
 from jacopy.central.algebroid.context import (

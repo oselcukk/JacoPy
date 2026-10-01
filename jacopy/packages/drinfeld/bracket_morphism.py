@@ -1,21 +1,24 @@
 """
-Bracket-morphism compatibility (Phase 6.I.2) — paper eqs
-(4.18)-(4.20), concretely for the natural map
+Bracket-morphism compatibility (Phase 6.I.2) — TW (4.18)-(4.20)
+[arXiv:2409.11973; the same conditions are DD (4.51)-(4.52) in
+arXiv:2312.06584], concretely for the natural map
 
     φ = φ_A ⊕ φ_Z = id ⊕ Π :  E = TM ⊕ Λᵖ T*M → TM,
 
 i.e. the TOTAL ANCHOR ``ρ(U+ω) = U + Πω`` of the Nambu double.
 Theorems:
 
-* **(4.20)**: ``φ_A(𝒦̃_η U) + φ_Z(ℒ_U η) = [φ_A U, φ_Z η]`` —
+* **TW (4.20)** (= DD (4.52), first line):
+  ``φ_A(𝒦̃_η U) + φ_Z(ℒ_U η) = [φ_A U, φ_Z η]`` —
   concretely ``𝒦̃_η U + Π(ℒ_U η) = [U, Πη]``: the compatibility
   condition IS the ``𝒦̃`` definition face. Declaration-free.
-* **(4.20)-dual**: ``ℒ̃_ω V + Π(𝒦_V ω) = [Πω, V]`` — via the magic
+* **TW (4.20)-dual** (DD (4.52), second line; TW prints only the
+  first line): ``ℒ̃_ω V + Π(𝒦_V ω) = [Πω, V]`` — via the magic
   formula. Declaration-free.
 * **φ_Z morphism**: ``Π[ω,η]_Kos = [Πω, Πη]`` — the declared FI
   (honest-fail without).
-* **(4.19) — the capstone**: the total anchor is a BRACKET MORPHISM
-  of the double,
+* **TW (4.19) (= DD (4.51)) — the capstone**: the total anchor is a
+  BRACKET MORPHISM of the double,
 
       ρ([e₁, e₂]_double) = [ρ(e₁), ρ(e₂)]_Lie,
 
@@ -69,7 +72,7 @@ def prove_morphism_compat_condition(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """(4.20): ``𝒦̃_η U + Π(ℒ_U η) = [U, Πη]`` — the bracket
+    """TW (4.20): ``𝒦̃_η U + Π(ℒ_U η) = [U, Πη]`` — the bracket
     morphism compatibility condition for ``φ = id ⊕ Π`` is the
     ``𝒦̃`` definition face. Declaration-free; probe ``h``."""
     node = Act(
@@ -92,8 +95,9 @@ def prove_morphism_compat_condition_dual(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """(4.20)-dual: ``ℒ̃_ω V + Π(𝒦_V ω) = [Πω, V]`` — closes via
-    the magic formula. Declaration-free; probe ``h``."""
+    """TW (4.20)-dual [DD (4.52), second line]:
+    ``ℒ̃_ω V + Π(𝒦_V ω) = [Πω, V]`` — closes via the magic formula.
+    Declaration-free; probe ``h``."""
     node = Act(
         Sum(
             lie_tilde_nambu(N, omega, V),
@@ -144,7 +148,7 @@ def prove_total_anchor_is_bracket_morphism(
     declare_fi: bool = True,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """(4.19), THE capstone: the total anchor ``ρ(U+ω) = U + Πω``
+    """TW (4.19), THE capstone: the total anchor ``ρ(U+ω) = U + Πω``
     is a bracket morphism of the Nambu double,
 
         ρ([e₁, e₂]_double) = [ρ(e₁), ρ(e₂)]_Lie
