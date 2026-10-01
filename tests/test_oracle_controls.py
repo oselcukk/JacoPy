@@ -130,7 +130,7 @@ NEGATIVE = {
 @pytest.mark.parametrize("name", sorted(POSITIVE))
 def test_positive_controls_agree(name):
     lhs, rhs = POSITIVE[name]
-    rep = ok(lhs, rhs)
+    rep = ok(lhs, rhs, owners=[])  # owners known: no structure declared
     assert rep.verdict == "AGREE", str(rep)
 
 
@@ -345,3 +345,63 @@ def test_leak_check_failure_is_flagged_not_plain_agree(monkeypatch):
     monkeypatch.setattr(TangentModel, "_counter", refuse)
     rep = ok(d_tilde(P, d_tilde(P, f)), Integer(0), owners=[P], requires=())
     assert rep.verdict == "AGREE" and rep.leak_unchecked and "NOT done" in rep.summary()
+
+
+# --------------------------------------------------------------------- #
+# Second review: further false-AGREE probes                              #
+# --------------------------------------------------------------------- #
+
+PI_ = MultivectorInterior(PI)
+SECOND_PROBES = {
+    # 1) the operator test basis must reach degree ≥ 3 (and the dimension
+    #    must cover what an operator can lower)
+    "ι_Xι_Yι_Z = 0 (operator)": (Product(Interior(X), Interior(Y), Interior(Z)), Integer(0)),
+    "ι_{X∧Y∧Z} = 0 (operator)": (MultivectorInterior(Wedge(X, Y, Z)), Integer(0)),
+    "ι_{X∧Y∧Z} = ι_{Y∧X∧Z} (operator)": (MultivectorInterior(Wedge(X, Y, Z)), MultivectorInterior(Wedge(Y, X, Z))),
+    "ι_π∘ι_π = 0 (operator)": (Product(PI_, PI_), Integer(0)),
+    # 2) the symbolic-degree range grows with the contractions
+    "ι_Xι_Yι_Z σ_p = 0": (i(X, i(Y, i(Z, sig))), Integer(0)),
+    # 6) an undefined summand is never skipped silently
+    "d = d + Y∘ι_Z": (CARTAN_TM.d, Sum(CARTAN_TM.d, Product(Y, Interior(Z)))),
+}
+
+
+@pytest.mark.parametrize("name", sorted(SECOND_PROBES))
+def test_second_review_probes_disagree(name):
+    lhs, rhs = SECOND_PROBES[name]
+    rep = ok(lhs, rhs, owners=[])
+    assert rep.verdict == "DISAGREE", str(rep)
+
+
+def test_operator_sum_with_undefined_summand_is_not_agree():
+    for extra in (Product(Interior(Y), Interior(Z)), Product(Integer(5), Interior(Y), Interior(Z))):
+        rep = ok(X, Sum(X, extra), owners=[])
+        assert rep.verdict in ("DISAGREE", "UNSUPPORTED"), str(rep)
+        assert rep.verdict != "AGREE"
+
+
+def test_leak_check_sees_plain_pvector_structures():
+    # [π,π]_SN and π(df, d π(dg,dh)) mention π only as a plain PVector
+    rep = ok(BracketApply(SN, PI, PI), Integer(0), owners=[P], requires=())
+    assert rep.verdict == "ASSUMPTION_LEAK", str(rep)
+    jac2 = Sum(*(MultiEval(PI, d(u), d(MultiEval(PI, d(v), d(w), slot_kind="covector")), slot_kind="covector")
+                 for u, v, w in ((f, g, h), (g, h, f), (h, f, g))))
+    assert ok(jac2, Integer(0), owners=[P], requires=()).verdict == "ASSUMPTION_LEAK"
+    assert ok(jac2, Integer(0), owners=[P0]).verdict == "DISAGREE"
+
+
+def test_unknown_proof_record_flags_unchecked_leak():
+    jac = POISSON_POSITIVE["Jacobi of the Poisson bracket"][0]
+    rep = ok(jac, Integer(0), owners=[P])
+    assert rep.verdict == "AGREE" and rep.leak_unchecked and "record unknown" in rep.leak_unchecked
+
+
+def test_unknown_owners_are_not_assumed_poisson():
+    jac = POISSON_POSITIVE["Jacobi of the Poisson bracket"][0]
+    rep = ok(jac, Integer(0))
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "owners-unknown"
+
+
+def test_symbolic_degree_range_follows_contractions():
+    rep = ok(i(X, i(Y, sig)), Neg(Neg(i(X, i(Y, sig)))), owners=[])
+    assert "p∈{0..4}" in rep.degree_assignments

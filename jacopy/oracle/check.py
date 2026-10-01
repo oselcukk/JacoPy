@@ -3,18 +3,26 @@ equation in random concrete models and compare.
 
 Model selection (F1):
 
-* D-models: ``R^n`` (``n = 3``, or 4 when a degree-3 object occurs) with
-  random polynomial data; a structure bivector (named by a ``tilde-π`` /
-  ``lichnerowicz-π`` calculus) is POISSON when its structure declares
-  ``poisson`` (or ``fundamental-identity``) — or when no owner
-  information is available — and GENERIC when the owners are known and
-  do not declare it.
-* ASSUMPTION_LEAK (F1: the ``poisson`` declaration only): when a
-  structure is declared Poisson but the proof's requirement record does
-  not use it, the equation must also hold in a verified non-Poisson
-  counter-model.
-* Symbolic degrees: each degree variable is assigned ``{0, 1, 2}``
-  (both parities; SPEC §7) and every assignment is checked.
+* D-models: ``R^n`` with ``n = max(3, D + 1)``, ``D`` an upper bound of
+  the exterior / multivector degree of EVERY subnode (operator results
+  and what an operator can lower included), capped at ``MAX_DIM = 6``
+  (beyond: UNSUPPORTED(dimension) unless already refuted). Random sparse
+  cubic polynomial data.
+* A structure bivector (named by a ``tilde-π`` / ``lichnerowicz-π``
+  calculus or a Poisson node) is POISSON when its structure declares
+  ``poisson`` (or ``fundamental-identity``), GENERIC when the owners are
+  known and do not declare it, and UNSUPPORTED(owners-unknown) when no
+  owner information is available.
+* ASSUMPTION_LEAK (F1: the ``poisson`` declaration only): every declared
+  Poisson π occurring in the equation (also as a plain PVector) whose
+  declaration the proof record does not use must also hold in a
+  verified non-Poisson counter-model; an unknown record or a failing
+  counter-model sets ``leak_unchecked``.
+* Symbolic degrees: the full product of ``0..k+2`` per variable (``k`` =
+  degree-lowering operations on one side; both parities), budget
+  ``MAX_ASSIGNMENTS``.
+* Operators are compared on the test basis of every form / multivector
+  degree ``0..n`` (domain rule in :func:`values_equal`).
 * Determinism: model seed ``sha256(base_seed, goal, index)`` (SPEC §4);
   a DISAGREE is re-run automatically with a second base seed.
 """
@@ -24,7 +32,7 @@ from __future__ import annotations
 import hashlib
 import itertools
 import time
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 
 from jacopy.central.calculus.bracket_calculus import ExteriorDerivative, LieDerivative
 from jacopy.central.objects.form import Form
@@ -34,7 +42,10 @@ from jacopy.algebra.commutator import Commutator
 from jacopy.algebra.derivation import Act
 from jacopy.algebra.lie_bracket_vf import LieBracketVF
 from jacopy.brackets.base import BracketApply
+from jacopy.central.objects.interior import Interior
+from jacopy.central.objects.multivector_interior import MultivectorInterior
 from jacopy.central.objects.partial_eval import PartialEval
+from jacopy.central.objects.tilde_interior import TildeInterior
 from jacopy.core.expr import Expr, Neg, Product, Sum, Symbol
 from jacopy.core.wedge import Wedge
 from jacopy.packages.poisson.core import HamiltonianVF, PoissonBracketValue, SharpVF
@@ -60,8 +71,8 @@ SECOND_SEED_OFFSET = 1_000_003
 MAX_NODES = 20_000
 #: largest model dimension; an equation needing more is UNSUPPORTED(dimension)
 MAX_DIM = 6
-#: largest number of symbolic-degree assignments (full product {0,1,2}^k)
-MAX_ASSIGNMENTS = 27
+#: largest number of symbolic-degree assignments (full product)
+MAX_ASSIGNMENTS = 64
 
 
 # --------------------------------------------------------------------- #
@@ -88,11 +99,11 @@ _STRUCTURE_USERS = (NambuSharpVF, SharpVF, HamiltonianVF, PoissonBracketValue, K
 
 def scan(*exprs):
     """``(structure bivector names, higher Nambu names, degree variables,
-    max concrete degree, atom names, node count)``. A bivector is a
-    STRUCTURE bivector when a tilde/Lichnerowicz calculus or a Poisson
-    node (sharp, Hamiltonian, bracket) refers to it."""
+    atom names, number of degree-lowering operations, node count)``. A
+    bivector is a STRUCTURE bivector when a tilde/Lichnerowicz calculus or
+    a Poisson node (sharp, Hamiltonian, bracket) refers to it."""
     names, nambu, dvars, atoms = set(), set(), set(), set()
-    maxdeg, count = 0, 0
+    lowering, count = 0, 0
     seen = set()
     stack = list(exprs)
     while stack:
@@ -115,14 +126,28 @@ def scan(*exprs):
                 (names if k == 2 else nambu).add(pi._repr_inner())
         if isinstance(e, (Form, PVector, VectorField, Symbol)):
             atoms.add(e._repr_inner())
-        if isinstance(e, (Form, PVector)):
-            k = e.degree.as_int()
-            if k is None:
-                dvars |= set(e.degree.variables())
-            else:
-                maxdeg = max(maxdeg, k)
+        if isinstance(e, (Form, PVector)) and e.degree.as_int() is None:
+            dvars |= set(e.degree.variables())
         stack.extend(_subexprs(e))
-    return names, nambu, dvars, maxdeg, atoms, count
+    lowering = max(_lowering(x) for x in exprs)
+    return names, nambu, dvars, atoms, lowering, count
+
+
+def _lowering(expr) -> int:
+    """Number of degree-lowering operations in ONE side (ι, ι̃ count 1,
+    ι_P counts deg P, a partial evaluation its fixed slots)."""
+    total, visits, stack = 0, 0, [expr]
+    while stack and visits < MAX_NODES:  # shared subtrees count each time
+        e = stack.pop()
+        visits += 1
+        if isinstance(e, (Interior, TildeInterior)):
+            total += 1
+        elif isinstance(e, MultivectorInterior):
+            total += max(1, max_exterior_degree((e.multivector,), {}))
+        elif isinstance(e, PartialEval):
+            total += len(e.fixed)
+        stack.extend(_subexprs(e))
+    return total
 
 
 #: Owner classes whose declared axioms the F1 models understand. Any other
@@ -383,6 +408,23 @@ def _op_raise(op) -> int:
     return 0
 
 
+def _op_lower(e, ub) -> int:
+    """Upper bound of the degree an operator expression can LOWER."""
+    if isinstance(e, (Interior, TildeInterior)):
+        return 1
+    if isinstance(e, MultivectorInterior):
+        return ub(e.multivector)
+    if isinstance(e, Product):
+        return sum(_op_lower(c, ub) for c in e.children)
+    if isinstance(e, Sum):
+        return max((_op_lower(c, ub) for c in e.children), default=0)
+    if isinstance(e, Neg):
+        return _op_lower(e.arg, ub)
+    if isinstance(e, Commutator):
+        return _op_lower(e.a, ub) + _op_lower(e.b, ub)
+    return 0
+
+
 def max_exterior_degree(exprs, assign) -> int:
     """Upper bound of the exterior / multivector degree of EVERY subnode
     (operator results included: ``d`` raises by one). The model dimension
@@ -416,6 +458,9 @@ def max_exterior_degree(exprs, assign) -> int:
             v = ub(e.a) + ub(e.b)
         else:
             v = 0
+        # an OPERATOR subnode needs test arguments of the degree it can
+        # lower: ι_{X∧Y∧Z} is only visible on 3-forms, ι_π∘ι_π on 4-forms
+        v = max(v, _op_lower(e, ub))
         memo[key] = v
         return v
 
@@ -443,20 +488,27 @@ def _evaluate(lhs, rhs, model, registry, mode, deadline):
     return eq, lv, rv, bool(env.ambiguous)
 
 
-def _degree_assignments(dvars):
-    """The FULL product ``{0,1,2}^k`` (every variable takes every value
-    and both parities, jointly); beyond :data:`MAX_ASSIGNMENTS` the check
-    is UNSUPPORTED(budget) — never a silent narrowing."""
+def degree_range(lowering: int) -> Tuple[int, ...]:
+    """Values of a symbolic degree: ``0..k+2`` for ``k`` degree-lowering
+    operations in the equation (so a form survives k contractions with
+    both parities left over)."""
+    return tuple(range(lowering + 3))
+
+
+def _degree_assignments(dvars, lowering: int = 0):
+    """The FULL product ``degree_range^m`` (every variable takes every
+    value and both parities, jointly); beyond :data:`MAX_ASSIGNMENTS` the
+    check is UNSUPPORTED(budget) — never a silent narrowing."""
     if not dvars:
         return [{}]
     names = sorted(dvars)
-    combos = list(itertools.product((0, 1, 2), repeat=len(names)))
+    combos = list(itertools.product(degree_range(lowering), repeat=len(names)))
     if len(combos) > MAX_ASSIGNMENTS:
         raise Unsupported("budget[degree-assignments]", (), f"{len(combos)} > {MAX_ASSIGNMENTS}")
     return [dict(zip(names, c)) for c in combos]
 
 
-def _run(lhs, rhs, *, registry, families, samples, base_seed, dvars, deadline, goal, label=""):
+def _run(lhs, rhs, *, registry, families, samples, base_seed, dvars, lowering, deadline, goal, label=""):
     """Evaluate in every (degree assignment × sample). Returns
     ``(witnesses, models, value_reading_holds, operator_reading_holds)``;
     raises Unsupported/Budget. Where a model has no Product ambiguity
@@ -464,7 +516,7 @@ def _run(lhs, rhs, *, registry, families, samples, base_seed, dvars, deadline, g
     witnesses, models, skipped = [], [], []
     v_all = o_all = True
     idx = 0
-    for assign in _degree_assignments(dvars):
+    for assign in _degree_assignments(dvars, lowering):
         need = max_exterior_degree((lhs, rhs), assign) + 1
         if need > MAX_DIM:
             # not evaluated: a refutation elsewhere still stands, but an
@@ -481,10 +533,9 @@ def _run(lhs, rhs, *, registry, families, samples, base_seed, dvars, deadline, g
             models.append(model.describe())
             witnesses.append(Witness(model.describe(), "value", _show(lv), _show(rv), eq))
             eq_op = eq
-            if amb:
-                model2 = TangentModel(n, seed, bivectors=families, degrees=assign, label=label, sample=s)
-                eq_op, lv2, rv2, _ = _evaluate(lhs, rhs, model2, registry, "operator", deadline)
-                witnesses.append(Witness(model2.describe(), "operator", _show(lv2), _show(rv2), eq_op))
+            if amb:  # same model (its atom cache), the other Product reading
+                eq_op, lv2, rv2, _ = _evaluate(lhs, rhs, model, registry, "operator", deadline)
+                witnesses.append(Witness(model.describe(), "operator", _show(lv2), _show(rv2), eq_op))
             v_all = v_all and eq
             o_all = o_all and eq_op
             if not v_all and not o_all:
@@ -512,7 +563,7 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
     base = dict(lhs=lhs._repr_inner(), rhs=rhs._repr_inner(), seed=seed, source=source, nodeid=nodeid)
     if lhs == rhs:
         return OracleReport(AGREE, detail="trivial (syntactically identical)", elapsed=time.monotonic() - t0, **base)
-    names, nambu, dvars, maxdeg, atoms, count = scan(lhs, rhs)
+    names, nambu, dvars, atoms, lowering, count = scan(lhs, rhs)
     if count > MAX_NODES:
         return OracleReport(UNSUPPORTED, unsupported_type="budget[size]", unsupported_path=(),
                             detail=f"> {MAX_NODES} nodes", elapsed=time.monotonic() - t0, **base)
@@ -521,15 +572,22 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
         return OracleReport(UNSUPPORTED, unsupported_type=obstruction, unsupported_path=(),
                             detail="a declared structure axiom has no F1 model", elapsed=time.monotonic() - t0, **base)
     info = _structure_info(owners)
+    if info is None and names:
+        # unknown owners: whether a structure bivector is Poisson is not
+        # known — no charitable guess (review: owners-unknown)
+        return OracleReport(UNSUPPORTED, unsupported_type="owners-unknown", unsupported_path=(),
+                            detail=f"structure bivector(s) {sorted(names)} without owner information",
+                            elapsed=time.monotonic() - t0, **base)
     declared = {n for n, ok in (info or {}).items() if ok}
     families = {}
     for n in names | declared:
-        families[n] = "poisson" if (n in declared or info is None) else "generic"
+        families[n] = "poisson" if n in declared else "generic"
     assign_txt = []
     if dvars:
-        k = 3 ** len(dvars)
-        assign_txt = [f"{v}∈{{0,1,2}}" for v in sorted(dvars)] + [f"full product, {k} assignment(s)"]
-    run = dict(registry=registry, families=families, samples=samples, dvars=dvars, goal=goal)
+        rng = degree_range(lowering)
+        k = len(rng) ** len(dvars)
+        assign_txt = [f"{v}∈{{{rng[0]}..{rng[-1]}}}" for v in sorted(dvars)] + [f"full product, {k} assignment(s)"]
+    run = dict(registry=registry, families=families, samples=samples, dvars=dvars, lowering=lowering, goal=goal)
     try:
         witnesses, models, v_all, o_all = _run(lhs, rhs, base_seed=seed, deadline=deadline, **run)
     except Unsupported as exc:
@@ -558,9 +616,12 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
                             elapsed=time.monotonic() - t0, **common, **base)
     # ASSUMPTION_LEAK: declared-but-unused Poisson structures
     unchecked = []
+    present = declared & (names | atoms)  # also a plain PVector π ([π,π]_SN, π(df,dg))
     used = poisson_requires(requires, chain)
+    if used is None and present:
+        unchecked.append(f"{', '.join(sorted(present))}: proof record unknown")
     if used is not None:
-        for n in sorted(declared & names):
+        for n in sorted(present):
             if n in used:
                 continue
             fam = dict(families)

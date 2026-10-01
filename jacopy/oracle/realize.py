@@ -328,7 +328,21 @@ def op_sum(ops, R) -> OpV:
     deg = degs.pop() if len(degs) == 1 else None
 
     def fn(a, ops=ops):
-        return add([o(a) for o in ops], R)
+        # summand by summand: an undefined summand makes the sum undefined
+        # only if every defined summand vanishes there; otherwise the sum
+        # is ill-typed on this argument and the oracle says so (never a
+        # silent skip of the undefined part — review: X = X + 5ι_Yι_Z)
+        outs, undefined = [], False
+        for o in ops:
+            try:
+                outs.append(o(a))
+            except DomainError:
+                undefined = True
+        if undefined:
+            if all(not isinstance(v, OpV) and is_zero(v) for v in outs):
+                raise DomainError(f"operator-sum[undefined on {kind(a)}]")
+            raise Unsupported(f"operator-sum[mixed domain on {kind(a)}]")
+        return add(outs, R)
 
     return OpV(fn, deg, "+".join(o.label for o in ops))
 

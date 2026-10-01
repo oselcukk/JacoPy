@@ -229,12 +229,14 @@ class TangentModel:
     # ---- test arguments for operator comparison ---------------------- #
 
     def test_arguments(self):
-        """Arguments on which two operator values are compared."""
+        """The standard test basis for operator equality: a function and,
+        in EVERY degree 1..n, a random form and a random multivector
+        (degree 1 multivector = vector field). Operators that differ
+        only in high degree (ι_{X∧Y∧Z}, ι_π∘ι_π) are thus separated."""
         out = [self.function(("test", "f"))]
-        for p in (1, 2):
-            if p <= self.n:
-                out.append(self.form(("test", "form"), p))
+        for p in range(1, self.n + 1):
+            out.append(self.form(("test", "form"), p))
         out.append(self.vector(("test", "X")))
-        if self.n >= 2:
-            out.append(self.multivector(("test", "P"), 2))
+        for p in range(2, self.n + 1):
+            out.append(self.multivector(("test", "P"), p))
         return out
