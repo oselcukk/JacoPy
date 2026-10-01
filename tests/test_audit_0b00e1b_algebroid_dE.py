@@ -592,3 +592,62 @@ class TestCertificationByTypeOnly:
         assert MultiEval(Wedge(a, b), X, X).alternating
         assert MultiEval(Product(f, Wedge(a, b)), X, X).alternating
         assert not MultiEval(Product(f, f), X, X).alternating
+
+
+class TestProductProtocolByType:
+    """Second review: splits_over_product certifies forms by TYPE."""
+
+    def _setup(self):
+        from jacopy.central.objects import p_vectors
+
+        reg = PropertyRegistry()
+        (f,) = functions("f", registry=reg)
+        A = algebroid("Apv", Bundle("Apv"))
+        (u,) = A.sections("u")
+        (P2,) = p_vectors("P2", degree=2, bundle=A.bundle)
+        (P1,) = p_vectors("P1", degree=1, bundle=A.bundle)
+        return reg, f, A, u, P1, P2
+
+    def test_multivector_is_not_a_form(self):
+        # PVector.degree reads as a degree but P is no form: on a bare
+        # bracket L_u(f·P) = ρ(u)(f)P + f L_u P is unlicensed (CLOSED
+        # on base and c2feac2 through the generic product rule; the
+        # protocol answer is what the core product-rule hook consumes).
+        reg, f, A, u, P1, P2 = self._setup()
+        L = lie_E(A, u)
+        assert L.splits_over_product(Product(f, P2), reg) is False
+        (al,) = forms("α", degree=2, bundle=A.bundle)
+        assert L.splits_over_product(Product(f, al), reg) is True
+
+    def test_symbolic_degree_form_rejected(self):
+        # Degree.as_int() is None for a symbolic degree: TypeError on
+        # c2feac2; default reject now.
+        from jacopy.core.symbolic_degree import Degree
+
+        reg, f, A, u, P1, P2 = self._setup()
+        (al,) = forms("αp", degree=Degree.var("p"), bundle=A.bundle)
+        assert lie_E(A, u).splits_over_product(Product(f, al), reg) is False
+
+    def test_one_vector_is_a_section(self):
+        # A 1-vector is a section: L_u(f·P1) = [u, f·P1] (definition);
+        # the right-Leibniz split must not close on a bare bracket.
+        reg, f, A, u, P1, P2 = self._setup()
+        L = lie_E(A, u)
+        eng = algebroid_engine(A, registry=reg)
+        lhs = Act(L, Product(f, P1))
+        with pytest.raises(ProofFailure):
+            _prove(lhs, _rl(A, u, f, P1), reg, eng)
+        assert _prove(lhs, A.bracket(u, Product(f, P1)), reg, eng).steps
+
+    def test_lie_identity_carries_right_leibniz(self):
+        # Equal-hash L's must not answer splits_over_product differently.
+        from jacopy.central.tangent.lie_bracket import lie_bracket
+
+        reg, f, A, u, P1, P2 = self._setup()
+        (X,) = vector_fields("X")
+        mk = lambda rl: BracketCalculus(  # noqa: E731
+            "Z", anchor=lambda s: s, bracket=lie_bracket, right_leibniz=rl
+        ).lie(X)
+        assert mk(True) != mk(False)
+        assert mk(True).splits_over_product(Product(f, X), reg)
+        assert not mk(False).splits_over_product(Product(f, X), reg)

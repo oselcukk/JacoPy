@@ -172,16 +172,10 @@ class LieDerivative(Derivation):
         from jacopy.central.calculus.scalars import is_scalar_function
 
         factors = arg.children if isinstance(arg, Product) else (arg,)
-        for c in factors:
-            if is_scalar_function(c, registry):
-                continue
-            try:
-                if calc.form_degree(c, registry).as_int() >= 1:
-                    continue
-            except ValueError:
-                pass
-            return False
-        return True
+        return all(
+            is_scalar_function(c, registry) or _is_certified_form(c, registry)
+            for c in factors
+        )
 
     # Slot protocol (Phase 6.E): the direction is a rewritable slot,
     # and it is ADDITIVE — L_{X+Y} = L_X + L_Y (ℝ-linearity of the
@@ -204,7 +198,28 @@ class LieDerivative(Derivation):
         return (0,)
 
     def _key(self) -> Any:
-        return (self._name, self._degree, self._calculus_name, self._vector)
+        # the product-rule answer depends on the calculus' right-Leibniz
+        # flag, so it is part of the identity
+        rl = None if self._calculus is None else self._calculus.right_leibniz
+        return (
+            self._name, self._degree, self._calculus_name, self._vector, rl
+        )
+
+
+def _is_certified_form(expr: Expr, registry=None) -> bool:
+    """A FORM by type (default reject): ``kind_of`` says form with a
+    concrete degree ≥ 1 and the node is certified alternating. A
+    multivector (``PVector.degree`` also reads as a degree), a tensor,
+    or a symbolic-degree form are refused."""
+    from jacopy.central.objects.kind import kind_of
+    from jacopy.core.multi_eval import admits_alternation
+
+    try:
+        k = kind_of(expr, registry)
+        deg = k.degree.as_int() if k.kind == "form" else None
+    except (ValueError, TypeError, AttributeError):
+        return False
+    return isinstance(deg, int) and deg >= 1 and admits_alternation(expr)
 
 
 class BracketCalculus:
@@ -329,6 +344,10 @@ class BracketCalculus:
         such (M2-2)?"""
         if self.is_section(expr):
             return True
+        from jacopy.central.objects.multivector import PVector
+
+        if isinstance(expr, PVector) and expr.degree == Degree.const(1):
+            return True  # a 1-vector IS a section
         if isinstance(expr, Neg):
             return self.is_section_valued(expr.arg, registry)
         if isinstance(expr, Sum):
