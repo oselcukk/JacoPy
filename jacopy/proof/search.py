@@ -132,7 +132,9 @@ def _definition_moves(
             after_root = _rewrite_at(root, path, after_sub)
             from jacopy.proof.result import _whole_step
 
-            moves.append((after_root, _whole_step(root, after_root, local, at_site=True)))
+            from jacopy.proof.expansion import is_library_engine
+
+            moves.append((after_root, _whole_step(root, after_root, local, at_site=is_library_engine(engine))))
 
     visit(root, ())
     return moves

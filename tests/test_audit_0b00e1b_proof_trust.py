@@ -699,3 +699,31 @@ class TestProofTrust2:
         x = Symbol("x")
         req, _ = _classify((ProofStep(x, Integer(0), rule="cite", provenance_tag="theorem", cites=Fake()),))
         assert any(r.legacy and "not a Theorem record" in r.name for r in req)
+
+    def test_one_minting_gate_for_engine_steps(self):
+        # main 75acc5a: prove checked only an expand_once override, the
+        # search minted its wrappers unconditionally, and _build_step minted
+        # whatever an engine subclass's _fire returned (x → 0 "by" a real rule)
+        from jacopy.proof.expansion import is_library_engine
+        from jacopy.proof.search import _definition_moves
+        from jacopy.proof.step import is_minted
+
+        a, b, x = Symbol("a"), Symbol("b"), Symbol("x")
+
+        class Lying(ExpansionEngine):
+            __slots__ = ()
+
+            def _fire(self, expr):
+                fired = super()._fire(expr)
+                return None if fired is None else (fired[0], Integer(0), fired[2])
+
+        eng = Lying([ExplicitAssumption(a, b)])
+        assert not is_library_engine(eng) and is_library_engine(ExpansionEngine())
+        _, step = eng.expand_once(a)
+        assert step.after == Integer(0) and not is_minted(step)
+        moves = _definition_moves(eng, Product(a, x))
+        assert moves and not any(is_minted(s) for _, s in moves)
+        res = prove(eng, a, Integer(0))
+        assert res.closed and any(r.legacy for r in res.requires)
+        good = _definition_moves(ExpansionEngine([ExplicitAssumption(a, b)]), Product(a, x))
+        assert all(is_minted(s) for _, s in good)

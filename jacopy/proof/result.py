@@ -696,12 +696,12 @@ def _tracked_simplify(expr: Expr, registry):
 
 def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simplify_normal_forms, oracle):
 
-    from jacopy.proof.expansion import ExpansionEngine
+    from jacopy.proof.expansion import is_library_engine
 
-    # the library engine's expand_once returns the whole expression
-    # rewritten at the step's site; an engine overriding it is not
-    # trusted to (the wrapper is then not minted)
-    engine_rewrites_at_site = getattr(type(engine), "expand_once", None) is ExpansionEngine.expand_once
+    # the library engine returns the whole expression rewritten at the
+    # step's site; an engine overriding its path is not trusted to (the
+    # wrapper is then not minted) — one gate with the search
+    engine_rewrites_at_site = is_library_engine(engine)
 
     def run(expr: Expr, cap: int):
         steps: List[ProofStep] = []
