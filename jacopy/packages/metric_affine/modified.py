@@ -562,7 +562,7 @@ def _engine(
         alg, registry=registry, projectors=projectors
     )
     engine.register(CoframeRecombinationDefinition(alg, fr, registry))
-    engine.register(IndexedSumLinearityDefinition())
+    engine.register(IndexedSumLinearityDefinition(registry))
     engine.register(IndexedSumEvalPushInDefinition())
     engine.register(KroneckerContractionDefinition())
     engine.register(IndexedSumOperatorPushDefinition())

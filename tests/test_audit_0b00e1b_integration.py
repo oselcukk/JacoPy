@@ -364,3 +364,59 @@ class TestSectionValuedAtomsAreNotDerivations:
             assert not is_scalar_function(Act(op, f), reg), name
         (u,) = A.sections("u")
         assert is_scalar_function(Act(A.anchor(u), f), reg)
+
+
+# --------------------------------------------------------------------- #
+# metric_affine engines: IndexedSumLinearity with the registry          #
+# --------------------------------------------------------------------- #
+
+
+class TestMetricAffineIndexedSumRegistry:
+    """The metric_affine engines built IndexedSumLinearityDefinition
+    without the registry: a functions() symbol in the MIDDLE of an
+    indexed-sum body was not certified scalar, so it was never pulled
+    out (completeness regression of the order-preserving rule)."""
+
+    def _setup(self):
+        from jacopy.core.indexed_sum import IndexedSum
+        from jacopy.core.pairing import Pairing
+        from jacopy.central.objects.frame import Frame, FrameIndex
+
+        reg = PropertyRegistry()
+        (h,) = functions("h", registry=reg)
+        E = algebroid("Eir", Bundle("Eir"), declare=("lie",))
+        (v,) = E.sections("v")
+        fr = Frame("e", bundle=E.bundle)
+        s = FrameIndex("s")
+        c_s = Pairing(fr.dual().field("s"), v)
+        return reg, h, E, fr, s, c_s, IndexedSum
+
+    def test_engines_carry_the_registry(self):
+        from jacopy.central.calculus.indexed_rules import (
+            IndexedSumLinearityDefinition,
+        )
+        from jacopy.packages.metric_affine.engine import metric_affine_engine
+        from jacopy.packages.metric_affine.modified import _engine
+
+        reg, h, E, fr, s, c_s, IS = self._setup()
+        for eng in (metric_affine_engine(registry=reg), _engine(E, fr, reg)):
+            rules = [
+                r for r in eng.definitions
+                if isinstance(r, IndexedSumLinearityDefinition)
+            ]
+            assert rules and all(r._registry is reg for r in rules)
+            # Σ_s ⟨e^s,v⟩·h·e_s → h·Σ_s ⟨e^s,v⟩·e_s (h passes a scalar)
+            x = IS(s, fr, Product(c_s, h, fr.field("s")))
+            assert rules[0].rewrite(x) == Product(
+                h, IS(s, fr, Product(c_s, fr.field("s")))
+            )
+
+    def test_middle_scalar_closes_through_modified_engine(self):
+        # ρ(Σ_s ⟨e^s,v⟩·h·e_s) = h·ρ(Σ_s ⟨e^s,v⟩·e_s): ρ is C∞-linear
+        # and h a function. ProofFailure before (registry-less rule).
+        from jacopy.packages.metric_affine.modified import _engine
+
+        reg, h, E, fr, s, c_s, IS = self._setup()
+        lhs = E.anchor(IS(s, fr, Product(c_s, h, fr.field("s"))))
+        rhs = Product(h, E.anchor(IS(s, fr, Product(c_s, fr.field("s")))))
+        assert _prove(lhs, rhs, reg, _engine(E, fr, reg)).steps
