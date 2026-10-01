@@ -235,13 +235,22 @@ class SymplecticClosedDeclaration(Definition):
         )
 
     def _is_d_omega(self, expr: Expr) -> bool:
+        """``d_TM ω`` only: closedness of the symplectic form is a
+        statement about the de Rham ``d`` of the TM Cartan calculus.
+        The ``d_E`` of another Lie algebroid (or the ``d̃`` of a
+        Poisson calculus) applied to ω is a different form and is NOT
+        declared zero (audit 0B00E1B-FULL M3-1: so(3)⊕ℝ with
+        ``ω = e¹²+e³⁴`` has ``(d_Aω)(e1,e2,e4) = −1``)."""
         from jacopy.central.calculus.bracket_calculus import (
             ExteriorDerivative,
+            belongs_to,
         )
+        from jacopy.central.tangent.exterior import CARTAN_TM
 
         return (
             isinstance(expr, Act)
             and isinstance(expr.op, ExteriorDerivative)
+            and belongs_to(expr.op, CARTAN_TM)
             and expr.arg == self._S.omega
         )
 

@@ -68,14 +68,24 @@ class ExteriorDerivative(Derivation):
     distinct operators even if displayed similarly.
     """
 
-    __slots__ = ("_calculus_name", "_skew")
+    __slots__ = ("_calculus_name", "_skew", "_calculus")
 
     def __init__(
-        self, calculus_name: str, *, name: str = "d", skew: bool = False
+        self,
+        calculus_name: str,
+        *,
+        name: str = "d",
+        skew: bool = False,
+        calculus: Optional["BracketCalculus"] = None,
     ) -> None:
         super().__init__(name, degree=1)
         self._calculus_name = calculus_name
         self._skew = bool(skew)
+        # the owning calculus — NOT part of the structural identity;
+        # carried so scope guards can match the operator by the
+        # calculus OBJECT, not by its display/name (audit 0B00E1B-FULL
+        # M3-1, see :func:`belongs_to`)
+        self._calculus = calculus
 
     @property
     def calculus_name(self) -> str:
@@ -222,6 +232,57 @@ def _is_certified_form(expr: Expr, registry=None) -> bool:
     return isinstance(deg, int) and deg >= 1 and admits_alternation(expr)
 
 
+#: Calculus names owned by a canonical library instance. Operator
+#: identity (``_key``) is name-based, so a second calculus carrying
+#: one of these names would build operators EQUAL to the canonical
+#: ones and inherit every rule scoped to them (audit 0B00E1B-FULL
+#: M3-1/M3-2: a foreign ``d``/``L`` firing ``dω = 0`` or the Nambu FI).
+#: Maps the name to the module that defines the canonical instance
+#: and the attribute holding it.
+_RESERVED_NAMES = {
+    "Cartan-TM": ("jacopy.central.tangent.exterior", "CARTAN_TM"),
+}
+
+
+def _guard_reserved_name(name: str) -> None:
+    """Refuse a reserved calculus name once its canonical instance
+    exists. The canonical module is imported first, so the guard
+    holds whichever is constructed first; while that module is being
+    initialized (the canonical construction itself) the attribute is
+    still unset and the construction is allowed."""
+    spec = _RESERVED_NAMES.get(name)
+    if spec is None:
+        return
+    import importlib
+
+    module = importlib.import_module(spec[0])
+    if getattr(module, spec[1], None) is not None:
+        raise ValueError(
+            f"BracketCalculus name {name!r} is reserved for "
+            f"{spec[0]}.{spec[1]}; choose a distinct calculus name"
+        )
+
+
+def belongs_to(op: Any, calculus: "BracketCalculus") -> bool:
+    """Is ``op`` the ``d`` or an ``L_X`` derived from ``calculus``?
+
+    The scope guard for rules that hold for ONE calculus only (audit
+    0B00E1B-FULL M3-1/M3-2: ``dω = 0`` of a symplectic form, the Nambu
+    fundamental identity — both statements about the TM Cartan
+    calculus). DEFAULT REJECT: the operator must carry ``calculus`` as
+    its owner (object identity) AND agree with it structurally; an
+    operator built by hand without an owner, or by another calculus
+    (whatever its display name), is refused."""
+    if isinstance(op, ExteriorDerivative):
+        return op._calculus is calculus and op == calculus.d
+    if isinstance(op, LieDerivative):
+        return (
+            op._calculus is calculus
+            and op.calculus_name == calculus.name
+        )
+    return False
+
+
 class BracketCalculus:
     """An ``(anchor, bracket)`` pair with its derived operators.
 
@@ -289,6 +350,7 @@ class BracketCalculus:
         silent axioms, audit 0B00E1B-FULL M2-1/M2-2)."""
         if not isinstance(name, str) or not name:
             raise ValueError("BracketCalculus name must be a non-empty str")
+        _guard_reserved_name(name)
         if not callable(anchor) or not callable(bracket):
             raise TypeError("anchor and bracket must be callables")
         self._name = name
@@ -298,7 +360,9 @@ class BracketCalculus:
             raise TypeError("skew and right_leibniz must be bools")
         self._skew = skew
         self._right_leibniz = right_leibniz
-        self._d = ExteriorDerivative(name, name=d_name, skew=skew)
+        self._d = ExteriorDerivative(
+            name, name=d_name, skew=skew, calculus=self
+        )
         self._lie_name = lie_name
         self._form_degree = form_degree
         self._section_test = section_test

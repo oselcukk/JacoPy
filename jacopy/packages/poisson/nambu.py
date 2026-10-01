@@ -560,6 +560,7 @@ class NambuFIDeclaration(Definition):
     def _split(self, expr: Expr):
         from jacopy.central.calculus.bracket_calculus import (
             LieDerivative,
+            belongs_to,
         )
 
         if not (
@@ -569,8 +570,14 @@ class NambuFIDeclaration(Definition):
         ):
             return None
         w = expr.op.omega
+        # the FI is a statement about the ORDINARY Lie derivative
+        # L^{TM}; the L of another calculus in the same direction is a
+        # different operator (audit 0B00E1B-FULL M3-2: zero-anchor,
+        # zero-bracket B has L^B η = 0 while [Πω, Πη](h) ≠ 0)
         if not (
-            isinstance(w, Act) and isinstance(w.op, LieDerivative)
+            isinstance(w, Act)
+            and isinstance(w.op, LieDerivative)
+            and belongs_to(w.op, CARTAN_TM)
         ):
             return None
         inner_vf = w.op.vector
