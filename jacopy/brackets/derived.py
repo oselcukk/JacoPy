@@ -47,7 +47,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-from jacopy.algebra.derivation import Act, Derivation
+from jacopy.algebra.derivation import Act, Derivation, degree_of
 from jacopy.algorithms.simplify import simplify
 from jacopy.brackets.base import BracketApply, GradedBracket
 from jacopy.core.expr import Expr, Integer, Neg, Sum
@@ -103,10 +103,15 @@ class DerivedBracket(GradedBracket):
     Q
         The generator, an :class:`Expr` of degree ``degree_Q``.
     degree_Q
-        Explicit generator degree. Defaults to ``0`` when unspecified.
-        The derived bracket's own degree is ``degree_Q + 2·|base|``
-        per the derived-bracket degree formula (each base layer
-        contributes its degree).
+        The generator's degree, measured in the BASE bracket's grading
+        (:meth:`~jacopy.brackets.base.GradedBracket.grading_degree`:
+        multivector degree for SN, so ``|π| = 2``). When omitted it is
+        DERIVED from ``Q`` through that hook, falling back to ``0``
+        when ``Q``'s degree is not determinable without a registry; an
+        explicit value contradicting a determinable degree raises
+        :class:`ValueError`. The derived bracket's own degree is
+        ``degree_Q + 2·|base|`` (each base layer contributes its
+        degree).
     name
         Optional display name. Defaults to a structured tag derived
         from the base bracket and generator.
@@ -132,7 +137,7 @@ class DerivedBracket(GradedBracket):
         base: GradedBracket,
         Q: Expr,
         *,
-        degree_Q: DegreeLike = 0,
+        degree_Q: Optional[DegreeLike] = None,
         name: Optional[str] = None,
         acting_on: Optional[Derivation] = None,
         d: Optional[Derivation] = None,
@@ -149,13 +154,19 @@ class DerivedBracket(GradedBracket):
             )
         self._base = base
         self._Q = Q
-        self._degree_Q = as_degree(degree_Q)
         try:
             q_deg = base.grading_degree(Q, None)
         except (ValueError, TypeError):
             q_deg = None
+        if degree_Q is None:
+            # derived from the base grading (review: DerivedBracket(SN,
+            # π) must not need an explicit |π|); 0 when undeterminable
+            self._degree_Q = q_deg if q_deg is not None else as_degree(0)
+        else:
+            self._degree_Q = as_degree(degree_Q)
         if (
-            q_deg is not None
+            degree_Q is not None
+            and q_deg is not None
             and q_deg.as_int() is not None
             and self._degree_Q.as_int() is not None
             and q_deg.as_int() != self._degree_Q.as_int()
@@ -204,17 +215,34 @@ class DerivedBracket(GradedBracket):
     # recorded ``degree`` (|Q| + 0) is not the right shift — the
     # hooks below are.
 
+    #
+    # In ``acting_on`` (Koszul) mode the operands are NOT elements of
+    # the base module: they are forms, lifted by the anchor. There the
+    # bracket is the Koszul bracket of the bivector ``Q`` on Ω(M) —
+    # graded in the FORM degree (:func:`degree_of`) with degree −1
+    # (``|[α, β]_π| = |α| + |β| − 1``: two 1-forms give a 1-form),
+    # a derivation of ``∧``. So ``s(α) = |α| − 1``: on 1-forms
+    # ``s = 0`` and the claimed sign is the plain antisymmetry ε = −1.
+
     def grading_degree(
         self, x: Expr, registry: Optional[PropertyRegistry] = None
     ) -> Degree:
+        if self._acting_on is not None:
+            return degree_of(x, registry)
         return self._base.grading_degree(x, registry)
 
     @property
     def operand_shift(self) -> Degree:
+        if self._acting_on is not None:
+            return Degree.const(-1)
         k_b = self._base.operand_shift
         return self._degree_Q + k_b + k_b
 
     def module_product(self, b: Expr, c: Expr) -> Expr:
+        if self._acting_on is not None:
+            from jacopy.core.wedge import Wedge
+
+            return Wedge(b, c)
         return self._base.module_product(b, c)
 
     @property
@@ -372,7 +400,7 @@ def derived_bracket(
     base: GradedBracket,
     Q: Expr,
     *,
-    degree_Q: DegreeLike = 0,
+    degree_Q: Optional[DegreeLike] = None,
     name: Optional[str] = None,
 ) -> DerivedBracket:
     """Construct a :class:`DerivedBracket`, mirror of the class
