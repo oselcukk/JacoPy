@@ -47,6 +47,10 @@ class CitedTheoremMixin:
         if self._cited_theorem is _UNBUILT:
             try:
                 self._cited_theorem = self._prove_cited()
+            except (NotImplementedError, RecursionError):
+                # programming errors (both are RuntimeError subclasses):
+                # never swallowed into an inert rule
+                raise
             except (ProofFailure, ValueError, RuntimeError):
                 # the structure does not support the cited theorem, or
                 # the lazy prover did not converge (RuntimeError): the

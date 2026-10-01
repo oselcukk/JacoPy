@@ -536,3 +536,24 @@ def test_rule_with_unbound_rhs_wildcard_never_fires():
     rule = Rule(Product(A, Symbol("c")), Product(Q, A))
     assert rule.try_at(Product(om, Symbol("c"))) is None
     assert rule.try_at(Product(Wildcard("Z"), Symbol("c"))) is None
+
+
+def test_cited_rule_reraises_programming_errors():
+    from jacopy.packages.generalized._cited_rule import CitedTheoremMixin
+
+    for exc in (NotImplementedError, RecursionError):
+
+        class Broken(CitedTheoremMixin, Definition):
+            name = "broken citation"
+
+            def _prove_cited(self, exc=exc):
+                raise exc("bug")
+
+            def matches(self, expr):
+                return self._licensed()
+
+            def rewrite(self, expr):  # pragma: no cover
+                return expr
+
+        with pytest.raises(exc):
+            Broken().matches(Symbol("x"))
