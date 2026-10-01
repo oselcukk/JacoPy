@@ -554,17 +554,12 @@ def prove_right_leibniz_from_r_invariance(
     inv = BourbakiInvarianceDeclaration(alg)
 
     start = BLieRE(u, BMetric(Product(f, v), w))
-    after = inv.rewrite(start)
-    step_inv = ProofStep(
-        start,
-        after,
-        rule=inv.name,
-        justification="declared axiom at the composite site",
-        provenance_tag="axiom",
-        # an application of the declared (7.8) rule: a declared, keyed
-        # requirement (audit 0B00E1B-FULL M1-4)
-        owner=alg, role="assumption", key=inv.key,
-    )
+    # the declared (7.8) rule FIRED by a library engine (a stamped step;
+    # a hand-built one would stay legacy — merge gate, M1-4)
+    from jacopy.packages.generalized._cited_rule import fire_declared
+
+    step_inv = fire_declared(inv, start)
+    after = step_inv.after
     from jacopy.central.algebroid.theorems import _normalize as _n
 
     n_a, steps_a = _n(after, engine, registry)

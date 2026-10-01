@@ -707,3 +707,36 @@ def test_alpha_equal_ignores_an_inner_binders_own_dummy():
     p = S(i, S(i, F(i)))
     q = S(j, S(i, F(i)))
     assert p == q and alpha_equal(p, q)
+
+
+def test_declared_axiom_steps_are_engine_fired_not_hand_built():
+    # merge gate: the (7.8) / [C5] steps of the (7.2), Prop 2.1(i) and
+    # Prop 2.2 provers carried owner/role/key on a HAND-BUILT step, which
+    # dropped the records' legacy flag. They are now fired by a library
+    # engine (stamped). The records stay unreplayed (narrative chains),
+    # so citing them still needs allow_legacy.
+    from jacopy.proof.step import is_minted
+    from jacopy.proof.theorems import check_citation
+    from jacopy.packages.generalized.bourbaki_structure import (
+        bourbaki_structure_engine,
+        prove_right_leibniz_from_r_invariance,
+    )
+    from jacopy.packages.generalized.courant_axioms import (
+        courant_context,
+        courant_engine,
+        prove_d_pairing_formula,
+    )
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    E = algebroid("E", declare=("bourbaki-invariance",))
+    u, v = E.sections("u v")
+    ch, t72 = prove_right_leibniz_from_r_invariance(E, u, v, f, registry=reg)
+    assert is_minted(ch.steps[0]) and ch.steps[0].rule.startswith("(7.8) invariance (E)")
+    assert any(a.kind == "unreplayed" for a in t72.requires)
+    assert not check_citation(t72, bourbaki_structure_engine(E, reg), registry=reg).ok
+    C = courant_context("C")
+    x, y = C.sections("x y")
+    ch2, t22 = prove_d_pairing_formula(C, x, y, f, registry=reg)
+    assert is_minted(ch2.steps[0]) and ch2.steps[0].rule.startswith("[C5] invariance (C)")
+    assert not check_citation(t22, courant_engine(C, reg), registry=reg).ok

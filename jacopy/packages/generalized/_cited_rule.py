@@ -88,4 +88,18 @@ def private_function(name: str = "f"):
     return fns, reg
 
 
-__all__ = ["CitedTheoremMixin", "private_function"]
+def fire_declared(rule, start):
+    """The step of a DECLARED rule applied at ``start``, produced by a
+    library engine (so it carries provenance), never hand-built: a
+    hand-made step must not turn a record's legacy requirement into a
+    declared one (audit 0B00E1B-FULL M1-4, merge gate). Raises
+    :class:`ProofFailure` unless the rule fires at the root."""
+    from jacopy.proof.expansion import ExpansionEngine
+
+    after, step = ExpansionEngine([rule]).expand_once(start)
+    if step is None or step.before != start or after != rule.rewrite(start):
+        raise ProofFailure(f"{rule.name} does not fire at the root of {start._repr_inner()[:100]}")
+    return step
+
+
+__all__ = ["CitedTheoremMixin", "fire_declared", "private_function"]

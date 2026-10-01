@@ -57,6 +57,7 @@ from jacopy.central.algebroid.context import (
 from jacopy.central.algebroid.engine import algebroid_engine
 from jacopy.packages.generalized._cited_rule import (
     CitedTheoremMixin,
+    fire_declared,
     private_function,
 )
 from jacopy.central.algebroid.theorems import (
@@ -726,18 +727,10 @@ def prove_left_leibniz_c3(
         raise ProofFailure(  # pragma: no cover - shape fixed above
             "[C5] does not apply to " + start._repr_inner()
         )
-    after_c5 = c5.rewrite(start)
-    step_c5 = ProofStep(
-        start,
-        after_c5,
-        rule=c5.name,
-        justification="declared axiom applied at the composite site",
-        provenance_tag="axiom",
-        # the step IS an application of the declared [C5] rule: name
-        # its licensing rule so the requirement is a declared one, not
-        # a legacy hand-built record (audit 0B00E1B-FULL M1-4)
-        owner=alg, role="assumption", key=c5.key,
-    )
+    # the declared [C5] rule FIRED by a library engine (a stamped step;
+    # a hand-built one would stay legacy — merge gate, M1-4)
+    step_c5 = fire_declared(c5, start)
+    after_c5 = step_c5.after
     n_a, steps_a = _normalize(after_c5, engine, registry)
     step_leg_a = ProofStep(
         after_c5,
@@ -1065,17 +1058,10 @@ def prove_d_pairing_formula(
         raise ProofFailure(  # pragma: no cover - shape fixed above
             "[C5] does not apply to " + start._repr_inner()
         )
-    after_c5 = c5.rewrite(start)
-    step_c5 = ProofStep(
-        start,
-        after_c5,
-        rule=c5.name,
-        justification=(
-            "declared axiom applied at the composite site f·x"
-        ),
-        provenance_tag="axiom",
-        owner=alg, role="assumption", key=c5.key,  # M1-4, as in 2.1(i)
-    )
+    # the declared [C5] rule FIRED by a library engine (a stamped step;
+    # a hand-built one would stay legacy — merge gate, M1-4)
+    step_c5 = fire_declared(c5, start)
+    after_c5 = step_c5.after
     n_a, steps_a = _normalize(after_c5, engine, registry)
     step_leg_a = ProofStep(
         after_c5, n_a,
