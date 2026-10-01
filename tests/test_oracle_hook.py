@@ -15,10 +15,45 @@ def test_default_is_off(monkeypatch):
     assert hook.on_closed(Integer(1), Integer(2)) is None
 
 
-def test_bad_mode_rejected(monkeypatch):
+@pytest.mark.parametrize("value", ["", "0", "false", "None", "OFF", "no"])
+def test_off_aliases(monkeypatch, value):
+    monkeypatch.setenv("JACOPY_ORACLE", value)
+    assert hook.current_mode() == "off"
+
+
+def test_unknown_mode_warns_once_and_is_off(monkeypatch):
     monkeypatch.setenv("JACOPY_ORACLE", "loud")
-    with pytest.raises(ValueError):
-        hook.current_mode()
+    hook._warned_bad_values.discard("loud")
+    with warnings.catch_warnings(record=True) as rec:
+        warnings.simplefilter("always")
+        assert hook.current_mode() == "off"
+        assert hook.current_mode() == "off"
+    assert sum(issubclass(w.category, hook.OracleWarning) for w in rec) == 1
+    assert hook.on_closed(Integer(1), Integer(2)) is None
+
+
+def test_reports_buffer_is_bounded():
+    assert hook.REPORTS.maxlen is not None
+
+
+def test_internal_error_raises_in_strict_records_in_warn(monkeypatch):
+    pytest.importorskip("sympy")
+    from jacopy.oracle import check
+
+    def boom(*a, **k):
+        raise TypeError("realizer bug")
+
+    monkeypatch.setattr(check, "check_equal", boom)
+    lhs, good, _ = _cartan_case()
+    hook.set_context(nodeid="t-internal")
+    with hook.oracle_mode("strict"):
+        with pytest.raises(TypeError):
+            hook.on_closed(lhs, good)
+    hook.set_context(nodeid="t-internal-2")
+    with hook.oracle_mode("warn"):
+        rep = hook.on_closed(lhs, good)
+    assert rep.verdict == "UNSUPPORTED" and rep.unsupported_type == "oracle-error:TypeError"
+    hook.set_context(nodeid="")
 
 
 def _cartan_case():
@@ -63,12 +98,26 @@ def test_prove_and_show_equal_call_the_hook(monkeypatch):
     reg = PropertyRegistry()
     eng = tangent_engine(registry=reg)
     hook.REPORTS.clear()
+    hook.set_context(nodeid="t-prove")
     show_equal(lhs, good, registry=reg, engine=eng)  # off: nothing recorded
     assert not hook.REPORTS
     show_equal(lhs, good, registry=reg, engine=eng, oracle="warn")
-    assert hook.REPORTS and hook.REPORTS[-1].source == "ExpandAndSimplify"
+    # the inner ExpandAndSimplify closure and the show_equal wrapper are ONE check
+    assert len(hook.REPORTS) == 1 and hook.REPORTS[-1].source == "ExpandAndSimplify"
     assert hook.REPORTS[-1].verdict == "AGREE"
+    from jacopy.proof.strategies import ExpandAndSimplify, PortfolioStrategy
+
+    hook.set_context(nodeid="t-portfolio")
+    hook.REPORTS.clear()
+    show_equal(lhs, good, registry=reg, engine=eng, oracle="warn",
+               strategy=PortfolioStrategy([ExpandAndSimplify()]))
+    assert len(hook.REPORTS) == 1
+    hook.set_context(nodeid="t-prove2")
     res = prove(eng, lhs, good, registry=reg, oracle="warn")
     if res.closed:
         assert hook.REPORTS[-1].source == "prove"
+    # reflexive closure: trivial AGREE without realization
+    rep = hook.on_closed(lhs, lhs, mode="warn")
+    assert rep.verdict == "AGREE" and rep.detail.startswith("trivial")
     hook.REPORTS.clear()
+    hook.set_context(nodeid="")

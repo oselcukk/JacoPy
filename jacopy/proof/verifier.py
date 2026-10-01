@@ -57,10 +57,10 @@ def show_equal(
     strat = strategy if strategy is not None else ExpandAndSimplify()
     with oracle_mode(oracle):
         chain = strat.prove(lhs, rhs, registry=registry, engine=engine)
-        if not isinstance(strat, ExpandAndSimplify):
-            # ExpandAndSimplify reports its own closure (strategies.py)
-            on_closed(lhs, rhs, registry=registry, source=f"show_equal:{type(strat).__name__}",
-                      engine=engine, chain=chain)
+        # (an inner ExpandAndSimplify closure of the same equation is
+        # deduplicated by the hook)
+        on_closed(lhs, rhs, registry=registry, source=f"show_equal:{type(strat).__name__}",
+                  engine=engine, chain=chain)
     return chain
 
 
@@ -174,7 +174,9 @@ def prove_equivalence(
         lhs_flat = _expand_all_brackets(lhs, registry)
         rhs_flat = _expand_all_brackets(rhs, registry)
         strat = strategy if strategy is not None else ExpandAndSimplify()
-        return strat.prove(lhs_flat, rhs_flat, registry=registry, engine=engine)
+        chain = strat.prove(lhs_flat, rhs_flat, registry=registry, engine=engine)
+        on_closed(lhs, rhs, registry=registry, source="prove_equivalence:brackets", engine=engine, chain=chain)
+        return chain
 
     if isinstance(stmt1, VanishingCondition) and isinstance(stmt2, VanishingCondition):
         if operands:
@@ -182,12 +184,15 @@ def prove_equivalence(
                 "prove_equivalence on VanishingConditions takes no operands"
             )
         strat = strategy if strategy is not None else ExpandAndSimplify()
-        return strat.prove(
+        chain = strat.prove(
             stmt1.obstruction,
             stmt2.obstruction,
             registry=registry,
             engine=engine,
         )
+        on_closed(stmt1.obstruction, stmt2.obstruction, registry=registry,
+                  source="prove_equivalence:vanishing", engine=engine, chain=chain)
+        return chain
 
     if isinstance(stmt1, Expr) and isinstance(stmt2, Expr):
         if operands:
@@ -252,7 +257,9 @@ def prove_operator_equation(
     or any generator's sub-proof fails.
     """
     strat = AgreementOnGenerators(algebra, sub_strategy=sub_strategy)
-    return strat.prove(op1, op2, registry=registry, engine=engine)
+    chain = strat.prove(op1, op2, registry=registry, engine=engine)
+    on_closed(op1, op2, registry=registry, source="prove_operator_equation", engine=engine, chain=chain)
+    return chain
 
 
 def unroll_property(prop: Property) -> ProofChain:
