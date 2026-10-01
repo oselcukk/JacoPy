@@ -47,9 +47,11 @@ class CitedTheoremMixin:
         if self._cited_theorem is _UNBUILT:
             try:
                 self._cited_theorem = self._prove_cited()
-            except (ProofFailure, ValueError):
-                # the structure does not support the cited theorem:
-                # the rule stays inert (default reject)
+            except (ProofFailure, ValueError, RuntimeError):
+                # the structure does not support the cited theorem, or
+                # the lazy prover did not converge (RuntimeError): the
+                # verdict is cached and the rule stays inert (default
+                # reject) — never re-attempted on every candidate
                 self._cited_theorem = None
         return self._cited_theorem
 

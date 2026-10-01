@@ -369,3 +369,55 @@ def test_alpha_expr_type_is_order_insensitive():
     assert alpha_equal(
         Wildcard("A", expr_type=(Symbol, Sum)), Wildcard("B", expr_type=(Sum, Symbol))
     )
+
+
+# --------------------------------------------------------------------- #
+# review of 38080c2 / 3a38eb2 (M1-4)                                     #
+# --------------------------------------------------------------------- #
+
+
+def test_dd_zero_ignores_a_foreign_d():
+    # ρ∘D = 0 is proved for C's D. A bare A's D_A is arbitrary (take
+    # D_A := grad: g(D_A f, D_A k) = ⟨df, dk⟩ ≠ 0). At 3a38eb2 DDZero(C)
+    # fired on C's pairing/anchor of D_A.
+    from jacopy.packages.generalized.courant_axioms import CourantD, DDZeroDefinition, courant_context
+
+    reg = PropertyRegistry()
+    f, k = functions("f k", registry=reg)
+    C = courant_context("C")
+    eng = ExpansionEngine([DDZeroDefinition(C)])
+    lhs = C.metric(CourantD("A", f), CourantD("A", k))
+    assert prove(eng, lhs, Integer(0), registry=reg).status == "RESIDUAL"
+    with pytest.raises(ProofFailure):
+        ExpandAndSimplify().prove(lhs, Integer(0), registry=reg, engine=eng)
+    act = Act(C.anchor(CourantD("A", k)), k)
+    assert prove(eng, act, Integer(0), registry=reg).status == "RESIDUAL"
+    # control: C's own D still closes
+    own = Act(C.anchor(CourantD("C", k)), k)
+    assert prove(eng, own, Integer(0), registry=reg).status == "CLOSED"
+
+
+def test_cited_rule_inert_and_cached_when_prover_diverges():
+    from jacopy.packages.generalized._cited_rule import CitedTheoremMixin
+
+    calls = []
+
+    class Diverging(CitedTheoremMixin, Definition):
+        name = "diverging citation"
+
+        def _prove_cited(self):
+            calls.append(1)
+            raise RuntimeError("ExpansionEngine did not converge")
+
+        def matches(self, expr):
+            return self._licensed()
+
+        def rewrite(self, expr):  # pragma: no cover - never fires
+            return Integer(0)
+
+    rule = Diverging()
+    x = Symbol("x")
+    assert not rule.matches(x) and not rule.matches(x)
+    assert rule.theorem is None
+    assert len(calls) == 1
+    assert prove(ExpansionEngine([rule]), x, Integer(0)).status == "RESIDUAL"

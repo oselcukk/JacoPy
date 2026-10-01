@@ -458,16 +458,25 @@ class DDZeroDefinition(CitedTheoremMixin, Definition):
         if (
             isinstance(expr, EMetric)
             and expr.algebroid_name == self._alg.name
-            and isinstance(expr.u, CourantD)
-            and isinstance(expr.v, CourantD)
+            and self._own_d(expr.u)
+            and self._own_d(expr.v)
         ):
             return self._licensed()
         return (
             isinstance(expr, Act)
             and isinstance(expr.op, AnchoredVF)
             and expr.op.algebroid_name == self._alg.name
-            and isinstance(expr.op.section, CourantD)
+            and self._own_d(expr.op.section)
             and self._licensed()
+        )
+
+    def _own_d(self, node) -> bool:
+        # ρ∘D = 0 is proved for THIS structure's D only: a foreign
+        # algebroid's D_A inside this pairing/anchor is arbitrary
+        # (audit 0B00E1B-FULL M1-4 review)
+        return (
+            isinstance(node, CourantD)
+            and node.algebroid_name == self._alg.name
         )
 
     def rewrite(self, expr: Expr) -> Expr:
