@@ -687,3 +687,15 @@ class TestProofTrust2:
             end_reads(inner)
             end_reads(base)
         assert not any(l is inner or l is outer or l is base for l in getattr(_READS, "stack", []))
+
+    def test_cited_record_type_is_checked_by_identity(self):
+        # main 75acc5a: _classify compared type names as strings — a class
+        # NAMED "Theorem" in module "jacopy.proof.theorems" passed as a
+        # verified record (no legacy marker)
+        from jacopy.proof.result import _classify
+
+        Fake = type("Theorem", (), {"__module__": "jacopy.proof.theorems", "legacy": False,
+                                     "requires": (), "name": "fake", "owner": None})
+        x = Symbol("x")
+        req, _ = _classify((ProofStep(x, Integer(0), rule="cite", provenance_tag="theorem", cites=Fake()),))
+        assert any(r.legacy and "not a Theorem record" in r.name for r in req)

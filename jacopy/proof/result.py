@@ -240,7 +240,7 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                     bump(assumptions, "legacy", f"unverified citation (record marked unverified): {s.rule}", owner, s.before)
                     if cited is not None:
                         inherit(cited)
-                elif cited is not None and type(cited).__name__ == "Theorem" and type(cited).__module__ == "jacopy.proof.theorems":
+                elif cited is not None and type(cited) is _theorem_class():
                     # TRANSITIVE requirements (Faz 8 step 3b): a citation
                     # contributes ALL its own requirements; an unverified
                     # (legacy) one is, in addition, a legacy assumption
@@ -323,6 +323,12 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         text = f"{o!r}" + (f" declaring {sorted(decl)}" if decl is not None else "")
         req.append(Assumption("structure", text, o))
     return tuple(req), tuple(prov)
+
+
+def _theorem_class():
+    from jacopy.proof.theorems import Theorem
+
+    return Theorem
 
 
 def _same_event(child: ProofStep, parent: ProofStep) -> bool:
