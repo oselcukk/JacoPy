@@ -128,12 +128,7 @@ def _expand_act(
         # what makes ℝ-homogeneity [c·X, Y] = c·[X, Y] close — the
         # Leibniz split of Y(c·g) leaves a Y(c)·g term that must die.
         return Integer(0)
-    if (
-        registry is not None
-        and arg.is_atom
-        and _is_certified_derivation(op)
-        and _is_real_constant(arg, registry)
-    ):
+    if registry is not None and arg.is_atom and _annihilates(op, arg, registry):
         # The Scalar CONTRACT (core.properties.Scalar, audit 0b00e1b
         # M1-1 ≡ M1-2): an EXACTLY Scalar-declared atom
         # (scalars.is_real_constant) is an ℝ-constant,
@@ -227,10 +222,11 @@ def _pull_out(op: Expr, prod: Product, registry, is_coefficient) -> Expr:
     return Act(op, prod)
 
 
-def _is_real_constant(arg: Expr, registry: PropertyRegistry) -> bool:
-    from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
+def _annihilates(op: Expr, arg: Expr, registry: PropertyRegistry) -> bool:
+    # late import: jacopy.central.calculus imports this module (cycle)
+    from jacopy.central.calculus.scalars import annihilates  # noqa: WPS433
 
-    return is_real_constant(arg, registry)
+    return annihilates(op, arg, registry)
 
 
 def _is_certified_derivation(op: Expr) -> bool:

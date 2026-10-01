@@ -11,8 +11,8 @@ caller can inspect it (even when the sign is symbolic like
 
 Every factor must be registered as :class:`Scalar` or :class:`Graded`.
 Scalars (ℝ-constants by contract) sort to the front and contribute no
-sign, they commute with everything in the Koszul rule — except a
-factor explicitly declared :class:`NonCommuting`, which never moves. Graded factors sort by a stable
+sign: an ℝ-constant commutes with every ℝ-linear operator, a
+:class:`NonCommuting` one included. Graded factors sort by a stable
 structural key and contribute ``|a||b|`` per swap. Unclassified factors
 raise :class:`ValueError`; the fix is to declare their grading, not to
 silently paper over the missing information.
@@ -153,22 +153,20 @@ def _should_swap(
 
 
 def _swap_behavior(
-    a: Expr, b: Expr, registry: PropertyRegistry
+    a: Expr, b: Expr, registry: PropertyRegistry, constants=None
 ) -> Tuple[bool, Degree]:
     """Return ``(can_swap, sign_exp_delta)`` for adjacent ``a``, ``b``.
 
     The commutativity law between the pair governs whether the swap is
     permitted and, if so, the Koszul exponent it contributes:
 
-    * Either factor carries :class:`NonCommuting`, swap forbidden —
-      checked FIRST: an explicit NonCommuting declaration is never
-      overridden by a Scalar one (audit 0b00e1b M1-1: a Scalar ``x``
-      next to a NonCommuting ``D`` "proved" ``D∘x = x∘D``).
-    * Either factor carries :class:`Scalar` (an ℝ-constant by
-      contract, see :class:`~jacopy.core.properties.Scalar`), free
-      swap, no sign. Next to a derivation this is ``D∘c = c∘D +
-      D(c) = c∘D``, consistent with :func:`product_rule` killing
-      ``D(c)``.
+    * Either factor is an ℝ-CONSTANT (a numeral or an exact Scalar
+      atom, :func:`~jacopy.central.calculus.scalars.is_real_constant`),
+      free swap, no sign — checked FIRST: a constant commutes with
+      every ℝ-linear operator, also a :class:`NonCommuting` one (chef
+      contract decision: Scalar = ℝ-constant; ``D∘c = c∘D + D(c) =
+      c∘D``, consistent with :func:`product_rule` killing ``D(c)``).
+    * Either factor carries :class:`NonCommuting`, swap forbidden.
     * Both carry :class:`AntiCommuting`, swap produces a flat ``-1``
       (parity delta ``1``).
     * Both carry :class:`GradedCommutative`, swap produces
@@ -186,10 +184,15 @@ def _swap_behavior(
       multivectors — the implicit Koszul default), swap produces
       ``(-1)^{|a||b|}``.
     """
+    if constants is None:
+        a_const = _is_real_constant(a, registry)
+        b_const = _is_real_constant(b, registry)
+    else:  # classified once per factor by sort_product
+        a_const, b_const = a in constants, b in constants
+    if a_const or b_const:
+        return (True, Degree.const(0))
     if registry.has(a, NonCommuting) or registry.has(b, NonCommuting):
         return (False, Degree.const(0))
-    if _is_real_constant(a, registry) or _is_real_constant(b, registry):
-        return (True, Degree.const(0))
     if registry.has(a, AntiCommuting) and registry.has(b, AntiCommuting):
         return (True, Degree.const(1))
     if registry.has(a, GradedCommutative) and registry.has(b, GradedCommutative):
@@ -297,6 +300,8 @@ def sort_product(
     # position, missing a grading is a modelling error, not a perf issue.
     for f in factors:
         _degree_of(f, registry)
+    # the ℝ-constant classification, once per distinct factor
+    constants = {f for f in set(factors) if _is_real_constant(f, registry)}
     sign_exp = Degree.const(neg_parity)
     n = len(factors)
     # Bubble sort: stable enough for our size, and each swap's sign
@@ -309,7 +314,7 @@ def sort_product(
             a, b = factors[j], factors[j + 1]
             if not _should_swap(a, b, registry):
                 continue
-            can_swap, delta = _swap_behavior(a, b, registry)
+            can_swap, delta = _swap_behavior(a, b, registry, constants)
             if not can_swap:
                 continue
             factors[j], factors[j + 1] = b, a

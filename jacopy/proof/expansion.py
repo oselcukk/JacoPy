@@ -29,6 +29,7 @@ from jacopy.algebra.derivation import Act, Derivation, compose, degree_of
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
+from jacopy.proof.registry_facts import current_context
 from jacopy.proof.step import ProofStep, _mint
 
 
@@ -201,23 +202,16 @@ class ScalarConstantContract(Definition):
     role = "definition"
 
     def matches(self, expr: Expr) -> bool:
-        from jacopy.algebra.derivation import Act
-
         if not isinstance(expr, Act) or not expr.arg.is_atom:
             return False
-        from jacopy.algorithms.product_rule import _is_certified_derivation
-
-        if not _is_certified_derivation(expr.op):
-            return False
-        from jacopy.proof.registry_facts import current_context
-
         ctx = current_context()
         registry = ctx[0] if ctx is not None else None
         if not isinstance(registry, PropertyRegistry):
             return False
-        from jacopy.central.calculus.scalars import is_real_constant
+        # late import: jacopy.central imports the proof layer (cycle)
+        from jacopy.central.calculus.scalars import annihilates  # noqa: WPS433
 
-        return is_real_constant(expr.arg, registry)
+        return annihilates(expr.op, expr.arg, registry)
 
     def rewrite(self, expr: Expr) -> Expr:
         return Integer(0)
@@ -471,8 +465,6 @@ class ExpansionEngine:
         during the one ``matches`` call that decided (no second call:
         review 2026-10-01 #6 — a modulo match is a full normalization)."""
         candidates = self._candidates(expr)
-        from jacopy.algebra.derivation import Act
-
         if isinstance(expr, Act):
             # the Scalar contract precedes every registered rule
             candidates = [(None, _SCALAR_CONTRACT)] + list(candidates)

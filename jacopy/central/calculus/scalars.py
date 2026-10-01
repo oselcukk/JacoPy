@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from jacopy.core.expr import Expr
+from jacopy.core.expr import Expr, Integer, Rational
+from jacopy.core.properties import Graded, Scalar
 from jacopy.core.registry import PropertyRegistry
 
 
@@ -52,14 +53,10 @@ def is_real_constant(
     pre-filter is not recorded as a registry read; a positive answer is
     re-queried so "``c`` is Scalar" becomes the step's hypothesis.
     """
-    from jacopy.core.expr import Integer, Rational
-
     if isinstance(expr, (Integer, Rational)):
         return True
     if registry is None or not expr.is_atom:
         return False
-    from jacopy.core.properties import Graded, Scalar
-
     if not registry.declared_exact(expr, Scalar):
         return False
     registry.get(expr, Scalar)  # record the hypothesis
@@ -69,3 +66,16 @@ def is_real_constant(
     from jacopy.central.objects.kind import kind_of  # noqa: WPS433
 
     return kind_of(expr, registry).kind == "function"
+
+
+def annihilates(
+    op: Expr, arg: Expr, registry: Optional[PropertyRegistry] = None
+) -> bool:
+    """``op(arg) = 0`` by the Scalar contract: ``op`` a certified
+    derivation and ``arg`` an ℝ-constant (:func:`is_real_constant`).
+    The ONE predicate behind product_rule's ``D(c) = 0`` and the
+    engine's :class:`~jacopy.proof.expansion.ScalarConstantContract`."""
+    # late: jacopy.algorithms imports this module lazily (cycle)
+    from jacopy.algorithms.product_rule import _is_certified_derivation  # noqa: WPS433
+
+    return _is_certified_derivation(op) and is_real_constant(arg, registry)
