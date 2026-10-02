@@ -10,7 +10,8 @@ authors:
     given-names: "Oğuzhan"
     # TODO: orcid, affiliation and email are not recorded anywhere in the
     # repository; add them here once confirmed.
-# Kept in step with jacopy/__init__.py (__version__).
+# Must equal jacopy.__version__ (jacopy/__init__.py); pinned by
+# tests/test_citation_metadata.py.
 version: "0.0.1"
 repository-code: "https://github.com/oselcukk/JacoPy.v.3"
 keywords:
