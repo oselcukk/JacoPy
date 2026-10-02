@@ -582,13 +582,29 @@ class DerivedBracketStrategy:
         # parity of Q in the base's SHIFTED grading, from the same
         # hook as every skew/Jacobi sign (``operand_shift``: SN counts
         # −1 in the multivector grading, not its recorded degree 0)
-        shifted = bracket.degree_Q + base.operand_shift
+        # the generator degree VALIDATED against the registry (review
+        # #7: a declared degree_Q contradicting the registry is refused,
+        # an undeclared one is derived from it)
+        try:
+            degree_q = bracket.generator_degree(registry)
+        except ValueError as exc:
+            raise ProofFailure(f"DerivedBracketStrategy: {exc}")
+        if bracket.acting_on is not None and not all(
+            bracket.koszul_well_typed(x, y, registry)
+            for x, y in ((a, b), (b, c), (c, a))
+        ):
+            raise ProofFailure(
+                "DerivedBracketStrategy: Koszul (acting_on) mode needs a "
+                "bivector generator and 1-form operands (review #9); got "
+                f"|Q| = {degree_q!r} on ({a!r}, {b!r}, {c!r})"
+            )
+        shifted = degree_q + base.operand_shift
         parity = shifted.parity()
         if parity != 1:
             raise ProofFailure(
                 "DerivedBracketStrategy: the generator must be ODD "
                 "in the shifted grading — parity(|Q| + k_base) = "
-                f"{parity!r} for |Q| = {bracket.degree_Q!r}, "
+                f"{parity!r} for |Q| = {degree_q!r}, "
                 f"k_base = {base.operand_shift!r} (the base's degree "
                 "in its own grading); with an even shifted "
                 "generator [Q,Q] = 0 is vacuous and Jacobi does "
