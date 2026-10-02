@@ -53,6 +53,10 @@ commit `0b00e1b` ("DENETİM 0B00E1B-FULL", 2026-09-30).
   `core.PropertyProvenance`, `central.tangent.prove_lie_jacobi`,
   `central.algebroid.prove_algebroid_*`. The known collisions shrink
   from 11 to 2 (`Metric` / `metric`).
+  The old names left their subpackage `__all__` lists, so a star
+  import (`from jacopy.core import *`, `jacopy.research`,
+  `jacopy.central.tangent`, …) no longer brings them; import them by
+  name, or use the new aliases.
 - Public names for private helpers used across packages and by the
   notebooks (same objects; the private names stay):
   `poisson.tilde.normalized_by`, `drinfeld.tilde_calculus.nambu_tilde_engine`,
