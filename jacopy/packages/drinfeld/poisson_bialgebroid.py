@@ -43,7 +43,7 @@ from jacopy.central.objects.interior import Interior
 _AUX_COUNTER = 0
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 from jacopy.packages.poisson.core import PoissonStructure, SharpVF
-from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.koszul_forms import KoszulBracket
 
 
 def _L(X: Expr, x: Expr) -> Expr:
@@ -112,7 +112,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
         jacobi_combination_theorems,
     )
     from jacopy.packages.poisson.showcase import showcase_engine
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
     global _AUX_COUNTER
     _AUX_COUNTER += 1
@@ -141,7 +141,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
             )
             names.append(nm)
     bare = showcase_engine(P, registry=registry, declare_poisson=False)
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     tm_only = tangent_engine(registry=registry)
     for k, (a, b) in enumerate(
@@ -154,7 +154,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
         # the tangent-only engine gives the Palais split; combining
         # yields the bracket-pairing identity. All steps mechanical.
         node = Pairing(_L(U, a), SharpVF(P.pi, b))
-        n_split = _normalized_by(bare, node, registry)
+        n_split = normalized_by(bare, node, registry)
         from jacopy.core.multi_eval import MultiEval as _ME
         from jacopy.proof.expansion import (
             ExpansionEngine as _EE,
@@ -164,7 +164,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
         )
 
         sharp_only = _EE([SharpEvaluationDefinition(P)])
-        n_compact = _normalized_by(sharp_only, node, registry)
+        n_compact = normalized_by(sharp_only, node, registry)
         leg1 = ExpandAndSimplify().prove(
             node, n_split, registry=registry, engine=bare
         )
@@ -200,7 +200,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
           for sgn, stag in (((lambda x: x), "p"), (Neg, "n")):
             base_seed = S if lift is None else Act(lift, S)
             seed = sgn(base_seed)
-            lifted = _normalized_by(engine, seed, registry)
+            lifted = normalized_by(engine, seed, registry)
             if lifted == Integer(0):
                 continue
             steps = list(chain)
@@ -267,7 +267,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
                     paired if lift is None else Act(lift, paired)
                 )
                 seed = sgn(base_seed)
-                lifted = _normalized_by(engine, seed, registry)
+                lifted = normalized_by(engine, seed, registry)
                 if lifted == Integer(0):
                     continue
                 steps = [step1, step2]
@@ -310,13 +310,13 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
             P.pi, Mdiff, b, alternating=True, slot_kind="covector"
         )
         node = Pairing(_L(U, a), SharpVF(P.pi, b))
-        n_split = _normalized_by(bare, node, registry)
+        n_split = normalized_by(bare, node, registry)
         from jacopy.proof.expansion import ExpansionEngine as _EE3
         from jacopy.packages.poisson.core import (
             SharpEvaluationDefinition as _SED,
         )
 
-        n_compact = _normalized_by(
+        n_compact = normalized_by(
             _EE3([_SED(P)]), node, registry
         )
         S_bridge = Sum(n_compact, Neg(n_split))
@@ -335,7 +335,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
                     combined if lift is None else Act(lift, combined)
                 )
                 seed = sgn(base_seed)
-                lifted = _normalized_by(engine, seed, registry)
+                lifted = normalized_by(engine, seed, registry)
                 if lifted == Integer(0):
                     continue
                 nm = f"compat_comb_{k}_{tag}_{stag}"

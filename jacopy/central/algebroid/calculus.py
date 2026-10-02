@@ -120,7 +120,7 @@ def lie_E(alg: Algebroid, u: Expr) -> LieDerivative:
 
 
 def _engine(alg: Algebroid, registry: Optional[PropertyRegistry]):
-    from jacopy.central.algebroid.engine import algebroid_engine
+    from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 
     return algebroid_engine(alg, registry=registry)
 
@@ -304,7 +304,7 @@ def jacobi_combination_theorem(
     the TM repair loop's vector-level bracket identities (2.C/2.D);
     ``d_E² = 0`` beyond functions consumes it.
     """
-    from jacopy.central.algebroid.engine import algebroid_engine
+    from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
     from jacopy.central.algebroid.operators import jacobiator
     from jacopy.central.algebroid.theorems import (
         _normalize,
@@ -438,3 +438,15 @@ def prove_d_squared_zero_on_one_forms(
         lhs, Integer(0), registry=registry, engine=engine
     )
     return chain, used
+
+
+# Unambiguous names of the algebroid Cartan theorems (audit 0B00E1B-FULL
+# T2 names): the TM theorems of :mod:`jacopy.central.tangent` carry the
+# bare names ``prove_cartan_magic_on_*`` / ``prove_d_squared_zero_on_*``
+# with a different signature (no algebroid argument). The bare names
+# stay importable here and on :mod:`jacopy.central.algebroid` (same
+# function objects); the package ``__all__`` lists only these.
+prove_algebroid_cartan_magic_on_functions = prove_cartan_magic_on_functions
+prove_algebroid_cartan_magic_on_one_forms = prove_cartan_magic_on_one_forms
+prove_algebroid_d_squared_zero_on_functions = prove_d_squared_zero_on_functions
+prove_algebroid_d_squared_zero_on_one_forms = prove_d_squared_zero_on_one_forms

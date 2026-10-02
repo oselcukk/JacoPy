@@ -113,6 +113,7 @@ from jacopy.packages.generalized.bourbaki_severa import (
     prove_h_antisymmetric_for_isotropic_phi,
 )
 from jacopy.packages.generalized.exceptional_rotation import (
+    exceptional_rotation_engine,
     pi_block,
     prove_rotated_form_decomposition,
     prove_rotated_vector_decomposition,
@@ -313,6 +314,7 @@ __all__ = [
     "prove_theta_jacobi",
     "prove_twisted_symmetric_part",
     "rotated_exceptional_bracket",
+    "exceptional_rotation_engine",
     "twisted_anchor",
     "twisted_bracket",
     "twisted_d",

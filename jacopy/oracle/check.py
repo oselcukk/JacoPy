@@ -49,7 +49,7 @@ from jacopy.central.objects.tilde_interior import TildeInterior
 from jacopy.core.expr import Expr, Neg, Product, Sum, Symbol
 from jacopy.core.wedge import Wedge
 from jacopy.packages.poisson.core import HamiltonianVF, PoissonBracketValue, SharpVF
-from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.koszul_forms import KoszulBracket
 from jacopy.packages.poisson.nambu import NambuSharpVF
 
 from jacopy.central.algebroid.context import CoboundaryForm

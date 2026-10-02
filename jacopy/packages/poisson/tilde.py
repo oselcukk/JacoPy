@@ -49,13 +49,13 @@ from jacopy.central.objects.frame import (
     Frame,
     FrameField,
     IndexLike,
-    _index_str,
+    frame_index_str,
 )
 from jacopy.central.objects.tilde_interior import TildeInterior
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 from jacopy.central.tangent.schouten import multivector_degree
 from jacopy.packages.poisson.core import PoissonStructure
-from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.koszul_forms import KoszulBracket
 from jacopy.packages.poisson.showcase import showcase_engine
 
 
@@ -395,10 +395,10 @@ def tilde_anholonomy_coefficient(
     """``γ̃_c^{ab}`` in canonical form (``a > b`` normalizes to
     ``−γ̃_c^{ba}``, ``a == b`` gives 0 — the Koszul antisymmetry as a
     canonical form, theorem-backed by
-    :func:`~jacopy.packages.poisson.koszul.prove_koszul_antisymmetry`)."""
-    a = _index_str(first)
-    b = _index_str(second)
-    c = _index_str(lower)
+    :func:`~jacopy.packages.poisson.koszul_forms.prove_koszul_antisymmetry`)."""
+    a = frame_index_str(first)
+    b = frame_index_str(second)
+    c = frame_index_str(lower)
     if a == b:
         return Integer(0)
     if a > b:
@@ -624,6 +624,12 @@ def _normalized_by(engine, seed: Expr, registry) -> Expr:
     returns the last expression (pre-4b behaviour — callers that need
     the guarantee use ``require_normal_form``)."""
     return _normal_form(engine, seed, registry).expr
+
+
+#: Public name of :func:`_normalized_by` — engine normal form with this helper's defaults (10 rounds, 1024 steps; a step-budget exhaustion raises)
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+normalized_by = _normalized_by
 
 
 def _normal_form(engine, seed: Expr, registry, *, record: bool = False):

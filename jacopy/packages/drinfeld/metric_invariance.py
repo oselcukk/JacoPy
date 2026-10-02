@@ -49,12 +49,12 @@ from jacopy.proof.strategies import ExpandAndSimplify
 from jacopy.central.objects.interior import Interior
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 from jacopy.packages.drinfeld.double import (
-    _ev,
+    evaluate_on_slots,
     lie_tilde_nambu,
     nambu_double,
 )
 from jacopy.packages.drinfeld.tilde_calculus import (
-    _tilde_engine,
+    nambu_tilde_engine,
     g_z_pairing,
     kappa_tilde_nambu,
 )
@@ -72,7 +72,7 @@ def _iota(X: Expr, x: Expr) -> Expr:
 def _maybe_ev(node: Expr, slots) -> Expr:
     """At p = 1 the g_Z-level statements are SCALARS (0 slots):
     prove them raw; otherwise evaluate on the given slots."""
-    return node if not slots else _ev(node, slots)
+    return node if not slots else evaluate_on_slots(node, slots)
 
 
 def _prove(N, node, registry, declare_fi, max_steps):
@@ -80,7 +80,7 @@ def _prove(N, node, registry, declare_fi, max_steps):
         node,
         Integer(0),
         registry=registry,
-        engine=_tilde_engine(N, registry, declare_fi=declare_fi),
+        engine=nambu_tilde_engine(N, registry, declare_fi=declare_fi),
         max_steps=max_steps,
     )
 
@@ -100,7 +100,7 @@ def prove_z_metric_invariance(
     ℒ_{Πω} g_Z(η,μ)`` — the Z-side metric-invariance operator is
     ``ℒ_{Πω}`` DD (D.15). Uses the declared FI where the paper invokes
     the bracket morphism. Evaluated on ``p−1`` slots (scalar at
-    p = 1: pass ``slots=[]`` … handled by the ``_ev`` helper via a
+    p = 1: pass ``slots=[]`` … handled by the ``evaluate_on_slots`` helper via a
     single probe)."""
     node = _maybe_ev(
         Sum(

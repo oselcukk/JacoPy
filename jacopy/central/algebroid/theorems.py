@@ -68,7 +68,7 @@ from jacopy.proof.strategies import ExpandAndSimplify, ProofFailure
 from jacopy.proof.theorems import Theorem, TheoremBook, cite
 from jacopy.bibliography import cite as bib_cite
 from jacopy.central.algebroid.context import Algebroid, algebroid
-from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 from jacopy.central.algebroid.operators import jacobiator
 
 

@@ -59,7 +59,7 @@ from jacopy.central.algebroid.context import (
     EMetric,
     algebroid,
 )
-from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 from jacopy.packages.generalized._cited_rule import (
     CitedTheoremMixin,
     fire_declared,

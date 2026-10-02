@@ -49,7 +49,7 @@ from jacopy.proof.chain import ProofChain
 from jacopy.proof.expansion import Definition
 from jacopy.proof.strategies import ExpandAndSimplify
 from jacopy.central.objects.connection import Connection
-from jacopy.central.objects.frame import Frame, IndexLike, _index_str
+from jacopy.central.objects.frame import Frame, IndexLike, frame_index_str
 from jacopy.packages.metric_affine.metric import (
     Metric,
     MetricValue,
@@ -149,7 +149,7 @@ def nonmetricity_form(
             "1-form is not an atom in this package)"
         )
     return NonMetricityForm(
-        conn.name, g.name, fr.name, _index_str(a), _index_str(b)
+        conn.name, g.name, fr.name, frame_index_str(a), frame_index_str(b)
     )
 
 
@@ -199,7 +199,7 @@ class NonMetricityFormEvaluationDefinition(Definition):
 
 
 def _engine(registry, conn, g, fr, *, decomposed: bool = False):
-    from jacopy.packages.metric_affine.engine import metric_affine_engine
+    from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
     from jacopy.packages.metric_affine.frame_components import (
         ConnectionFormEvaluationDefinition,
     )

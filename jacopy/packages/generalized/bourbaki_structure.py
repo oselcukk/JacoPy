@@ -50,7 +50,7 @@ from jacopy.proof.theorems import Theorem
 from jacopy.bibliography import cite
 from jacopy.central.calculus.scalars import is_scalar_function
 from jacopy.central.algebroid.context import Algebroid, algebroid
-from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 from jacopy.central.algebroid.theorems import _fresh_section
 from jacopy.algorithms.simplify import simplify
 from jacopy.packages.generalized.bourbaki_precalculus import (
@@ -407,15 +407,15 @@ def bourbaki_structure_engine(
 
 
 def _normalize(engine, expr: Expr, registry, *, record: bool = False):
-    """Engine normal form (the tilde ``_normalized_by`` budget: 10
+    """Engine normal form (the tilde ``normalized_by`` budget: 10
     rounds, 1024 steps). With ``record=True`` returns ``(nf, steps)``
     so a prover can keep the fired rules as children — the citing
     rules must reach the theorem's requirements (audit 0B00E1B-FULL
     M1-4)."""
     if not record:
-        from jacopy.packages.poisson.tilde import _normalized_by
+        from jacopy.packages.poisson.tilde import normalized_by
 
-        return _normalized_by(engine, expr, registry)
+        return normalized_by(engine, expr, registry)
     from jacopy.proof.normalize import normalize
 
     run = normalize(engine, expr, registry, rounds=10, max_steps=1024, record=True)

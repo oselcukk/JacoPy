@@ -270,7 +270,7 @@ class CurvatureExpansionDefinition(Definition):
 
 
 def _engine(registry: Optional[PropertyRegistry]):
-    from jacopy.packages.metric_affine.engine import metric_affine_engine
+    from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
 
     return metric_affine_engine(registry=registry)
 

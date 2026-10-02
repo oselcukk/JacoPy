@@ -67,6 +67,12 @@ def antisymmetrize(
     return Product(Rational(1, factorial(n)), total)
 
 
+#: Unambiguous name (audit 0B00E1B-FULL T2 names): ``antisymmetrize``
+#: alone is also :func:`jacopy.core.symmetrize.antisymmetrize`, the
+#: slot antisymmetrizer of an expression. Same function object.
+antisymmetrize_indices = antisymmetrize
+
+
 def swap_indices(expr: Expr, a: str, b: str) -> Expr:
     """Transposition ``a ↔ b``."""
     return rename_indices(expr, {a: b, b: a})

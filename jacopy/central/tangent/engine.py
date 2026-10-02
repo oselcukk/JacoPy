@@ -1,117 +1,13 @@
-"""
-The tangent-case expansion engine (Phase 2).
+"""Compatibility path: this module moved to :mod:`jacopy.central.tangent.tangent_expansion`.
 
-Assembles all **definitional** rules of the TM case landed so far
-(definition policy §2 in the ROADMAP): Act operator-linearity (core),
-the Lie-bracket action (2.A), scalar action as multiplication (2.A),
-the connection's action on functions and the frame duality (2.B).
-Derived rules (proved theorems) are added in later sub-phases behind
-explicit citation.
+It is the TM expansion engine (``tangent_engine``). The file was renamed so that no two modules of the
+package share a basename (audit 0B00E1B-FULL T2 names); this old path
+stays importable and IS the moved module — ``import jacopy.central.tangent.engine`` returns
+the very module object :mod:`jacopy.central.tangent.tangent_expansion`, so every name (private ones
+included) keeps resolving to the same object, with no warning.
 """
 
-from __future__ import annotations
+import importlib as _importlib
+import sys as _sys
 
-from typing import Optional
-
-from jacopy.core.registry import PropertyRegistry
-from jacopy.proof.expansion import ActOverSumOpDefinition, ExpansionEngine
-from jacopy.central.calculus import (
-    IntrinsicDDefinition,
-    IntrinsicLDefinition,
-    InteriorActDefinition,
-    HeadSumDefinition,
-    HeadScalarDefinition,
-    InteriorEvalDefinition,
-    PairingVectorScalarDefinition,
-    SlotNegDefinition,
-    SlotZeroDefinition,
-)
-from jacopy.central.calculus.symmetrize_rules import SymAltEvalDefinition
-from jacopy.central.calculus.partial_eval_rules import (
-    AlternatingPartialEvalAsInteriorDefinition,
-    MusicalAsPartialEvalDefinition,
-    PartialEvalCollapseDefinition,
-    PartialEvalLinearityDefinition,
-)
-from jacopy.central.tangent.lie_bracket import (
-    LieBracketActionDefinition,
-    ScalarActAsMultiplicationDefinition,
-)
-from jacopy.central.tangent.definitions import (
-    CovariantScalarActionDefinition,
-    FrameDualityDefinition,
-)
-
-
-def _TensorLieEval(registry):
-    from jacopy.central.calculus.tensor_calculus import (
-        TensorLieEvalDefinition,
-    )
-
-    return TensorLieEvalDefinition(registry)
-
-
-def tangent_engine(
-    *,
-    registry: Optional[PropertyRegistry] = None,
-    mode: str = "efficient",
-    holonomic_frames=(),
-) -> ExpansionEngine:
-    """Build the TM-case engine with the definitional rules only.
-
-    ``holonomic_frames``: frames declared holonomic (coordinate
-    frames); their brackets rewrite to zero.
-    """
-    # Late imports: exterior.py / anholonomy.py proof helpers
-    # late-import this module.
-    from jacopy.central.tangent.exterior import CARTAN_TM
-    from jacopy.central.tangent.anholonomy import (
-        FrameBracketCoefficientDefinition,
-        HolonomicFrameDefinition,
-    )
-    from jacopy.central.tangent.lie_bracket import BracketOrientationDefinition
-    from jacopy.central.tangent.schouten import (
-        LieOnMultivectorDefinition,
-        SNExpansionDefinition,
-        SNOrientationDefinition,
-    )
-
-    engine = ExpansionEngine(
-        [
-            ActOverSumOpDefinition(),
-            LieBracketActionDefinition(),
-            ScalarActAsMultiplicationDefinition(registry),
-            CovariantScalarActionDefinition(registry),
-            FrameDualityDefinition(),
-            IntrinsicDDefinition(CARTAN_TM, registry),
-            IntrinsicLDefinition(CARTAN_TM, registry),
-            InteriorActDefinition(registry),
-            InteriorEvalDefinition(registry),
-            HeadSumDefinition(),
-            HeadScalarDefinition(registry),
-            PairingVectorScalarDefinition(registry),
-            SlotNegDefinition(),
-            SlotZeroDefinition(),
-            FrameBracketCoefficientDefinition(),
-            SymAltEvalDefinition(),
-            # Theorem-backed canonical form (see the class docstring):
-            # orientation normalization for Lie-bracket atoms.
-            BracketOrientationDefinition(),
-            SNOrientationDefinition(registry),
-            SNExpansionDefinition(registry),
-            LieOnMultivectorDefinition(registry),
-            # (q,r)-tensor Lie evaluation law (PDF 9e; 2026-09-08
-            # audit compliance-2 closure).
-            _TensorLieEval(registry),
-            # item 8w generalization (ledger K2): partial evaluation
-            # of k-linear maps and the musical atoms as its j = 1 case.
-            PartialEvalCollapseDefinition(),
-            PartialEvalLinearityDefinition(registry),
-            AlternatingPartialEvalAsInteriorDefinition(),
-            MusicalAsPartialEvalDefinition(),
-        ],
-        mode=mode,
-    )
-    for fr in holonomic_frames:
-        engine.register(HolonomicFrameDefinition(fr))
-    return engine
+_sys.modules[__name__] = _importlib.import_module("jacopy.central.tangent.tangent_expansion")

@@ -48,7 +48,7 @@ def _engine(registry: Optional[PropertyRegistry]):
     # Late import: the engine module aggregates definitional rules from
     # this module and from definitions.py, so importing it eagerly at
     # the top would cycle.
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     return tangent_engine(registry=registry)
 
@@ -366,6 +366,13 @@ def prove_jacobi(
         registry=registry,
         engine=_engine(registry),
     )
+
+
+#: Unambiguous name of the vector-field Jacobi theorem (audit
+#: 0B00E1B-FULL T2 names): ``prove_jacobi`` alone is also
+#: :func:`jacopy.proof.verifier.prove_jacobi`, the bracket-generic
+#: graded Jacobi prover. Same function object.
+prove_lie_jacobi = prove_jacobi
 
 
 def jacobi_combination_theorems(

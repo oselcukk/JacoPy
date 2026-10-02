@@ -12,7 +12,8 @@ from jacopy.central.tangent.lie_bracket import (
     ScalarActAsMultiplicationDefinition,
     lie_bracket,
     prove_antisymmetry,
-    prove_jacobi,
+    prove_jacobi,  # old name of prove_lie_jacobi (kept, not in __all__)
+    prove_lie_jacobi,
     prove_leibniz_second_slot,
     prove_first_slot_function_linearity,
     prove_additivity_second_slot,
@@ -26,7 +27,7 @@ from jacopy.central.tangent.definitions import (
     prove_covariant_leibniz,
     prove_frame_duality,
 )
-from jacopy.central.tangent.engine import tangent_engine
+from jacopy.central.tangent.tangent_expansion import tangent_engine
 from jacopy.central.tangent.anholonomy import (
     AnholonomyCoefficient,
     FrameBracketCoefficientDefinition,
@@ -86,7 +87,7 @@ __all__ = [
     "lie_bracket",
     "tangent_engine",
     "prove_antisymmetry",
-    "prove_jacobi",
+    "prove_lie_jacobi",
     "prove_leibniz_second_slot",
     "prove_first_slot_function_linearity",
     "prove_additivity_second_slot",

@@ -52,7 +52,7 @@ from jacopy.proof.chain import ProofChain
 from jacopy.central.objects.interior import Interior
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 from jacopy.packages.drinfeld.double import (
-    _ev,
+    evaluate_on_slots,
     _iota,
     _L,
     dorfman_double,
@@ -149,6 +149,12 @@ def _twist_engine(N, registry):
     return eng
 
 
+#: Public name of :func:`_twist_engine` — the twist engine of a Nambu structure
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+twist_engine = _twist_engine
+
+
 # ------------------------------------------------------------------- #
 # Π-transform theorems                                                 #
 # ------------------------------------------------------------------- #
@@ -176,7 +182,7 @@ def prove_pi_twist_form_is_nambu(
         U, omega, V, eta,
     )
     _, nb_form = nambu_double(N, U, omega, V, eta)
-    node = _ev(Sum(tw_form, Neg(nb_form)), slots)
+    node = evaluate_on_slots(Sum(tw_form, Neg(nb_form)), slots)
     return ExpandAndSimplify().prove(
         node,
         Integer(0),
@@ -312,7 +318,7 @@ def prove_twisted_z_bracket_is_koszul(
         _L(N.sharp_vf(omega), eta),
         kappa(N.sharp_vf(eta), omega),
     )
-    node = _ev(
+    node = evaluate_on_slots(
         Sum(lhs, Neg(nambu_koszul_bracket(N, omega, eta))), slots
     )
     return ExpandAndSimplify().prove(
@@ -344,7 +350,7 @@ def prove_b_twist_vec_unchanged(
     untouched ``[U,V]_Lie`` [TW (7.18) with zero tilde side]. Acting
     on ``h``; declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     tw_vec, _ = twisted_dorfman(
         lambda v, f: b_twist(B, v, f),
@@ -388,7 +394,7 @@ def prove_b_twist_severa(
         InteriorVectorLinearityDefinition,
         OperatorSlotAdditivityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -403,7 +409,7 @@ def prove_b_twist_severa(
     )
     _, base_form = dorfman_double(U, omega, V, eta)
     h_term = Act(Interior(V), Act(Interior(U), d(B)))
-    node = _ev(
+    node = evaluate_on_slots(
         Sum(tw_form, Neg(base_form), Neg(h_term)), slots
     )
     eng = tangent_engine(registry=registry)
@@ -567,7 +573,7 @@ def prove_b_twist_severa_h(
         MultiEvalArgLinearityDefinition,
         OperatorSlotAdditivityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -581,7 +587,7 @@ def prove_b_twist_severa_h(
     _, target_form = dorfman_double_h(
         Sum(H, d(B)), U, omega, V, eta
     )
-    node = _ev(Sum(tw_form, Neg(target_form)), slots)
+    node = evaluate_on_slots(Sum(tw_form, Neg(target_form)), slots)
     eng = tangent_engine(registry=registry)
     eng.register(LieBracketLeibnizDefinition(registry))
     eng.register(MultiEvalArgLinearityDefinition(registry))
@@ -631,7 +637,7 @@ def prove_pi_twist_h_form(
         Sum(U, N.sharp_vf(omega)),
         Sum(V, N.sharp_vf(eta)),
     )
-    node = _ev(Sum(tw_form, Neg(nb_form), Neg(shift)), slots)
+    node = evaluate_on_slots(Sum(tw_form, Neg(nb_form), Neg(shift)), slots)
     return ExpandAndSimplify().prove(
         node,
         Integer(0),
@@ -737,7 +743,7 @@ def _m_twist_engine(registry):
         EndoInverseDefinition,
         EndoLinearityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -976,7 +982,7 @@ def prove_b_twists_compose_additively(
         MultiEvalArgLinearityDefinition,
         OperatorSlotAdditivityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -998,7 +1004,7 @@ def prove_b_twists_compose_additively(
     eng.register(InteriorVectorLinearityDefinition(registry))
     eng.register(ActExpansionDefinition(registry))
     eng.register(OperatorSlotAdditivityDefinition())
-    node = _ev(Sum(f_comp, Neg(f_sum)), slots)
+    node = evaluate_on_slots(Sum(f_comp, Neg(f_sum)), slots)
     return ExpandAndSimplify().prove(
         node,
         Integer(0),
@@ -1031,12 +1037,12 @@ def _jacobi_bridge_engine(N, registry):
     """The tilde engine of the FI-declaring ``N`` plus the sharp-slot
     alternating normalization (``Π(d Π(μ,ω)) + Π(d Π(ω,μ))`` must
     cancel; :mod:`r_twisted` precedent)."""
-    from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
+    from jacopy.packages.drinfeld.tilde_calculus import nambu_tilde_engine
     from jacopy.packages.generalized.r_twisted import (
         SharpSlotAlternatingNormalizeDefinition,
     )
 
-    eng = _tilde_engine(N, registry)
+    eng = nambu_tilde_engine(N, registry)
     eng.register(SharpSlotAlternatingNormalizeDefinition(registry))
     return eng
 
@@ -1118,8 +1124,8 @@ def prove_nambu_double_jacobi_via_twist(
         )
     e = ((U, omega), (V, eta), (W, mu))
     pe = tuple(pi_twist(N, *x) for x in e)
-    jac_n = _ev(nambu_double_jacobiator(N, *e, component=1), slots)
-    jac_d = _ev(bracket_jacobiator(dorfman_double, *pe, component=1), slots)
+    jac_n = evaluate_on_slots(nambu_double_jacobiator(N, *e, component=1), slots)
+    jac_d = evaluate_on_slots(bracket_jacobiator(dorfman_double, *pe, component=1), slots)
 
     bridge_engine = _jacobi_bridge_engine(N, registry)
     bridge_chain = ExpandAndSimplify().prove(

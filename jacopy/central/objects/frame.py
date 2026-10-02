@@ -89,6 +89,12 @@ def _index_str(index: IndexLike) -> str:
     return s
 
 
+#: Public name of :func:`_index_str` — the string name of a frame index
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+frame_index_str = _index_str
+
+
 def substituted_index_names(
     names: Tuple[str, ...], dummy: Expr, target: Expr
 ) -> Optional[Tuple[str, ...]]:

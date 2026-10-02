@@ -38,13 +38,16 @@ Support levels
    these may change without notice.
 
 Same name, different object: here ``Zero`` is the expression
-:data:`~jacopy.core.expr.Zero` (not the block-matrix
-``jacopy.research.Zero``), ``metric``/``Metric`` the central metric
-atom (not the :mod:`jacopy.packages.metric_affine` metric context) and
-``normalize`` :func:`jacopy.proof.normalize` (not
-``jacopy.algorithms.rewrite.normalize``). ``Provenance``,
-``antisymmetrize`` and ``prove_jacobi`` are deliberately not exported
-here: two different objects carry each of those names.
+:data:`~jacopy.core.expr.Zero` (the block-matrix zero operator is
+``jacopy.research.ZeroOperator``), ``metric``/``Metric`` the central
+metric atom (not the :mod:`jacopy.packages.metric_affine` metric
+context) and ``normalize`` :func:`jacopy.proof.normalize` (the
+rule-list fixed point is ``jacopy.algorithms.rewrite_to_fixpoint``).
+``Provenance``, ``antisymmetrize`` and ``prove_jacobi`` are deliberately
+not exported here; each subpackage ``__all__`` now carries an
+unambiguous name for the second object (``PropertyProvenance``,
+``antisymmetrize_indices``, ``prove_lie_jacobi``) while the old names
+stay importable from their old paths.
 
 The core expression classes load eagerly; every other name loads on
 first access, so ``import jacopy.core`` (or ``jacopy.oracle``) stays as

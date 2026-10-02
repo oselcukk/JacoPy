@@ -292,7 +292,7 @@ def _sn_expand(
 
 
 def _engine(registry):
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     return tangent_engine(registry=registry)
 

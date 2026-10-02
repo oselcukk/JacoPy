@@ -37,7 +37,7 @@ from jacopy.packages.metric_affine.e_connection import (
 from jacopy.packages.metric_affine.component_workflow import (
     ComponentInput,
 )
-from jacopy.packages.metric_affine.engine import metric_affine_engine
+from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
 from jacopy.packages.metric_affine.modified import (
     CoframeRecombinationDefinition,
     modified_torsion,
@@ -67,7 +67,7 @@ from jacopy.packages.metric_affine.frame_components import (
     prove_connection_form_on_frame,
     prove_torsion_components,
 )
-from jacopy.packages.metric_affine.koszul import (
+from jacopy.packages.metric_affine.metric_koszul import (
     prove_generalized_koszul,
     prove_koszul_formula,
     prove_levi_civita_unique,

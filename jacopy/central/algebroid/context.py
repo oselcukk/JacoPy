@@ -667,7 +667,7 @@ class Algebroid:
         coboundary pairing/linearity definitions; phase
         ``"expansion"`` — the Jacobiator / derivator / predator
         definitional expansions. Structure-free rules are the engine
-        builder's (:func:`~jacopy.central.algebroid.engine.algebroid_engine`)."""
+        builder's (:func:`~jacopy.central.algebroid.algebroid_expansion.algebroid_engine`)."""
         from jacopy.central.algebroid.declarations import declaration_rules
         from jacopy.central.algebroid.operators import (
             DerivatorExpansionDefinition,

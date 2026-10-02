@@ -109,10 +109,16 @@ def _engine(N3, registry):
     return eng
 
 
-def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+#: Public name of :func:`_engine` — the engine of the rotated exceptional bracket
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+exceptional_rotation_engine = _engine
 
-    return _normalized_by(engine, expr, registry)
+
+def _normalize(engine, expr: Expr, registry) -> Expr:
+    from jacopy.packages.poisson.tilde import normalized_by
+
+    return normalized_by(engine, expr, registry)
 
 
 def _zero_theorem(

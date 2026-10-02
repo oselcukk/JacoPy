@@ -48,7 +48,7 @@ from jacopy.central.objects.interior import Interior
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 from jacopy.central.tangent.lie_bracket import lie_bracket
 from jacopy.packages.drinfeld.double import (
-    _double_engine,
+    double_engine,
     canonical_pairing,
     dorfman_double,
 )
@@ -90,9 +90,9 @@ def courant_bracket_std(
 
 
 def _norm(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, expr, registry)
+    return normalized_by(engine, expr, registry)
 
 
 def _component_theorem(
@@ -158,7 +158,7 @@ def prove_anchor_morphism_std(
     ``ρ(U+ω) = U``, the anchor of the Dorfman bracket is the Lie
     bracket of the anchors — the vector component of the bracket IS
     ``[U,V]_Lie``, so the defect normalizes to 0 in one step."""
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     vec, _form = dorfman_double(U, omega, V, eta)
     diff = Sum(vec, Neg(lie_bracket(U, V)))
     return _component_theorem(
@@ -205,7 +205,7 @@ def prove_dorfman_invariance_std(
     computation: the left side is ``U(ι_W η + ι_V ζ)`` and the
     right side opens through the magic formula and the ``[ℒ,ι]``
     commutator."""
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     lhs = Act(U, canonical_pairing(V, eta, W, zeta))
     xy_vec, xy_form = dorfman_double(U, omega, V, eta)
     xz_vec, xz_form = dorfman_double(U, omega, W, zeta)
@@ -256,7 +256,7 @@ def prove_courant_dorfman_relation(
     (equivalently: Courant is the skew-symmetrization of Dorfman,
     since ``[x,y]_D + [y,x]_D = 2·D⟨x,y⟩₊``). Component-wise
     normalization to 0."""
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     c_vec, c_form = courant_bracket_std(U, omega, V, eta)
     d_vec, d_form = dorfman_double(U, omega, V, eta)
     D_vec, D_form = d_operator_std(
@@ -297,7 +297,7 @@ def prove_courant_skew_std(
     """The Courant bracket is genuinely SKEW:
     ``[x,y]_C + [y,x]_C = 0`` component-wise (the D-exact symmetric
     part of Dorfman is subtracted off exactly)."""
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     ab_vec, ab_form = courant_bracket_std(U, omega, V, eta)
     ba_vec, ba_form = courant_bracket_std(V, eta, U, omega)
     return _component_theorem(
@@ -347,7 +347,7 @@ def prove_courant_c3_lwx_std(
         MagicFormulaDefinition,
     )
 
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     engine.register(MagicFormulaDefinition(registry))
     engine.register(
         InteriorVectorLinearityDefinition(registry)
@@ -474,9 +474,9 @@ def prove_courant_jacobi_dt_std(
     from jacopy.packages.drinfeld.twist import (
         MagicFormulaDefinition,
     )
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     engine.register(MagicFormulaDefinition(registry))
     engine.register(
         InteriorVectorLinearityDefinition(registry)
@@ -492,10 +492,10 @@ def prove_courant_jacobi_dt_std(
     # Vector component: Σcyc[[U,V],W] = 0 on the action probe f
     # (agreement on generators — a VF vanishing on every function
     # is zero); D T has no vector component.
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
     probe = Act(jac_vec, f)
-    nf = _normalized_by(engine, probe, registry)
+    nf = normalized_by(engine, probe, registry)
     if nf != Integer(0):
         raise ProofFailure(
             "Courant [C1]: the vector-component Jacobi probe "
@@ -504,7 +504,7 @@ def prove_courant_jacobi_dt_std(
         )
 
     node = Sum(
-        _ev(jac_form, slots), Neg(_ev(dt_form, slots))
+        evaluate_on_slots(jac_form, slots), Neg(evaluate_on_slots(dt_form, slots))
     )
     return prove_with_bracket_identities(
         node,

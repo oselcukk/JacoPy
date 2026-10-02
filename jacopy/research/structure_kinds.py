@@ -87,6 +87,9 @@ class FamilyRule:
     when: Callable[[FrozenSet[str]], bool] = field(compare=False)
     build: Callable[[Any], Definition] = field(compare=False)
     why: str = field(compare=False)
+    #: what makes two registrations "the same" (:func:`register_family_rule`
+    #: is idempotent on it): the ``when`` spec, ``build``, ``why``, ``order``
+    spec: Any = field(default=None, compare=False, repr=False)
 
 
 _FAMILIES: List[NodeFamily] = []
@@ -103,7 +106,10 @@ def register_family(
     additive_slots: bool = False,
 ) -> NodeFamily:
     """Register a node family; re-registering the same ``(cls, tag)``
-    replaces the earlier entry in place (idempotent imports)."""
+    replaces the earlier entry in place (idempotent imports). The
+    library's own families are always loaded first
+    (:func:`ensure_builtin_kinds`)."""
+    ensure_builtin_kinds()
     fam = NodeFamily(cls, tag, owner_key, additive_slots)
     for i, old in enumerate(_FAMILIES):
         if old.cls is cls and old.tag == tag:
@@ -114,12 +120,15 @@ def register_family(
 
 
 def families() -> Tuple[NodeFamily, ...]:
-    """The registered node families, in registration order."""
+    """The registered node families, in registration order (the
+    library's own first)."""
+    ensure_builtin_kinds()
     return tuple(_FAMILIES)
 
 
 def additive_slot_tags() -> FrozenSet[str]:
     """Tags whose operators have additive direction slots."""
+    ensure_builtin_kinds()
     return frozenset(f.tag for f in _FAMILIES if f.additive_slots)
 
 
@@ -133,22 +142,40 @@ def register_family_rule(
     """Add ``build(registry)`` to an assembled engine when the scanned
     families satisfy ``when``: a tag (``"wedge"``), a set of tags (ALL
     present) or a predicate ``families -> bool``. Rules are added in
-    ascending ``order`` (ties: registration order)."""
+    ascending ``order`` (ties: registration order).
+
+    Idempotent: registering the same rule again (same ``when`` tag /
+    tag set / predicate object, same ``build`` object, ``why`` and
+    ``order``) returns the existing entry instead of adding a second
+    copy. The library's own rules are always loaded first
+    (:func:`ensure_builtin_kinds`)."""
+    ensure_builtin_kinds()
     if isinstance(when, str):
         tag = when
         pred = lambda fam, _t=tag: _t in fam  # noqa: E731
+        when_spec = ("tag", tag)
     elif callable(when):
         pred = when
+        when_spec = ("predicate", id(when))
     else:
         tags = frozenset(when)
         pred = lambda fam, _t=tags: _t <= fam  # noqa: E731
-    rule = FamilyRule(order, next(_SEQ), pred, build, why)
+        when_spec = ("tags", tags)
+    spec = (when_spec, id(build), why, order)
+    for old in _FAMILY_RULES:
+        if old.spec == spec and (
+            when_spec[0] != "predicate" or old.when is when
+        ) and old.build is build:
+            return old
+    rule = FamilyRule(order, next(_SEQ), pred, build, why, spec)
     _FAMILY_RULES.append(rule)
     return rule
 
 
 def family_rules() -> Tuple[FamilyRule, ...]:
-    """The registered family rules in the order they are applied."""
+    """The registered family rules in the order they are applied (the
+    library's own are always loaded first)."""
+    ensure_builtin_kinds()
     return tuple(sorted(_FAMILY_RULES, key=lambda r: (r.order, r.seq)))
 
 
@@ -185,7 +212,7 @@ class StructureKind:
         by default the tangent (Cartan) engine; the structure's own
         rules (provider protocol) are then added and reported by
         ``assemble_engine`` (see :attr:`host_includes_rules`)."""
-        from jacopy.central.tangent.engine import tangent_engine
+        from jacopy.central.tangent.tangent_expansion import tangent_engine
 
         return tangent_engine(registry=registry)
 
@@ -198,7 +225,12 @@ class StructureKind:
 
 def register_structure_kind(kind: StructureKind, *, first: bool = False) -> StructureKind:
     """Register ``kind``; the first kind whose ``accepts`` is true
-    handles a structure (``first=True`` puts ``kind`` in front)."""
+    handles a structure (``first=True`` puts ``kind`` in front). The
+    library's own kinds are always loaded first
+    (:func:`ensure_builtin_kinds`), so a kind registered without
+    ``first=True`` never takes precedence over a built-in one, whatever
+    the import order."""
+    ensure_builtin_kinds()
     if kind in _KINDS:
         return kind
     if first:
@@ -209,12 +241,14 @@ def register_structure_kind(kind: StructureKind, *, first: bool = False) -> Stru
 
 
 def unregister_structure_kind(kind: StructureKind) -> None:
+    ensure_builtin_kinds()
     if kind in _KINDS:
         _KINDS.remove(kind)
 
 
 def unregister(entry) -> None:
     """Remove a family, family rule or structure kind (tests, sessions)."""
+    ensure_builtin_kinds()
     for reg in (_FAMILIES, _FAMILY_RULES, _KINDS):
         if entry in reg:
             reg.remove(entry)
@@ -240,18 +274,29 @@ def structure_kind_of(structure) -> StructureKind:
 # ------------------------------------------------------------------ #
 
 _BUILTINS_LOADED = False
+_BUILTINS_LOADING = False
 
 
 def ensure_builtin_kinds() -> None:
-    """Load the library's own families, family rules and kinds once."""
-    global _BUILTINS_LOADED
-    if _BUILTINS_LOADED:
-        return
-    from jacopy.research import engine_assembly, nambu_kind
+    """Load the library's own families, family rules and kinds once.
 
-    engine_assembly._register_central_builtins()
-    nambu_kind.register()
-    _BUILTINS_LOADED = True
+    Every registry function (register and read) calls this first, so
+    the built-ins always precede user entries and the registries never
+    depend on which was touched first (arch-core gate L1/L2). The
+    built-ins' own registrations run while loading and do not recurse.
+    """
+    global _BUILTINS_LOADED, _BUILTINS_LOADING
+    if _BUILTINS_LOADED or _BUILTINS_LOADING:
+        return
+    _BUILTINS_LOADING = True
+    try:
+        from jacopy.research import engine_assembly, nambu_kind
+
+        engine_assembly._register_central_builtins()
+        nambu_kind.register()
+        _BUILTINS_LOADED = True
+    finally:
+        _BUILTINS_LOADING = False
 
 
 __all__ = [

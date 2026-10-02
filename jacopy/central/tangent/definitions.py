@@ -121,7 +121,7 @@ class FrameDualityDefinition(Definition):
 
 def _engine(registry: Optional[PropertyRegistry]):
     # Late import: engine.py aggregates rules from this module.
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     return tangent_engine(registry=registry)
 

@@ -52,14 +52,14 @@ from jacopy.central.tangent.anholonomy import (
     anholonomy_coefficient,
 )
 from jacopy.central.tangent.cartan import L as _L
-from jacopy.central.tangent.engine import tangent_engine
+from jacopy.central.tangent.tangent_expansion import tangent_engine
 from jacopy.central.tangent.exterior import d
 from jacopy.central.tangent.lie_bracket import lie_bracket
 from jacopy.packages.poisson.core import (
     PoissonStructure,
     SharpVF,
 )
-from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.koszul_forms import KoszulBracket
 from jacopy.packages.poisson.tilde import (
     TildeAnholonomyDefinition,
     tilde_anholonomy_coefficient,
@@ -98,9 +98,9 @@ def _zero_theorem(
     notes,
     label,
 ) -> Tuple[ProofChain, Theorem]:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    nf = _normalized_by(engine, diff, registry)
+    nf = normalized_by(engine, diff, registry)
     if nf != Integer(0):
         raise ProofFailure(
             f"{name}: {label} FAILS — residual "
@@ -332,7 +332,7 @@ def prove_boxtimes_components_are_413(
     from jacopy.packages.drinfeld.tilde_calculus import (
         NambuSharpPairingEvalDefinition,
     )
-    from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
+    from jacopy.packages.drinfeld.tilde_calculus import nambu_tilde_engine
     from jacopy.research.antisymmetrize import antisymmetrize
 
     if N3.p != 2:
@@ -358,15 +358,15 @@ def prove_boxtimes_components_are_413(
             Product(comp(*idx[:3]), comp(*idx[3:], c_up)), idx
         ),
     )
-    engine = _tilde_engine(N3, registry, declare_fi=False)
+    engine = nambu_tilde_engine(N3, registry, declare_fi=False)
     engine.register(MultivectorInteriorLinearityDefinition(registry))
     engine.register(
         MultivectorInteriorDecomposableFormDefinition(registry)
     )
     engine.register(NambuSharpPairingEvalDefinition(N3, registry))
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    left = _normalized_by(engine, lhs, registry)
+    left = normalized_by(engine, lhs, registry)
     right = simplify(rhs, registry)
     diff = simplify(Sum(left, Neg(right)), registry)
     if diff != Integer(0):

@@ -195,7 +195,7 @@ def e_connection_engine(
     """The algebroid engine extended with the E-connection layer: the
     4.A connection structure rules plus the anchored scalar action and
     the E-torsion/E-curvature expansions."""
-    from jacopy.central.algebroid.engine import algebroid_engine
+    from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
     from jacopy.packages.metric_affine.rules import (
         ConnectionArgumentLeibnizDefinition,
         ConnectionDirectionLinearityDefinition,

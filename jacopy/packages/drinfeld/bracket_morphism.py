@@ -43,7 +43,7 @@ from jacopy.packages.drinfeld.double import (
     nambu_double,
 )
 from jacopy.packages.drinfeld.tilde_calculus import (
-    _tilde_engine,
+    nambu_tilde_engine,
     kappa_tilde_nambu,
 )
 from jacopy.packages.poisson.nambu import nambu_koszul_bracket
@@ -58,7 +58,7 @@ def _prove(N, node, registry, declare_fi, max_steps):
         node,
         Integer(0),
         registry=registry,
-        engine=_tilde_engine(N, registry, declare_fi=declare_fi),
+        engine=nambu_tilde_engine(N, registry, declare_fi=declare_fi),
         max_steps=max_steps,
     )
 

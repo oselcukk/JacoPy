@@ -73,7 +73,7 @@ def _jacobi_engine(
 ) -> Tuple[object, List[Theorem]]:
     """A metric-affine engine with the section-level Jacobi instance
     theorems for the given triples cited (both signs)."""
-    from jacopy.packages.metric_affine.engine import metric_affine_engine
+    from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
 
     engine = metric_affine_engine(registry=registry)
     book = TheoremBook()
@@ -104,7 +104,7 @@ def prove_ricci_identity_on_functions(
     """``∇_X ∇_Y f − ∇_Y ∇_X f − ∇_{[X,Y]} f = 0`` — the curvature
     operator kills scalars (purely definitional: ``∇f = Xf`` and the
     bracket's commutator definition)."""
-    from jacopy.packages.metric_affine.engine import metric_affine_engine
+    from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
 
     lhs = Sum(
         conn(X, conn(Y, f)),
@@ -187,7 +187,7 @@ def covariant_jacobi_theorems(
     vanishes.
     """
     from jacopy.proof.step import ProofStep
-    from jacopy.packages.metric_affine.engine import metric_affine_engine
+    from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
 
     V = Sum(
         lie_bracket(X, lie_bracket(Y, Z)),

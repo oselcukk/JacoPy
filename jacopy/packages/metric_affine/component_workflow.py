@@ -226,11 +226,11 @@ class ComponentInput:
         audit, finding 4 — the result must depend on the expression
         and THIS data set only, not on prior calls)."""
         from jacopy.proof.expansion import ExpansionEngine
-        from jacopy.packages.metric_affine.engine import (
+        from jacopy.packages.metric_affine.metric_affine_expansion import (
             metric_affine_engine,
         )
         from jacopy.packages.poisson.tilde import (
-            _normalized_by,
+            normalized_by,
         )
 
         base = (
@@ -247,7 +247,7 @@ class ComponentInput:
         )
         for d_ in base.definitions:
             eng.register(d_)
-        return _normalized_by(eng, expr, registry)
+        return normalized_by(eng, expr, registry)
 
 
 class SubstituteComponentsDefinition(Definition):

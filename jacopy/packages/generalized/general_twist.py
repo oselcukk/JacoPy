@@ -57,7 +57,7 @@ from jacopy.central.algebroid.context import (
     Algebroid,
     algebroid,
 )
-from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 from jacopy.packages.generalized.bourbaki_precalculus import (
     _SlotAtom,
     _split_scalar,
@@ -220,9 +220,9 @@ def general_twist_engine(
 
 
 def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, expr, registry)
+    return normalized_by(engine, expr, registry)
 
 
 def _zero_theorem(

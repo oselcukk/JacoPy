@@ -431,7 +431,7 @@ class AxiomSuite:
     def _zero_by_components(
         self, axiom: str, diff: GeneralizedSection
     ) -> SuiteReport:
-        from jacopy.packages.poisson.tilde import _normalized_by
+        from jacopy.packages.poisson.tilde import normalized_by
 
         rep = SuiteReport(axiom)
         for comp, slot in zip(diff, diff.type):
@@ -488,7 +488,7 @@ class AxiomSuite:
         ``lie_R`` of the data, checked per pairing component (a
         scalar component directly, a ``k``-form component on ``k``
         fresh vector slots)."""
-        from jacopy.packages.poisson.tilde import _normalized_by
+        from jacopy.packages.poisson.tilde import normalized_by
         from jacopy.research.sections import Slot
 
         if self.data.pairing is None or self.data.lie_R is None:
@@ -537,7 +537,7 @@ class AxiomSuite:
         """``ρ([e₁,e₂]) = [ρe₁, ρe₂]_Lie`` (probed); a residual here
         is the *obstruction* (the Poisson condition's analogue)."""
         from jacopy.central.tangent.lie_bracket import lie_bracket
-        from jacopy.packages.poisson.tilde import _normalized_by
+        from jacopy.packages.poisson.tilde import normalized_by
 
         br, rho = self.data.bracket, self.data.anchor
         body = Sum(rho(br(e1, e2)), Neg(lie_bracket(rho(e1), rho(e2))))

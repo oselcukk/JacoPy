@@ -22,6 +22,11 @@ The class bodies are moved verbatim (their docstrings still name the
 engine that first registered them); the old module paths re-export the
 SAME class objects, so every existing import keeps working and the
 engines that register them are unchanged.
+
+Naming: ``*_rules`` modules hold ``Definition`` classes (the
+convention of :mod:`jacopy.central.calculus.slot_rules` and its
+siblings); the proved Cartan theorems (``prove_*``) and the operator
+``L`` are in :mod:`jacopy.central.tangent.cartan`.
 """
 
 from __future__ import annotations

@@ -350,11 +350,11 @@ def _tilde_engine(N, registry, *, declare_fi: bool = False):
     (``N.with_declarations("fundamental-identity")``) — the flag is
     never distributed to other structures. Prefer declaring on the
     structure."""
-    from jacopy.packages.drinfeld.twist import _twist_engine
+    from jacopy.packages.drinfeld.twist import twist_engine
 
     if declare_fi and not N.declares("fundamental-identity"):
         N = N.with_declarations("fundamental-identity")
-    eng = _twist_engine(N, registry)
+    eng = twist_engine(N, registry)
     eng.register(LieIotaCommutatorDefinition())
     eng.register(InteriorAnticommuteDefinition())
     for rule in N.engine_rules(registry, phase="pairing"):
@@ -362,6 +362,12 @@ def _tilde_engine(N, registry, *, declare_fi: bool = False):
     for rule in N.engine_rules(registry, phase="declared"):
         eng.register(rule)
     return eng
+
+
+#: Public name of :func:`_tilde_engine` — the tilde-calculus engine of a Nambu structure (not :func:`jacopy.packages.poisson.tilde.tilde_engine`)
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+nambu_tilde_engine = _tilde_engine
 
 
 def _fi_key(engine, N):
@@ -393,7 +399,7 @@ def _cite_fi_instances(engine, N, omega, eta, W, h, registry):
         TheoremBook,
         TheoremDefinition,
     )
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
     fi_key = _fi_key(engine, N)
     # metadata of the licensing declaration (copied, never hand-typed)
@@ -413,7 +419,7 @@ def _cite_fi_instances(engine, N, omega, eta, W, h, registry):
             for sgn, gtag in (((lambda x: x), "p"), (Neg, "n")):
                 seed = S if lift is None else Act(lift, S)
                 seed = sgn(seed)
-                lifted = _normalized_by(engine, seed, registry)
+                lifted = normalized_by(engine, seed, registry)
                 if lifted == Integer(0):
                     continue
                 nm = f"fi_inst_{stag}_{ltag}_{gtag}"
@@ -658,10 +664,10 @@ def prove_jacobi_compat_d9(
     from jacopy.proof.strategies import ExpandAndSimplify
     from jacopy.central.tangent.exterior import CARTAN_TM
     from jacopy.packages.drinfeld.calculus_conditions import kappa
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
     theta = d(iota_tilde(U, eta))
-    node = _ev(
+    node = evaluate_on_slots(
         Sum(
             Act(CARTAN_TM.lie(d_tilde(N, iota_tilde(U, eta))), mu),
             nambu_koszul_bracket(N, theta, mu),
@@ -959,7 +965,7 @@ def _p1_deep_instances(engine, N, omega, eta, W, h, registry):
     from jacopy.core.multi_eval import MultiEval
     from jacopy.core.pairing import Pairing
     from jacopy.central.tangent.lie_bracket import lie_bracket
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
     from jacopy.proof.step import ProofStep
 
     def ME(*a):
@@ -1005,7 +1011,7 @@ def _p1_deep_instances(engine, N, omega, eta, W, h, registry):
                 ((lambda x: x), "p"),
                 (Neg, "n"),
             ):
-                nf = _normalized_by(
+                nf = normalized_by(
                     engine, sgn(base_seed), registry
                 )
                 if nf != Integer(0):
@@ -1025,12 +1031,12 @@ def _stall_difference_prove(
     ``R → NF(R − lhs)`` with ``lhs = 0`` a cited instance and NF a
     chain of registered-rule applications. Returns a
     :class:`ProofChain` or raises :class:`ProofFailure`."""
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
     from jacopy.proof.step import ProofStep
     from jacopy.proof.strategies import ProofFailure
 
     steps = []
-    residual = _normalized_by(engine, node, registry)
+    residual = normalized_by(engine, node, registry)
     if residual != node:
         steps.append(ProofStep(
             node, residual,
@@ -1042,7 +1048,7 @@ def _stall_difference_prove(
         rounds += 1
         progressed = False
         for name, lhs, chain in instances:
-            cand = _normalized_by(
+            cand = normalized_by(
                 engine, Sum(residual, Neg(lhs)), registry
             )
             if _node_size(cand) < _node_size(residual):

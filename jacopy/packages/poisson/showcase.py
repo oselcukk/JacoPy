@@ -51,7 +51,7 @@ from jacopy.packages.poisson.core import (
     PoissonStructure,
     poisson_engine,
 )
-from jacopy.packages.poisson.koszul import (
+from jacopy.packages.poisson.koszul_forms import (
     KoszulBracketDefinition,
     SharpVFLinearityDefinition,
     koszul_bracket,
@@ -69,6 +69,12 @@ def _is_exact(expr: Expr) -> bool:
         and isinstance(expr.op, ExteriorDerivative)
         and belongs_to(expr.op, CARTAN_TM)
     )
+
+
+#: Public name of :func:`_is_exact` — ``expr`` is ``d(·)`` of the TM calculus
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+is_exact_form = _is_exact
 
 
 class SNBivectorExactEvalDefinition(Definition):
@@ -175,7 +181,7 @@ class SNBivectorGeneralEvalDefinition(Definition):
         # normal forms while not closing the general Jacobi either.
         from jacopy.central.tangent.exterior import CARTAN_TM as _C
         from jacopy.packages.poisson.core import SharpVF
-        from jacopy.packages.poisson.koszul import KoszulBracket
+        from jacopy.packages.poisson.koszul_forms import KoszulBracket
 
         pi = self._structure.pi
         a, b, c = expr.args
@@ -502,7 +508,7 @@ def prove_sn_eval_views_agree_on_exacts(
     from jacopy.algebra.lie_bracket_vf import LieBracketVF
     from jacopy.central.tangent.exterior import d as d_
     from jacopy.packages.poisson.core import SharpVF
-    from jacopy.packages.poisson.koszul import KoszulBracket
+    from jacopy.packages.poisson.koszul_forms import KoszulBracket
     from jacopy.packages.poisson.tilde import (
         LieDCommutationDefinition,
     )

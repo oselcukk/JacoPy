@@ -69,7 +69,7 @@ from jacopy.packages.poisson.core import (
     SharpEvaluationDefinition,
     SharpVF,
 )
-from jacopy.packages.poisson.koszul import (
+from jacopy.packages.poisson.koszul_forms import (
     KoszulBracket,
     koszul_bracket,
 )
@@ -113,9 +113,9 @@ def _rich_engine(P, registry, *, declare: bool):
 
 
 def _normalize(engine, seed: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, seed, registry)
+    return normalized_by(engine, seed, registry)
 
 
 def _to_vec(expr: Expr, acc=None, coeff=Fraction(1)):
@@ -659,7 +659,7 @@ class _SeedProvers:
         """``J = 0`` for a vector-field combination, by agreement on a
         FRESH generic function (:class:`_GenericFunction`)."""
         def build():
-            from jacopy.central.tangent.engine import tangent_engine
+            from jacopy.central.tangent.tangent_expansion import tangent_engine
             from jacopy.core.registry import PropertyRegistry
             from jacopy.proof.strategies import AgreementOnGenerators
 

@@ -62,6 +62,13 @@ from jacopy.central.algebroid.calculus import (
     d_E,
     jacobi_combination_theorem,
     lie_E,
+    # the bare prove_cartan_magic_on_* / prove_d_squared_zero_on_* names
+    # are the old names of the prove_algebroid_* aliases: kept
+    # importable, not in __all__ (the TM theorems carry them)
+    prove_algebroid_cartan_magic_on_functions,
+    prove_algebroid_cartan_magic_on_one_forms,
+    prove_algebroid_d_squared_zero_on_functions,
+    prove_algebroid_d_squared_zero_on_one_forms,
     prove_cartan_magic_on_functions,
     prove_cartan_magic_on_one_forms,
     prove_d_coincides_with_coboundary,
@@ -71,7 +78,7 @@ from jacopy.central.algebroid.calculus import (
     prove_lie_core_cases,
     prove_palais_on_one_forms,
 )
-from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 from jacopy.central.algebroid.locality import (
     LocalityProjector,
     LocalityProjectorAbsorptionDefinition,
@@ -143,12 +150,12 @@ __all__ = [
     "d_E",
     "lie_E",
     "jacobi_combination_theorem",
-    "prove_cartan_magic_on_functions",
-    "prove_cartan_magic_on_one_forms",
+    "prove_algebroid_cartan_magic_on_functions",
+    "prove_algebroid_cartan_magic_on_one_forms",
     "prove_d_coincides_with_coboundary",
     "prove_d_on_functions",
-    "prove_d_squared_zero_on_functions",
-    "prove_d_squared_zero_on_one_forms",
+    "prove_algebroid_d_squared_zero_on_functions",
+    "prove_algebroid_d_squared_zero_on_one_forms",
     "prove_lie_core_cases",
     "prove_palais_on_one_forms",
 ]

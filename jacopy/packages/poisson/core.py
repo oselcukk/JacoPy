@@ -540,7 +540,7 @@ def poisson_engine(
     declare on the structures themselves (``declare=("poisson",)``)
     — the 4a contract: the flag is not distributed, each structure
     carries its own assumptions."""
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     engine = tangent_engine(registry=registry, mode=mode)
     engine.register(PVectorEvalLinearityDefinition(registry))

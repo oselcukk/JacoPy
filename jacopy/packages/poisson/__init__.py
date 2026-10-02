@@ -53,7 +53,7 @@ from jacopy.packages.poisson.showcase import (
     prove_poisson_jacobi,
     showcase_engine,
 )
-from jacopy.packages.poisson.koszul import (
+from jacopy.packages.poisson.koszul_forms import (
     KoszulBracket,
     KoszulBracketDefinition,
     SharpVFLinearityDefinition,

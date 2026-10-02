@@ -322,13 +322,13 @@ class PoissonOmegaBridgeDeclaration(Definition):
         )
 
     def matches(self, expr: Expr) -> bool:
-        from jacopy.packages.poisson.showcase import _is_exact
+        from jacopy.packages.poisson.showcase import is_exact_form
 
         return (
             isinstance(expr, MultiEval)
             and expr.head == self._P.pi
             and expr.arity == 2
-            and all(_is_exact(a) for a in expr.args)
+            and all(is_exact_form(a) for a in expr.args)
         )
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -373,7 +373,7 @@ def symplectic_engine(
             PoissonOmegaBridgeDeclaration(poisson_bridge, S)
         )
     else:
-        from jacopy.central.tangent.engine import tangent_engine
+        from jacopy.central.tangent.tangent_expansion import tangent_engine
 
         engine = tangent_engine(registry=registry)
     engine.register(SymplecticHamiltonianDefinition(S))

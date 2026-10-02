@@ -83,7 +83,7 @@ class WedgeGradedOrderDefinition(Definition):
         self._r = registry
 
     def _sorted(self, e: Wedge):
-        from jacopy.algorithms.normalize_alternating import _sort_key
+        from jacopy.algorithms.normalize_alternating import structural_sort_key
 
         items = []
         for c in e.children:
@@ -95,7 +95,7 @@ class WedgeGradedOrderDefinition(Definition):
         # (normalize_alternating._sort_key): two canonical orders on
         # the same wedge would rewrite each other forever (2026-09-09
         # non-convergence catch on the exceptional 5-form Jacobi).
-        target = sorted(items, key=lambda it: _sort_key(it[0]))
+        target = sorted(items, key=lambda it: structural_sort_key(it[0]))
         if [c for c, _ in target] == list(e.children):
             return None
         cur, sign = items[:], 0
@@ -334,7 +334,7 @@ def assemble_engine(
     family rules. ``declare_fi=True`` DECLARES the fundamental identity
     of the first structure — an explicit assumption, recorded in the
     report."""
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.proof.ownership import check_owners
     from jacopy.research.structure_kinds import family_rules, structure_kind_of
 

@@ -189,9 +189,9 @@ def _engine(
     from jacopy.central.calculus import InteriorVectorLinearityDefinition
     from jacopy.central.calculus.indexed_rules import WedgeEvalDefinition
     from jacopy.central.objects.endomorphism import EndoLinearityDefinition
-    from jacopy.packages.drinfeld.double import _double_engine
+    from jacopy.packages.drinfeld.double import double_engine
 
-    eng = _double_engine(registry)
+    eng = double_engine(registry)
     eng.register(InteriorVectorLinearityDefinition(registry))
     eng.register(EndoLinearityDefinition(registry))
     if projector_name is not None:
@@ -209,9 +209,9 @@ def _engine(
 
 
 def _norm(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, expr, registry)
+    return normalized_by(engine, expr, registry)
 
 
 # --------------------------------------------------------------------- #

@@ -47,7 +47,7 @@ from jacopy.central.objects.interior import Interior
 from jacopy.central.tangent.exterior import d
 from jacopy.central.tangent.lie_bracket import lie_bracket
 from jacopy.packages.drinfeld.double import (
-    _double_engine,
+    double_engine,
     canonical_pairing,
 )
 from jacopy.packages.drinfeld.twist import (
@@ -86,7 +86,7 @@ def prove_twisted_anchor_morphism(
     """[C'2] for the H-twisted Dorfman bracket: the H-term is
     form-valued, so the vector component — and with it the anchor
     morphism — is untouched by the twist."""
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     vec, _form = dorfman_double_h(H, U, omega, V, eta)
     diff = Sum(vec, Neg(lie_bracket(U, V)))
     return _component_theorem(
@@ -131,7 +131,7 @@ def prove_twisted_right_leibniz(
         MagicFormulaDefinition,
     )
 
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     engine.register(MagicFormulaDefinition(registry))
     engine.register(
         InteriorVectorLinearityDefinition(registry)
@@ -183,7 +183,7 @@ def prove_twisted_symmetric_part(
         InteriorAnticommuteDefinition,
     )
 
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     engine.register(InteriorAnticommuteDefinition())
     ab_vec, ab_form = dorfman_double_h(H, U, omega, V, eta)
     ba_vec, ba_form = dorfman_double_h(H, V, eta, U, omega)
@@ -231,7 +231,7 @@ def prove_twisted_invariance(
     — the two H-contributions ``ι_W ι_V ι_U H + ι_V ι_W ι_U H``
     cancel by antisymmetry, so the twisted bracket preserves the
     SAME canonical pairing."""
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     lhs = Act(U, canonical_pairing(V, eta, W, zeta))
     xy_vec, xy_form = dorfman_double_h(H, U, omega, V, eta)
     xz_vec, xz_form = dorfman_double_h(H, U, omega, W, zeta)
@@ -268,7 +268,7 @@ def prove_twisted_courant_dorfman_relation(
     """The H-twisted Dorfman↔Courant relation:
     ``[x,y]_{C,H} = [x,y]_{D,H} − D⟨x,y⟩₊`` — the twist commutes
     with skew-symmetrization (the H-term is already skew)."""
-    engine = _double_engine(registry)
+    engine = double_engine(registry)
     c_vec, c_form = courant_bracket_h(H, U, omega, V, eta)
     d_vec, d_form = dorfman_double_h(H, U, omega, V, eta)
     D_vec, D_form = d_operator_std(
@@ -322,7 +322,7 @@ def prove_twisted_jacobi_dh_defect(
     from jacopy.central.tangent.cartan import (
         prove_with_bracket_identities,
     )
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
     def nest(U1, o1, U2, o2, U3, o3):
         iv, if_ = dorfman_double_h(H, U2, o2, U3, o3)
@@ -335,13 +335,13 @@ def prove_twisted_jacobi_dh_defect(
         Neg(nest(V, eta, U, omega, W, mu)),
         Neg(_iota(W, _iota(V, _iota(U, d(H))))),
     )
-    node = _ev(defect, slots)
+    node = evaluate_on_slots(defect, slots)
     return prove_with_bracket_identities(
         node,
         Integer(0),
         f,
         registry=registry,
-        engine=_double_engine(registry),
+        engine=double_engine(registry),
         max_steps=max_steps,
     )
 
@@ -368,7 +368,7 @@ def prove_severa_twist_is_courant(
     from jacopy.central.tangent.cartan import (
         prove_with_bracket_identities,
     )
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
     H = d(B)
 
@@ -382,12 +382,12 @@ def prove_severa_twist_is_courant(
         Neg(dorfman_double_h(H, v12, f12, W, mu)[1]),
         Neg(nest(V, eta, U, omega, W, mu)),
     )
-    node = _ev(defect, slots)
+    node = evaluate_on_slots(defect, slots)
     return prove_with_bracket_identities(
         node,
         Integer(0),
         f,
         registry=registry,
-        engine=_double_engine(registry),
+        engine=double_engine(registry),
         max_steps=max_steps,
     )

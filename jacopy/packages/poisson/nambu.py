@@ -388,7 +388,7 @@ def nambu_engine(
     from jacopy.central.calculus.indexed_rules import (
         WedgeEvalDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -504,7 +504,7 @@ def prove_dorfman_form_reduces_to_koszul_at_p1(
     formula — definitional)."""
     from jacopy.core.pairing import Pairing
     from jacopy.packages.poisson.core import SharpVF
-    from jacopy.packages.poisson.koszul import koszul_bracket
+    from jacopy.packages.poisson.koszul_forms import koszul_bracket
     from jacopy.packages.poisson.showcase import showcase_engine
 
     lhs = Sum(
@@ -559,15 +559,15 @@ class NambuFIDeclaration(Definition):
         )
 
     def _exact_wedge(self, omega: Expr) -> bool:
-        from jacopy.packages.poisson.showcase import _is_exact
+        from jacopy.packages.poisson.showcase import is_exact_form
 
         p = self._N.p
         if p == 1:
-            return _is_exact(omega)
+            return is_exact_form(omega)
         return (
             isinstance(omega, Wedge)
             and len(omega.children) == p
-            and all(_is_exact(c) for c in omega.children)
+            and all(is_exact_form(c) for c in omega.children)
         )
 
     def _split(self, expr: Expr):

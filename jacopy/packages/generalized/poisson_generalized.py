@@ -71,7 +71,7 @@ from jacopy.central.tangent.lie_bracket import lie_bracket
 from jacopy.packages.drinfeld.double import (
     canonical_pairing,
 )
-from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
+from jacopy.packages.drinfeld.tilde_calculus import nambu_tilde_engine
 from jacopy.packages.poisson.nambu import (
     NambuPoissonStructure,
     nambu_structure,
@@ -212,7 +212,7 @@ def prove_theta_anchor_morphism(
         ),
         h,
     )
-    engine = _tilde_engine(
+    engine = nambu_tilde_engine(
         N, registry, declare_fi=declare_poisson
     )
     return ExpandAndSimplify().prove(
@@ -225,9 +225,9 @@ def prove_theta_anchor_morphism(
 
 
 def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, expr, registry)
+    return normalized_by(engine, expr, registry)
 
 
 def _zero_theorem(
@@ -290,7 +290,7 @@ def prove_theta_courant_skew(
     and the subtraction removes it. Holds for ANY bivector (no
     Poisson declaration)."""
     _require_poisson(N)
-    engine = _tilde_engine(N, registry, declare_fi=False)
+    engine = nambu_tilde_engine(N, registry, declare_fi=False)
     ab_vec, ab_form = theta_courant(N, U, omega, V, eta)
     ba_vec, ba_form = theta_courant(N, V, eta, U, omega)
     return _zero_theorem(
@@ -335,7 +335,7 @@ def prove_theta_right_leibniz(
     )
 
     _require_poisson(N)
-    engine = _tilde_engine(N, registry, declare_fi=False)
+    engine = nambu_tilde_engine(N, registry, declare_fi=False)
     engine.register(NambuSharpLinearityDefinition(N, registry))
     l_vec, l_form = theta_dorfman(
         N, U, omega, Product(f, V), Product(f, eta)
@@ -389,7 +389,7 @@ def prove_theta_symmetric_part(
     — the Koszul form parts cancel by antisymmetry and the tilde
     magic terms assemble to ``d̃⟨x,y⟩₊``; any bivector."""
     _require_poisson(N)
-    engine = _tilde_engine(N, registry, declare_fi=False)
+    engine = nambu_tilde_engine(N, registry, declare_fi=False)
     ab_vec, ab_form = theta_dorfman(N, U, omega, V, eta)
     ba_vec, ba_form = theta_dorfman(N, V, eta, U, omega)
     D_vec, D_form = d_operator_theta(
@@ -452,7 +452,7 @@ def _theta_jacobi_instances(engine, N, forms3, vectors, h, registry):
     )
     from jacopy.packages.drinfeld.twist import r_twist
     from jacopy.packages.poisson.nambu import nambu_koszul_bracket
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
     def ME(*a):
         return MultiEval(
@@ -481,7 +481,7 @@ def _theta_jacobi_instances(engine, N, forms3, vectors, h, registry):
         out = []
         for ltag, seed in lifts:
             for sgn, g in (((lambda x: x), "p"), (Neg, "n")):
-                nf = _normalized_by(engine, sgn(seed), registry)
+                nf = normalized_by(engine, sgn(seed), registry)
                 if nf != Integer(0):
                     out.append((f"{tag}{ltag}_{g}", nf, chain))
         return out
@@ -605,7 +605,7 @@ def prove_theta_jacobi(
         (Pairing(Jf, X), "form component on the evaluation vector", (X,)),
     )
     if not declare_poisson:
-        engine = _tilde_engine(N, registry, declare_fi=False)
+        engine = nambu_tilde_engine(N, registry, declare_fi=False)
         residual = _normalize(engine, nodes[1][0], registry)
         raise ProofFailure(
             "the Leibniz-Jacobi identity of (TM)₀ ⊕ (T*M)_θ needs the "
@@ -614,7 +614,7 @@ def prove_theta_jacobi(
         )
     steps: List[ProofStep] = []
     for node, label, lifts in nodes:
-        engine = _tilde_engine(N, registry, declare_fi=True)
+        engine = nambu_tilde_engine(N, registry, declare_fi=True)
         instances = _theta_jacobi_instances(
             engine, N, (omega, eta, zeta), lifts, h, registry
         )
@@ -673,7 +673,7 @@ def prove_theta_d_pairing_value(
     (2.6) anchor action ``½(θ♯ω)(h)``. Ties the θ-double to the
     7.A abstract axiomatics."""
     _require_poisson(N)
-    engine = _tilde_engine(N, registry, declare_fi=False)
+    engine = nambu_tilde_engine(N, registry, declare_fi=False)
     D_vec, D_form = d_operator_theta(N, h)
     lhs = canonical_pairing(D_vec, D_form, U, omega)
     rhs = Product(
@@ -733,14 +733,14 @@ class ThetaUnfoldDefinition(Definition):
         )
 
     def matches(self, expr: Expr) -> bool:
-        from jacopy.packages.poisson.showcase import _is_exact
+        from jacopy.packages.poisson.showcase import is_exact_form
 
         return (
             isinstance(expr, MultiEval)
             and expr.head == self._N.pi
             and expr.arity == 2
-            and not _is_exact(expr.args[0])
-            and not _is_exact(expr.args[1])
+            and not is_exact_form(expr.args[0])
+            and not is_exact_form(expr.args[1])
         )
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -769,13 +769,13 @@ class SharpPairingExactFoldDefinition(Definition):
 
     def matches(self, expr: Expr) -> bool:
         from jacopy.core.pairing import Pairing
-        from jacopy.packages.poisson.showcase import _is_exact
+        from jacopy.packages.poisson.showcase import is_exact_form
 
         return (
             isinstance(expr, Pairing)
             and isinstance(expr.X, self._sharp_cls)
             and expr.X.pi == self._N.pi
-            and _is_exact(expr.X.omega)
+            and is_exact_form(expr.X.omega)
         )
 
     def rewrite(self, expr: Expr) -> Expr:
@@ -807,14 +807,14 @@ class SharpPairingSideDefinition(Definition):
 
     def matches(self, expr: Expr) -> bool:
         from jacopy.core.pairing import Pairing
-        from jacopy.packages.poisson.showcase import _is_exact
+        from jacopy.packages.poisson.showcase import is_exact_form
 
         return (
             isinstance(expr, Pairing)
             and isinstance(expr.X, self._sharp_cls)
             and expr.X.pi == self._N.pi
-            and not _is_exact(expr.X.omega)
-            and not _is_exact(expr.alpha)
+            and not is_exact_form(expr.X.omega)
+            and not is_exact_form(expr.alpha)
             and expr.X.omega._repr_inner()
             > expr.alpha._repr_inner()
         )
@@ -843,9 +843,9 @@ def _invariance_engine(N, registry, *, declare_poisson: bool):
         LieIotaCommutatorDefinition,
         NambuMorphismDeclaration,
     )
-    from jacopy.packages.drinfeld.twist import _twist_engine
+    from jacopy.packages.drinfeld.twist import twist_engine
 
-    engine = _twist_engine(N, registry)
+    engine = twist_engine(N, registry)
     engine.register(LieIotaCommutatorDefinition())
     engine.register(InteriorAnticommuteDefinition())
     if declare_poisson:

@@ -15,7 +15,8 @@ from jacopy.algorithms.rewrite import (
     apply_bottomup,
     apply_once_at_root,
     apply_topdown,
-    normalize,
+    normalize,  # old name of rewrite_to_fixpoint (kept, not in __all__)
+    rewrite_to_fixpoint,
 )
 from jacopy.algorithms.simplify import simplify
 from jacopy.algorithms.sort_product import apply_sign, sort_product
@@ -29,7 +30,7 @@ __all__ = [
     "apply_once_at_root",
     "apply_bottomup",
     "apply_topdown",
-    "normalize",
+    "rewrite_to_fixpoint",
     # flatten
     "flatten",
     "Flatten",

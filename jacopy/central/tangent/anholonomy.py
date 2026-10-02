@@ -53,7 +53,7 @@ from jacopy.central.objects.frame import (
     Frame,
     FrameField,
     IndexLike,
-    _index_str,
+    frame_index_str,
 )
 from jacopy.central.tangent.exterior import d
 from jacopy.central.tangent.lie_bracket import lie_bracket
@@ -136,9 +136,9 @@ def anholonomy_coefficient(
     """
     if not isinstance(fr, Frame):
         raise TypeError("anholonomy_coefficient expects a Frame")
-    c = _index_str(upper)
-    a = _index_str(first)
-    b = _index_str(second)
+    c = frame_index_str(upper)
+    a = frame_index_str(first)
+    b = frame_index_str(second)
     if a == b:
         return Integer(0)
     if a > b:
@@ -223,7 +223,7 @@ class HolonomicFrameDefinition(Definition):
 
 
 def _engine(registry, holonomic_frames=()):
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     return tangent_engine(
         registry=registry, holonomic_frames=holonomic_frames

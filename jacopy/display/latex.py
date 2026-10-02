@@ -891,7 +891,7 @@ def _load_poisson_handlers() -> None:
         PoissonBracketValue,
         SharpVF,
     )
-    from jacopy.packages.poisson.koszul import KoszulBracket
+    from jacopy.packages.poisson.koszul_forms import KoszulBracket
     from jacopy.packages.poisson.nambu import NambuSharpVF
     from jacopy.packages.poisson.symplectic import SymplecticHamiltonianVF
     from jacopy.packages.poisson.tilde import TildeAnholonomyCoefficient

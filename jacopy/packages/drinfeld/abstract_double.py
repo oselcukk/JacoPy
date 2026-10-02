@@ -73,7 +73,7 @@ def _double_engine(alg: Algebroid, registry):
     engine — the calculus rules alone never see the declared axioms
     (anchor-morphism, Leibniz, locality), which is exactly what the
     sweep is about."""
-    from jacopy.central.algebroid.engine import algebroid_engine
+    from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 
     eng = _engine(alg, registry)
     for d in algebroid_engine(alg, registry=registry).definitions:
@@ -267,7 +267,7 @@ def prove_abstract_double_jacobi_form(
         from itertools import combinations
 
         from jacopy.packages.poisson.tilde import (
-            _normalized_by,
+            normalized_by,
         )
 
         # Stage 1: normalize ALL ± lhs's in the citing engine BEFORE
@@ -283,7 +283,7 @@ def prove_abstract_double_jacobi_form(
                 ((lambda x: x), ""),
                 (Neg, "_neg"),
             ):
-                lhs_nf = _normalized_by(
+                lhs_nf = normalized_by(
                     eng, sgn(thm.lhs), registry
                 )
                 if lhs_nf == Integer(0):

@@ -149,7 +149,7 @@ _NOTEBOOK_DEEP_NAMES = {
         "prove_exceptional_twist_inverse", "prove_exceptional_jacobi_five",
         "prove_top_slot_jacobi", "prove_calculus_condition_one",
         "prove_calculus_condition_two", "prove_calculus_condition_three",
-        "prove_kappa_kappa", "prove_kappa_bracket",
+        "prove_kappa_kappa", "prove_kappa_bracket", "twist_engine",
     ],
     "jacopy.packages.poisson": ["nambu_structure", "NambuSharpLinearityDefinition"],
     "jacopy.packages.generalized": [
@@ -161,7 +161,7 @@ _NOTEBOOK_DEEP_NAMES = {
         "prove_exceptional_r_twist_bidegree_split",
         "prove_r22_reduces_to_lifted_cross_term",
         "prove_r25_is_lie_tilde_equivariance_defect",
-        "prove_exceptional_r_twist_symmetric_part",
+        "prove_exceptional_r_twist_symmetric_part", "exceptional_rotation_engine",
     ],
 }
 
@@ -263,18 +263,14 @@ class TestTopLevelSurface:
 
 # Names that two different objects carry across the subpackage __all__
 # lists, each owned outside the facade lane; a NEW collision fails.
+# The other nine (Provenance, Zero, antisymmetrize, normalize, the four
+# central prove_cartan_magic_* / prove_d_squared_zero_* pairs and
+# prove_jacobi) were resolved by unambiguous names in the second
+# package's __all__ (audit 0B00E1B-FULL T2 names); the old names stay
+# importable as attributes (tests/test_audit_0b00e1b_arch_names.py).
 _KNOWN_COLLISIONS = {
     "Metric",  # central atom vs metric_affine context (ROADMAP 5f adapter)
     "metric",
-    "Provenance",  # core.properties vs proof.result
-    "Zero",  # core.expr vs research.block_matrix
-    "antisymmetrize",  # core.symmetrize vs research.antisymmetrize
-    "normalize",  # algorithms.rewrite vs proof.normalize
-    "prove_cartan_magic_on_functions",  # central.tangent vs central.algebroid
-    "prove_cartan_magic_on_one_forms",
-    "prove_d_squared_zero_on_functions",
-    "prove_d_squared_zero_on_one_forms",
-    "prove_jacobi",  # central.tangent vs proof.verifier
 }
 
 

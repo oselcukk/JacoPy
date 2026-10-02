@@ -18,7 +18,8 @@ there, without editing the library (audit 0B00E1B-FULL T2-3).
 """
 
 from jacopy.research.antisymmetrize import (
-    antisymmetrize,
+    antisymmetrize,  # old name of antisymmetrize_indices (kept, not in __all__)
+    antisymmetrize_indices,
     permutation_sign,
     rename_indices,
     swap_indices,
@@ -35,7 +36,8 @@ from jacopy.research.block_matrix import (
     Identity,
     Map,
     Operator,
-    Zero,
+    Zero,  # old name of ZeroOperator (kept importable, not in __all__)
+    ZeroOperator,
     as_operator,
 )
 from jacopy.research.engine_assembly import (
@@ -74,8 +76,8 @@ __all__ = [
     "SuiteReport",
     "WedgeGradedOrderDefinition",
     "WedgeScalarFactorDefinition",
-    "Zero",
-    "antisymmetrize",
+    "ZeroOperator",
+    "antisymmetrize_indices",
     "as_operator",
     "assemble_engine",
     "assembly_report",

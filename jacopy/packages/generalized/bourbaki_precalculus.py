@@ -447,7 +447,7 @@ def bourbaki_engine(
     """Definitional rules of the quintet + the declared (9.14),
     layered on the tangent engine (for ``[U,V]`` bookkeeping) —
     or on ``base_engine`` for an INDEPENDENT abstract A (13k)."""
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     eng = ExpansionEngine(
         [
@@ -471,9 +471,9 @@ def bourbaki_engine(
 
 
 def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, expr, registry)
+    return normalized_by(engine, expr, registry)
 
 
 # ------------------------------------------------------------------ #
@@ -705,9 +705,9 @@ def prove_cartan_satisfies_914(
     ``(ι, d, ω∧·, ℒ, ℒ)``: ``ℒ_U ι_V ω = ι_{[U,V]} ω + ι_V ℒ_U ω``
     — the ``[ℒ, ι]`` commutator, evaluated on the probe slots."""
     from jacopy.central.tangent.cartan import L as _L
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.objects.interior import Interior
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
     from jacopy.proof.strategies import ExpandAndSimplify
 
     def iota(X, a):
@@ -718,7 +718,7 @@ def prove_cartan_satisfies_914(
         iota(lie_bracket(U, V), omega),
         iota(V, _L(U, omega)),
     )
-    node = _ev(Sum(lhs, Neg(rhs)), slots)
+    node = evaluate_on_slots(Sum(lhs, Neg(rhs)), slots)
     return ExpandAndSimplify().prove(
         node,
         Integer(0),
@@ -740,16 +740,16 @@ def prove_cartan_satisfies_915(
     magic turns each parenthesis into ``ι dω``, and ``ι² = 0``
     (alternation) kills the symmetric sum."""
     from jacopy.central.tangent.cartan import L as _L
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.exterior import d
     from jacopy.central.objects.interior import Interior
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
     from jacopy.proof.strategies import ExpandAndSimplify
 
     def iota(X, a):
         return Act(Interior(X), a)
 
-    node = _ev(
+    node = evaluate_on_slots(
         Sum(
             iota(U, Sum(_L(V, omega), Neg(d(iota(V, omega))))),
             iota(V, Sum(_L(U, omega), Neg(d(iota(U, omega))))),
