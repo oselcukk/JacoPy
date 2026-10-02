@@ -223,7 +223,10 @@ def admits_alternation(head: Expr) -> bool:
     * ``Act(op, arg)`` whose operator declares ``"inherit"`` (interior
       products, Lie derivatives, the ``d`` of a SKEW calculus) with a
       certified or scalar ``arg``; the ``d`` of a non-skew calculus
-      declares ``False`` (``dα(u,u) = −α([u,u])``);
+      declares ``False`` (``dα(u,u) = −α([u,u])``). An operator
+      ``Sum``/``Neg`` (``(L_U + L_V)α`` from vector-slot linearity)
+      inherits when EVERY summand does: ``(A + B)α = Aα + Bα`` and a
+      sum of alternating values is alternating;
     * ``Sum``/``Neg``/``Wedge`` when every child is certified;
       ``Product`` when every factor is certified or a scalar
       coefficient (number, plain symbol, pairing/evaluation value,
@@ -246,12 +249,20 @@ def admits_alternation(head: Expr) -> bool:
     op = getattr(head, "op", None)
     arg = getattr(head, "arg", None)
     if op is not None and isinstance(arg, Expr):
-        if getattr(op, "alternating_values", False) == "inherit":
+        if _op_inherits(op):
             return _is_scalar(arg) or admits_alternation(arg)
         return False
     if head.is_atom:
         return getattr(type(head), "alternating_values", False) is True
     return False
+
+
+def _op_inherits(op) -> bool:
+    """``op`` declares ``alternating_values = "inherit"``, or is an
+    operator ``Sum``/``Neg`` all of whose summands do."""
+    if isinstance(op, (Sum, Neg)):
+        return all(_op_inherits(c) for c in op.children)
+    return getattr(op, "alternating_values", False) == "inherit"
 
 
 def _is_scalar(h: Expr) -> bool:
