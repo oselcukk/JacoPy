@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import pkgutil
 import re
 
@@ -255,6 +256,10 @@ def test_no_new_same_name_different_object():
         m.name for m in pkgutil.walk_packages(jacopy.__path__, "jacopy.") if m.ispkg
     ]
     for pkg_name in packages:
+        if pkg_name.startswith("jacopy.oracle") and importlib.util.find_spec(
+            "sympy"
+        ) is None:  # the oracle needs the optional sympy (extra "oracle")
+            continue
         pkg = importlib.import_module(pkg_name)
         for name in getattr(pkg, "__all__", None) or ():
             owners.setdefault(name, {})[id(getattr(pkg, name))] = pkg_name

@@ -5,6 +5,7 @@ not create an import-order dependency or a cycle that only a warm
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import pkgutil
 import subprocess
@@ -22,8 +23,15 @@ _PACKAGES = sorted(
 )
 
 
+# subpackage prefix -> the optional dependency (extra) it needs
+_OPTIONAL = {"jacopy.oracle": "sympy"}
+
+
 @pytest.mark.parametrize("package", _PACKAGES)
 def test_package_imports_in_a_clean_process(package):
+    for prefix, dist in _OPTIONAL.items():
+        if package.startswith(prefix) and importlib.util.find_spec(dist) is None:
+            pytest.skip(f"{package} needs the optional {dist!r}")
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join(
         p for p in (str(_ROOT), env.get("PYTHONPATH", "")) if p
