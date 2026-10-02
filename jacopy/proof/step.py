@@ -70,6 +70,33 @@ def is_minted(step) -> bool:
     return ref is not None and ref() is step
 
 
+def classification_label(provenance_tag: Optional[str], role: Optional[str]) -> Optional[str]:
+    """The reader-facing classification of a step, in the terms
+    :class:`~jacopy.proof.result.ProofResult` counts it with.
+
+    ``provenance_tag`` alone says only whether a rule fired as given
+    (``"axiom"``) or as derivable (``"theorem"``); the rule's logical
+    ``role`` refines it:
+
+    * role ``"assumption"`` → ``"assumption"`` (a declared axiom, even
+      when theorem-tagged);
+    * tag ``"theorem"`` → ``"theorem"``;
+    * tag ``"axiom"`` with role ``"definition"`` → ``"definition"``
+      (ProofResult lists it under provenance, not as an assumption);
+    * tag ``"axiom"`` with no recorded role → ``"axiom"`` (a hand-built
+      or unmigrated step; ProofResult counts it as a legacy assumption);
+    * otherwise the tag itself (``"computation"`` / ``None``).
+
+    Display metadata only: nothing in the proof logic reads it."""
+    if role == "assumption":
+        return "assumption"
+    if provenance_tag == "theorem":
+        return "theorem"
+    if provenance_tag == "axiom" and role == "definition":
+        return "definition"
+    return provenance_tag
+
+
 class ProofStep:
     """One rewrite: ``before → after`` under ``rule``."""
 
@@ -196,6 +223,14 @@ class ProofStep:
         return self._provenance_tag
 
     @property
+    def classification(self) -> Optional[str]:
+        """Reader-facing label: ``"definition"``, ``"assumption"``,
+        ``"theorem"``, ``"axiom"`` (no role recorded), ``"computation"``
+        or ``None`` — see :func:`classification_label`. The renderers
+        print it as ``(definition)`` etc."""
+        return classification_label(self._provenance_tag, self._role)
+
+    @property
     def owner(self):
         """The structure whose rule fired this step (``None`` when the
         rule is structure-free or the step was built by hand)."""
@@ -244,7 +279,8 @@ class ProofStep:
     def format(self, indent: int = 0, max_depth: int = 64) -> str:
         """Render this step as text; recurse into children up to ``max_depth``."""
         pad = "  " * indent
-        tag = f" ({self._provenance_tag})" if self._provenance_tag else ""
+        label = self.classification
+        tag = f" ({label})" if label else ""
         head = (
             f"{pad}[{self._rule}]{tag} "
             f"{self._before._repr_inner()} → {self._after._repr_inner()}"

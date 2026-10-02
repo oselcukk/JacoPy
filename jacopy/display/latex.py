@@ -1366,7 +1366,7 @@ def _step_rows(step: ProofStep, *, width: float, cite_style: str, depth: int, ma
     its sub-steps, indented)."""
     ind = "\\quad " * depth
     rows: list[str] = []
-    tag = f" ({step.provenance_tag})" if step.provenance_tag else ""
+    tag = f" ({step.classification})" if step.classification else ""
     for line in _wrap_words(f"[{step.rule}]{tag}", TEXT_WIDTH):
         rows.append(f"&{ind}\\text{{{_escape_text(line)}}}")
     rows.extend(_cite_rows(ind, "Source:", step.source, cite_style))
@@ -1377,7 +1377,10 @@ def _step_rows(step: ProofStep, *, width: float, cite_style: str, depth: int, ma
     for k, line in enumerate(after):
         rows.append(f"&{ind}\\to {line}" if k == 0 else f"&{ind}\\qquad {line}")
     just = step.justification or ""
-    just_strip = just.removeprefix("apply axiom: ").removeprefix("apply theorem: ").removeprefix("apply ")
+    just_strip = just
+    for label in ("axiom", "theorem", "definition", "assumption"):
+        just_strip = just_strip.removeprefix(f"apply {label}: ")
+    just_strip = just_strip.removeprefix("apply ")
     if just and just_strip != step.rule:
         for line in _wrap_words(f"--- {just}", TEXT_WIDTH):
             rows.append(f"&{ind}\\textit{{{_escape_text(line)}}}")
@@ -1394,7 +1397,7 @@ def step_to_latex(
     step: ProofStep, *, width: float = DEFAULT_WIDTH, cite_style: str = "apa", max_depth: int = 0
 ) -> str:
     r"""Render a :class:`ProofStep` as an ``aligned`` block (math mode):
-    the rule name and provenance tag (``\text{[rule] (axiom)}``), the
+    the rule name and classification (``\text{[rule] (definition)}``), the
     literature source of the rule (APA in-text citation), ``before`` and
     ``\to after`` broken at summand boundaries into lines of about
     ``width`` visible units, and the justification. Sub-steps are shown
@@ -1631,7 +1634,7 @@ def chain_to_tikz(chain: ProofChain, *, node_distance: str = "1.2cm") -> str:
             f"\\node[draw, rectangle, below=of e{i}] (e{i + 1}) {{${to_latex(step.after)}$}};"
         )
     for i, step in enumerate(chain.steps):
-        tag = f" ({step.provenance_tag})" if step.provenance_tag else ""
+        tag = f" ({step.classification})" if step.classification else ""
         rule = _escape_text(f"{step.rule}{tag}")
         lines.append(f"\\draw[->] (e{i}) -- node[right] {{\\small {rule}}} (e{i + 1});")
     lines.append(r"\end{tikzpicture}")

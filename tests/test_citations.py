@@ -255,13 +255,17 @@ def test_c3_ascii_shows_every_axiom_source(c3):
     text = chain_to_ascii(chain, references=True)
     for s in _walk(chain.steps):
         if s.provenance_tag == "axiom":
-            assert f"[{s.rule}] (axiom) — {in_text(s.source)}" in text
+            # the label is the step's classification (the declared C3/C5
+            # axioms print as "(assumption)", display-polish 2026-10-02)
+            assert f"[{s.rule}] ({s.classification}) — {in_text(s.source)}" in text
     assert "\n\nReferences\n" in text
     assert "\nLiu, Z.-J., Weinstein, A., & Xu, P. (1997). Manin triples for Lie bialgebroids." in text
     assert "Uchino, K. (2002). Remarks on the definition of a Courant algebroid" in text
     plain = render_chain(chain, styles=False, references=True)
-    # the rich tree wraps long lines at 120 columns
-    assert "(Liu et al., 1997; Uchino, 2002," in plain and "\nReferences\n" in plain
+    # the rich tree wraps long lines at 120 columns (where depends on the
+    # label length — "(assumption)" since display-polish 2026-10-02)
+    flat = re.sub(r"\s*\n[│ ]*", " ", plain)
+    assert "(Liu et al., 1997; Uchino, 2002," in flat and "\nReferences\n" in plain
 
 
 def test_c3_latex_shows_every_axiom_source(c3):

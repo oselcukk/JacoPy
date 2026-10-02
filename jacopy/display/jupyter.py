@@ -208,8 +208,8 @@ def display_theorem(theorem: Theorem, *, with_proof: bool = True, max_steps: int
 def _step_summary_html(step: ProofStep, verbosity: str) -> str:
     rule = _html.escape(step.rule)
     pieces = [f'<span class="jacopy-rule">[{rule}]</span>']
-    if step.provenance_tag:
-        pieces.append(f'<span class="jacopy-tag">({_html.escape(step.provenance_tag)})</span>')
+    if step.classification:
+        pieces.append(f'<span class="jacopy-tag">({_html.escape(step.classification)})</span>')
     if getattr(step, "source", None):
         from jacopy.bibliography import in_text
 
