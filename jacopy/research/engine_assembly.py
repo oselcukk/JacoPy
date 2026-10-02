@@ -170,57 +170,133 @@ def _walk(expr: Expr, seen: Set[int], out: List[Expr]) -> None:
 
 
 class Scan:
-    """What occurs in a set of expressions."""
+    """What occurs in a set of expressions — the node families
+    registered in :mod:`jacopy.research.structure_kinds` (central
+    families and those of every registered structure kind)."""
 
     def __init__(self, exprs: Iterable[Expr]) -> None:
-        from jacopy.algebra.lie_bracket_vf import LieBracketVF
-        from jacopy.core.indexed_sum import IndexedSum
-        from jacopy.core.multi_eval import MultiEval
-        from jacopy.algebra.derivation import Act
-        from jacopy.central.calculus.bracket_calculus import (
-            ExteriorDerivative,
-            LieDerivative,
-        )
-        from jacopy.central.objects.interior import Interior
         from jacopy.central.objects.multivector_interior import (
             MultivectorInterior,
         )
-        from jacopy.packages.poisson.nambu import NambuSharpVF
+        from jacopy.research.structure_kinds import (
+            ensure_builtin_kinds,
+            families,
+        )
 
+        ensure_builtin_kinds()
         nodes: List[Expr] = []
         seen: Set[int] = set()
         for e in exprs:
             _walk(e, seen, nodes)
         self.families: Set[str] = set()
-        self.sharp_pis = []
+        #: keys of the structures owning scanned nodes (e.g. the ``Π``
+        #: of each Nambu sharp), in first-occurrence order
+        self.structure_keys = []
         self.interior_multivectors = []
+        table = families()
         for n in nodes:
-            for cls, tag in (
-                (Act, "act"),
-                (MultiEval, "multi_eval"),
-                (Wedge, "wedge"),
-                (IndexedSum, "indexed_sum"),
-                (LieDerivative, "lie_derivative"),
-                (ExteriorDerivative, "exterior_derivative"),
-                (Interior, "interior"),
-                (LieBracketVF, "lie_bracket"),
-                (MultivectorInterior, "multivector_interior"),
-                (NambuSharpVF, "nambu_sharp"),
-            ):
-                if isinstance(n, cls):
-                    self.families.add(tag)
-            if isinstance(n, NambuSharpVF) and n.pi not in self.sharp_pis:
-                self.sharp_pis.append(n.pi)
+            for fam in table:
+                if isinstance(n, fam.cls):
+                    self.families.add(fam.tag)
+                    if fam.owner_key is not None:
+                        k = fam.owner_key(n)
+                        if k not in self.structure_keys:
+                            self.structure_keys.append(k)
             if isinstance(n, MultivectorInterior):
                 mv = n.multivector
                 if mv not in self.interior_multivectors:
                     self.interior_multivectors.append(mv)
 
+    @property
+    def sharp_pis(self):
+        """Legacy name of :attr:`structure_keys` (the Nambu sharps'
+        multivectors were the only structure-owned nodes)."""
+        return self.structure_keys
+
     def __repr__(self) -> str:
         return (
             f"Scan(families={sorted(self.families)}, "
-            f"sharps={[p._repr_inner() for p in self.sharp_pis]})"
+            f"sharps={[_key_repr(p) for p in self.structure_keys]})"
         )
+
+
+def _key_repr(key) -> str:
+    inner = getattr(key, "_repr_inner", None)
+    return inner() if callable(inner) else repr(key)
+
+
+# ------------------------------------------------------------------ #
+# Central families and family rules (registered lazily by             #
+# structure_kinds.ensure_builtin_kinds)                               #
+# ------------------------------------------------------------------ #
+
+
+def _register_central_builtins() -> None:
+    """The structure-free node families and family rules. ``order``
+    reproduces the pre-registry ``assemble_engine`` sequence; the
+    Nambu-Poisson kind slots its sharp-slot rules in at 35 and 40
+    (:mod:`jacopy.research.nambu_kind`)."""
+    from jacopy.algebra.derivation import Act
+    from jacopy.algebra.lie_bracket_vf import LieBracketVF
+    from jacopy.core.multi_eval import MultiEval
+    from jacopy.central.calculus import (
+        ActExpansionDefinition,
+        MultiEvalArgLinearityDefinition,
+        OperatorSlotAdditivityDefinition,
+    )
+    from jacopy.central.calculus.bracket_calculus import (
+        ExteriorDerivative,
+        LieDerivative,
+    )
+    from jacopy.central.calculus.slot_rules import (
+        FormProductToWedgeDefinition,
+        WedgeSumScalarDefinition,
+    )
+    from jacopy.central.objects.interior import Interior
+    from jacopy.central.objects.multivector_interior import (
+        MultivectorInterior,
+        MultivectorInteriorDecomposableDefinition,
+        MultivectorInteriorDecomposableFormDefinition,
+        MultivectorInteriorLinearityDefinition,
+    )
+    from jacopy.central.tangent.lie_bracket import (
+        LieBracketLeibnizDefinition,
+    )
+    from jacopy.research.structure_kinds import (
+        additive_slot_tags,
+        register_family,
+        register_family_rule,
+    )
+
+    register_family(Act, "act")
+    register_family(MultiEval, "multi_eval")
+    register_family(Wedge, "wedge")
+    register_family(IndexedSum, "indexed_sum")
+    register_family(LieDerivative, "lie_derivative", additive_slots=True)
+    register_family(ExteriorDerivative, "exterior_derivative")
+    register_family(Interior, "interior", additive_slots=True)
+    register_family(LieBracketVF, "lie_bracket")
+    register_family(MultivectorInterior, "multivector_interior")
+
+    rule = register_family_rule
+    rule(lambda fam: True, lambda r: ZeroProductDefinition(), "always: zero products inside operator slots", order=10)
+    mi = "multivector interiors present"
+    rule("multivector_interior", MultivectorInteriorLinearityDefinition, mi, order=20)
+    rule("multivector_interior", lambda r: MultivectorInteriorDecomposableDefinition(), mi, order=21)
+    rule("multivector_interior", MultivectorInteriorDecomposableFormDefinition, mi, order=22)
+    rule("wedge", WedgeSumScalarDefinition, "wedges present", order=30)
+    rule("wedge", FormProductToWedgeDefinition, "wedges present", order=31)
+    rule("wedge", WedgeGradedOrderDefinition, "wedges present", order=32)
+    rule("wedge", WedgeScalarFactorDefinition, "wedges present", order=33)
+    rule("act", ActExpansionDefinition, "operator actions present", order=50)
+    rule("multi_eval", MultiEvalArgLinearityDefinition, "multi-slot evaluations present", order=60)
+    rule(
+        lambda fam: bool(fam & additive_slot_tags()),
+        lambda r: OperatorSlotAdditivityDefinition(),
+        "operators with additive direction slots",
+        order=70,
+    )
+    rule("lie_bracket", LieBracketLeibnizDefinition, "Lie brackets of vector fields present", order=80)
 
 
 # ------------------------------------------------------------------ #
@@ -248,51 +324,33 @@ def assemble_engine(
     """Build an engine for ``exprs``; :func:`assembly_report` returns
     its one-line explanations of what was detected and added.
 
-    ``structures`` are the Nambu/Poisson structures whose sharps may
-    occur (the first one hosts the tilde-calculus rules, the others
-    get their linearity rules); ``declare_fi=True`` DECLARES the
-    fundamental identity (Poisson condition) of the first structure —
-    an explicit assumption, recorded in the report."""
-    from jacopy.central.calculus import (
-        ActExpansionDefinition,
-        MultiEvalArgLinearityDefinition,
-        OperatorSlotAdditivityDefinition,
-    )
-    from jacopy.central.objects.multivector_interior import (
-        MultivectorInteriorDecomposableDefinition,
-        MultivectorInteriorDecomposableFormDefinition,
-        MultivectorInteriorLinearityDefinition,
-    )
+    ``structures`` are the structures whose nodes may occur, each
+    handled by its registered kind
+    (:mod:`jacopy.research.structure_kinds`; built in: Nambu-Poisson,
+    :mod:`jacopy.research.nambu_kind`). The first one hosts the base
+    engine (``kind.host_engine``), the others contribute their own
+    rules (``engine_rules``); without structures the base is the
+    tangent (Cartan) engine. The scanned node families decide the
+    family rules. ``declare_fi=True`` DECLARES the fundamental identity
+    of the first structure — an explicit assumption, recorded in the
+    report."""
     from jacopy.central.tangent.engine import tangent_engine
-    from jacopy.central.tangent.lie_bracket import (
-        LieBracketLeibnizDefinition,
-    )
-    from jacopy.packages.drinfeld.roytenberg import (
-        SharpSlotWedgeNormalizeDefinition,
-    )
-    from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
-    from jacopy.packages.drinfeld.twist import (
-        FormProductToWedgeDefinition,
-        WedgeSumScalarDefinition,
-    )
-    from jacopy.packages.poisson.nambu import (
-        NambuSharpLinearityDefinition,
-    )
-
     from jacopy.proof.ownership import check_owners
+    from jacopy.research.structure_kinds import family_rules, structure_kind_of
 
     # two structures under one bivector name are ambiguous in the tree
     check_owners(structures)
     scan = Scan(exprs)
     report: List[str] = [f"scanned {len(exprs)} expression(s): {scan}"]
-    known = {s.pi: s for s in structures}
+    kinds = [structure_kind_of(s) for s in structures]
+    known = {k.key(s): s for k, s in zip(kinds, structures)}
     if len(known) != len(structures):
         raise ValueError("assemble_engine: two structures share one multivector — pass each structure once")
-    unknown = [p for p in scan.sharp_pis if p not in known]
+    unknown = [p for p in scan.structure_keys if p not in known]
     if unknown:
         raise ValueError(
             "sharp maps of undeclared structure(s) "
-            f"{[p._repr_inner() for p in unknown]}: pass them via "
+            f"{[_key_repr(p) for p in unknown]}: pass them via "
             "structures=(...) — the engine will not guess their rules"
         )
 
@@ -308,19 +366,12 @@ def assemble_engine(
             f"{structures[0].name} only — declare on the structure instead"
         )
     if structures:
-        host = structures[0]
-        eng = _tilde_engine(host, registry)
-        report.append(
-            f"base: tilde-calculus engine hosted by {host.name} "
-            f"(Cartan calculus + Koszul/tilde rules)"
-            + (
-                " — WITH the DECLARED fundamental identity (Poisson condition)"
-                if host.declares("fundamental-identity")
-                else " — no fundamental-identity declaration"
-            )
-        )
+        host, host_kind = structures[0], kinds[0]
+        eng = host_kind.host_engine(host, registry)
+        report.append(host_kind.host_report(host))
         registered = {getattr(r, "key", None) for r in eng.definitions}
-        for s in structures[1:]:
+        first = 1 if host_kind.host_includes_rules else 0
+        for s, kind in zip(structures[first:], kinds[first:]):
             # every structure contributes ITS OWN rule set — definitional
             # capabilities are symmetric, declared axioms are each
             # structure's own (N₁ with the FI, N₂ without)
@@ -330,10 +381,7 @@ def assemble_engine(
                 eng.register(rule)
                 registered.add(rule.key)
                 report.append(f"+ {rule.name}  [rules of {s.name}]")
-            report.append(
-                f"structure {s.name}: "
-                + ("WITH the DECLARED fundamental identity" if s.declares("fundamental-identity") else "no fundamental-identity declaration")
-            )
+            report.append(kind.member_report(s))
     else:
         eng = tangent_engine(registry=registry)
         report.append("base: tangent (Cartan) engine")
@@ -346,39 +394,10 @@ def assemble_engine(
         eng.register(rule)
         report.append(f"+ {rule.name}  [{why}]")
 
-    fam = scan.families
-    add(ZeroProductDefinition(), "always: zero products inside operator slots")
-    if "multivector_interior" in fam:
-        add(MultivectorInteriorLinearityDefinition(registry), "multivector interiors present")
-        add(MultivectorInteriorDecomposableDefinition(), "multivector interiors present")
-        add(MultivectorInteriorDecomposableFormDefinition(registry), "multivector interiors present")
-    if "wedge" in fam:
-        add(WedgeSumScalarDefinition(registry), "wedges present")
-        add(FormProductToWedgeDefinition(registry), "wedges present")
-        add(WedgeGradedOrderDefinition(registry), "wedges present")
-        add(WedgeScalarFactorDefinition(registry), "wedges present")
-        if "nambu_sharp" in fam:
-            add(SharpSlotWedgeNormalizeDefinition(registry), "wedges inside sharp slots")
-    if "nambu_sharp" in fam:
-        # evaluations θ(·,·) are BORN inside sharp slots during
-        # expansion (not visible in the scanned input), so the
-        # slot-reachable alternation rule rides with every sharp
-        from jacopy.packages.generalized.r_twisted import (
-            SharpSlotAlternatingNormalizeDefinition,
-        )
-
-        add(
-            SharpSlotAlternatingNormalizeDefinition(registry),
-            "sharp slots present (alternation must reach inside them)",
-        )
-    if "act" in fam:
-        add(ActExpansionDefinition(registry), "operator actions present")
-    if "multi_eval" in fam:
-        add(MultiEvalArgLinearityDefinition(registry), "multi-slot evaluations present")
-    if fam & {"lie_derivative", "interior", "nambu_sharp"}:
-        add(OperatorSlotAdditivityDefinition(), "operators with additive direction slots")
-    if "lie_bracket" in fam:
-        add(LieBracketLeibnizDefinition(registry), "Lie brackets of vector fields present")
+    fam = frozenset(scan.families)
+    for entry in family_rules():
+        if entry.when(fam):
+            add(entry.build(registry), entry.why)
     for rule in extra:
         # caller-supplied rules are NEVER deduplicated: two instances
         # of one Definition class with different parameters are two
