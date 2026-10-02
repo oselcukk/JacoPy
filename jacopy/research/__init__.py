@@ -11,6 +11,10 @@ that ``examples/bracket_twist_walkthrough.ipynb`` had to do by hand:
 * :mod:`axiom_suite` — the generic Courant-type condition runner and
   the Ψ-transport of a whole structure;
 * :mod:`antisymmetrize` — index antisymmetrisation for frame formulas.
+
+:mod:`structure_kinds` is the registry ``assemble_engine`` reads: a new
+structure type (and its node families / family rules) is registered
+there, without editing the library (audit 0B00E1B-FULL T2-3).
 """
 
 from jacopy.research.antisymmetrize import (
@@ -46,6 +50,12 @@ from jacopy.research.sections import (
     SectionType,
     Slot,
 )
+from jacopy.research.structure_kinds import (
+    StructureKind,
+    register_family,
+    register_family_rule,
+    register_structure_kind,
+)
 
 __all__ = [
     "AlgebroidData",
@@ -60,6 +70,7 @@ __all__ = [
     "Scan",
     "SectionType",
     "Slot",
+    "StructureKind",
     "SuiteReport",
     "WedgeGradedOrderDefinition",
     "WedgeScalarFactorDefinition",
@@ -69,6 +80,9 @@ __all__ = [
     "assemble_engine",
     "assembly_report",
     "permutation_sign",
+    "register_family",
+    "register_family_rule",
+    "register_structure_kind",
     "rename_indices",
     "swap_indices",
 ]
