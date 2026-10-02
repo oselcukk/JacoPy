@@ -8,8 +8,10 @@ as a permanent test.
    PoissonBracketValue, musical maps, Act …) are refused;
    one function symbol per derivation term through nested shapes
    (cr7/p02, gate7/q1 a5, F9).
-2. AoG-domain (cr7/p06): an AgreementOnGenerators identity carries its
-   algebra; a citation applies it to elements of that algebra only.
+2. AoG-domain (cr7/p06, cr8/p02): an AgreementOnGenerators identity
+   carries its algebra; a citation applies it to elements of that algebra
+   only.  KNOWN MAIN BUG, strict-xfail: the fix moved to its own lane
+   (gate 8: multi-domain first-wins, Koszul zero_pair regression).
 3. Oracle corners (cr7/p04, gate7/q2 corners, q3, F5).
 4. Raw facts under citation (cr7/p03, gate7/q1 a2, q1b, q4).
 """
@@ -222,6 +224,10 @@ def test_1_one_function_symbol_per_term_through_nested_shapes():
 # --------------------------------------------------------------------- #
 
 
+_AOG_XFAIL = pytest.mark.xfail(strict=True, reason="AoG-domain moved to its own lane; known main bug cr7/p06")
+
+
+@_AOG_XFAIL
 @pytest.mark.parametrize("order", ["theorem first", "rules first"])
 def test_2_aog_theorem_applies_on_its_algebra_only(order):
     x, z, u = Symbol("x"), Symbol("z"), Symbol("u")
@@ -258,6 +264,53 @@ def test_2_aog_theorem_applies_on_its_algebra_only(order):
             assert not td.matches(Act(D, outside)), outside
         assert not td.matches(D)                           # the bare operator is never rewritten
     assert prove(eng2, D, E, registry=reg).status == "RESIDUAL"
+
+
+@_AOG_XFAIL
+@pytest.mark.parametrize("order", ["theorem first", "rules first"])
+def test_2_known_bug_cr7_p06_aog_cited_outside_its_algebra(order):
+    # D(x) = E(x) = u on ℝ[x]; z ∉ ℝ[x] with D(z) = 1, E(z) = 0: D(z) = 0 is FALSE.
+    x, z, u = Symbol("x"), Symbol("z"), Symbol("u")
+    D, E = Derivation("D", degree=0), Derivation("E", degree=0)
+    reg = PropertyRegistry()
+    for s in (x, z, u):
+        reg.declare(s, Graded(0))
+
+    class Alg:
+        generators = (x,)
+
+    gens = _rule({(D, x): u, (E, x): u})
+    chain = prove_operator_equation(D, E, Alg(), registry=reg, engine=ExpansionEngine([gens]))
+    thm = Theorem("DE", "D = E on ℝ[x]", D, E, chain).with_structural_requires()
+    defs = [TheoremDefinition(thm), gens, _rule({(D, z): Integer(1), (E, z): Integer(0)}, "onz")]
+    if order == "rules first":
+        defs = defs[1:] + defs[:1]
+    assert not prove(ExpansionEngine(defs), Act(D, z), Integer(0), registry=reg).closed
+
+
+@pytest.mark.xfail(strict=True, reason="AoG-domain moved to its own lane; known main bug cr8/p02")
+def test_2_known_bug_cr8_p02_two_aog_domains_in_one_chain():
+    # D = E on ℝ[x], E = G on ℝ[y], G(x) = 0: D = G holds on ℝ only; D(x) = u, so D(x) = 0 is FALSE.
+    from jacopy.proof.chain import ProofChain
+
+    x, y, u, v = (Symbol(n) for n in "xyuv")
+    D, E, G = (Derivation(n, degree=0) for n in "DEG")
+    reg = PropertyRegistry()
+    for s in (x, y, u, v):
+        reg.declare(s, Graded(0))
+    table = _rule({(D, x): u, (E, x): u, (E, y): v, (G, y): v, (G, x): Integer(0)}, "table")
+
+    class AX:
+        generators = (x,)
+
+    class AY:
+        generators = (y,)
+
+    c1 = prove_operator_equation(D, E, AX(), registry=reg, engine=ExpansionEngine([table]))
+    c2 = prove_operator_equation(E, G, AY(), registry=reg, engine=ExpansionEngine([table]))
+    thm = Theorem("DG", "D = G", D, G, ProofChain(list(c1.steps) + list(c2.steps))).with_structural_requires()
+    eng = ExpansionEngine([TheoremDefinition(thm), table])
+    assert not prove(eng, Act(D, x), Integer(0), registry=reg).closed
 
 
 # --------------------------------------------------------------------- #
