@@ -80,6 +80,38 @@ from jacopy.packages.poisson.core import (
     prove_poisson_leibniz,
 )
 
+# Facade alignment (DENETİM 0B00E1B-FULL T2-6): the remaining user-path
+# constructors, prove_* theorems and package-specific declarations/rules.
+from jacopy.packages.poisson.koszul_jacobi import (
+    KoszulJacobiCertificate,
+    ZeroSeed,
+    koszul_jacobi_certificate,
+    prove_general_koszul_jacobi,
+    prove_koszul_zero_by_certificate,
+)
+from jacopy.packages.poisson.nambu import (
+    NambuSharpActionDefinition,
+    NambuSharpLinearityDefinition,
+    NambuToPoissonSharpDefinition,
+    poisson_view,
+)
+from jacopy.packages.poisson.showcase import (
+    SNBivectorGeneralEvalDefinition,
+    prove_sn_eval_views_agree_on_exacts,
+)
+from jacopy.packages.poisson.tilde import (
+    TildeInteriorActDefinition,
+    TildeInteriorEvalDefinition,
+    prove_lie_tilde_commutator_on_exacts,
+    prove_lie_tilde_d_iota_commutation_general,
+    prove_lie_tilde_d_iota_commutation_on_exacts,
+    prove_lie_tilde_d_iota_exact_general,
+    prove_lie_tilde_d_iota_exact_on_exacts,
+    prove_lie_tilde_iota_commutator_on_vectors,
+    prove_tilde_magic_on_vectors,
+    tilde_multivector_degree,
+)
+
 __all__ = [
     "NambuFIDeclaration",
     "NambuPoissonStructure",
@@ -145,4 +177,26 @@ __all__ = [
     "prove_poisson_antisymmetry",
     "prove_poisson_constant",
     "prove_poisson_leibniz",
+    # facade alignment (T2-6)
+    "KoszulJacobiCertificate",
+    "ZeroSeed",
+    "koszul_jacobi_certificate",
+    "prove_general_koszul_jacobi",
+    "prove_koszul_zero_by_certificate",
+    "NambuSharpActionDefinition",
+    "NambuSharpLinearityDefinition",
+    "NambuToPoissonSharpDefinition",
+    "poisson_view",
+    "SNBivectorGeneralEvalDefinition",
+    "prove_sn_eval_views_agree_on_exacts",
+    "TildeInteriorActDefinition",
+    "TildeInteriorEvalDefinition",
+    "prove_lie_tilde_commutator_on_exacts",
+    "prove_lie_tilde_d_iota_commutation_general",
+    "prove_lie_tilde_d_iota_commutation_on_exacts",
+    "prove_lie_tilde_d_iota_exact_general",
+    "prove_lie_tilde_d_iota_exact_on_exacts",
+    "prove_lie_tilde_iota_commutator_on_vectors",
+    "prove_tilde_magic_on_vectors",
+    "tilde_multivector_degree",
 ]

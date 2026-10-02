@@ -3,9 +3,16 @@ curvature ``R``, non-metricity ``Q``, connection/torsion/curvature
 forms, Ricci, Ricci scalar, Einstein, Bianchi, Cartan structure
 equations, Koszul, Schouten decomposition.
 
-Phase 4.A ships the connection structure layer (direction-slot
-``C^∞``-linearity + the engine); T/R/Q and the identities follow in
-4.B-4.E.
+On an algebroid ``E`` it also carries E-connections, E-torsion and
+E-curvature, the modified/projected torsion and curvature, admissible
+connections, the derived algebroid, the E-Koszul formula and the
+E-Bianchi / E-Cartan identities; frame-component workflows compute
+the concrete coefficients.
+
+``Metric``/``metric`` here are the package's metric CONTEXT; the
+central :func:`jacopy.central.objects.metric` builds the ``g`` ATOM
+(the name exported by top-level ``jacopy``). The two are bridged by
+:func:`as_metric_context` until the ROADMAP 5f metric adapter lands.
 """
 
 from jacopy.packages.metric_affine.bianchi import (
@@ -112,6 +119,68 @@ from jacopy.packages.metric_affine.e_cartan import (
     prove_e_cartan_second,
 )
 
+# Facade alignment (DENETİM 0B00E1B-FULL T2-6): the remaining user-path
+# constructors, prove_* theorems and package-specific declarations/rules.
+from jacopy.packages.metric_affine.admissible import (
+    AdmissibilityDeclaration,
+    ModifiedTorsionFreeDeclaration,
+    modified_bracket,
+    prove_admissible_implies_metric_compatible,
+    prove_courant_locality_generator,
+    prove_metric_compatible_implies_admissible,
+    prove_modified_bracket_left_leibniz,
+    prove_modified_torsion_symmetric_part_vanishes,
+    prove_torsion_free_implies_admissible,
+)
+from jacopy.packages.metric_affine.derived import (
+    d_derived,
+    derived_algebroid,
+    derived_engine,
+    derived_is_projected,
+    lie_derived,
+    prove_derived_magic_on_forms,
+    prove_derived_magic_on_functions,
+    prove_projected_d_squared_associator,
+    prove_projected_d_squared_on_functions,
+)
+from jacopy.packages.metric_affine.e_bianchi import (
+    anomaly_direction,
+    covariant_modified_torsion_derivative,
+    projected_modified_bracket,
+    prove_e_bianchi_first_identity,
+    prove_e_bianchi_second_identity,
+)
+from jacopy.packages.metric_affine.e_cartan import (
+    e_cartan_engine,
+    e_cartan_first_sides,
+    e_cartan_second_sides,
+)
+from jacopy.packages.metric_affine.e_koszul import (
+    EKoszulDeclaration,
+    e_nonmetricity,
+    fundamental_theorem_components,
+    koszul_correction,
+    prove_e_generalized_koszul,
+    prove_e_koszul_admissible_implies_compatible,
+    prove_e_koszul_admissible_implies_torsion_free,
+    prove_e_koszul_formula,
+    prove_e_koszul_unique_under_null_locality,
+    prove_fundamental_theorem_components,
+    prove_koszul_reference_decomposition,
+    prove_metric_lie_derivative_identity,
+    prove_projectors_agree_on_coboundary_values,
+)
+from jacopy.packages.metric_affine.metric import (
+    inverse_metric_component_named,
+)
+from jacopy.packages.metric_affine.modified import (
+    generalized_ricci_anomaly,
+    prove_generalized_ricci_identity,
+)
+from jacopy.packages.metric_affine.nonmetricity_forms import (
+    nonmetricity_form_component_formula,
+)
+
 __all__ = [
     "NonMetricityForm",
     "NonMetricityFormEvaluationDefinition",
@@ -193,4 +262,48 @@ __all__ = [
     "prove_projected_curvature_last_slot",
     "prove_connection_form_on_frame",
     "prove_torsion_components",
+    # facade alignment (T2-6)
+    "AdmissibilityDeclaration",
+    "ModifiedTorsionFreeDeclaration",
+    "modified_bracket",
+    "prove_admissible_implies_metric_compatible",
+    "prove_courant_locality_generator",
+    "prove_metric_compatible_implies_admissible",
+    "prove_modified_bracket_left_leibniz",
+    "prove_modified_torsion_symmetric_part_vanishes",
+    "prove_torsion_free_implies_admissible",
+    "d_derived",
+    "derived_algebroid",
+    "derived_engine",
+    "derived_is_projected",
+    "lie_derived",
+    "prove_derived_magic_on_forms",
+    "prove_derived_magic_on_functions",
+    "prove_projected_d_squared_associator",
+    "prove_projected_d_squared_on_functions",
+    "anomaly_direction",
+    "covariant_modified_torsion_derivative",
+    "projected_modified_bracket",
+    "prove_e_bianchi_first_identity",
+    "prove_e_bianchi_second_identity",
+    "e_cartan_engine",
+    "e_cartan_first_sides",
+    "e_cartan_second_sides",
+    "EKoszulDeclaration",
+    "e_nonmetricity",
+    "fundamental_theorem_components",
+    "koszul_correction",
+    "prove_e_generalized_koszul",
+    "prove_e_koszul_admissible_implies_compatible",
+    "prove_e_koszul_admissible_implies_torsion_free",
+    "prove_e_koszul_formula",
+    "prove_e_koszul_unique_under_null_locality",
+    "prove_fundamental_theorem_components",
+    "prove_koszul_reference_decomposition",
+    "prove_metric_lie_derivative_identity",
+    "prove_projectors_agree_on_coboundary_values",
+    "inverse_metric_component_named",
+    "generalized_ricci_anomaly",
+    "prove_generalized_ricci_identity",
+    "nonmetricity_form_component_formula",
 ]

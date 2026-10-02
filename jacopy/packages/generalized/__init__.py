@@ -1,9 +1,12 @@
 """Generalized geometry (project directive item 14; Phase 7).
 
 Courant algebroid axiomatics + the Uchino redundancy theorems
-(Uchino 2002, arXiv:math/0204010); Dorfman & Courant bracket property
-suites, H-twists and the Roytenberg family arrive from the Phase 6
-drinfeld package as this phase proceeds."""
+(Uchino 2002, arXiv:math/0204010); the standard, H-twisted and
+general-twist Dorfman/Courant brackets and their property suites; the
+Roytenberg-Courant family; Bourbaki (pre)calculus, Ševera and
+exact (pre-)Bourbaki structures; the Poisson-generalized / R-twisted
+(θ, R-flux) brackets; the exceptional double and its rotation; and
+the Nambu ↔ Poisson dialect bridge."""
 
 from jacopy.packages.generalized.courant_axioms import (
     C3IdentityDeclaration,
@@ -167,6 +170,33 @@ from jacopy.packages.generalized.standard_courant import (
     prove_dorfman_invariance_std,
 )
 
+# Facade alignment (DENETİM 0B00E1B-FULL T2-6): the remaining user-path
+# constructors, prove_* theorems and package-specific declarations/rules.
+from jacopy.packages.generalized.bourbaki_severa import (
+    severa_engine,
+)
+from jacopy.packages.generalized.dialect_bridge import (
+    bridge_engine,
+)
+from jacopy.packages.generalized.exact_locality_projector import (
+    locally_exact_form,
+)
+from jacopy.packages.generalized.exceptional_double import (
+    exceptional_lie_tilde,
+    pi_hat,
+    transported_form_pairing,
+)
+from jacopy.packages.generalized.frame_evaluation import (
+    basis_pairing,
+)
+from jacopy.packages.generalized.general_twist import (
+    general_twist_engine,
+)
+from jacopy.packages.generalized.r_twisted import (
+    RFluxClosureDeclaration,
+    lichnerowicz_calculus,
+)
+
 __all__ = [
     "C3IdentityDeclaration",
     "CourantD",
@@ -293,4 +323,15 @@ __all__ = [
     "theta_courant",
     "theta_dorfman",
     "prove_leibniz_from_c3",
+    # facade alignment (T2-6)
+    "severa_engine",
+    "bridge_engine",
+    "locally_exact_form",
+    "exceptional_lie_tilde",
+    "pi_hat",
+    "transported_form_pairing",
+    "basis_pairing",
+    "general_twist_engine",
+    "RFluxClosureDeclaration",
+    "lichnerowicz_calculus",
 ]
