@@ -470,12 +470,15 @@ def test_m1_1_scalar_at_any_level_is_a_constant():
     reg.declare(Symbol("y"), Scalar())                    # exact Graded(0) hides the predicate
     with pytest.raises(ScalarContractError):
         reg.declare(Symbol("x"), Scalar())                # effective Graded(1) by predicate
-    # a Scalar on a composite is not a constant atom
+    # a product of constants is a constant (structural closure); a
+    # product with a function is not
     reg = PropertyRegistry()
     reg.declare_for_predicate(lambda e: isinstance(e, Symbol), Scalar())
     c = Symbol("c")
     assert is_real_constant(c, reg)
-    assert not is_real_constant(Product(c, c), reg)
+    assert is_real_constant(Product(c, c), reg)
+    (f,) = functions("f", registry=reg)
+    assert not is_real_constant(Product(c, f), reg)
 
 
 def test_m1_1_leibniz_proofs_do_not_accumulate_scalar_reads():

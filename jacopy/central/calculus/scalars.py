@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Optional
 
 from jacopy.algebra.commutator import is_certified_derivation
-from jacopy.core.expr import Expr, Integer, Rational
+from jacopy.core.expr import Expr, Integer, Neg, Product, Rational, Sum
 from jacopy.core.properties import (
     AntiCommuting,
     Graded,
@@ -79,12 +79,17 @@ def declared_real_constant(
     with (nullcontext() if record else registry.untracked()):
         if registry.peek(expr, Scalar) is None:
             return False
-        return scalar_contract_certified(
-            registry.get(expr, Scalar),
-            registry.get(expr, Graded),
-            registry.get(expr, NonCommuting),
-            registry.get(expr, AntiCommuting),
-        )
+        # the clash is decided on the RAW declarations (gate-5 F1): a
+        # visibility filter (axioms whitelist / strict mode) narrows
+        # which Scalar declaration may be USED, it never hides the
+        # Graded / NonCommuting / AntiCommuting that make the
+        # expression a non-constant — shadowing in the registry uses
+        # the raw declarations for the same reason
+        scalar = registry.get(expr, Scalar)
+        answers = (registry.get(expr, Graded), registry.get(expr, NonCommuting),
+                   registry.get(expr, AntiCommuting))  # recorded hypotheses
+        raw = tuple(registry.lookup(expr, cls)[0] for cls in (Graded, NonCommuting, AntiCommuting))
+        return scalar_contract_certified(scalar, *raw) and scalar_contract_certified(scalar, *answers)
 
 
 def is_real_constant(
@@ -109,6 +114,11 @@ def is_real_constant(
     """
     if isinstance(expr, (Integer, Rational)):
         return True
+    if isinstance(expr, (Neg, Sum, Product)):
+        # structural closure (gate-5 #5): a negation / sum / product
+        # whose every leaf is an ℝ-constant is one (constants form a
+        # ring); any other compound is not
+        return all(is_real_constant(c, registry, record=record) for c in expr.children)
     if registry is None or not expr.is_atom:
         return False
     if not declared_real_constant(expr, registry, record=record):

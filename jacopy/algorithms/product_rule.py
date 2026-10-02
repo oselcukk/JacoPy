@@ -129,7 +129,7 @@ def _expand_act(
         # what makes ℝ-homogeneity [c·X, Y] = c·[X, Y] close — the
         # Leibniz split of Y(c·g) leaves a Y(c)·g term that must die.
         return Integer(0)
-    if registry is not None and arg.is_atom and _annihilates(op, arg, registry):
+    if registry is not None and (arg.is_atom or isinstance(arg, (Neg, Sum, Product))) and _annihilates(op, arg, registry):
         # The Scalar CONTRACT (core.properties.Scalar, audit 0b00e1b
         # M1-1 ≡ M1-2): a Scalar-declared atom
         # (scalars.is_real_constant) is an ℝ-constant,

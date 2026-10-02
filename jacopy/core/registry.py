@@ -205,6 +205,20 @@ class PropertyRegistry:
                     return p, _PREDICATE
         return None, None
 
+    def lookup(self, expr: Expr, prop_cls: Type[P]):
+        """``(property, level)`` of the RAW declaration (no visibility
+        filter, no shadowing) that answers ``prop_cls`` for ``expr``:
+        ``level`` is ``"exact"``, ``"class"`` or ``"predicate"``, or
+        ``(None, None)``. Public read access to the declaration data
+        for consumers that must restate the Scalar contract
+        independently (the model oracle) or decide it on the raw
+        answers (the predicate's clash check: a visibility filter
+        never turns a declared graded element into a constant)."""
+        prop, level = self._raw(expr, prop_cls)
+        if prop is None:
+            return None, None
+        return prop, ("exact", "class", "predicate")[level[0]]
+
     def _scalar_shadowed(self, expr, mro, level) -> bool:
         """Is a Scalar found at ``level`` shadowed by a STRICTLY more
         specific Graded / NonCommuting / AntiCommuting declaration?
@@ -361,9 +375,19 @@ class PropertyRegistry:
             # the predicate covers; a predicate cannot be enumerated
             # further, so the predicate-level contract is ALSO enforced
             # at query time (scalar_contract_certified default-rejects)
+            def covered(e):
+                # a predicate written for one node type may raise on
+                # another exact-declared expression: not a match (the
+                # same predicate raising inside get() is the caller's
+                # concern, as on main)
+                try:
+                    return bool(predicate(e))
+                except Exception:
+                    return False
+
             try:
                 self._validate_contract(
-                    exprs=[e for e in list(self._props) if predicate(e)]
+                    exprs=[e for e in list(self._props) if covered(e)]
                 )
             except Exception:
                 self._by_predicate.pop()

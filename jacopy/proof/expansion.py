@@ -202,7 +202,9 @@ class ScalarConstantContract(Definition):
     role = "definition"
 
     def matches(self, expr: Expr) -> bool:
-        if not isinstance(expr, Act) or not expr.arg.is_atom:
+        if not isinstance(expr, Act) or not (
+            expr.arg.is_atom or isinstance(expr.arg, (Neg, Sum, Product))
+        ):
             return False
         ctx = current_context()
         registry = ctx[0] if ctx is not None else None
