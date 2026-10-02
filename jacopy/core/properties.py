@@ -190,16 +190,24 @@ def scalar_contract_clash(graded, noncommuting, anticommuting):
     return None
 
 
-def scalar_contract_certified(scalar, graded, noncommuting, anticommuting) -> bool:
-    """The ONE registry-level certificate of the ℝ-constant: an
-    effective ``Scalar`` answer and NO clash, where — stricter than
-    :func:`scalar_contract_clash` (default-reject) — a ``Graded``
-    answer must be the CONSTANT ``0`` (a symbolic degree certifies
-    nothing). The structural half (the atom is of function kind) is
-    added by :func:`~jacopy.central.calculus.scalars.is_real_constant`."""
-    if scalar is None or noncommuting is not None or anticommuting is not None:
+def plain_degree_zero(graded, noncommuting, anticommuting) -> bool:
+    """The ONE rule "no ``NonCommuting``, no ``AntiCommuting``, ``Graded``
+    absent or the CONSTANT ``0``" (a symbolic degree certifies nothing;
+    default-reject). Shared by the ℝ-constant certificate below and by
+    the f·D commutation certificate of AgreementOnGenerators
+    (:func:`jacopy.proof.strategies._plain_atom`)."""
+    if noncommuting is not None or anticommuting is not None:
         return False
     return graded is None or graded.degree.as_int() == 0
+
+
+def scalar_contract_certified(scalar, graded, noncommuting, anticommuting) -> bool:
+    """The ONE registry-level certificate of the ℝ-constant: an
+    effective ``Scalar`` answer and :func:`plain_degree_zero` on the
+    other three answers (stricter than :func:`scalar_contract_clash`).
+    The structural half (the atom is of function kind) is added by
+    :func:`~jacopy.central.calculus.scalars.is_real_constant`."""
+    return scalar is not None and plain_degree_zero(graded, noncommuting, anticommuting)
 
 
 @dataclass(frozen=True)

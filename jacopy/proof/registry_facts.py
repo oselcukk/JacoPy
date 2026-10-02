@@ -111,9 +111,12 @@ class RegistryFact:
 def facts_from_log(log: Iterable[tuple]) -> Tuple[RegistryFact, ...]:
     """Deduplicated facts of a :func:`track_reads` log (first-seen order)."""
     out: dict = {}
+    from jacopy.core.registry import RAW_READ
+
     for entry in log:
         expr, prop_cls, visible = entry[:3]
-        f = RegistryFact(expr, prop_cls, property_content(visible), raw=len(entry) > 3)
+        raw = len(entry) > 3 and entry[3] == RAW_READ
+        f = RegistryFact(expr, prop_cls, property_content(visible), raw=raw)
         out.setdefault(f, None)
     return tuple(out)
 
@@ -124,7 +127,7 @@ def answer(registry, fact: RegistryFact) -> Optional[tuple]:
     if registry is None:
         return None
     if fact.raw:
-        return property_content(registry.lookup(fact.expr, fact.prop_cls)[0])
+        return property_content(registry.lookup(fact.expr, fact.prop_cls).prop)
     return property_content(registry.get(fact.expr, fact.prop_cls))
 
 

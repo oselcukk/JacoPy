@@ -17,6 +17,7 @@ from jacopy.core.properties import (
     Graded,
     NonCommuting,
     Scalar,
+    plain_degree_zero,
     scalar_contract_certified,
 )
 from jacopy.core.registry import PropertyRegistry
@@ -59,8 +60,10 @@ def declared_real_constant(
     Reads. A NEGATIVE Scalar answer is pre-filtered with
     :meth:`~jacopy.core.registry.PropertyRegistry.peek` and NOT
     recorded as a hypothesis; a positive one is re-queried with ``get``
-    together with the three clash answers, so all four become the
-    hypotheses of the step that relies on them. Why the negative is not
+    (the visible Scalar) and the three clash answers are read RAW
+    (:meth:`~jacopy.core.registry.PropertyRegistry.lookup`, recorded as
+    raw facts — a visibility filter never hides a clash, gate-5 F1), so
+    all four become the hypotheses of the step that relies on them. Why the negative is not
     a hypothesis (the documented contract, locked by
     ``test_m1_1_negative_scalar_answers_are_not_hypotheses``): constants
     are functions, so every rewrite the engine performs for a
@@ -85,14 +88,12 @@ def declared_real_constant(
         # Graded / NonCommuting / AntiCommuting that make the
         # expression a non-constant — shadowing in the registry uses
         # the raw declarations for the same reason
-        scalar = registry.get(expr, Scalar)
-        answers = (registry.get(expr, Graded), registry.get(expr, NonCommuting),
-                   registry.get(expr, AntiCommuting))  # recorded hypotheses
+        scalar = registry.get(expr, Scalar)  # the visible Scalar: a recorded hypothesis
         raw = tuple(
-            registry.lookup(expr, cls, record=record)[0]  # recorded as RAW facts
+            registry.lookup(expr, cls, record=record).prop  # recorded as RAW facts
             for cls in (Graded, NonCommuting, AntiCommuting)
         )
-        return scalar_contract_certified(scalar, *raw) and scalar_contract_certified(scalar, *answers)
+        return scalar_contract_certified(scalar, *raw)
 
 
 def is_real_constant(
@@ -125,10 +126,10 @@ def is_real_constant(
         if not all(is_real_constant(c, registry, record=record) for c in expr.children):
             return False  # (a negative answer records nothing)
         if registry is not None:
-            for cls in (Graded, NonCommuting, AntiCommuting):
-                own = registry.lookup(expr, cls, record=record)[0]
-                if own is not None and (cls is not Graded or own.degree.as_int() != 0):
-                    return False
+            own = tuple(registry.lookup(expr, cls, record=record).prop
+                        for cls in (Graded, NonCommuting, AntiCommuting))
+            if not plain_degree_zero(*own):
+                return False
         return True
     if registry is None or not expr.is_atom:
         return False

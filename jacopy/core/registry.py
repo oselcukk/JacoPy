@@ -39,7 +39,7 @@ from __future__ import annotations
 import threading
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Callable, Iterable, Iterator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Callable, Iterable, Iterator, List, NamedTuple, Optional, Set, Tuple, Type, TypeVar
 
 from jacopy.core.expr import Expr
 from jacopy.core.properties import Property, Provenance
@@ -54,6 +54,10 @@ P = TypeVar("P", bound=Property)
 #: ``(expr, property class, visible property or None)``. Off by
 #: default: one attribute lookup per query.
 _READS = threading.local()
+
+#: the explicit marker of a RAW read-log entry ``(expr, cls, prop, RAW_READ)``
+#: written by :meth:`PropertyRegistry.lookup`
+RAW_READ = "raw"
 
 
 def begin_reads() -> list:
@@ -100,6 +104,19 @@ def track_reads():
         end_reads(log)
 
 Predicate = Callable[[Expr], bool]
+
+
+class Declaration(NamedTuple):
+    """A RAW declaration as :meth:`PropertyRegistry.lookup` reports it:
+    the property (or ``None``), its ``level`` (``"exact"``, ``"class"``,
+    ``"predicate"`` or ``None``) and its comparable specificity ``rank``
+    (smaller = more specific; the class level carries the MRO depth;
+    ``None`` when undeclared). Stable public structure for consumers
+    that restate the Scalar contract independently (the model oracle)."""
+
+    prop: Optional[Property]
+    level: Optional[str]
+    rank: Optional[tuple]
 
 
 #: Declaration LEVELS, most specific first: exact ``(0, 0)``, class
@@ -213,7 +230,7 @@ class PropertyRegistry:
         return None, None
 
     def lookup(self, expr: Expr, prop_cls: Type[P], *, record: bool = False):
-        """``(property, level, rank)`` of the RAW declaration (no
+        """The :class:`Declaration` ``(prop, level, rank)`` of the RAW declaration (no
         visibility filter, no shadowing) that answers ``prop_cls`` for
         ``expr``: ``level`` is ``"exact"``, ``"class"`` or
         ``"predicate"``, ``rank`` the comparable specificity tuple
@@ -230,10 +247,10 @@ class PropertyRegistry:
         if record:
             stack = getattr(_READS, "stack", None)
             if stack:
-                stack[-1].append((expr, prop_cls, prop, "raw"))
+                stack[-1].append((expr, prop_cls, prop, RAW_READ))
         if prop is None:
-            return None, None, None
-        return prop, ("exact", "class", "predicate")[rank[0]], rank
+            return Declaration(None, None, None)
+        return Declaration(prop, ("exact", "class", "predicate")[rank[0]], rank)
 
     def _scalar_shadowed(self, expr, mro, level) -> bool:
         """Is a Scalar found at ``level`` shadowed by a STRICTLY more
