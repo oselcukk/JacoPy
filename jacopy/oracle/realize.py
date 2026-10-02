@@ -410,42 +410,47 @@ def _rational(e, env, path):
     return env.R.const(Q(e.p, e.q))
 
 
-_LEVEL = {"exact": 0, "class": 1, "predicate": 2}
-
-
 def _declared_constant(e, env) -> bool:
     """The Scalar contract restated INDEPENDENTLY of the engine (chef
-    decision, gate 5: the oracle must not import the engine's
+    decision, gate 5/6: the oracle must not import the engine's
     predicate, or a wrong "constant" there would be modelled here too
-    and the DISAGREE masked). From the registry's raw declaration data
-    (:meth:`~jacopy.core.registry.PropertyRegistry.lookup`), for an
-    atom the caller already knows to be of function kind (a Symbol, a
-    degree-0 Form / PVector):
+    and the DISAGREE masked). From the registry's public declaration
+    data alone (:meth:`~jacopy.core.registry.PropertyRegistry.lookup`
+    raw answers with their specificity ranks, ``strict_axioms_only``,
+    ``axiom_whitelist``), for an atom the caller already knows to be of
+    function kind (a Symbol, a degree-0 Form / PVector):
 
-    * a ``Scalar`` declared at any level (exact / class / predicate);
-    * SHADOWED — not a constant — by a strictly more specific
-      ``Graded`` (any degree) / ``NonCommuting`` / ``AntiCommuting``;
-    * not a constant when an effective ``NonCommuting`` /
-      ``AntiCommuting`` exists, or the effective ``Graded`` degree is
-      not the constant ``0`` (a symbolic degree certifies nothing).
+    * a ``Scalar`` declared at any level (exact / class / predicate)
+      that is VISIBLE: not filtered out by an ``axioms`` whitelist
+      without ``Scalar``, not a DERIVED property in strict mode;
+    * SHADOWED — not a constant — by a strictly more specific (rank:
+      exact < class by MRO depth < predicate) raw ``Graded`` (any
+      degree) / ``NonCommuting`` / ``AntiCommuting``;
+    * not a constant when a raw ``NonCommuting`` / ``AntiCommuting``
+      exists, or the raw ``Graded`` degree is not the constant ``0`` (a
+      symbolic degree certifies nothing). Raw: a filter never hides a
+      clash (gate-5 F1).
 
-    ``tests/test_audit_0b00e1b_p1_core_tur2.py`` locks this against the
-    engine's predicate differentially over every declaration
-    combination. The registry's visibility filters are deliberately
-    NOT applied (raw data, as the engine's clash check)."""
+    ``tests/test_audit_0b00e1b_p1_core_tur3.py`` locks this against the
+    engine's predicate differentially (class hierarchy, every ``axioms``
+    subset, strict / DERIVED)."""
     reg = env.registry
     if reg is None:
         return False
-    scalar, s_level = reg.lookup(e, Scalar)
+    scalar, _, rank = reg.lookup(e, Scalar)
     if scalar is None:
         return False
-    rank = _LEVEL[s_level]
-    graded, g_level = reg.lookup(e, Graded)
-    nc, nc_level = reg.lookup(e, NonCommuting)
-    ac, ac_level = reg.lookup(e, AntiCommuting)
-    for other, level in ((graded, g_level), (nc, nc_level), (ac, ac_level)):
-        if other is not None and _LEVEL[level] < rank:
+    graded, _, g_rank = reg.lookup(e, Graded)
+    nc, _, nc_rank = reg.lookup(e, NonCommuting)
+    ac, _, ac_rank = reg.lookup(e, AntiCommuting)
+    for other, other_rank in ((graded, g_rank), (nc, nc_rank), (ac, ac_rank)):
+        if other is not None and other_rank < rank:
             return False  # shadowed: a graded element, not a constant
+    if reg.strict_axioms_only and scalar.provenance.name == "DERIVED":
+        return False
+    wl = reg.axiom_whitelist
+    if wl is not None and Scalar not in wl:
+        return False
     if nc is not None or ac is not None:
         return False
     return graded is None or graded.degree.as_int() == 0
