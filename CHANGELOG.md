@@ -11,6 +11,86 @@ commit `0b00e1b` ("DENETİM 0B00E1B-FULL", 2026-09-30).
 
 ## [Unreleased]
 
+### Documentation and test portability (audit T2-8)
+
+- `README.md` rewritten in English: what jacopy is, installation with
+  the extras, a quick start through the top-level surface, the
+  packages mapped to the Math 595 guideline items (planned items
+  marked), proof trust and the oracle, licence and citation.
+- `docs/ARCHITECTURE.md` rewritten for the current tree: measured layer
+  map with the 29 deferred upward imports listed (T2-2), the proof
+  flow, the trust model (requirement kinds, minting, replay,
+  default-reject citation, the Scalar contract), the model oracle,
+  extension points (`Definition`, `StructureKind`) with runnable
+  examples, the support levels and known limits.
+- `docs/TESTING.md`: sympy is the `oracle` extra; `--oracle`,
+  `--oracle-report`, the `oracle_exempt` and `contract_table` markers,
+  the wheel run and the merge gate.
+- `docs/CITATIONS.md`: file paths follow the renamed modules.
+- The `jacopy` docstring names the `cite` / `prove` homonyms.
+- The fast suite runs from a sympy-free wheel (CI job `wheel`): the
+  module-level sympy import of `tests/test_audit_0b00e1b_metric_affine.py`
+  moved into the four tests that use it (`pytest.importorskip`), and the
+  tests that call the oracle or need a repository file skip with a
+  reason.
+- `CITATION.cff` keeps its `version`; `tests/test_citation_metadata.py`
+  checks that it equals `jacopy.__version__`.
+- The research-interface notebook uses `antisymmetrize_indices`.
+
+### Unambiguous names (audit T2 names, T2-4; arch-core follow-up), 2026-10-02
+
+- Module files that shared a basename were renamed; each old path is a
+  compatibility alias that *is* the moved module:
+  `metric_affine/koszul.py` → `metric_affine/metric_koszul.py`,
+  `poisson/koszul.py` → `poisson/koszul_forms.py`,
+  `central/tangent/engine.py` → `central/tangent/tangent_expansion.py`,
+  `central/algebroid/engine.py` → `central/algebroid/algebroid_expansion.py`,
+  `metric_affine/engine.py` → `metric_affine/metric_affine_expansion.py`.
+- A name that two different objects carried across subpackage
+  `__all__` lists has an unambiguous alias (same object) in the second
+  package; the old name stays importable: `research.ZeroOperator`,
+  `research.antisymmetrize_indices`, `algorithms.rewrite_to_fixpoint`,
+  `core.PropertyProvenance`, `central.tangent.prove_lie_jacobi`,
+  `central.algebroid.prove_algebroid_*`. The known collisions shrink
+  from 11 to 2 (`Metric` / `metric`).
+- Public names for private helpers used across packages and by the
+  notebooks (same objects; the private names stay):
+  `poisson.tilde.normalized_by`, `drinfeld.tilde_calculus.nambu_tilde_engine`,
+  `central.objects.frame.frame_index_str`, `drinfeld.double.evaluate_on_slots`,
+  `drinfeld.double.double_engine`, `poisson.showcase.is_exact_form`,
+  `drinfeld.twist_engine`, `generalized.exceptional_rotation_engine`,
+  `algorithms.normalize_alternating.structural_sort_key`,
+  `proof.search.node_count`. Private from-imports inside the library:
+  150 → 80 (across subpackages 74 → 28); the notebooks import no
+  private name.
+- `jacopy.research.structure_kinds`: the built-in families, family
+  rules and kinds load before any user entry, whenever the user
+  registers (a kind registered before first use no longer displaces
+  Nambu–Poisson; `first=True` still puts a kind in front on purpose);
+  `families()`, `family_rules()` and `additive_slot_tags()` load the
+  built-ins; `register_family_rule` is idempotent for the same
+  condition, builder, reason and order.
+
+### Architecture (audit T2-1, T2-3), merged 2026-10-02
+
+- Nine structure-free rule classes moved, byte-identical, into the
+  central layer: `central.tangent.cartan_rules`
+  (`MagicFormulaDefinition`, `LieIotaCommutatorDefinition`,
+  `DSquaredZeroDefinition`, `DWedgeLeibnizDefinition`) and
+  `central.calculus.slot_rules` (`PairingArgSplitDefinition`,
+  `FormProductToWedgeDefinition`, `WedgeSumScalarDefinition`,
+  `WedgeZeroNegDefinition`, `TrivialZeroSumDefinition`). The old
+  modules (`drinfeld.twist`, `drinfeld.tilde_calculus`,
+  `poisson.nambu`) re-export the same class objects; no engine changes
+  which rules it registers or in which order.
+- `assemble_engine` and `Scan` no longer name Nambu–Poisson. They read
+  a registry in `jacopy.research.structure_kinds`: node families
+  (`register_family`), family rules (`register_family_rule`, explicit
+  order) and structure kinds (`StructureKind`,
+  `register_structure_kind`). The Nambu–Poisson kind lives in
+  `jacopy.research.nambu_kind`. A structure without a registered kind
+  raises a `TypeError` that names `register_structure_kind`.
+
 ### Public surface and packaging (audit T2-5, T2-6, T2-7, T2-9)
 
 - Top-level `jacopy` now exposes a stable, documented surface
