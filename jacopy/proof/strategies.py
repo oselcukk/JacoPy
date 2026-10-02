@@ -239,15 +239,21 @@ def _is_derivation_expr(
       contract (2026-09-08 re-audit, finding 3),
     * a :class:`Sum`/:class:`Neg` of certified derivations (module
       structure),
-    * a :class:`Product` of scalar factors with EXACTLY ONE certified
-      derivation (``f·D`` is again a derivation).
+    * a :class:`Product` with EXACTLY ONE certified derivation whose
+      other factors are ℝ-constants (anywhere — they commute) or
+      certified scalar FUNCTIONS placed BEFORE the derivation (``f·D``
+      is again a derivation: ``(fD)(ab) = f·D(a)·b + ± a·f·D(b)`` because
+      ``f`` commutes with ``a``; ``D·f`` is the composition ``D∘(f·)``,
+      not a derivation — audit 0b00e1b M1-2). A coefficient declared
+      ``NonCommuting`` does not commute with ``a`` and is refused.
 
     A Product with two or more derivation factors is a COMPOSITION —
     not a derivation — and is rejected; so is anything unrecognized
     (soundness over completeness)."""
     from jacopy.core.expr import Product
+    from jacopy.core.properties import NonCommuting
     from jacopy.algebra.derivation import Derivation
-    from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433 - cycle
+    from jacopy.central.calculus.scalars import is_real_constant, is_scalar_function  # noqa: WPS433 - cycle
 
     if isinstance(expr, Derivation):
         return getattr(expr, "leibniz", True) is not False
@@ -262,7 +268,13 @@ def _is_derivation_expr(
         derivations = 0
         for c in expr.children:
             if is_real_constant(c, registry):
-                continue
+                continue  # a constant commutes: anywhere
+            if (
+                derivations == 0
+                and is_scalar_function(c, registry)
+                and (registry is None or registry.get(c, NonCommuting) is None)
+            ):
+                continue  # a function coefficient, before the derivation
             if _is_derivation_expr(c, registry):
                 derivations += 1
             else:
