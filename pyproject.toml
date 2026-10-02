@@ -4,7 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jacopy"
-version = "0.0.1"
+# Single version source: jacopy/__init__.py (__version__), read below.
+dynamic = ["version"]
 description = "Graded algebra, bracket calculus, and metric-affine / generalized geometry with step-by-step proofs (v3, central-code architecture)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,24 +31,29 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
+# Coloured terminal display (jacopy.display.terminal; plain text without it).
 rich = ["rich>=13.0"]
+# The model oracle (jacopy.oracle; pytest --oracle=warn|strict).
+oracle = ["sympy>=1.12"]
 test = ["pytest>=7.0"]
-docs = [
-    "nbformat>=5.0",
-    "nbclient>=0.7",
-    "ipykernel>=6.0",
-]
-components = ["sympy>=1.12"]
-parallel = ["joblib>=1.3"]
+# Jupyter kernel for the example notebooks (make kernel).
+docs = ["ipykernel>=6.0"]
 dev = [
     "pytest>=7.0",
     "rich>=13.0",
-    "nbformat>=5.0",
-    "nbclient>=0.7",
-    "ipykernel>=6.0",
     "sympy>=1.12",
-    "joblib>=1.3",
+    "ipykernel>=6.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/oselcukk/JacoPy.v.3"
+Changelog = "https://github.com/oselcukk/JacoPy.v.3/blob/main/CHANGELOG.md"
+
+[tool.setuptools.dynamic]
+version = { attr = "jacopy.__version__" }
+
+[tool.setuptools.package-data]
+jacopy = ["py.typed"]
 
 [tool.setuptools.packages.find]
 where = ["."]

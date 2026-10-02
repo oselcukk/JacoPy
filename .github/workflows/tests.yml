@@ -62,10 +62,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install (editable, with the test extras and sympy for the oracle)
+      - name: Install (editable, with the test and oracle (sympy) extras)
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[test,components]"
+          python -m pip install -e ".[test,oracle]"
       - name: Fast test suite, oracle strict
         run: python -m pytest tests -q -p no:cacheprovider --oracle=strict --oracle-report oracle-report.json
       - name: Upload the oracle report

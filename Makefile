@@ -24,7 +24,7 @@ $(VENV)/bin/python:
 	$(VBIN)/pip install --upgrade pip
 
 $(VENV)/.installed: $(VENV)/bin/python pyproject.toml
-	$(VBIN)/pip install -e ".[dev,parallel]"
+	$(VBIN)/pip install -e ".[dev]"
 	@touch $@
 
 deps: $(VENV)/.installed

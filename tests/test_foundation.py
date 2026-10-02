@@ -48,9 +48,9 @@ def test_package_skeleton_importable():
     import jacopy.packages
     import jacopy.packages.metric_affine
     import jacopy.packages.poisson
-    import jacopy.packages.algebroid_calculus
+    import jacopy.packages.drinfeld  # item 13 (was the empty algebroid_calculus)
     import jacopy.packages.generalized
-    import jacopy.packages.research
+    import jacopy.research  # item 15 (was the empty packages.research)
 
 
 # --------------------------------------------------------------------- #

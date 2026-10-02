@@ -1,27 +1,12 @@
-# jacopy runtime + recommended optional dependencies.
+# jacopy has no required runtime dependencies; the optional ones are
+# declared once, as extras, in pyproject.toml:
 #
-# For development (tests, notebook execution), install via the project's
-# pyproject.toml extras instead:
+#   rich    coloured terminal display (jacopy.display.terminal)
+#   oracle  sympy, for the model oracle (jacopy.oracle, pytest --oracle=…)
+#   test    pytest
+#   docs    ipykernel, the Jupyter kernel for examples/*.ipynb
+#   dev     all of the above
 #
-#   pip install -e ".[dev]"
-#
-# This file is provided for users who prefer a single-file install.
-# It pins major versions only; bump as the project evolves.
-
-# Core symbolic engine (used by jacopy.frame_calc + symbolic_atoms)
-sympy>=1.12
-
-# Coloured / paper-grade display (display.terminal, display.jupyter)
-rich>=13.0
-
-# Notebook execution + Jupyter kernel (used by tests/test_docs and tutorials)
-ipykernel>=6.0
-nbformat>=5.0
-nbclient>=0.7
-
-# Multi-core symbolic computation (Riemann/Ricci/Einstein parallelisation
-# in heavy metrics like Kerr / Bianchi-IX). loky backend works in Jupyter.
-joblib>=1.3
-
-# Test runner
-pytest>=7.0
+# This file is a one-line shortcut for a development install from a
+# clone (`pip install -r requirements.txt`, run in the repository root):
+-e .[dev]
