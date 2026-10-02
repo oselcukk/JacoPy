@@ -437,6 +437,9 @@ def _declared_constant(e, env) -> bool:
     reg = env.registry
     if reg is None:
         return False
+    own = getattr(e, "degree", None)
+    if own is not None and own.as_int() != 0:
+        return False  # a form / multivector symbol of non-zero or symbolic degree (gate7 q3)
     scalar, _, rank = reg.lookup(e, Scalar)
     if scalar is None:
         return False
@@ -449,11 +452,25 @@ def _declared_constant(e, env) -> bool:
     if reg.strict_axioms_only and scalar.provenance.name == "DERIVED":
         return False
     wl = reg.axiom_whitelist
-    if wl is not None and Scalar not in wl:
-        return False
+    if wl is not None and type(scalar) not in wl:
+        return False  # the registry filters by the EXACT property type (cr7/p04: a Scalar subclass)
     if nc is not None or ac is not None:
         return False
     return graded is None or graded.degree.as_int() == 0
+
+
+def _compound_declared(e, env, path) -> None:
+    """A Neg / Sum / Product that ITSELF carries a raw declaration the
+    engine treats as a constancy clash (``Graded(k ≠ 0)``,
+    ``NonCommuting``, ``AntiCommuting``) is modelled by neither side
+    (cr7 F5): the oracle does not guess — UNSUPPORTED."""
+    reg = env.registry
+    if reg is None:
+        return
+    for cls in (Graded, NonCommuting, AntiCommuting):
+        own = reg.lookup(e, cls).prop
+        if own is not None and (cls is not Graded or own.degree.as_int() != 0):
+            raise Unsupported(f"{type(e).__name__}[declared {cls.__name__}]", path)
 
 
 @register(Symbol)
@@ -476,6 +493,7 @@ def _symbol(e, env, path):
 
 @register(Neg)
 def _neg(e, env, path):
+    _compound_declared(e, env, path)
     v = env.value(e.arg, path + (0,))
     if isinstance(v, OpV):
         return op_scale(v, -1, env.R)
@@ -484,6 +502,7 @@ def _neg(e, env, path):
 
 @register(Sum)
 def _sum(e, env, path):
+    _compound_declared(e, env, path)
     return add([env.value(c, path + (i,)) for i, c in enumerate(e.children)], env.R, path)
 
 
@@ -499,6 +518,7 @@ def _power(e, env, path):
 
 @register(Product)
 def _product(e, env, path):
+    _compound_declared(e, env, path)
     R = env.R
     vals = [env.value(c, path + (i,)) for i, c in enumerate(e.children)]
     opish = [isinstance(v, (OpV, VecV)) for v in vals]
