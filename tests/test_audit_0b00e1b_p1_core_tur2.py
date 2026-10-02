@@ -325,6 +325,7 @@ def _combos():
 
 @pytest.mark.contract_table
 def test_6_oracle_and_engine_constant_predicates_agree():
+    pytest.importorskip("sympy")  # the model oracle needs the optional ``oracle`` extra
     # ONE test over the whole table (3528 combinations × 2 views); the
     # first mismatch names its combination
     from jacopy.oracle.realize import _declared_constant

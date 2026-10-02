@@ -172,6 +172,8 @@ def test_every_reference_records_its_provenance():
 def test_citations_doc_reference_list_is_generated():
     """docs/CITATIONS.md carries the APA list generated from the table
     (single source of truth)."""
+    if not (ROOT / "docs" / "CITATIONS.md").is_file():
+        pytest.skip("docs/CITATIONS.md is not next to the tests (wheel run)")
     doc = (ROOT / "docs" / "CITATIONS.md").read_text(encoding="utf-8")
     block = doc.split("<!-- references:begin -->")[1].split("<!-- references:end -->")[0]
     expected = "\n\n".join(apa_reference(r, "markdown") for r in cited_references([cite(k) for k in BIBLIOGRAPHY]))

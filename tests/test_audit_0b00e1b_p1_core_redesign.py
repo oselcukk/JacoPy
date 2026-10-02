@@ -246,6 +246,7 @@ class _Env:
 
 
 def test_4_oracle_constant_agrees_with_the_engine_predicate_on_function_atoms():
+    pytest.importorskip("sympy")  # the model oracle needs the optional ``oracle`` extra
     # gate 5 (chef): the oracle restates the contract INDEPENDENTLY (no
     # engine import — test_oracle_independence) and this differential
     # check locks the two implementations together on the atoms the

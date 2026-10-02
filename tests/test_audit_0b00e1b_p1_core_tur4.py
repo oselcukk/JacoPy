@@ -328,6 +328,7 @@ class _MyScalar(Scalar):
 
 
 def test_3_oracle_scalar_subclass_filters_by_exact_type():
+    pytest.importorskip("sympy")  # the model oracle needs the optional ``oracle`` extra
     from jacopy.oracle.realize import _declared_constant
 
     w = Symbol("w")
@@ -344,6 +345,7 @@ def test_3_oracle_scalar_subclass_filters_by_exact_type():
 
 
 def test_3_oracle_form_of_symbolic_degree_is_not_a_constant():
+    pytest.importorskip("sympy")  # the model oracle needs the optional ``oracle`` extra
     from jacopy.oracle.realize import _declared_constant
 
     r = PropertyRegistry()

@@ -14,6 +14,8 @@ import json
 import pathlib
 import pkgutil
 
+import pytest
+
 import jacopy
 from jacopy.proof.expansion import Definition
 
@@ -39,6 +41,7 @@ def _classes():
 
 
 def test_every_rule_class_has_a_reviewed_role():
+    pytest.importorskip("sympy")  # walks every module, jacopy.oracle included (sympy extra)
     inventory = json.loads(INVENTORY.read_text())
     classes = _classes()
     missing = sorted(set(classes) - set(inventory))
@@ -51,6 +54,7 @@ def test_every_rule_class_has_a_reviewed_role():
 
 
 def test_declaration_classes_are_assumptions():
+    pytest.importorskip("sympy")  # walks every module, jacopy.oracle included (sympy extra)
     # the naming convention is not the trust boundary, but every class
     # named *Declaration must at least be an assumption
     for name, c in _classes().items():
@@ -72,6 +76,7 @@ def _own_builder(c):
 
 
 def test_theorem_like_rules_are_not_bare_definitions():
+    pytest.importorskip("sympy")  # walks every module, jacopy.oracle included (sympy extra)
     # "Theorem" in the name / a citation docstring + role "definition"
     # + no proof builder = the rule rewrites by a theorem while the
     # engine records an assumption-free definitional step (M1-4)
@@ -85,6 +90,7 @@ def test_theorem_like_rules_are_not_bare_definitions():
 
 
 def test_theorem_role_rules_have_a_proof_builder():
+    pytest.importorskip("sympy")  # walks every module, jacopy.oracle included (sympy extra)
     # role "theorem" without a builder is tagged "axiom" by the engine
     # and lands as a LEGACY requirement — the citation never flows
     for name, c in _classes().items():

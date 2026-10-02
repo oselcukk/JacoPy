@@ -242,6 +242,7 @@ def test_library_citation_keeps_transitive_requirements_under_the_oracle():
     result carries the cited record's requirements — the declared
     Poisson structure and the 'unreplayed' marker — and the model oracle
     (strict) finds no DISAGREE and no ASSUMPTION_LEAK on it."""
+    pytest.importorskip("sympy")  # the model oracle needs the optional ``oracle`` extra
     from jacopy.central.objects import functions
     from jacopy.oracle.hook import REPORTS, oracle_mode
     from jacopy.packages.poisson.core import poisson_structure

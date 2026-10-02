@@ -100,6 +100,7 @@ def test_conformance_by_protocol(name):
 
 
 def test_every_slot_bearing_class_is_covered():
+    pytest.importorskip("sympy")  # walks every module, jacopy.oracle included (sympy extra)
     # the protocol test above is only as good as the recipe list: a
     # slot-bearing class without a recipe would never be walked
     slotted = {c.__name__ for c in _all_expr_subclasses() if "rewritable_slots" in vars(c)} - _INTERNAL
