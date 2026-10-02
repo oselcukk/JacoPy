@@ -150,6 +150,13 @@ class PropertyRegistry:
     def strict_axioms_only(self) -> bool:
         return self._strict
 
+    @property
+    def axiom_whitelist(self) -> Optional[Set[type]]:
+        """The active :meth:`axioms` whitelist (``None``: everything
+        visible) — public read access for independent restatements of
+        the visibility rule (the model oracle)."""
+        return self._axiom_whitelist
+
     def set_strict(self, strict: bool) -> None:
         self._strict = bool(strict)
 
@@ -205,19 +212,28 @@ class PropertyRegistry:
                     return p, _PREDICATE
         return None, None
 
-    def lookup(self, expr: Expr, prop_cls: Type[P]):
-        """``(property, level)`` of the RAW declaration (no visibility
-        filter, no shadowing) that answers ``prop_cls`` for ``expr``:
-        ``level`` is ``"exact"``, ``"class"`` or ``"predicate"``, or
-        ``(None, None)``. Public read access to the declaration data
-        for consumers that must restate the Scalar contract
-        independently (the model oracle) or decide it on the raw
-        answers (the predicate's clash check: a visibility filter
-        never turns a declared graded element into a constant)."""
-        prop, level = self._raw(expr, prop_cls)
+    def lookup(self, expr: Expr, prop_cls: Type[P], *, record: bool = False):
+        """``(property, level, rank)`` of the RAW declaration (no
+        visibility filter, no shadowing) that answers ``prop_cls`` for
+        ``expr``: ``level`` is ``"exact"``, ``"class"`` or
+        ``"predicate"``, ``rank`` the comparable specificity tuple
+        (smaller = more specific; class level carries the MRO depth),
+        or ``(None, None, None)``. Public read access to the
+        declaration data for consumers that must restate the Scalar
+        contract independently (the model oracle) or decide it on the
+        raw answers (the predicate's clash check: a visibility filter
+        never turns a declared graded element into a constant). With
+        ``record=True`` the raw answer is appended to the open read log
+        as a RAW fact — a hypothesis checked against the raw
+        declarations of the citing registry (gate-6 cr6/p05)."""
+        prop, rank = self._raw(expr, prop_cls)
+        if record:
+            stack = getattr(_READS, "stack", None)
+            if stack:
+                stack[-1].append((expr, prop_cls, prop, "raw"))
         if prop is None:
-            return None, None
-        return prop, ("exact", "class", "predicate")[level[0]]
+            return None, None, None
+        return prop, ("exact", "class", "predicate")[rank[0]], rank
 
     def _scalar_shadowed(self, expr, mro, level) -> bool:
         """Is a Scalar found at ``level`` shadowed by a STRICTLY more

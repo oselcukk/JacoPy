@@ -88,7 +88,10 @@ def declared_real_constant(
         scalar = registry.get(expr, Scalar)
         answers = (registry.get(expr, Graded), registry.get(expr, NonCommuting),
                    registry.get(expr, AntiCommuting))  # recorded hypotheses
-        raw = tuple(registry.lookup(expr, cls)[0] for cls in (Graded, NonCommuting, AntiCommuting))
+        raw = tuple(
+            registry.lookup(expr, cls, record=record)[0]  # recorded as RAW facts
+            for cls in (Graded, NonCommuting, AntiCommuting)
+        )
         return scalar_contract_certified(scalar, *raw) and scalar_contract_certified(scalar, *answers)
 
 
@@ -117,8 +120,16 @@ def is_real_constant(
     if isinstance(expr, (Neg, Sum, Product)):
         # structural closure (gate-5 #5): a negation / sum / product
         # whose every leaf is an ℝ-constant is one (constants form a
-        # ring); any other compound is not
-        return all(is_real_constant(c, registry, record=record) for c in expr.children)
+        # ring) — unless the node ITSELF carries a raw declaration that
+        # contradicts constancy (gate-6 P3a: ``declare(c·k, Graded(1))``)
+        if not all(is_real_constant(c, registry, record=record) for c in expr.children):
+            return False  # (a negative answer records nothing)
+        if registry is not None:
+            for cls in (Graded, NonCommuting, AntiCommuting):
+                own = registry.lookup(expr, cls, record=record)[0]
+                if own is not None and (cls is not Graded or own.degree.as_int() != 0):
+                    return False
+        return True
     if registry is None or not expr.is_atom:
         return False
     if not declared_real_constant(expr, registry, record=record):
