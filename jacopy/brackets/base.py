@@ -260,10 +260,15 @@ class GradedBracket(ABC):
         """Sign ``ε`` such that ``[a, b] = ε·[b, a]`` HOLDS — a rewrite
         licence: :meth:`claimed_swap_sign` for a bracket asserted
         graded antisymmetric, ``None`` (decline: do not rewrite) for
-        any other bracket or a symbolic parity."""
+        any other bracket, a symbolic parity OR an undeterminable
+        operand degree (audit 0b00e1b K1-3 review #8: a licence never
+        raises — an unknown degree means no rule fires, no closure)."""
         if not self._is_graded_antisymmetric:
             return None
-        return self.claimed_swap_sign(a, b, registry)
+        try:
+            return self.claimed_swap_sign(a, b, registry)
+        except ValueError:
+            return None
 
     def jacobi_term_sign(
         self,

@@ -81,9 +81,12 @@ def test_k1_3_sn_shifted_degree_hooks():
         b = [f, Y, PVector("B2", degree=2), PVector("Q3", degree=3)][q]
         expected = -((-1) ** ((p - 1) * (q - 1)))
         assert SN.pair_swap_sign(a, b, reg) == expected, (p, q)
-    # undeterminable multivector degree: no guessed sign
+    # undeterminable multivector degree: no guessed sign — the CLAIM
+    # raises, the rewrite LICENCE declines (review #8: never a ValueError
+    # out of a licence; no rule fires, no closure)
     with pytest.raises(ValueError):
-        SN.pair_swap_sign(Symbol("u"), X, reg)
+        SN.claimed_swap_sign(Symbol("u"), X, reg)
+    assert SN.pair_swap_sign(Symbol("u"), X, reg) is None
 
 
 def test_k1_3_sn_bivector_antisymmetry_is_no_constraint():
