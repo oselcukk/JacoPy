@@ -9,8 +9,9 @@ and returns the accumulated sign as a :class:`Degree` polynomial so the
 caller can inspect it (even when the sign is symbolic like
 ``(-1)^{|α||β|}``).
 
-Every factor must be registered as :class:`Scalar` or :class:`Graded`.
-Scalars (ℝ-constants by contract) sort to the front and contribute no
+Every factor must be registered as :class:`Scalar` or :class:`Graded`
+(:func:`~jacopy.central.calculus.scalars.is_real_constant` decides the
+former). Scalars (ℝ-constants by contract) sort to the front and contribute no
 sign: an ℝ-constant commutes with every ℝ-linear operator, a
 :class:`NonCommuting` one included. Graded factors sort by a stable
 structural key and contribute ``|a||b|`` per swap. Unclassified factors
@@ -36,7 +37,6 @@ from jacopy.core.properties import (
     Graded,
     GradedCommutative,
     NonCommuting,
-    Scalar,
 )
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -89,23 +89,21 @@ def _explode_factor(factor: Expr) -> Tuple[List[Expr], int]:
     return (result, parity)
 
 
-def _is_scalar(factor: Expr, registry: PropertyRegistry) -> bool:
-    # Numeric literals are always scalars, they commute with
-    # everything and carry no grading. Declaring Scalar on every
-    # Integer(k) would be noise.
-    if isinstance(factor, (Integer, Rational)):
-        return True
-    return registry.has(factor, Scalar)
+_IS_REAL_CONSTANT = None
 
 
 def _is_real_constant(factor: Expr, registry: PropertyRegistry) -> bool:
-    """The Scalar contract's ℝ-constant (numeral or an atom whose
-    effective answer is Scalar,
-    :func:`~jacopy.central.calculus.scalars.is_real_constant`): the only
-    factors that swap past ANYTHING (operators included)."""
-    from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
+    """The Scalar contract's ℝ-constant — THE predicate
+    :func:`~jacopy.central.calculus.scalars.is_real_constant` (a numeral
+    or a certified Scalar atom), resolved once: the only factors that
+    swap past ANYTHING (operators included) and the only ones that are
+    degree 0 without a Graded declaration."""
+    global _IS_REAL_CONSTANT
+    if _IS_REAL_CONSTANT is None:
+        from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
 
-    return is_real_constant(factor, registry)
+        _IS_REAL_CONSTANT = is_real_constant
+    return _IS_REAL_CONSTANT(factor, registry)
 
 
 def _degree_of(factor: Expr, registry: PropertyRegistry) -> Degree:
@@ -121,7 +119,7 @@ def _degree_of(factor: Expr, registry: PropertyRegistry) -> Degree:
     that still can't be classified raises with a hint about the
     missing declaration.
     """
-    if _is_scalar(factor, registry):
+    if _is_real_constant(factor, registry):
         return Degree.const(0)
     if isinstance(factor, Derivation):
         return factor.degree

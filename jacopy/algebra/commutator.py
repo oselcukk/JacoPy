@@ -117,3 +117,29 @@ def expand_commutator(
     if parity == 0:
         return Sum(ab, Neg(ba))
     return Sum(ab, ba)
+
+
+def is_certified_derivation(op: Expr) -> bool:
+    """Leibniz certificate, DEFAULT-REJECT: a
+    :class:`~jacopy.algebra.derivation.Derivation` not marked
+    ``leibniz = False``; any operator declaring ``leibniz = True``
+    explicitly; a :class:`Commutator` of two certified derivations (the
+    graded commutator of graded derivations is one). Nothing else — a
+    public ``Sharp``/Hodge star, a ``Graded(k)`` symbol, an arbitrary
+    operator — is split. A ``section_value`` atom (a Derivation only
+    for slot plumbing) is never one. Lives here, below the algorithms
+    and the calculus layer, so :func:`jacopy.central.calculus.scalars.annihilates`
+    and :mod:`jacopy.algorithms.product_rule` import it without a cycle
+    (audit 0b00e1b M1-1 review #10)."""
+    from jacopy.algebra.derivation import Derivation  # noqa: WPS433 - derivation imports this module lazily
+
+    if getattr(op, "section_value", False):
+        return False
+    marker = getattr(op, "leibniz", None)
+    if isinstance(op, Derivation):
+        return marker is not False
+    if marker is True:
+        return True
+    if isinstance(op, Commutator):
+        return is_certified_derivation(op.a) and is_certified_derivation(op.b)
+    return False

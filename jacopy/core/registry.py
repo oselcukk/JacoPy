@@ -102,37 +102,21 @@ def track_reads():
 Predicate = Callable[[Expr], bool]
 
 
-def _refuse_scalar_contradiction(where, scalar, graded, noncomm) -> None:
-    """Refuse an EFFECTIVE property combination that contradicts the
-    Scalar contract (:class:`~jacopy.core.properties.Scalar` =
-    ℝ-constant at WHATEVER level it is declared — exact, class or
-    predicate; audit 0b00e1b M1-1, chef decision). Deliberate contract
-    change: ``declare_for_class(Symbol, Scalar())`` followed by
-    ``declare(w, Graded(1))`` is REFUSED (main accepted it, but it
-    makes ``w`` a constant of degree 1). A constant has degree 0, so
-    ``Graded(k)`` with ``k`` a non-zero constant contradicts it, and a
-    declared ``NonCommuting`` contradicts "commutes with every
-    operator". The arguments are what :meth:`PropertyRegistry.get`
-    WOULD answer after the declaration (an exact declaration overrides
-    a class-level one of the same type). A symbolic degree is not
-    provably non-zero and is accepted."""
-    from jacopy.core.properties import ScalarContractError
+#: Declaration LEVELS, most specific first: exact ``(0, 0)``, class
+#: ``(1, mro index)``, predicate ``(2, 0)`` — every predicate is the
+#: same level (registration order is a tie-break of the lookup, not a
+#: specificity, so shadowing stays order-independent). A smaller tuple
+#: is a strictly more specific declaration (the registry's own lookup
+#: priority, applied ACROSS the Scalar-contract property types for
+#: shadowing — see :class:`~jacopy.core.properties.Scalar`).
+_EXACT = (0, 0)
+_PREDICATE = (2, 0)
 
-    if scalar is None:
-        return
-    clash = None
-    if noncomm is not None:
-        clash = noncomm
-    elif graded is not None:
-        k = graded.degree.as_int()
-        if k is not None and k != 0:
-            clash = graded
-    if clash is not None:
-        raise ScalarContractError(
-            f"{where!r}: Scalar contradicts {clash!r} — Scalar means an "
-            "ℝ-constant (degree 0, commutes with every operator); "
-            "declare a function Graded(0) instead of Scalar"
-        )
+
+def _contract_types():
+    from jacopy.core.properties import AntiCommuting, Graded, NonCommuting, Scalar
+
+    return Scalar, Graded, NonCommuting, AntiCommuting
 
 
 class PropertyRegistry:
@@ -182,62 +166,126 @@ class PropertyRegistry:
             raise ValueError(
                 f"{type(prop).__name__} already declared on {expr!r}"
             )
-        if self._contract_relevant(prop):
-            self._check_contract(expr, exact=(expr, prop))
         bucket[type(prop)] = prop
+        if self._contract_relevant(prop):
+            # the EFFECTIVE state after the mutation is validated; on a
+            # contradiction the mutation is undone (order-independent:
+            # whichever declaration comes last is the one refused)
+            try:
+                self._validate_contract(exprs=(expr,))
+            except Exception:
+                del bucket[type(prop)]
+                raise
 
-    # ---- Scalar contract (M1-1) --------------------------------------- #
+    # ---- Scalar contract (M1-1): levels, shadowing, validation ------- #
 
     @staticmethod
-    def _contract_relevant(prop: Property) -> bool:
-        from jacopy.core.properties import Graded, NonCommuting, Scalar
+    def _contract_relevant(prop) -> bool:
+        return isinstance(prop, _contract_types())
 
-        return isinstance(prop, (Scalar, Graded, NonCommuting))
-
-    def _effective(self, expr, prop_cls, mro, exact=None, klass=None, pred=None):
-        """What :meth:`get` would answer (untracked, predicates
-        included when ``expr`` is given) with the pending ``exact``
-        ``(expr, prop)`` / ``klass`` ``(cls, prop)`` / ``pred``
-        ``(predicate, prop)`` declaration (a new predicate is last in
-        registration order)."""
+    def _raw(self, expr, prop_cls, mro=None):
+        """``(property, level)`` of the UNFILTERED declaration that
+        :meth:`get` would use for ``expr`` (or for a generic instance of
+        the class whose ``mro`` is given when ``expr`` is ``None`` —
+        predicates cannot be evaluated then). ``(None, None)`` when
+        nothing is declared."""
         if expr is not None:
-            if exact is not None and exact[0] == expr and type(exact[1]) is prop_cls:
-                return self._filter(exact[1])
             prop = self._props.get(expr, {}).get(prop_cls)
             if prop is not None:
-                return self._filter(prop)
-        for c in mro:
-            if klass is not None and klass[0] is c and type(klass[1]) is prop_cls:
-                return self._filter(klass[1])
-            prop = self._by_class.get(c, {}).get(prop_cls)
+                return prop, _EXACT
+            if mro is None:
+                mro = type(expr).__mro__
+        for i, cls in enumerate(mro):
+            prop = self._by_class.get(cls, {}).get(prop_cls)
             if prop is not None:
-                return self._filter(prop)
+                return prop, (1, i)
         if expr is not None:
-            preds = list(self._by_predicate) + ([pred] if pred is not None else [])
-            for test, p in preds:
-                if isinstance(p, prop_cls) and test(expr):
-                    return self._filter(p)
-        return None
+            for pred, p in self._by_predicate:
+                if isinstance(p, prop_cls) and pred(expr):
+                    return p, _PREDICATE
+        return None, None
 
-    def _check_contract(self, expr, *, mro=None, exact=None, klass=None, pred=None) -> None:
-        from jacopy.core.properties import Graded, NonCommuting, Scalar
+    def _scalar_shadowed(self, expr, mro, level) -> bool:
+        """Is a Scalar found at ``level`` shadowed by a STRICTLY more
+        specific Graded / NonCommuting / AntiCommuting declaration?
+        (Raw declarations: a visibility filter must not turn a declared
+        function into a constant.)"""
+        if level == _EXACT:
+            return False
+        for other in _contract_types()[1:]:
+            _, other_level = self._raw(expr, other, mro)
+            if other_level is not None and other_level < level:
+                return True
+        return False
 
-        if mro is None:
+    def _effective_scalar(self, expr, mro=None):
+        """The effective (shadowing applied, unfiltered) Scalar answer."""
+        scalar_cls = _contract_types()[0]
+        prop, level = self._raw(expr, scalar_cls, mro)
+        if prop is None or self._scalar_shadowed(expr, mro, level):
+            return None
+        return prop
+
+    def _check_contract(self, expr, mro=None) -> None:
+        """Refuse the EFFECTIVE answers for ``expr`` (or a generic
+        instance of ``mro[0]``) when an unshadowed Scalar meets a
+        clashing declaration (:func:`~jacopy.core.properties.scalar_contract_clash`)."""
+        from jacopy.core.properties import ScalarContractError, scalar_contract_clash
+
+        if expr is not None and mro is None:
             mro = type(expr).__mro__
-        look = lambda pc: self._effective(expr, pc, mro, exact, klass, pred)  # noqa: E731
-        _refuse_scalar_contradiction(
-            expr if expr is not None else mro[0].__name__,
-            look(Scalar), look(Graded), look(NonCommuting),
+        scalar = self._effective_scalar(expr, mro)
+        if scalar is None:
+            return
+        _, graded_cls, nc_cls, ac_cls = _contract_types()
+        clash = scalar_contract_clash(
+            self._raw(expr, graded_cls, mro)[0],
+            self._raw(expr, nc_cls, mro)[0],
+            self._raw(expr, ac_cls, mro)[0],
         )
+        if clash is not None:
+            where = expr if expr is not None else f"<{mro[0].__name__}>"
+            raise ScalarContractError(
+                f"{where!r}: Scalar contradicts {clash!r} — Scalar means an "
+                "ℝ-constant (degree 0, commutes with every operator); "
+                "declare a function Graded(0) instead of Scalar"
+            )
+
+    def _validate_contract(self, *, exprs=(), classes=()) -> None:
+        """Validate the effective state for the given exact expressions
+        and for generic instances of the given classes (plus every
+        registered subclass and every exact-declared instance)."""
+        for e in exprs:
+            self._check_contract(e)
+        for cls in classes:
+            seen = set()
+            for sub in [cls] + [c for c in self._by_class if issubclass(c, cls)]:
+                if sub not in seen:
+                    seen.add(sub)
+                    self._check_contract(None, mro=sub.__mro__)
+            for e in list(self._props):
+                if isinstance(e, cls):
+                    self._check_contract(e)
 
     def retract(
         self, expr: Expr, prop_cls: Type[Property]
     ) -> Optional[Property]:
-        """Remove the exact-expression property of type ``prop_cls``."""
+        """Remove the exact-expression property of type ``prop_cls``.
+        A retract that would EXPOSE a Scalar contradiction (the removed
+        declaration was shadowing one, or was the ``Graded(0)`` hiding
+        a class-level ``Graded(k)``) is refused and leaves the registry
+        unchanged."""
         bucket = self._props.get(expr)
         if bucket is None:
             return None
-        return bucket.pop(prop_cls, None)
+        prop = bucket.pop(prop_cls, None)
+        if prop is not None and self._contract_relevant(prop):
+            try:
+                self._validate_contract(exprs=(expr,))
+            except Exception:
+                bucket[prop_cls] = prop
+                raise
+        return prop
 
     # ---- mutation: class-based -------------------------------------- #
 
@@ -261,18 +309,16 @@ class PropertyRegistry:
                 f"{type(prop).__name__} already declared for class "
                 f"{cls.__name__}"
             )
-        if self._contract_relevant(prop):
-            # the EFFECTIVE answers after this declaration (M1-1
-            # review): for an instance of cls or of any registered
-            # subclass with no exact override, and for every existing
-            # exact-declared instance (its exact entries win)
-            pending = (cls, prop)
-            for sub in [cls] + [c for c in self._by_class if issubclass(c, cls)]:
-                self._check_contract(None, mro=sub.__mro__, klass=pending)
-            for e in list(self._props):
-                if isinstance(e, cls):
-                    self._check_contract(e, klass=pending)
         bucket[type(prop)] = prop
+        if self._contract_relevant(prop):
+            # the EFFECTIVE answers after this declaration: a generic
+            # instance of cls and of every registered subclass, and
+            # every exact-declared instance (exact entries shadow)
+            try:
+                self._validate_contract(classes=(cls,))
+            except Exception:
+                del bucket[type(prop)]
+                raise
 
     def retract_for_class(
         self, cls: Type[Expr], prop_cls: Type[Property]
@@ -280,7 +326,14 @@ class PropertyRegistry:
         bucket = self._by_class.get(cls)
         if bucket is None:
             return None
-        return bucket.pop(prop_cls, None)
+        prop = bucket.pop(prop_cls, None)
+        if prop is not None and self._contract_relevant(prop):
+            try:
+                self._validate_contract(classes=(cls,))
+            except Exception:
+                bucket[prop_cls] = prop
+                raise
+        return prop
 
     # ---- mutation: predicate-based ---------------------------------- #
 
@@ -302,14 +355,19 @@ class PropertyRegistry:
             raise TypeError(
                 "declare_for_predicate: `prop` must be a Property"
             )
-        if self._contract_relevant(prop):
-            # effective answers of every exact-declared expression the
-            # predicate covers (expressions declared later are checked
-            # by declare itself)
-            for e in list(self._props):
-                if predicate(e):
-                    self._check_contract(e, pred=(predicate, prop))
         self._by_predicate.append((predicate, prop))
+        if self._contract_relevant(prop):
+            # the effective answers of every exact-declared expression
+            # the predicate covers; a predicate cannot be enumerated
+            # further, so the predicate-level contract is ALSO enforced
+            # at query time (scalar_contract_certified default-rejects)
+            try:
+                self._validate_contract(
+                    exprs=[e for e in list(self._props) if predicate(e)]
+                )
+            except Exception:
+                self._by_predicate.pop()
+                raise
 
     # ---- query ----------------------------------------------------- #
 
@@ -332,22 +390,24 @@ class PropertyRegistry:
         """Return the property of type ``prop_cls`` on ``expr``, or ``None``.
 
         Lookup cascades: exact → class (MRO) → predicate. The first
-        hit, after applying visibility filters, is returned.
+        hit, after applying visibility filters, is returned — except
+        that a class/predicate-level :class:`~jacopy.core.properties.Scalar`
+        shadowed by a strictly more specific ``Graded`` / ``NonCommuting``
+        / ``AntiCommuting`` declaration answers ``None`` (the Scalar
+        contract's specificity rule).
         """
-        # 1. Exact.
-        prop: Optional[Property] = self._props.get(expr, {}).get(prop_cls)
-        if prop is None:
-            # 2. Class-based.
-            for cls in type(expr).__mro__:
-                prop = self._by_class.get(cls, {}).get(prop_cls)
-                if prop is not None:
-                    break
-        if prop is None:
-            # 3. Predicate.
-            for pred, p in self._by_predicate:
-                if isinstance(p, prop_cls) and pred(expr):
-                    prop = p
-                    break
+        prop, level = self._raw(expr, prop_cls)
+        if (
+            prop is not None
+            and level != _EXACT
+            and isinstance(prop, _contract_types()[0])
+            and self._scalar_shadowed(expr, None, level)
+        ):
+            # Scalar contract (M1-1): a generic-level Scalar is shadowed
+            # by a strictly more specific Graded / NonCommuting /
+            # AntiCommuting declaration — the expression is a graded
+            # element (a function for Graded(0)), not a constant
+            prop = None
         visible = self._filter(prop)
         stack = getattr(_READS, "stack", None)
         if stack:
@@ -362,10 +422,18 @@ class PropertyRegistry:
         for a caller whose result depends only on a POSITIVE answer,
         which it then re-queries with :meth:`get` so the answer becomes
         the step's hypothesis (negative answers do not pile up)."""
+        with self.untracked():
+            return self.get(expr, prop_cls)
+
+    @contextmanager
+    def untracked(self):
+        """Suspend read recording on this thread for the block (the
+        model oracle restates registry data without minting
+        hypotheses; :meth:`peek`)."""
         stack = getattr(_READS, "stack", None)
         _READS.stack = None
         try:
-            return self.get(expr, prop_cls)
+            yield self
         finally:
             _READS.stack = stack
 

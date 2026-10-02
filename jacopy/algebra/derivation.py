@@ -281,7 +281,13 @@ def degree_of(
     if isinstance(expr, MultiEval):
         return Degree.const(0)
     if registry is not None:
-        if registry.has(expr, Scalar):
+        # THE constant predicate (Scalar contract): a certified
+        # ℝ-constant has degree 0; a shadowed / contradicted Scalar
+        # does not make a degree (late import: the calculus layer
+        # sits above the algebra)
+        from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
+
+        if is_real_constant(expr, registry):
             return Degree.const(0)
         graded = registry.get(expr, Graded)
         if graded is not None:

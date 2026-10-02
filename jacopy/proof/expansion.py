@@ -208,10 +208,11 @@ class ScalarConstantContract(Definition):
         registry = ctx[0] if ctx is not None else None
         if not isinstance(registry, PropertyRegistry):
             return False
-        # late import: jacopy.central imports the proof layer (cycle)
-        from jacopy.central.calculus.scalars import annihilates  # noqa: WPS433
+        # the ONE predicate, resolved through product_rule's cached
+        # late import (jacopy.central imports the proof layer)
+        from jacopy.algorithms.product_rule import _annihilates
 
-        return annihilates(expr.op, expr.arg, registry)
+        return _annihilates(expr.op, expr.arg, registry)
 
     def rewrite(self, expr: Expr) -> Expr:
         return Integer(0)

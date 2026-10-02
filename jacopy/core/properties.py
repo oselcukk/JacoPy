@@ -106,8 +106,9 @@ class Property:
 class ScalarContractError(ValueError):
     """A DECLARATION contradicts the :class:`Scalar` contract (a Scalar
     is an ℝ-constant): an expression whose EFFECTIVE registry answers
-    are ``Scalar`` together with ``Graded(k ≠ 0)`` or ``NonCommuting``
-    (refused by the registry at every declaration level)."""
+    are ``Scalar`` together with ``Graded(k ≠ 0)``, ``NonCommuting`` or
+    ``AntiCommuting`` (refused by the registry on every declaration
+    path — exact, class, predicate, retract — order-independently)."""
 
 
 @dataclass(frozen=True)
@@ -127,12 +128,40 @@ class Scalar(Property):
     * it is still a (constant) function: ``kind_of`` reports
       ``"function"`` and ``is_scalar_function`` holds.
 
-    The single predicate is
+    THE predicate is
     :func:`~jacopy.central.calculus.scalars.is_real_constant` (a numeral,
-    or an atom of function kind whose effective answer is Scalar); the
-    engine, sort_product, AgreementOnGenerators and the oracle all use
-    it, and the facts it relies on ("c is Scalar", its Graded) become
-    the hypotheses of the step, so a citation needs them too.
+    or an atom of function kind whose effective answer is Scalar with
+    no Graded(k ≠ 0) / NonCommuting / AntiCommuting); the engine's
+    contract step, product_rule, sort_product, degree_of, kind_of,
+    AgreementOnGenerators, the diagnostics and the model oracle all
+    call it — nothing else decides "is this a constant". The facts it
+    relies on ("c is Scalar", its Graded / NonCommuting answers)
+    become the hypotheses of the step, so a citation needs them too.
+
+    SPECIFICITY (shadowing). A Scalar declared at a GENERIC level
+    (class or predicate) is inherited by an expression only when
+    nothing STRICTLY MORE SPECIFIC says what that expression is: an
+    exact ``Graded(k)`` (any ``k``, ``0`` included — ``functions(...)``
+    declares ``Graded(0)``) or ``NonCommuting`` / ``AntiCommuting``
+    shadows a class-level Scalar, and a class-level one shadows a
+    predicate-level Scalar. Mathematically: ``Graded(0)`` on ``f`` says
+    "``f`` is a degree-0 element (a function)", and a function never
+    inherits constancy from a blanket default — ``X(f) = 0`` must not
+    close for ``functions('f')`` under ``declare_for_class(Symbol,
+    Scalar())``. The registry resolves this in ``get(expr, Scalar)``
+    itself (:meth:`~jacopy.core.registry.PropertyRegistry.get`), so
+    every reader sees the same answer and the read log records
+    ``None`` for a shadowed Scalar.
+
+    CONTRADICTION. Where the Scalar is NOT shadowed (it is at least as
+    specific as the clashing declaration) and the effective answers
+    also give ``Graded(k ≠ 0)``, ``NonCommuting`` or ``AntiCommuting``,
+    the declaration is refused with :class:`ScalarContractError`
+    (:func:`scalar_contract_clash`), on every path and in every order,
+    retract included. A symbolic degree is not provably non-zero: it is
+    accepted at declaration time, but the predicate does not certify
+    such an atom as a constant (default-reject,
+    :func:`scalar_contract_certified`).
 
     A symbol that may have a non-zero derivative is a FUNCTION: declare
     it ``Graded(0)`` (as :func:`~jacopy.central.objects.function.functions`
@@ -141,11 +170,36 @@ class Scalar(Property):
     the engine applies the recorded contract step ``D(c) = 0``
     (:class:`~jacopy.proof.expansion.ScalarConstantContract`) BEFORE any
     registered rule, so such a rule is never used (not an error).
-    The registry refuses, by effective answers at every level,
-    ``Scalar`` together with ``Graded(k ≠ 0)`` or ``NonCommuting``
-    (:class:`ScalarContractError`) — deliberately also
-    ``declare_for_class(Symbol, Scalar())`` + ``declare(w, Graded(1))``.
     """
+
+
+def scalar_contract_clash(graded, noncommuting, anticommuting):
+    """The ONE definition of a declaration that CONTRADICTS an
+    effective (unshadowed) ``Scalar`` on the same expression: a
+    ``Graded`` whose degree is a non-zero CONSTANT, a ``NonCommuting``
+    or an ``AntiCommuting``. Returns the clashing property or ``None``.
+    A symbolic degree is not provably non-zero and does not clash."""
+    if noncommuting is not None:
+        return noncommuting
+    if anticommuting is not None:
+        return anticommuting
+    if graded is not None:
+        k = graded.degree.as_int()
+        if k is not None and k != 0:
+            return graded
+    return None
+
+
+def scalar_contract_certified(scalar, graded, noncommuting, anticommuting) -> bool:
+    """The ONE registry-level certificate of the ℝ-constant: an
+    effective ``Scalar`` answer and NO clash, where — stricter than
+    :func:`scalar_contract_clash` (default-reject) — a ``Graded``
+    answer must be the CONSTANT ``0`` (a symbolic degree certifies
+    nothing). The structural half (the atom is of function kind) is
+    added by :func:`~jacopy.central.calculus.scalars.is_real_constant`."""
+    if scalar is None or noncommuting is not None or anticommuting is not None:
+        return False
+    return graded is None or graded.degree.as_int() == 0
 
 
 @dataclass(frozen=True)

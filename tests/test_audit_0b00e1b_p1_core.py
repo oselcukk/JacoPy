@@ -420,34 +420,61 @@ def test_m1_1_poisson_hamiltonian_on_a_scalar_does_not_crash():
 
 def test_m1_1_scalar_at_any_level_is_a_constant():
     # chef decision A/B: ONE meaning — Scalar declared exactly, per class
-    # or per predicate is an ℝ-constant; contradictions are refused at
-    # every level by the effective answers
+    # or per predicate is an ℝ-constant. Redesign (Fable, review #1/#2):
+    # SPECIFICITY — a strictly more specific Graded / NonCommuting
+    # declaration SHADOWS a generic-level Scalar (the expression is a
+    # graded element, not a constant); where the Scalar is at least as
+    # specific as the clash, the registry refuses, in either order.
     from jacopy.algebra.derivation import Act, Derivation
     from jacopy.algorithms.product_rule import product_rule
     from jacopy.central.calculus.scalars import is_real_constant
     from jacopy.core.properties import Scalar, ScalarContractError
 
     D = Derivation("D", degree=1)
+    for level in ("class", "predicate"):
+        for order in ("scalar-first", "graded-first"):
+            reg = PropertyRegistry()
+            w = Symbol("w")
+            steps = [
+                lambda: (
+                    reg.declare_for_class(Symbol, Scalar()) if level == "class"
+                    else reg.declare_for_predicate(lambda e: isinstance(e, Symbol), Scalar())
+                ),
+                lambda: reg.declare(w, Graded(1)),
+            ]
+            for step in (steps if order == "scalar-first" else steps[::-1]):
+                step()                                    # accepted: shadowed
+            assert reg.get(w, Scalar) is None             # the registry's own answer
+            assert reg.get(w, Graded).degree.as_int() == 1
+            assert not is_real_constant(w, reg)
+            assert product_rule(Act(D, w), reg) == Act(D, w)
+            z = Symbol("z")                               # no specific declaration: constant
+            assert is_real_constant(z, reg)
+            assert product_rule(Act(D, z), reg) == Integer(0)
+    # the Scalar at least as specific as the clash: refused, either order
     reg = PropertyRegistry()
     reg.declare_for_class(Symbol, Scalar())
-    with pytest.raises(ScalarContractError):      # deliberate contract change
-        reg.declare(Symbol("w"), Graded(1))
-    z = Symbol("z")
-    assert is_real_constant(z, reg)
-    assert product_rule(Act(D, z), reg) == Integer(0)
+    with pytest.raises(ScalarContractError):
+        reg.declare_for_class(Symbol, Graded(1))
     reg = PropertyRegistry()
-    reg.declare(Symbol("w"), Graded(1))
+    reg.declare_for_class(Symbol, Graded(1))
     with pytest.raises(ScalarContractError):
         reg.declare_for_class(Symbol, Scalar())
+    reg = PropertyRegistry()
+    reg.declare_for_class(Symbol, Graded(1))
     with pytest.raises(ScalarContractError):
-        reg.declare_for_predicate(lambda e: isinstance(e, Symbol), Scalar())
+        reg.declare(Symbol("x"), Scalar())                # exact Scalar vs class Graded(1)
+    reg = PropertyRegistry()
+    reg.declare_for_predicate(lambda e: isinstance(e, Symbol), Graded(1))
+    reg.declare(Symbol("y"), Graded(0))
+    reg.declare(Symbol("y"), Scalar())                    # exact Graded(0) hides the predicate
+    with pytest.raises(ScalarContractError):
+        reg.declare(Symbol("x"), Scalar())                # effective Graded(1) by predicate
+    # a Scalar on a composite is not a constant atom
     reg = PropertyRegistry()
     reg.declare_for_predicate(lambda e: isinstance(e, Symbol), Scalar())
-    with pytest.raises(ScalarContractError):
-        reg.declare(Symbol("w"), Graded(1))
-    assert is_real_constant(Symbol("q"), reg)
-    # a Scalar on a composite is not a constant atom
     c = Symbol("c")
+    assert is_real_constant(c, reg)
     assert not is_real_constant(Product(c, c), reg)
 
 

@@ -47,6 +47,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
+from jacopy.algebra.commutator import is_certified_derivation
 from jacopy.algebra.derivation import Act, Derivation, degree_of
 from jacopy.algorithms.base import Algorithm
 from jacopy.core.expr import Expr, Integer, Neg, Product, Rational, Sum
@@ -222,34 +223,23 @@ def _pull_out(op: Expr, prod: Product, registry, is_coefficient) -> Expr:
     return Act(op, prod)
 
 
+_ANNIHILATES = None
+
+
 def _annihilates(op: Expr, arg: Expr, registry: PropertyRegistry) -> bool:
-    # late import: jacopy.central.calculus imports this module (cycle)
-    from jacopy.central.calculus.scalars import annihilates  # noqa: WPS433
+    """:func:`jacopy.central.calculus.scalars.annihilates`, resolved
+    once (the calculus layer sits above the algorithms, so the import
+    is late — but cached: no import machinery on the hot path)."""
+    global _ANNIHILATES
+    if _ANNIHILATES is None:
+        from jacopy.central.calculus.scalars import annihilates  # noqa: WPS433
 
-    return annihilates(op, arg, registry)
+        _ANNIHILATES = annihilates
+    return _ANNIHILATES(op, arg, registry)
 
 
-def _is_certified_derivation(op: Expr) -> bool:
-    """Leibniz certificate, DEFAULT-REJECT: a :class:`Derivation` not
-    marked ``leibniz = False``; any operator declaring
-    ``leibniz = True`` explicitly; a :class:`Commutator` of two
-    certified derivations (the graded commutator of graded
-    derivations is one). Nothing else — a public ``Sharp``/Hodge
-    star, a ``Graded(k)`` symbol, an arbitrary operator — is split."""
-    from jacopy.algebra.commutator import Commutator
-
-    if getattr(op, "section_value", False):
-        return False
-    marker = getattr(op, "leibniz", None)
-    if isinstance(op, Derivation):
-        return marker is not False
-    if marker is True:
-        return True
-    if isinstance(op, Commutator):
-        return _is_certified_derivation(op.a) and _is_certified_derivation(
-            op.b
-        )
-    return False
+#: the Leibniz certificate (one definition, in the algebra layer)
+_is_certified_derivation = is_certified_derivation
 
 
 def _product_mode(op: Expr, arg: Expr, registry) -> str:

@@ -33,7 +33,7 @@ from typing import Iterable, Optional
 
 from jacopy.algebra.derivation import Act, Derivation
 from jacopy.core.expr import Expr, Integer, Neg, Product, Rational, Sum
-from jacopy.core.properties import Graded, Scalar
+from jacopy.core.properties import Graded
 from jacopy.core.registry import PropertyRegistry
 from jacopy.proof.diagnostics import (
     DiagnosticHint,
@@ -80,7 +80,9 @@ def _classifies(
     if isinstance(factor, Derivation):
         return True
     if registry is not None:
-        if registry.has(factor, Scalar):
+        from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
+
+        if is_real_constant(factor, registry):
             return True
         if registry.get(factor, Graded) is not None:
             return True
