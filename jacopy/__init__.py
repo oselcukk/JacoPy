@@ -41,8 +41,15 @@ Same name, different object: here ``Zero`` is the expression
 :data:`~jacopy.core.expr.Zero` (the block-matrix zero operator is
 ``jacopy.research.ZeroOperator``), ``metric``/``Metric`` the central
 metric atom (not the :mod:`jacopy.packages.metric_affine` metric
-context) and ``normalize`` :func:`jacopy.proof.normalize` (the
-rule-list fixed point is ``jacopy.algorithms.rewrite_to_fixpoint``).
+context), ``normalize`` :func:`jacopy.proof.normalize` (the
+rule-list fixed point is ``jacopy.algorithms.rewrite_to_fixpoint``),
+``cite`` :func:`jacopy.proof.theorems.cite`, which cites proven
+theorems into an engine (the literature-reference builder is the
+different :func:`jacopy.bibliography.cite`), and ``prove``
+:func:`jacopy.proof.search.prove`, which returns a :class:`ProofChain`
+or raises :class:`ProofFailure` (the driver that returns a
+:class:`ProofResult` with its requirements is the different
+:func:`jacopy.proof.result.prove`, called as ``prove(engine, lhs, rhs)``).
 ``Provenance``, ``antisymmetrize`` and ``prove_jacobi`` are deliberately
 not exported here; each subpackage ``__all__`` now carries an
 unambiguous name for the second object (``PropertyProvenance``,
