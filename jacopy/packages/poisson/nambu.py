@@ -49,6 +49,18 @@ from jacopy.central.objects.interior import Interior
 from jacopy.central.objects.multivector import PVector
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 
+# Structure-free rules, moved to the central layer (audit 0B00E1B-FULL
+# T2-1); re-exported here so every existing import path keeps the SAME
+# class objects.
+from jacopy.central.calculus.slot_rules import (  # noqa: F401  (re-export)
+    TrivialZeroSumDefinition,
+    WedgeZeroNegDefinition,
+)
+from jacopy.central.tangent.cartan_rules import (  # noqa: F401  (re-export)
+    DSquaredZeroDefinition,
+    DWedgeLeibnizDefinition,
+)
+
 
 #: The declarable axioms of a Nambu-Poisson structure (Faz 8 step 4a):
 #: ``"fundamental-identity"`` — the Nambu fundamental identity (the
@@ -659,168 +671,6 @@ def prove_nambu_leibniz_jacobi_on_exacts(
         engine=engine,
         max_steps=max_steps,
     )
-
-
-class DSquaredZeroDefinition(Definition):
-    """``d(d(x)) → 0`` — THEOREM-classified (never in the always-on
-    engines; ``d² = 0`` is proven on TM up to p = 5 via cited Jacobi
-    instances — the higher-degree audit). Registered opt-in by the
-    Nambu engine, where ``d(dF∧…)`` shapes must die inside interior
-    slots."""
-
-    anchor = Act
-
-    def __init__(self) -> None:
-        self.name = "theorem d² = 0: d(d(x)) → 0 (proven, Phase 2/audit)"
-
-    def matches(self, expr: Expr) -> bool:
-        from jacopy.central.calculus.bracket_calculus import (
-            ExteriorDerivative,
-            belongs_to,
-        )
-
-        return (
-            isinstance(expr, Act)
-            and isinstance(expr.op, ExteriorDerivative)
-            and belongs_to(expr.op, CARTAN_TM)
-            and isinstance(expr.arg, Act)
-            and isinstance(expr.arg.op, ExteriorDerivative)
-            and belongs_to(expr.arg.op, CARTAN_TM)
-        )
-
-    def rewrite(self, expr: Expr) -> Expr:
-        return Integer(0)
-
-    def theorem_proof_builder(self):
-        from jacopy.proof.chain import ProofChain
-        from jacopy.proof.step import ProofStep
-
-        def _builder(matched: Expr) -> ProofChain:
-            return ProofChain(
-                [
-                    ProofStep(
-                        matched,
-                        Integer(0),
-                        rule="d² = 0 (proven to p = 5, cited Jacobi)",
-                        justification=(
-                            "prove_with_bracket_identities closes "
-                            "(ddω)(Y…) = 0 mechanically"
-                        ),
-                    )
-                ]
-            )
-
-        return _builder
-
-
-class DWedgeLeibnizDefinition(Definition):
-    """``d(α₁∧…∧α_n) → Σ_i (−1)^{|α₁|+…+|α_{i−1}|} α₁∧…∧dα_i∧…∧α_n``
-    — the graded Leibniz of ``d`` over the wedge, as an ENGINE rule
-    (the algorithm-level twin in ``product_rule`` cannot reach
-    operator-atom SLOTS; the engine's slot protocol can — Phase
-    5.E.4, the ``ι_Π(d(dF∧dG))`` shapes)."""
-
-    anchor = Act
-
-    def __init__(
-        self, registry: Optional[PropertyRegistry] = None
-    ) -> None:
-        self._registry = registry
-        self.name = (
-            "d wedge Leibniz: d(α∧β) = dα∧β + (−1)^{|α|} α∧dβ"
-        )
-
-    def matches(self, expr: Expr) -> bool:
-        from jacopy.central.calculus.bracket_calculus import (
-            ExteriorDerivative,
-            belongs_to,
-        )
-
-        if not (
-            isinstance(expr, Act)
-            and isinstance(expr.op, ExteriorDerivative)
-            and belongs_to(expr.op, CARTAN_TM)
-            and isinstance(expr.arg, Wedge)
-        ):
-            return False
-        for c in expr.arg.children:
-            try:
-                degree_of(c, self._registry)
-            except ValueError:
-                return False
-        return True
-
-    def rewrite(self, expr: Expr) -> Expr:
-        factors = tuple(expr.arg.children)
-        running = 0
-        terms = []
-        for i, fac in enumerate(factors):
-            new_factors = list(factors)
-            new_factors[i] = Act(expr.op, fac)
-            term: Expr = (
-                Wedge(*new_factors)
-                if len(new_factors) > 1
-                else new_factors[0]
-            )
-            if running % 2 == 1:
-                term = Neg(term)
-            terms.append(term)
-            deg = degree_of(fac, self._registry)
-            running += deg.as_int()
-        return Sum(*terms)
-
-
-class WedgeZeroNegDefinition(Definition):
-    """Slot-level wedge hygiene (engine rule — simplify passes cannot
-    reach operator-atom slots): a zero factor kills the wedge, a Neg
-    factor pulls out."""
-
-    anchor = Wedge
-    name = "wedge hygiene: 0∧α = 0, (−α)∧β = −(α∧β)"
-
-    def matches(self, expr: Expr) -> bool:
-        return isinstance(expr, Wedge) and any(
-            c == Integer(0) or isinstance(c, Neg)
-            for c in expr.children
-        )
-
-    def rewrite(self, expr: Expr) -> Expr:
-        sign = False
-        children = []
-        for c in expr.children:
-            while isinstance(c, Neg):
-                sign = not sign
-                c = c.arg
-            if c == Integer(0):
-                return Integer(0)
-            children.append(c)
-        core: Expr = (
-            children[0] if len(children) == 1 else Wedge(*children)
-        )
-        return Neg(core) if sign else core
-
-
-class TrivialZeroSumDefinition(Definition):
-    """Slot-level sum hygiene: a Sum whose every term is ``0`` (up
-    to Neg) collapses to ``0`` — simplify cannot reach operator-atom
-    slots, the engine can."""
-
-    anchor = Sum
-    name = "sum hygiene: 0 + (−0) + … = 0"
-
-    def matches(self, expr: Expr) -> bool:
-        if not isinstance(expr, Sum):
-            return False
-
-        def is_zero(t: Expr) -> bool:
-            while isinstance(t, Neg):
-                t = t.arg
-            return t == Integer(0)
-
-        return all(is_zero(t) for t in expr.children)
-
-    def rewrite(self, expr: Expr) -> Expr:
-        return Integer(0)
 
 
 # ------------------------------------------------------------------- #

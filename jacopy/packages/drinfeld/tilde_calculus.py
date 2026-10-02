@@ -48,6 +48,12 @@ from jacopy.packages.poisson.nambu import (
     nambu_koszul_bracket,
 )
 
+# Structure-free Cartan rule, moved to the central layer (audit
+# 0B00E1B-FULL T2-1); re-exported here (the SAME class object).
+from jacopy.central.tangent.cartan_rules import (  # noqa: F401  (re-export)
+    LieIotaCommutatorDefinition,
+)
+
 
 def iota_tilde(U: Expr, eta: Expr) -> Expr:
     """``ι̃_η U := ι_U η`` — the tilde interior [DD (6.7)]."""
@@ -106,66 +112,6 @@ class NambuMorphismDeclaration(Definition):
         return self._N.sharp_vf(
             nambu_koszul_bracket(self._N, expr.X.omega, expr.Y.omega)
         )
-
-
-class LieIotaCommutatorDefinition(Definition):
-    """THEOREM-classified Cartan relation ``ι_{[X,Y]} = ℒ_X ι_Y −
-    ι_Y ℒ_X`` as an operator-level rewrite (proved in Phase 2 — the
-    ``lie_iota`` relation; the always-on engines apply it at eval
-    sites). Terminating: removes a bracket from an interior
-    subscript; magic then converts the ``ℒ``'s to ``ι``/``d``."""
-
-    anchor = Act
-
-    def __init__(self) -> None:
-        self.name = (
-            "theorem lie-iota: ι_{[X,Y]} x = ℒ_X(ι_Y x) − ι_Y(ℒ_X x)"
-        )
-
-    def matches(self, expr: Expr) -> bool:
-        return (
-            isinstance(expr, Act)
-            and isinstance(expr.op, Interior)
-            and isinstance(expr.op.vector, LieBracketVF)
-        )
-
-    def rewrite(self, expr: Expr) -> Expr:
-        from jacopy.central.tangent.exterior import CARTAN_TM
-
-        br = expr.op.vector
-        x = expr.arg
-        return Sum(
-            Act(
-                CARTAN_TM.lie(br.X),
-                Act(Interior(br.Y), x),
-            ),
-            Neg(
-                Act(
-                    Interior(br.Y),
-                    Act(CARTAN_TM.lie(br.X), x),
-                )
-            ),
-        )
-
-    def theorem_proof_builder(self):
-        from jacopy.proof.step import ProofStep
-
-        def _builder(matched: Expr) -> ProofChain:
-            return ProofChain(
-                [
-                    ProofStep(
-                        matched,
-                        self.rewrite(matched),
-                        rule="lie-iota Cartan relation (proven, Phase 2)",
-                        justification=(
-                            "the eval-level statement closes "
-                            "mechanically in the Cartan suite"
-                        ),
-                    )
-                ]
-            )
-
-        return _builder
 
 
 class InteriorAnticommuteDefinition(Definition):

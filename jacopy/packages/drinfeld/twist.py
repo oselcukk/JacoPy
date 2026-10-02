@@ -60,6 +60,18 @@ from jacopy.packages.drinfeld.double import (
     nambu_double,
 )
 
+# Structure-free rules, moved to the central layer (audit 0B00E1B-FULL
+# T2-1); re-exported here so every existing import path keeps the SAME
+# class objects.
+from jacopy.central.calculus.slot_rules import (  # noqa: F401  (re-export)
+    FormProductToWedgeDefinition,
+    PairingArgSplitDefinition,
+    WedgeSumScalarDefinition,
+)
+from jacopy.central.tangent.cartan_rules import (  # noqa: F401  (re-export)
+    MagicFormulaDefinition,
+)
+
 
 # ------------------------------------------------------------------- #
 # Twist maps on component pairs                                        #
@@ -117,106 +129,6 @@ def r_twist(N, omega: Expr, eta: Expr) -> Expr:
 # ------------------------------------------------------------------- #
 # Scoped engine rules (registered by _twist_engine only)               #
 # ------------------------------------------------------------------- #
-
-
-class MagicFormulaDefinition(Definition):
-    """THEOREM-classified Cartan magic as a form-level rewrite:
-    ``L_X ω → ι_X(dω) + d(ι_X ω)`` for a TM Cartan Lie derivative on
-    a determinable form of degree ≥ 1.
-
-    The magic formula is a proven theorem (Phase 2 seed + the
-    higher-degree audit to p = 5); the always-on engines apply it at
-    EVAL sites via the Palais route. The twist proofs need it at the
-    OPERATOR level: TW (7.25) writes the twisted family through
-    ``𝒦_V = −ℒ_V + dι_V`` and the equivalence with the tilde
-    calculus is mediated by magic on forms sitting INSIDE sharp
-    slots, where no evaluation ever happens. Guarded away from
-    vectors/multivectors (``wedge_degree`` protocol) — ``L_X Y`` is a
-    bracket, not a magic candidate."""
-
-    anchor = Act
-
-    def __init__(
-        self, registry: Optional[PropertyRegistry] = None
-    ) -> None:
-        self._registry = registry
-        self.name = (
-            "theorem Cartan magic: L_X ω = ι_X(dω) + d(ι_X ω)"
-        )
-
-    def matches(self, expr: Expr) -> bool:
-        from jacopy.algebra.derivation import degree_of
-        from jacopy.central.calculus.bracket_calculus import (
-            LieDerivative,
-        )
-
-        if not (
-            isinstance(expr, Act)
-            and isinstance(expr.op, LieDerivative)
-            and __import__("jacopy.central.calculus.bracket_calculus", fromlist=["belongs_to"]).belongs_to(expr.op, CARTAN_TM)
-        ):
-            return False
-        arg = expr.arg
-        if hasattr(arg, "wedge_degree"):
-            return False
-        try:
-            k = degree_of(arg, self._registry).as_int()
-        except ValueError:
-            return False
-        return k is not None and k >= 1
-
-    def rewrite(self, expr: Expr) -> Expr:
-        X = expr.op.vector
-        arg = expr.arg
-        return Sum(
-            Act(Interior(X), d(arg)),
-            d(Act(Interior(X), arg)),
-        )
-
-    def theorem_proof_builder(self):
-        from jacopy.proof.chain import ProofChain
-        from jacopy.proof.step import ProofStep
-
-        def _builder(matched: Expr) -> ProofChain:
-            return ProofChain(
-                [
-                    ProofStep(
-                        matched,
-                        self.rewrite(matched),
-                        rule="Cartan magic (proven, Phase 2 + audit p ≤ 5)",
-                        justification=(
-                            "prove_cartan_magic_* close the eval-level "
-                            "statement mechanically"
-                        ),
-                    )
-                ]
-            )
-
-        return _builder
-
-
-class PairingArgSplitDefinition(Definition):
-    """``⟨α, X + Y⟩ → ⟨α, X⟩ + ⟨α, Y⟩`` — pairing-argument
-    additivity, SCOPED to the twist engine.
-
-    The always-on engines deliberately leave pairing-argument sums to
-    the COLLECTING pass (``collect_pairings``) because the
-    citation-driven flows need the collected shape. Twist proofs are
-    pure cancellation: both sides must reach one normal form, and the
-    split direction is the terminating one here. Do not register this
-    next to theorem-citation tactics."""
-
-    name = "pairing argument additivity: ⟨α, X+Y⟩ = ⟨α,X⟩ + ⟨α,Y⟩"
-    anchor = Pairing
-
-    def matches(self, expr: Expr) -> bool:
-        return isinstance(expr, Pairing) and isinstance(expr.X, Sum)
-
-    def rewrite(self, expr: Expr) -> Expr:
-        return Sum(
-            *(Pairing(expr.alpha, t) for t in expr.X.children)
-        )
-
 
 
 def _twist_engine(N, registry):
@@ -782,123 +694,6 @@ def prove_pi_twist_h_vec(
         engine=_twist_engine(N, registry),
         max_steps=max_steps,
     )
-
-
-class FormProductToWedgeDefinition(Definition):
-    """``α · β → α ∧ β`` for a bare :class:`Product` with at least
-    two determinable form-degree (≥ 1) factors — scoped to the twist
-    engine (the head-position case is central
-    :class:`HeadFormProductLiftDefinition`; here the shapes sit
-    INSIDE sharp slots, where Leibniz splits leave ``d(f)·x``
-    products). Scalar (degree-0) factors stay in front."""
-
-    name = "form product is a wedge: α · β = α ∧ β (slot-reachable)"
-
-    def __init__(
-        self, registry: Optional[PropertyRegistry] = None
-    ) -> None:
-        from jacopy.core.expr import Product
-
-        self._registry = registry
-        self.anchor = Product
-
-    def _split(self, expr: Expr):
-        from jacopy.algebra.derivation import degree_of
-        from jacopy.core.expr import Product
-
-        if not (
-            isinstance(expr, Product) and len(expr.children) >= 2
-        ):
-            return None
-        scalars, formfs = [], []
-        for c in expr.children:
-            if hasattr(c, "wedge_degree"):
-                return None
-            try:
-                k = degree_of(c, self._registry).as_int()
-            except ValueError:
-                return None
-            if k is None:
-                return None
-            (scalars if k == 0 else formfs).append(c)
-        if len(formfs) < 2:
-            return None
-        return scalars, formfs
-
-    def matches(self, expr: Expr) -> bool:
-        return self._split(expr) is not None
-
-    def rewrite(self, expr: Expr) -> Expr:
-        from jacopy.core.expr import Product
-        from jacopy.core.wedge import Wedge
-
-        scalars, formfs = self._split(expr)
-        wedge = Wedge(*formfs)
-        if not scalars:
-            return wedge
-        return Product(*scalars, wedge)
-
-
-class WedgeSumScalarDefinition(Definition):
-    """Wedge slot normalization, scoped to the twist engine: a
-    ``Sum`` factor distributes (``α ∧ (x + y) = α∧x + α∧y``) and a
-    degree-0 factor pulls out as a scalar coefficient (``α ∧ f =
-    f·α`` — the wedge with a 0-form IS scalar multiplication). The
-    algorithm passes do this in visible trees; inside sharp slots
-    only Definitions fire."""
-
-    name = "wedge normalization: Sum distributes, 0-forms pull out"
-
-    def __init__(
-        self, registry: Optional[PropertyRegistry] = None
-    ) -> None:
-        from jacopy.core.wedge import Wedge
-
-        self._registry = registry
-        self.anchor = Wedge
-
-    def _site(self, expr: Expr):
-        from jacopy.algebra.derivation import degree_of
-
-        for i, c in enumerate(expr.children):
-            if isinstance(c, Sum):
-                return i, "sum"
-            if hasattr(c, "wedge_degree"):
-                continue
-            try:
-                k = degree_of(c, self._registry).as_int()
-            except ValueError:
-                continue
-            if k == 0:
-                return i, "scalar"
-        return None
-
-    def matches(self, expr: Expr) -> bool:
-        from jacopy.core.wedge import Wedge
-
-        return (
-            isinstance(expr, Wedge)
-            and len(expr.children) >= 2
-            and self._site(expr) is not None
-        )
-
-    def rewrite(self, expr: Expr) -> Expr:
-        from jacopy.core.expr import Product
-        from jacopy.core.wedge import Wedge
-
-        i, kind = self._site(expr)
-        kids = list(expr.children)
-        if kind == "sum":
-            return Sum(
-                *(
-                    Wedge(*(kids[:i] + [t] + kids[i + 1 :]))
-                    for t in kids[i].children
-                )
-            )
-        scalar = kids[i]
-        rest = kids[:i] + kids[i + 1 :]
-        core = rest[0] if len(rest) == 1 else Wedge(*rest)
-        return Product(scalar, core)
 
 
 # ------------------------------------------------------------------- #

@@ -271,7 +271,7 @@ def assemble_engine(
         SharpSlotWedgeNormalizeDefinition,
     )
     from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
-    from jacopy.packages.drinfeld.twist import (
+    from jacopy.central.calculus.slot_rules import (
         FormProductToWedgeDefinition,
         WedgeSumScalarDefinition,
     )
