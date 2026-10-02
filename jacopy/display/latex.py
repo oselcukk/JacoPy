@@ -981,6 +981,15 @@ def _load_metric_affine_handlers() -> None:
             f"_{{{latex_name(str(expr.lower))}}}"
         )
 
+    from jacopy.packages.metric_affine.nonmetricity_forms import (
+        NonMetricityForm,
+    )
+
+    @_register(NonMetricityForm)
+    def _q_ab(expr, _ctx):
+        a, b = expr.lower
+        return f"Q_{{{latex_name(str(a))}{latex_name(str(b))}}}"
+
 
 def _load_generalized_handlers() -> None:
     from jacopy.packages.generalized.courant_axioms import CourantD

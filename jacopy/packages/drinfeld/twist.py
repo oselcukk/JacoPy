@@ -1211,3 +1211,179 @@ def prove_b_twists_compose_additively(
         engine=eng,
         max_steps=max_steps,
     )
+
+
+# ------------------------------------------------------------------- #
+# Leibniz-Jacobi of the Nambu double via the Π-twist (audit M4-3)      #
+# ------------------------------------------------------------------- #
+
+
+def nambu_double_jacobiator(N, e1, e2, e3, *, component: int) -> Expr:
+    """One component (``0`` vector, ``1`` form) of the Leibniz-
+    Jacobiator of the Nambu double on ``eᵢ = (Uᵢ, ωᵢ)``."""
+    from jacopy.packages.drinfeld.double import bracket_jacobiator
+
+    return bracket_jacobiator(
+        lambda a, b, c, e: nambu_double(N, a, b, c, e),
+        e1,
+        e2,
+        e3,
+        component=component,
+    )
+
+
+def _jacobi_bridge_engine(N, registry):
+    """The tilde engine of the FI-declaring ``N`` plus the sharp-slot
+    alternating normalization (``Π(d Π(μ,ω)) + Π(d Π(ω,μ))`` must
+    cancel; :mod:`r_twisted` precedent)."""
+    from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
+    from jacopy.packages.generalized.r_twisted import (
+        SharpSlotAlternatingNormalizeDefinition,
+    )
+
+    eng = _tilde_engine(N, registry)
+    eng.register(SharpSlotAlternatingNormalizeDefinition(registry))
+    return eng
+
+
+def prove_nambu_double_jacobi_via_twist(
+    N,
+    U: Expr,
+    omega: Expr,
+    V: Expr,
+    eta: Expr,
+    W: Expr,
+    mu: Expr,
+    f: Expr,
+    slots,
+    *,
+    registry: Optional[PropertyRegistry] = None,
+    max_steps: int = 400000,
+):
+    """FORM component of the Leibniz-Jacobi identity of the Nambu
+    double [DD (4.17) with the Π-induced tilde calculus (6.6)-(6.7)],
+
+        [e₁,[e₂,e₃]] − [[e₁,e₂],e₃] − [e₂,[e₁,e₃]]  (form part) = 0,
+
+    evaluated on ``slots``, for a structure that DECLARES the
+    fundamental identity (``N.declares("fundamental-identity")`` —
+    the FI is never added silently; a structure without it raises).
+
+    The proof is the twist argument of TW §7, as a short chain of
+    CITED, library-produced theorems:
+
+    1. **bridge** (FI): ``Jac_N(e) = Jac_Dorf(Ψ_Π e)`` (form part, on
+       ``slots``) — the Nambu double IS the Ψ_Π-conjugated Dorfman
+       bracket ``Ψ⁻¹[Ψ·,Ψ·]`` once ``R′ = 0`` (the content of
+       :func:`prove_pi_twist_form_is_nambu` /
+       :func:`prove_pi_twist_vec_is_nambu_plus_r`), and a conjugated
+       bracket's Jacobiator is the conjugated Jacobiator. Proved by the
+       FI-declaring tilde engine, mechanically.
+    2. **Dorfman Jacobi at Ψ_Π e**: :func:`~jacopy.packages.drinfeld.
+       double.prove_dorfman_jacobi_form` at the twisted arguments
+       ``(Uᵢ + Πωᵢ, ωᵢ)`` (no FI; Lie-bracket Jacobi instances cited by
+       the repair loop).
+    3. the final chain cites 1 then 2: ``Jac_N(e) → Jac_Dorf(Ψe) → 0``.
+
+    Returns ``(chain, theorems)`` with ``theorems = (bridge, dorfman,
+    *dorfman's cited bracket identities)``.
+
+    Replay status: the bridge replays; the Dorfman theorem cites the
+    vector-level bracket identities of the repair loop (``V = 0`` from
+    ``V(f) = 0``, agreement on generators), which the replay does not
+    accept as a chain of ``V = 0`` — so the final chain is
+    requirements-derived but NOT ``chain_replayed`` (the citation is
+    explicit, ``allow_legacy=True``).
+
+    Scope (honest): the VECTOR component is not built — its bridge
+    leaves alternation residues of multi-evaluations with composite
+    arguments (``Π(dh, X)`` vs ``Π(X, dh)``, ``X`` itself a ``d`` of an
+    evaluation) that the engine does not canonicalize, and at
+    ``p ≥ 2`` ``Π(Jac_form)(h)`` stays inert (no form-level zero).
+    Cost: p = 1 ≈ 2–3 min (≈ 5000 bridge steps) — SLOW suite only.
+    p = 2 (offline, 2026-10-01): the bridge CLOSES (11465 steps,
+    ≈ 26 min), but step 2 fails — the repair loop of
+    :func:`prove_dorfman_jacobi_form` does not reduce the residual
+    ``η(J_VF, Πμ)`` (a 2-form evaluated on a VF-Jacobi combination AND
+    a twisted argument); so p ≥ 2 is not proved."""
+    from jacopy.bibliography import cite as _cite
+    from jacopy.proof.expansion import ExpansionEngine
+    from jacopy.proof.strategies import ExpandAndSimplify
+    from jacopy.proof.theorems import Theorem, TheoremDefinition
+    from jacopy.packages.drinfeld.double import (
+        bracket_jacobiator,
+        prove_dorfman_jacobi_form,
+    )
+
+    if not N.declares("fundamental-identity"):
+        raise ValueError(
+            "prove_nambu_double_jacobi_via_twist needs a structure that "
+            "declares the fundamental identity "
+            "(N.with_declarations('fundamental-identity'))"
+        )
+    e = ((U, omega), (V, eta), (W, mu))
+    pe = tuple(pi_twist(N, *x) for x in e)
+    jac_n = _ev(nambu_double_jacobiator(N, *e, component=1), slots)
+    jac_d = _ev(bracket_jacobiator(dorfman_double, *pe, component=1), slots)
+
+    bridge_engine = _jacobi_bridge_engine(N, registry)
+    bridge_chain = ExpandAndSimplify().prove(
+        jac_n,
+        jac_d,
+        registry=registry,
+        engine=bridge_engine,
+        max_steps=max_steps,
+    )
+    bridge = Theorem(
+        name="nambu_double_jacobi_form_is_twisted_dorfman_jacobi",
+        statement=(
+            "Jac_Nambu(e₁,e₂,e₃) = Jac_Dorfman(Ψ_Π e₁, Ψ_Π e₂, Ψ_Π e₃) "
+            "(form component, FI declared)"
+        ),
+        lhs=jac_n,
+        rhs=jac_d,
+        proof=bridge_chain,
+        generality="instance",
+        owner=N,
+        source=(
+            _cite("CatalOzerDoganYetismisoglu2025", "Eqs. (7.3), (7.11), (7.25)"),
+            _cite("CatalOzerDoganYetismisoglu2024", "Eq. (6.9)"),
+        ),
+    ).with_structural_requires()
+
+    dorf_chain, dorf_used = prove_dorfman_jacobi_form(
+        *pe[0], *pe[1], *pe[2], f, slots,
+        registry=registry,
+        max_steps=max_steps,
+    )
+    dorfman = Theorem(
+        name="dorfman_jacobi_form_at_pi_twisted_arguments",
+        statement="Jac_Dorfman(Ψ_Π e₁, Ψ_Π e₂, Ψ_Π e₃) = 0 (form component)",
+        lhs=jac_d,
+        rhs=Integer(0),
+        proof=dorf_chain,
+        generality="instance",
+        source=_cite("CatalOzerDoganYetismisoglu2024", "Eq. (4.17)"),
+    ).with_structural_requires()
+
+    citing = ExpansionEngine()
+    for rule in (
+        # the bridge is cited strictly (it must replay); the Dorfman
+        # Jacobi explicitly: its repair-loop bracket identities are the
+        # documented unreplayed records (see the docstring)
+        TheoremDefinition(bridge),
+        TheoremDefinition(dorfman, allow_legacy=True),
+    ):
+        citing.register(rule)
+    # the bridge's declared requirements (the FI rules of N) must be
+    # registered where it is cited
+    for rule in N.engine_rules(registry, phase="declared"):
+        citing.register(rule)
+    chain = ExpandAndSimplify().prove(
+        jac_n,
+        Integer(0),
+        registry=registry,
+        engine=citing,
+        max_steps=64,
+    )
+    return chain, [bridge, dorfman, *dorf_used]

@@ -31,6 +31,7 @@ from __future__ import annotations
 from typing import Any, Optional, Tuple
 
 from jacopy.algebra.derivation import Act
+from jacopy.bibliography import cite
 from jacopy.algebra.lie_bracket_vf import LieBracketVF
 from jacopy.core.expr import Atom, Expr, Integer, Neg, Product, Sum
 from jacopy.core.multi_eval import MultiEval
@@ -227,6 +228,17 @@ class ConnectionForm(Atom):
         )
 
 
+def check_bound_index(bound: str, *labels: IndexLike) -> None:
+    """Refuse a bound (summation) index name that collides with a free
+    index label — the one shared guard of the indexed-sum provers."""
+    for label in labels:
+        if _index_str(label) == bound:
+            raise ValueError(
+                f"bound index {bound!r} collides with a free index; "
+                "pass a different `bound` name"
+            )
+
+
 def connection_form(
     conn: Connection, fr: Frame, upper: IndexLike, lower: IndexLike
 ) -> ConnectionForm:
@@ -289,9 +301,11 @@ class FrameConnectionCoefficientDefinition(Definition):
 class ConnectionFormEvaluationDefinition(Definition):
     """``⟨ω^a_b, X⟩ → ⟨e^a, ∇_X e_b⟩`` — the defining evaluation of the
     connection 1-form (constructed per connection/frame pair so the
-    rewrite can rebuild ``∇`` and the coframe)."""
+    rewrite can rebuild ``∇`` and the coframe). Bundle-agnostic: on an
+    algebroid frame it is the E-connection 1-form of ADM (3.38)."""
 
     anchor = Pairing
+    source = cite("DereliDogan2023", "Eq. (2.12); Eq. (3.38) on an E-frame")
 
     def __init__(self, conn: Connection, fr: Frame) -> None:
         if not isinstance(conn, Connection):
@@ -503,12 +517,7 @@ def prove_cartan_first_structure(
     from jacopy.core.wedge import Wedge
     from jacopy.central.objects.frame import FrameIndex
 
-    for label in (upper, b, c):
-        if _index_str(label) == bound:
-            raise ValueError(
-                f"bound index {bound!r} collides with a free index; "
-                "pass a different `bound` name"
-            )
+    check_bound_index(bound, *(upper, b, c))
     e_up = fr.dual().field(upper)
     eb, ec = fr.field(b), fr.field(c)
     dummy = FrameIndex(bound)
@@ -633,12 +642,7 @@ def prove_cartan_second_structure(
     from jacopy.central.objects.frame import FrameIndex
     from jacopy.central.tangent.exterior import d as exterior_d
 
-    for label in (a, b, c, d):
-        if _index_str(label) == bound:
-            raise ValueError(
-                f"bound index {bound!r} collides with a free index; "
-                "pass a different `bound` name"
-            )
+    check_bound_index(bound, *(a, b, c, d))
     lhs = Pairing(
         fr.dual().field(a),
         curvature(conn, fr.field(c), fr.field(d), fr.field(b)),
@@ -688,11 +692,7 @@ def ricci_component(
     from jacopy.core.indexed_sum import IndexedSum
     from jacopy.central.objects.frame import FrameIndex
 
-    for label in (b, d):
-        if _index_str(label) == bound:
-            raise ValueError(
-                f"bound index {bound!r} collides with a free index"
-            )
+    check_bound_index(bound, b, d)
     dummy = FrameIndex(bound)
     return IndexedSum(
         dummy,
