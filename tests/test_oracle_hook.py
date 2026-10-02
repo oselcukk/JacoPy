@@ -71,6 +71,7 @@ def _cartan_case():
     return lhs, Sum(di, id_), Sum(di, Neg(id_))
 
 
+@pytest.mark.oracle_exempt(reason="oracle self-test: closes the deliberately wrong Cartan sign (L_X = d i_X - i_X d) to check warn/strict reactions")
 def test_warn_and_strict_on_refuted_closure(monkeypatch):
     pytest.importorskip("sympy")
     monkeypatch.delenv("JACOPY_ORACLE", raising=False)
@@ -133,6 +134,7 @@ def _jacobi(pi):
     return Sum(B(pi, f, B(pi, g, h)), B(pi, g, B(pi, h, f)), B(pi, h, B(pi, f, g))), reg
 
 
+@pytest.mark.oracle_exempt(reason="oracle self-test: closes Jacobi = 0 for a non-Poisson π and with an empty proof record on purpose (expected DISAGREE / ASSUMPTION_LEAK)")
 def test_dedup_key_includes_owners_requires_and_registry_identity():
     pytest.importorskip("sympy")
     from types import SimpleNamespace
@@ -183,6 +185,7 @@ def test_no_dedup_without_context():
     assert a is not b and not hook._seen
 
 
+@pytest.mark.oracle_exempt(reason="oracle self-test: a bogus strategy 'closes' Jacobi = 0 for a generic π on purpose (expected DISAGREE)")
 def test_show_equal_uses_the_strategy_engine():
     pytest.importorskip("sympy")
     from jacopy.packages.poisson.core import poisson_structure
@@ -203,6 +206,7 @@ def test_show_equal_uses_the_strategy_engine():
     hook.set_context(nodeid="")
 
 
+@pytest.mark.oracle_exempt(reason="oracle self-test: closes X*f = f*X on purpose to check the AMBIGUOUS reaction")
 def test_ambiguous_warns_and_strict_raises(monkeypatch):
     pytest.importorskip("sympy")
     from jacopy.central.objects import functions, vector_fields
