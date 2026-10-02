@@ -113,9 +113,9 @@ def _rich_engine(P, registry, *, declare: bool):
 
 
 def _normalize(engine, seed: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, seed, registry)
+    return normalized_by(engine, seed, registry)
 
 
 def _to_vec(expr: Expr, acc=None, coeff=Fraction(1)):

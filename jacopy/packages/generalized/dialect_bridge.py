@@ -88,7 +88,7 @@ def bridge_engine(N, registry: Optional[PropertyRegistry] = None):
     the Poisson package's sharp / Koszul definitions — an engine in
     which Nambu-dialect and Poisson-dialect expressions of the same
     bivector normalise together."""
-    from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
+    from jacopy.packages.drinfeld.tilde_calculus import nambu_tilde_engine
     from jacopy.packages.poisson.core import (
         SharpActionDefinition,
         SharpEvaluationDefinition,
@@ -103,7 +103,7 @@ def bridge_engine(N, registry: Optional[PropertyRegistry] = None):
     )
 
     P = poisson_view(N)
-    eng = _tilde_engine(N, registry, declare_fi=False)
+    eng = nambu_tilde_engine(N, registry, declare_fi=False)
     eng.register(NambuToPoissonSharpDefinition(N))
     eng.register(KoszulBracketDefinition(P))
     eng.register(SharpEvaluationDefinition(P))

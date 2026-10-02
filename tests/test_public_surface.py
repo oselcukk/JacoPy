@@ -149,7 +149,7 @@ _NOTEBOOK_DEEP_NAMES = {
         "prove_exceptional_twist_inverse", "prove_exceptional_jacobi_five",
         "prove_top_slot_jacobi", "prove_calculus_condition_one",
         "prove_calculus_condition_two", "prove_calculus_condition_three",
-        "prove_kappa_kappa", "prove_kappa_bracket",
+        "prove_kappa_kappa", "prove_kappa_bracket", "twist_engine",
     ],
     "jacopy.packages.poisson": ["nambu_structure", "NambuSharpLinearityDefinition"],
     "jacopy.packages.generalized": [
@@ -161,7 +161,7 @@ _NOTEBOOK_DEEP_NAMES = {
         "prove_exceptional_r_twist_bidegree_split",
         "prove_r22_reduces_to_lifted_cross_term",
         "prove_r25_is_lie_tilde_equivariance_defect",
-        "prove_exceptional_r_twist_symmetric_part",
+        "prove_exceptional_r_twist_symmetric_part", "exceptional_rotation_engine",
     ],
 }
 

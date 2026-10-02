@@ -270,10 +270,10 @@ def exceptional_pairing_five(
 
 def _exc_engine(N, registry):
     from jacopy.packages.drinfeld.tilde_calculus import (
-        _tilde_engine,
+        nambu_tilde_engine,
     )
 
-    return _tilde_engine(N, registry, declare_fi=False)
+    return nambu_tilde_engine(N, registry, declare_fi=False)
 
 
 def prove_exceptional_symmetric_part(
@@ -296,7 +296,7 @@ def prove_exceptional_symmetric_part(
     ``−d(ω₂ ∧ η₂)`` (graded Leibniz of ``d`` over the wedge).
     Declaration-free; evaluated on 2 resp. 5 vector slots."""
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
     _, f2_12, f5_12 = exceptional_courant_bracket(
         U, om2, om5, V, et2, et5
@@ -306,7 +306,7 @@ def prove_exceptional_symmetric_part(
     )
     chains = []
     for node in (
-        _ev(
+        evaluate_on_slots(
             Sum(
                 f2_12,
                 f2_21,
@@ -316,7 +316,7 @@ def prove_exceptional_symmetric_part(
             ),
             slots2,
         ),
-        _ev(
+        evaluate_on_slots(
             Sum(
                 f5_12,
                 f5_21,
@@ -363,7 +363,7 @@ def prove_exceptional_right_leibniz(
     Leibniz anomaly ``−η₂ ∧ df ∧ ω₂``-type contributions cancel
     between the ``ι_V d`` and wedge legs."""
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
     _, f2L, f5L = exceptional_courant_bracket(
         U,
@@ -382,7 +382,7 @@ def prove_exceptional_right_leibniz(
         (f2L, f2B, et2, slots2),
         (f5L, f5B, et5, slots5),
     ):
-        node = _ev(
+        node = evaluate_on_slots(
             Sum(
                 lhs,
                 Neg(
@@ -475,7 +475,7 @@ def prove_top_slot_jacobi(
         dorfman_double,
         prove_dorfman_jacobi_form,
     )
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
     from jacopy.proof.strategies import ProofFailure
     from jacopy.research.engine_assembly import assemble_engine
 
@@ -512,7 +512,7 @@ def prove_top_slot_jacobi(
         ("top-slot Jacobiator = Dorfman Jacobiator + cross Jacobiator (linear split)", split),
         ("cross Jacobiator normalizes to 0 (form level)", J_cross),
     ):
-        nf = _normalized_by(eng, node, registry)
+        nf = normalized_by(eng, node, registry)
         if nf != Integer(0):
             raise ProofFailure(
                 f"top-slot Jacobi: {label} FAILS — residual "
@@ -606,15 +606,15 @@ def prove_exceptional_h_second_entry_linear(
     tensorial in ``η₂``. Declaration-free, on 5 slots."""
     from jacopy.core.pairing import Pairing
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
     from jacopy.packages.poisson.nambu import nambu_structure
 
     N = nambu_structure(p=2)
     from jacopy.packages.drinfeld.tilde_calculus import (
-        _tilde_engine,
+        nambu_tilde_engine,
     )
 
-    node = _ev(
+    node = evaluate_on_slots(
         Sum(
             exceptional_h_reading(U, om2, V, Product(f, et2)),
             Neg(
@@ -630,7 +630,7 @@ def prove_exceptional_h_second_entry_linear(
         node,
         Integer(0),
         registry=registry,
-        engine=_tilde_engine(N, registry, declare_fi=False),
+        engine=nambu_tilde_engine(N, registry, declare_fi=False),
         max_steps=max_steps,
     )
 
@@ -653,14 +653,14 @@ def prove_exceptional_h_first_entry_symbol(
     — the exact symbol, from the ``dω₂`` leg's Leibniz split.
     Declaration-free, on 5 slots."""
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
     from jacopy.packages.poisson.nambu import nambu_structure
     from jacopy.packages.drinfeld.tilde_calculus import (
-        _tilde_engine,
+        nambu_tilde_engine,
     )
 
     N = nambu_structure(p=2)
-    node = _ev(
+    node = evaluate_on_slots(
         Sum(
             exceptional_h_reading(
                 U, Product(f, om2), V, et2
@@ -679,7 +679,7 @@ def prove_exceptional_h_first_entry_symbol(
         node,
         Integer(0),
         registry=registry,
-        engine=_tilde_engine(N, registry, declare_fi=False),
+        engine=nambu_tilde_engine(N, registry, declare_fi=False),
         max_steps=max_steps,
     )
 

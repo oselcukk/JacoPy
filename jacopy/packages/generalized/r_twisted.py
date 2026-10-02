@@ -68,7 +68,7 @@ from jacopy.central.calculus.scalars import is_scalar_function
 from jacopy.central.objects.tilde_interior import TildeInterior
 from jacopy.central.tangent.lie_bracket import lie_bracket
 from jacopy.packages.drinfeld.double import canonical_pairing
-from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
+from jacopy.packages.drinfeld.tilde_calculus import nambu_tilde_engine
 from jacopy.packages.generalized.poisson_generalized import (
     THETA_JACOBI_SOURCE,
     _normalize,
@@ -253,7 +253,7 @@ def r_twisted_theta_dorfman(
 
 
 def _engine(N, registry, *, declare_fi: bool):
-    eng = _tilde_engine(N, registry, declare_fi=declare_fi)
+    eng = nambu_tilde_engine(N, registry, declare_fi=declare_fi)
     eng.register(
         TildeInteriorFormLinearityDefinition(registry)
     )

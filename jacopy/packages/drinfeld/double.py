@@ -121,6 +121,12 @@ def _ev(expr: Expr, slots) -> Expr:
     )
 
 
+#: Public name of :func:`_ev` — a form evaluated on vector slots (``Pairing`` for one slot, alternating ``MultiEval`` otherwise)
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+evaluate_on_slots = _ev
+
+
 def _double_engine(registry):
     """Tangent engine + the theorem-classified Lie-bracket Leibniz
     and the MultiEval argument linearity (degree ≥ 2 form slots need
@@ -137,6 +143,12 @@ def _double_engine(registry):
     eng.register(LieBracketLeibnizDefinition(registry))
     eng.register(MultiEvalArgLinearityDefinition(registry))
     return eng
+
+
+#: Public name of :func:`_double_engine` — the 6.D double engine
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+double_engine = _double_engine
 
 
 def prove_dorfman_right_leibniz_form(

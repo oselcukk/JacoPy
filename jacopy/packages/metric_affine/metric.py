@@ -352,13 +352,13 @@ def inverse_metric_component(
 ) -> InverseMetricComponent:
     """``g^{ab}`` of the metric ``g`` (canonical index order); the
     metric's bundle travels into the component's identity."""
-    from jacopy.central.objects.frame import _index_str
+    from jacopy.central.objects.frame import frame_index_str
 
     g = as_metric_context(g)
     return inverse_metric_component_named(
         g.name,
-        _index_str(first),
-        _index_str(second),
+        frame_index_str(first),
+        frame_index_str(second),
         bundle=g.bundle,
     )
 

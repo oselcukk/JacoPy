@@ -559,15 +559,15 @@ class NambuFIDeclaration(Definition):
         )
 
     def _exact_wedge(self, omega: Expr) -> bool:
-        from jacopy.packages.poisson.showcase import _is_exact
+        from jacopy.packages.poisson.showcase import is_exact_form
 
         p = self._N.p
         if p == 1:
-            return _is_exact(omega)
+            return is_exact_form(omega)
         return (
             isinstance(omega, Wedge)
             and len(omega.children) == p
-            and all(_is_exact(c) for c in omega.children)
+            and all(is_exact_form(c) for c in omega.children)
         )
 
     def _split(self, expr: Expr):

@@ -220,9 +220,9 @@ def general_twist_engine(
 
 
 def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, expr, registry)
+    return normalized_by(engine, expr, registry)
 
 
 def _zero_theorem(

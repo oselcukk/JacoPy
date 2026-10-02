@@ -281,7 +281,7 @@ def _engine(N3, N6, registry, *, declare_fi: bool = False):
     from jacopy.central.objects.multivector_interior import (
         MultivectorInteriorLinearityDefinition,
     )
-    from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
+    from jacopy.packages.drinfeld.tilde_calculus import nambu_tilde_engine
     from jacopy.packages.poisson.nambu import (
         NambuSharpLinearityDefinition,
     )
@@ -289,7 +289,7 @@ def _engine(N3, N6, registry, *, declare_fi: bool = False):
         WedgeGradedOrderDefinition,
     )
 
-    eng = _tilde_engine(N3, registry, declare_fi=declare_fi)
+    eng = nambu_tilde_engine(N3, registry, declare_fi=declare_fi)
     eng.register(OperatorSlotAdditivityDefinition())
     eng.register(MultivectorInteriorLinearityDefinition(registry))
     eng.register(NambuSharpLinearityDefinition(N3, registry))
@@ -299,9 +299,9 @@ def _engine(N3, N6, registry, *, declare_fi: bool = False):
 
 
 def _normalize(engine, expr: Expr, registry) -> Expr:
-    from jacopy.packages.poisson.tilde import _normalized_by
+    from jacopy.packages.poisson.tilde import normalized_by
 
-    return _normalized_by(engine, expr, registry)
+    return normalized_by(engine, expr, registry)
 
 
 def _zero_theorem(

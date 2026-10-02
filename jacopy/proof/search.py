@@ -59,6 +59,12 @@ def _node_count(expr: Expr) -> int:
     return sum(1 for _ in expr.walk())
 
 
+#: Public name of :func:`_node_count` — the number of nodes of an expression tree
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+node_count = _node_count
+
+
 # --------------------------------------------------------------------- #
 # Scorers — lower is better                                              #
 # --------------------------------------------------------------------- #

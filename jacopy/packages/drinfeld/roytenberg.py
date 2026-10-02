@@ -52,7 +52,7 @@ from jacopy.central.tangent.lie_bracket import lie_bracket
 from jacopy.packages.drinfeld.calculus_conditions import kappa
 from jacopy.packages.drinfeld.double import lie_tilde_nambu
 from jacopy.packages.drinfeld.tilde_calculus import (
-    _tilde_engine,
+    nambu_tilde_engine,
     kappa_tilde_nambu,
 )
 from jacopy.packages.drinfeld.twist import h_term, r_twist
@@ -119,7 +119,7 @@ def prove_h_bilinearity(
         MultiEvalArgLinearityDefinition,
     )
     from jacopy.central.tangent.tangent_expansion import tangent_engine
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
     def eng():
         e = tangent_engine(registry=registry)
@@ -139,7 +139,7 @@ def prove_h_bilinearity(
             Product(f, h_term(H, U, V)),
         ),
     ):
-        node = _ev(Sum(lhs, Neg(rhs)), slots)
+        node = evaluate_on_slots(Sum(lhs, Neg(rhs)), slots)
         chains.append(
             ExpandAndSimplify().prove(
                 node,
@@ -188,9 +188,9 @@ def prove_h_closure_measures_dh(
     separately): ``H = dB`` — the Ševera image — satisfies TW (5.13) by
     ``d² = 0``."""
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
-    node = _ev(
+    node = evaluate_on_slots(
         Sum(
             h_closure_defect(H, U, V, W),
             Neg(
@@ -206,7 +206,7 @@ def prove_h_closure_measures_dh(
         node,
         Integer(0),
         registry=registry,
-        engine=_tilde_engine(N, registry, declare_fi=False),
+        engine=nambu_tilde_engine(N, registry, declare_fi=False),
         max_steps=max_steps,
     )
 
@@ -226,14 +226,14 @@ def prove_h_closure_for_exact_h(
     mechanically (``d² = 0``) — the Ševera-twisted bracket keeps the
     Jacobi requirement. Declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
-    node = _ev(h_closure_defect(d(B), U, V, W), slots)
+    node = evaluate_on_slots(h_closure_defect(d(B), U, V, W), slots)
     return ExpandAndSimplify().prove(
         node,
         Integer(0),
         registry=registry,
-        engine=_tilde_engine(N, registry, declare_fi=False),
+        engine=nambu_tilde_engine(N, registry, declare_fi=False),
         max_steps=max_steps,
     )
 
@@ -269,7 +269,7 @@ def prove_h_twisted_jacobi_measures_dh(
     from jacopy.central.tangent.cartan import (
         prove_with_bracket_identities,
     )
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
     from jacopy.packages.drinfeld.twist import dorfman_double_h
 
     def nest(U1, o1, U2, o2, U3, o3):
@@ -288,13 +288,13 @@ def prove_h_twisted_jacobi_measures_dh(
             )
         ),
     )
-    node = _ev(defect, slots)
+    node = evaluate_on_slots(defect, slots)
     return prove_with_bracket_identities(
         node,
         Integer(0),
         f,
         registry=registry,
-        engine=_tilde_engine(N, registry, declare_fi=False),
+        engine=nambu_tilde_engine(N, registry, declare_fi=False),
         max_steps=max_steps,
     )
 
@@ -330,15 +330,15 @@ def prove_fi_collapses_twisted_compat(
         node,
         Integer(0),
         registry=registry,
-        engine=_tilde_engine(N, registry, declare_fi=True),
+        engine=nambu_tilde_engine(N, registry, declare_fi=True),
         max_steps=max_steps,
     )
 
 
 def _ev_forms(expr: Expr, slots) -> Expr:
-    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.double import evaluate_on_slots
 
-    return _ev(expr, slots)
+    return evaluate_on_slots(expr, slots)
 
 
 def twisted_calculus_obstruction_one(
@@ -489,7 +489,7 @@ def prove_twisted_fi_kills_r_twist_h(
         FISharpPairingSwapDefinition,
     )
 
-    eng = _tilde_engine(N, registry, declare_fi=False)
+    eng = nambu_tilde_engine(N, registry, declare_fi=False)
     eng.register(TwistedFIDeclaration(N, H))
     # The pairing-swap consequence holds under the TWISTED FI too:
     # the H-parts are antisymmetric and cancel in the symmetric
@@ -547,7 +547,7 @@ def prove_r_twist_h_correction_bilinear(
                 node,
                 Integer(0),
                 registry=registry,
-                engine=_tilde_engine(
+                engine=nambu_tilde_engine(
                     N, registry, declare_fi=False
                 ),
                 max_steps=max_steps,
@@ -668,10 +668,10 @@ def prove_r_twist_psi_properties(
     from jacopy.core.expr import Product
     from jacopy.proof.strategies import ExpandAndSimplify
     from jacopy.packages.drinfeld.tilde_calculus import (
-        _tilde_engine,
+        nambu_tilde_engine,
     )
 
-    eng = _tilde_engine(psi_host, registry, declare_fi=False)
+    eng = nambu_tilde_engine(psi_host, registry, declare_fi=False)
     chains = []
     for node in (
         Act(Sum(r_twist_psi(psi_host, omega, eta),

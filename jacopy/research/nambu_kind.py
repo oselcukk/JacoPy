@@ -24,7 +24,7 @@ from __future__ import annotations
 # imported at load time, as the pre-registry assemble_engine did on
 # every call (module import side effects unchanged)
 from jacopy.packages.drinfeld.roytenberg import SharpSlotWedgeNormalizeDefinition
-from jacopy.packages.drinfeld.tilde_calculus import _tilde_engine
+from jacopy.packages.drinfeld.tilde_calculus import nambu_tilde_engine
 from jacopy.packages.poisson.nambu import NambuPoissonStructure, NambuSharpVF
 from jacopy.research.structure_kinds import (
     StructureKind,
@@ -48,7 +48,7 @@ class NambuPoissonKind(StructureKind):
         return structure.pi
 
     def host_engine(self, structure, registry):
-        return _tilde_engine(structure, registry)
+        return nambu_tilde_engine(structure, registry)
 
     def host_report(self, structure) -> str:
         return (

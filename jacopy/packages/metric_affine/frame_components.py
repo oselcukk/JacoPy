@@ -47,7 +47,7 @@ from jacopy.central.objects.frame import (
     Frame,
     FrameField,
     IndexLike,
-    _index_str,
+    frame_index_str,
 )
 from jacopy.central.tangent.anholonomy import anholonomy_coefficient
 from jacopy.central.tangent.exterior import d
@@ -147,9 +147,9 @@ def connection_coefficient(
     return ConnectionCoefficient(
         conn.name,
         fr.name,
-        _index_str(upper),
-        _index_str(first),
-        _index_str(second),
+        frame_index_str(upper),
+        frame_index_str(first),
+        frame_index_str(second),
     )
 
 
@@ -232,7 +232,7 @@ def check_bound_index(bound: str, *labels: IndexLike) -> None:
     """Refuse a bound (summation) index name that collides with a free
     index label — the one shared guard of the indexed-sum provers."""
     for label in labels:
-        if _index_str(label) == bound:
+        if frame_index_str(label) == bound:
             raise ValueError(
                 f"bound index {bound!r} collides with a free index; "
                 "pass a different `bound` name"
@@ -248,7 +248,7 @@ def connection_form(
     if not isinstance(fr, Frame):
         raise TypeError("connection_form expects a Frame")
     return ConnectionForm(
-        conn.name, fr.name, _index_str(upper), _index_str(lower)
+        conn.name, fr.name, frame_index_str(upper), frame_index_str(lower)
     )
 
 
@@ -570,7 +570,7 @@ def curvature_component_formula(
     from jacopy.central.objects.frame import FrameIndex
 
     G = lambda u, m, n: ConnectionCoefficient(
-        conn.name, fr.name, _index_str(u), _index_str(m), _index_str(n)
+        conn.name, fr.name, frame_index_str(u), frame_index_str(m), frame_index_str(n)
     )
     s = bound
     dummy = FrameIndex(s)

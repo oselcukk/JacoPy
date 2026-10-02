@@ -71,6 +71,12 @@ def _is_exact(expr: Expr) -> bool:
     )
 
 
+#: Public name of :func:`_is_exact` — ``expr`` is ``d(·)`` of the TM calculus
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+is_exact_form = _is_exact
+
+
 class SNBivectorExactEvalDefinition(Definition):
     """``[π,π](df, dg, dh) → 2·Σ_cyc π(df, d π(dg, dh))`` — the
     evaluation view of the Schouten square of an atomic bivector on

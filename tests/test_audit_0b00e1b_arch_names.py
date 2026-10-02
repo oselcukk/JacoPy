@@ -145,3 +145,107 @@ def test_old_path_first_then_new_in_a_clean_process(old, new):
         f"assert a is b and sys.modules[{old!r}] is b\n"
     )
     assert r.returncode == 0, r.stderr[-2000:]
+
+
+# ------------------------------------------------------------ T2-4 / K3-4
+# (defining module, private name, public name) — same object
+PUBLIC_ALIASES = [
+    ("jacopy.packages.poisson.tilde", "_normalized_by", "normalized_by"),
+    ("jacopy.packages.drinfeld.tilde_calculus", "_tilde_engine", "nambu_tilde_engine"),
+    ("jacopy.central.objects.frame", "_index_str", "frame_index_str"),
+    ("jacopy.packages.drinfeld.double", "_ev", "evaluate_on_slots"),
+    ("jacopy.packages.drinfeld.double", "_double_engine", "double_engine"),
+    ("jacopy.packages.poisson.showcase", "_is_exact", "is_exact_form"),
+    ("jacopy.packages.drinfeld.twist", "_twist_engine", "twist_engine"),
+    ("jacopy.packages.generalized.exceptional_rotation", "_engine", "exceptional_rotation_engine"),
+    ("jacopy.algorithms.normalize_alternating", "_sort_key", "structural_sort_key"),
+    ("jacopy.proof.search", "_node_count", "node_count"),
+]
+
+
+@pytest.mark.parametrize("home,private,public", PUBLIC_ALIASES)
+def test_public_alias_is_the_private_object(home, private, public):
+    mod = importlib.import_module(home)
+    assert getattr(mod, public) is getattr(mod, private)
+
+
+def test_notebook_engine_names_are_on_the_facades():
+    import jacopy.packages.drinfeld as dr
+    import jacopy.packages.generalized as ge
+    from jacopy.packages.drinfeld.twist import _twist_engine
+    from jacopy.packages.generalized.exceptional_rotation import _engine
+
+    assert dr.twist_engine is _twist_engine and "twist_engine" in dr.__all__
+    assert ge.exceptional_rotation_engine is _engine
+    assert "exceptional_rotation_engine" in ge.__all__
+
+
+def _jacopy_sources():
+    import pathlib
+
+    import jacopy
+
+    root = pathlib.Path(jacopy.__file__).parent
+    for p in root.rglob("*.py"):
+        rel = p.relative_to(root.parent).with_suffix("")
+        mod = ".".join(rel.parts)
+        yield (mod[: -len(".__init__")] if mod.endswith(".__init__") else mod), p.read_text(encoding="utf-8")
+
+
+def test_publicized_helpers_are_not_imported_privately_across_modules():
+    import ast
+
+    wanted = {(home, private) for home, private, _ in PUBLIC_ALIASES}
+    offenders = []
+    for mod, src in _jacopy_sources():
+        for node in ast.walk(ast.parse(src)):
+            if isinstance(node, ast.ImportFrom) and node.level == 0:
+                for a in node.names:
+                    if (node.module, a.name) in wanted and node.module != mod:
+                        offenders.append((mod, node.module, a.name))
+    assert not offenders, offenders
+
+
+def test_notebooks_import_no_private_jacopy_names():
+    import ast
+    import json
+    import pathlib
+
+    import jacopy
+
+    examples = pathlib.Path(jacopy.__file__).resolve().parents[1] / "examples"
+    if not examples.is_dir():
+        pytest.skip("installed package: no examples/ next to it")
+    offenders = []
+    for nb in sorted(examples.rglob("*.ipynb")):
+        for i, cell in enumerate(json.loads(nb.read_text(encoding="utf-8"))["cells"]):
+            if cell["cell_type"] != "code":
+                continue
+            for node in ast.walk(ast.parse("".join(cell["source"]))):
+                if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("jacopy"):
+                    offenders += [(nb.name, i, a.name) for a in node.names if a.name.startswith("_")]
+    assert not offenders, offenders
+
+
+def test_notebook_replacements_agree_with_the_old_helpers():
+    import jacopy
+    from jacopy.central.objects import forms, functions, vector_fields
+    from jacopy.central.tangent.cartan import L
+    from jacopy.core.registry import PropertyRegistry
+    from jacopy.packages.drinfeld.double import _ev
+    from jacopy.packages.drinfeld.twist import _twist_engine
+    from jacopy.packages.poisson.nambu import nambu_structure
+    from jacopy.packages.poisson.tilde import _normalized_by
+
+    reg = PropertyRegistry()
+    (f,) = functions("f", registry=reg)
+    X, Y, Z, W, Q = vector_fields("X Y Z W Q")
+    (om,) = forms("ω", degree=1)
+    N = nambu_structure("Π", p=1)
+    eng = _twist_engine(N, reg)
+    e = L(X, om)
+    old = _normalized_by(eng, e, reg)
+    nf = jacopy.normalize(eng, e, reg)
+    assert nf.stopped_by != "steps" and nf.expr == old
+    for slots in ((Y, Z), (X, Y, Z, W, Q)):
+        assert _ev(om, slots) == jacopy.multi_eval(om, *slots)

@@ -32,6 +32,12 @@ def _sort_key(expr: Expr) -> str:
     return expr._repr_inner()
 
 
+#: Public name of :func:`_sort_key` — the simplifier's stable structural ordering key
+#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: example notebooks). Same function object; the private name stays.
+structural_sort_key = _sort_key
+
+
 def _permutation_parity(before, after) -> int:
     """Parity (0 even / 1 odd) of the permutation taking ``before`` to
     ``after``. Assumes ``after`` is a rearrangement of ``before`` with
