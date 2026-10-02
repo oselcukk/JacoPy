@@ -76,6 +76,34 @@ def test_facade_names_are_the_deep_objects(facade):
         assert obj.__module__.startswith(facade + "."), (facade, name)
 
 
+# Facade names equal to a submodule name rebind the package attribute,
+# so ``import pkg.sub as m`` returns the function, not the module. These
+# predate the facade alignment; no new one may appear.
+_SHADOWING_SUBMODULE = {
+    "jacopy.packages.generalized": {"exceptional_double"},
+    "jacopy.packages.metric_affine": {"metric", "e_connection"},
+}
+
+
+@pytest.mark.parametrize("facade", _FACADES)
+def test_facade_names_do_not_shadow_submodules(facade):
+    pkg = importlib.import_module(facade)
+    subs = {m.name for m in pkgutil.iter_modules(pkg.__path__)}
+    shadowing = set(pkg.__all__) & subs
+    assert shadowing <= _SHADOWING_SUBMODULE.get(facade, set()), shadowing
+
+
+def test_import_as_of_drinfeld_submodules_gives_modules():
+    import types
+
+    import jacopy.packages.drinfeld as dr
+
+    for sub in pkgutil.iter_modules(dr.__path__):
+        mod = importlib.import_module(f"{dr.__name__}.{sub.name}")
+        assert isinstance(getattr(dr, sub.name), types.ModuleType), sub.name
+        assert getattr(dr, sub.name) is mod
+
+
 def test_drinfeld_facade_covers_item_13():
     import jacopy.packages.drinfeld as dr
     from jacopy.packages.drinfeld import double, examples, roytenberg, twist

@@ -22,7 +22,11 @@ twists, the Roytenberg bracket, the exceptional/BN examples), every
 stay at their module paths for engine extension, as do the TM/tilde
 shorthands ``lie``/``iota`` (:mod:`.calculus_conditions`) and
 ``iota_tilde``/``d_tilde`` (:mod:`.tilde_calculus`) — the latter would
-shadow :func:`jacopy.packages.poisson.d_tilde`, a different object."""
+shadow :func:`jacopy.packages.poisson.d_tilde`, a different object.
+The constructor ``abstract_double`` is not re-exported either: the name
+is its own submodule (:mod:`.abstract_double`), and binding the function
+on the package would break ``import jacopy.packages.drinfeld.abstract_double``;
+call ``abstract_double.abstract_double(...)``."""
 
 from jacopy.packages.drinfeld.double import (
     bracket_jacobiator,
@@ -62,7 +66,6 @@ from jacopy.packages.drinfeld.calculus_conditions import (
     prove_kappa_kappa,
 )
 from jacopy.packages.drinfeld.abstract_double import (
-    abstract_double,
     abstract_pairing,
     prove_abstract_double_jacobi_form,
     prove_abstract_double_right_leibniz,
@@ -214,7 +217,6 @@ __all__ = [
     "prove_kappa_bracket",
     "prove_kappa_kappa",
     # abstract_double
-    "abstract_double",
     "abstract_pairing",
     "prove_abstract_double_jacobi_form",
     "prove_abstract_double_right_leibniz",
