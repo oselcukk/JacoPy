@@ -323,23 +323,29 @@ def _combos():
                 yield tuple(zip(names, lv))
 
 
-@pytest.mark.parametrize("combo", list(_combos()), ids=lambda c: "+".join(f"{n}@{l}" for n, l in c))
-def test_6_oracle_and_engine_constant_predicates_agree(combo):
+@pytest.mark.contract_table
+def test_6_oracle_and_engine_constant_predicates_agree():
+    # ONE test over the whole table (3528 combinations × 2 views); the
+    # first mismatch names its combination
     from jacopy.oracle.realize import _declared_constant
 
-    reg = PropertyRegistry()
-    w = Symbol("w")
-    for name, lv in combo:
-        p = _PROPS[name]()
-        try:
-            if lv == "exact":
-                reg.declare(w, p)
-            elif lv == "class":
-                reg.declare_for_class(Symbol, p)
-            else:
-                reg.declare_for_predicate(lambda e: isinstance(e, Symbol), p)
-        except (ScalarContractError, ValueError):
-            continue
-    assert _declared_constant(w, _Env(reg)) == is_real_constant(w, reg), combo
-    with reg.axioms([Scalar]):
-        assert _declared_constant(w, _Env(reg)) == is_real_constant(w, reg), ("axioms", combo)
+    checked = 0
+    for combo in _combos():
+        reg = PropertyRegistry()
+        w = Symbol("w")
+        for name, lv in combo:
+            p = _PROPS[name]()
+            try:
+                if lv == "exact":
+                    reg.declare(w, p)
+                elif lv == "class":
+                    reg.declare_for_class(Symbol, p)
+                else:
+                    reg.declare_for_predicate(lambda e: isinstance(e, Symbol), p)
+            except (ScalarContractError, ValueError):
+                continue
+        assert _declared_constant(w, _Env(reg)) == is_real_constant(w, reg), combo
+        with reg.axioms([Scalar]):
+            assert _declared_constant(w, _Env(reg)) == is_real_constant(w, reg), ("axioms", combo)
+        checked += 1
+    assert checked == 3528

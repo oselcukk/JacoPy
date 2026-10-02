@@ -278,29 +278,33 @@ def _combos():
                 yield tuple(zip(names, lv))
 
 
-@pytest.mark.parametrize("strict", [False, True], ids=["axiom-mode", "strict"])
-@pytest.mark.parametrize("filt", list(_FILTERS))
-@pytest.mark.parametrize("combo", list(_combos()), ids=lambda c: "+".join(f"{n}@{l}" for n, l in c))
-def test_4_oracle_and_engine_agree_over_hierarchy_filters_and_strict(combo, filt, strict):
-    # coverage: 1–2 declarations from {S, DERIVED S, G0, G1, Gk, NC, DERIVED
-    # NC, AC} at exact / class (subclass, Symbol, Atom) / predicate level,
-    # under every axioms subset, in axiom and strict mode — on a Symbol
-    # subclass instance (the oracle's dispatch covers Symbol instances)
+@pytest.mark.contract_table
+def test_4_oracle_and_engine_agree_over_hierarchy_filters_and_strict():
+    # ONE test over the whole table: 1–2 declarations from {S, DERIVED S,
+    # G0, G1, Gk, NC, DERIVED NC, AC} at exact / class (subclass, Symbol,
+    # Atom) / predicate level × every axioms subset × axiom / strict mode
+    # = 17 280 comparisons on a Symbol-subclass instance; the first
+    # mismatch names its combination
     from jacopy.oracle.realize import _declared_constant
 
-    reg = PropertyRegistry(strict_axioms_only=strict)
-    w = _Coord("w")
-    for name, lv in combo:
-        try:
-            _declare(reg, w, name, lv)
-        except (ScalarContractError, ValueError):
-            continue
-    allowed = _FILTERS[filt]
-    if allowed is None:
-        assert _declared_constant(w, _Env(reg)) == is_real_constant(w, reg), combo
-    else:
-        with reg.axioms(allowed):
-            assert _declared_constant(w, _Env(reg)) == is_real_constant(w, reg), (combo, filt)
+    checked = 0
+    for combo in _combos():
+        for strict in (False, True):
+            reg = PropertyRegistry(strict_axioms_only=strict)
+            w = _Coord("w")
+            for name, lv in combo:
+                try:
+                    _declare(reg, w, name, lv)
+                except (ScalarContractError, ValueError):
+                    continue
+            for filt, allowed in _FILTERS.items():
+                if allowed is None:
+                    assert _declared_constant(w, _Env(reg)) == is_real_constant(w, reg), (combo, strict)
+                else:
+                    with reg.axioms(allowed):
+                        assert _declared_constant(w, _Env(reg)) == is_real_constant(w, reg), (combo, strict, filt)
+                checked += 1
+    assert checked == 17280
 
 
 def test_4_oracle_corners_from_the_probes():

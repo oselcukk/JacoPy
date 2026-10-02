@@ -39,6 +39,11 @@ _EXEMPTABLE = ("DISAGREE", "ASSUMPTION_LEAK", "AMBIGUOUS")
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
+        "contract_table: a Scalar-contract differential table (engine predicate vs model oracle) "
+        "run as ONE test over every declaration combination",
+    )
+    config.addinivalue_line(
+        "markers",
         "oracle_exempt(reason): the test closes a deliberately false equation; "
         "--oracle=strict reports its refuting verdicts as EXEMPT instead of failing it",
     )
