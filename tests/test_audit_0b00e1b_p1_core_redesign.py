@@ -245,27 +245,29 @@ class _Env:
         self.registry = registry
 
 
-def test_4_oracle_constant_is_the_engine_predicate():
+def test_4_oracle_constant_agrees_with_the_engine_predicate_on_function_atoms():
+    # gate 5 (chef): the oracle restates the contract INDEPENDENTLY (no
+    # engine import — test_oracle_independence) and this differential
+    # check locks the two implementations together on the atoms the
+    # oracle dispatches to it (a Symbol, a degree-0 Form / PVector —
+    # the function-kind half is the oracle caller's dispatch)
     from jacopy.oracle.realize import _declared_constant
 
-    (X,) = vector_fields("X")
     (h,) = forms("h", degree=0)
-    (w,) = forms("w", degree=1)
     cases = []
     reg = PropertyRegistry()
     reg.declare_for_class(Symbol, Scalar())
     (f,) = functions("f", registry=reg)
     reg.declare(Symbol("s"), Graded(Degree.var("k")))
-    cases += [(reg, e) for e in (f, Symbol("z"), Symbol("s"), Product(Symbol("z"), Symbol("z")))]
+    reg.declare(Symbol("n"), NonCommuting())
+    cases += [(reg, e) for e in (f, Symbol("z"), Symbol("s"), Symbol("n"))]
     reg2 = PropertyRegistry()
-    reg2.declare_for_predicate(lambda e: True, Scalar())   # even on a vector field / 1-form
-    cases += [(reg2, e) for e in (X, h, w, Symbol("t"), Integer(3))]
+    reg2.declare_for_predicate(lambda e: True, Scalar())
+    reg2.declare(h, Graded(0))
+    reg2.declare_for_class(Symbol, AntiCommuting())
+    cases += [(reg2, e) for e in (h, Symbol("t"), PVector("q", degree=0))]
     for r, e in cases:
         assert _declared_constant(e, _Env(r)) == is_real_constant(e, r), e
-    # the function-kind condition the old restatement lacked
-    assert not _declared_constant(X, _Env(reg2))
-    assert not _declared_constant(w, _Env(reg2))
-    assert _declared_constant(h, _Env(reg2))
     # the oracle mints no hypotheses
     with track_reads() as log:
         _declared_constant(Symbol("t"), _Env(reg2))
@@ -298,14 +300,16 @@ def test_5_function_times_derivation_is_a_derivation():
     x = Symbol("x")
     reg.declare(x, Graded(0))
     reg.declare(x, NonCommuting())
-    assert _is_derivation_expr(Product(f, X), reg)
-    assert _is_derivation_expr(Product(f, g, X), reg)
-    assert _is_derivation_expr(Product(c, X, c), reg)
-    assert _is_derivation_expr(Product(Integer(2), f, X), reg)
-    assert not _is_derivation_expr(Product(X, f), reg)        # D∘(f·): composition
-    assert not _is_derivation_expr(Product(f, X, g), reg)
-    assert not _is_derivation_expr(Product(x, X), reg)         # x does not commute
-    assert not _is_derivation_expr(Product(f, X, Y), reg)      # two derivations
+    gens = (g,)                                              # a commutative algebra of functions
+    assert _is_derivation_expr(Product(f, X), reg, gens)
+    assert _is_derivation_expr(Product(f, g, X), reg, gens)
+    assert _is_derivation_expr(Product(c, X, c), reg)        # constants need no algebra
+    assert _is_derivation_expr(Product(Integer(2), f, X), reg, gens)
+    assert not _is_derivation_expr(Product(f, X), reg)        # unknown algebra: refused
+    assert not _is_derivation_expr(Product(X, f), reg, gens)  # D∘(f·): composition
+    assert not _is_derivation_expr(Product(f, X, g), reg, gens)
+    assert not _is_derivation_expr(Product(x, X), reg, gens)  # x does not commute
+    assert not _is_derivation_expr(Product(f, X, Y), reg, gens)  # two derivations
     # a proof that needs it: f·(X + Y) = f·X + f·Y as operators
     class _Alg:
         generators = (g,)

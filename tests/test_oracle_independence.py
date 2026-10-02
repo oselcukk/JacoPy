@@ -20,10 +20,8 @@ ALLOWED_NON_NODES = {
     ("jacopy.central.objects.bundle", "TM"),
     ("jacopy.core.properties", "Scalar"),
     ("jacopy.core.properties", "Graded"),
-    # the Scalar contract's ONE predicate (audit 0b00e1b M1-1 review #4):
-    # the oracle must model a constant exactly where the engine treats
-    # one, so it calls the same predicate instead of restating it
-    ("jacopy.central.calculus.scalars", "is_real_constant"),
+    ("jacopy.core.properties", "NonCommuting"),
+    ("jacopy.core.properties", "AntiCommuting"),
 }
 
 

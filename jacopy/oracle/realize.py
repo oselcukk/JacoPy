@@ -49,7 +49,7 @@ from jacopy.central.objects.vector_field import VectorField
 from jacopy.core.expr import Integer, Neg, Power, Product, Rational, Sum, Symbol
 from jacopy.core.multi_eval import MultiEval
 from jacopy.core.pairing import Pairing
-from jacopy.core.properties import Graded, Scalar
+from jacopy.core.properties import AntiCommuting, Graded, NonCommuting, Scalar
 from jacopy.core.wedge import Wedge
 from jacopy.packages.poisson.core import HamiltonianVF, PoissonBracketValue, SharpVF
 from jacopy.packages.poisson.koszul import KoszulBracket
@@ -410,17 +410,45 @@ def _rational(e, env, path):
     return env.R.const(Q(e.p, e.q))
 
 
-def _declared_constant(e, env) -> bool:
-    """THE engine predicate
-    :func:`~jacopy.central.calculus.scalars.is_real_constant` itself
-    (audit 0b00e1b M1-1 review #4: a restatement drifted — it lacked
-    the function-kind condition and accepted a symbolic degree). The
-    oracle models a constant exactly where the engine treats one;
-    ``record=False`` keeps the oracle's reads out of every proof's
-    hypotheses (SPEC §1: the oracle mints nothing)."""
-    from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
+_LEVEL = {"exact": 0, "class": 1, "predicate": 2}
 
-    return is_real_constant(e, env.registry, record=False)
+
+def _declared_constant(e, env) -> bool:
+    """The Scalar contract restated INDEPENDENTLY of the engine (chef
+    decision, gate 5: the oracle must not import the engine's
+    predicate, or a wrong "constant" there would be modelled here too
+    and the DISAGREE masked). From the registry's raw declaration data
+    (:meth:`~jacopy.core.registry.PropertyRegistry.lookup`), for an
+    atom the caller already knows to be of function kind (a Symbol, a
+    degree-0 Form / PVector):
+
+    * a ``Scalar`` declared at any level (exact / class / predicate);
+    * SHADOWED — not a constant — by a strictly more specific
+      ``Graded`` (any degree) / ``NonCommuting`` / ``AntiCommuting``;
+    * not a constant when an effective ``NonCommuting`` /
+      ``AntiCommuting`` exists, or the effective ``Graded`` degree is
+      not the constant ``0`` (a symbolic degree certifies nothing).
+
+    ``tests/test_audit_0b00e1b_p1_core_tur2.py`` locks this against the
+    engine's predicate differentially over every declaration
+    combination. The registry's visibility filters are deliberately
+    NOT applied (raw data, as the engine's clash check)."""
+    reg = env.registry
+    if reg is None:
+        return False
+    scalar, s_level = reg.lookup(e, Scalar)
+    if scalar is None:
+        return False
+    rank = _LEVEL[s_level]
+    graded, g_level = reg.lookup(e, Graded)
+    nc, nc_level = reg.lookup(e, NonCommuting)
+    ac, ac_level = reg.lookup(e, AntiCommuting)
+    for other, level in ((graded, g_level), (nc, nc_level), (ac, ac_level)):
+        if other is not None and _LEVEL[level] < rank:
+            return False  # shadowed: a graded element, not a constant
+    if nc is not None or ac is not None:
+        return False
+    return graded is None or graded.degree.as_int() == 0
 
 
 @register(Symbol)
