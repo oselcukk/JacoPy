@@ -1,21 +1,28 @@
 """jacopy — graded algebra & bracket calculus with step-by-step proofs.
 
-Layers (each builds on the ones above it; the remaining upward edges
-are deferred imports):
+Layers, from the top down (each imports only from its own layer and
+the ones below it; the remaining upward edges are deferred imports —
+``docs/ARCHITECTURE.md`` section 1):
 
-* **Foundation** — ``core`` (expression tree, properties, matching),
-  ``algebra`` (``Act``, ``Derivation``, grading), ``algorithms``
-  (simplify / product rule / normal forms), ``brackets`` (the
-  ``GradedBracket`` base), ``proof`` (proof chains, strategies,
-  ``ProofResult``, theorems), ``display`` (text / LaTeX / HTML).
+* **display** — text / LaTeX / HTML / terminal rendering; reads every
+  layer, changes nothing.
+* **research** — :mod:`jacopy.research`: pick a bracket and objects,
+  assemble an engine, check the bracket axioms.
+* **packages** — geometry built on the central code: ``poisson``,
+  ``drinfeld`` (algebroid calculus, Drinfel'd doubles, twists),
+  ``generalized`` (Courant algebroids), ``metric_affine``.
 * **central** — objects and calculus valid on ``TM`` and on any
   algebroid ``E``: functions, vector fields, forms, tensors, metric,
   connection, frames; Lie/Schouten brackets, ``d``, ``ι``, ``ℒ``.
-* **packages** — geometry built on the central code:
-  ``metric_affine``, ``poisson``, ``drinfeld`` (algebroid calculus,
-  Drinfel'd doubles, twists), ``generalized`` (Courant algebroids).
-* **research** — :mod:`jacopy.research`: pick a bracket and objects,
-  assemble an engine, check the bracket axioms.
+* **proof** — the engine, strategies, proof chains, ``ProofResult``,
+  theorems.
+* **Foundation** — ``algebra`` (``Act``, ``Derivation``, grading),
+  ``algorithms`` (simplify / product rule / normal forms),
+  ``brackets`` (the ``GradedBracket`` base), ``bibliography``.
+* **core** — expression tree, properties, registry, matching.
+
+``oracle`` (the model falsifier) stands beside the stack; the proof
+layer imports only its engine-free ``jacopy.oracle.hook``.
 
 Support levels
 --------------
