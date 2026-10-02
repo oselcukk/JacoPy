@@ -9,9 +9,11 @@ and returns the accumulated sign as a :class:`Degree` polynomial so the
 caller can inspect it (even when the sign is symbolic like
 ``(-1)^{|α||β|}``).
 
-Every factor must be registered as :class:`Scalar` or :class:`Graded`.
-Scalars sort to the front and contribute no sign, they commute with
-everything in the Koszul rule. Graded factors sort by a stable
+Every factor must be registered as :class:`Scalar` or :class:`Graded`
+(:func:`~jacopy.central.calculus.scalars.is_real_constant` decides the
+former). Scalars (ℝ-constants by contract) sort to the front and contribute no
+sign: an ℝ-constant commutes with every ℝ-linear operator, a
+:class:`NonCommuting` one included. Graded factors sort by a stable
 structural key and contribute ``|a||b|`` per swap. Unclassified factors
 raise :class:`ValueError`; the fix is to declare their grading, not to
 silently paper over the missing information.
@@ -35,7 +37,6 @@ from jacopy.core.properties import (
     Graded,
     GradedCommutative,
     NonCommuting,
-    Scalar,
 )
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
@@ -88,13 +89,21 @@ def _explode_factor(factor: Expr) -> Tuple[List[Expr], int]:
     return (result, parity)
 
 
-def _is_scalar(factor: Expr, registry: PropertyRegistry) -> bool:
-    # Numeric literals are always scalars, they commute with
-    # everything and carry no grading. Declaring Scalar on every
-    # Integer(k) would be noise.
-    if isinstance(factor, (Integer, Rational)):
-        return True
-    return registry.has(factor, Scalar)
+_IS_REAL_CONSTANT = None
+
+
+def _is_real_constant(factor: Expr, registry: PropertyRegistry) -> bool:
+    """The Scalar contract's ℝ-constant — THE predicate
+    :func:`~jacopy.central.calculus.scalars.is_real_constant` (a numeral
+    or a certified Scalar atom), resolved once: the only factors that
+    swap past ANYTHING (operators included) and the only ones that are
+    degree 0 without a Graded declaration."""
+    global _IS_REAL_CONSTANT
+    if _IS_REAL_CONSTANT is None:
+        from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
+
+        _IS_REAL_CONSTANT = is_real_constant
+    return _IS_REAL_CONSTANT(factor, registry)
 
 
 def _degree_of(factor: Expr, registry: PropertyRegistry) -> Degree:
@@ -110,7 +119,7 @@ def _degree_of(factor: Expr, registry: PropertyRegistry) -> Degree:
     that still can't be classified raises with a hint about the
     missing declaration.
     """
-    if _is_scalar(factor, registry):
+    if _is_real_constant(factor, registry):
         return Degree.const(0)
     if isinstance(factor, Derivation):
         return factor.degree
@@ -130,27 +139,38 @@ def _degree_of(factor: Expr, registry: PropertyRegistry) -> Degree:
         ) from None
 
 
-def _factor_key(factor: Expr, registry: PropertyRegistry) -> Tuple[int, str]:
-    """Ordering key: scalars first (bucket 0), others by repr."""
-    bucket = 0 if _is_scalar(factor, registry) else 1
-    return (bucket, repr(factor))
+def _factor_key(
+    factor: Expr, registry: PropertyRegistry, constants=None
+) -> Tuple[int, str]:
+    """Ordering key: ℝ-constants first (bucket 0, the SAME predicate as
+    the free swap — :func:`_is_real_constant`), others by repr."""
+    if constants is None:
+        const = _is_real_constant(factor, registry)
+    else:
+        const = factor in constants
+    return (0 if const else 1, repr(factor))
 
 
 def _should_swap(
-    a: Expr, b: Expr, registry: PropertyRegistry
+    a: Expr, b: Expr, registry: PropertyRegistry, constants=None
 ) -> bool:
-    return _factor_key(a, registry) > _factor_key(b, registry)
+    return _factor_key(a, registry, constants) > _factor_key(b, registry, constants)
 
 
 def _swap_behavior(
-    a: Expr, b: Expr, registry: PropertyRegistry
+    a: Expr, b: Expr, registry: PropertyRegistry, constants=None
 ) -> Tuple[bool, Degree]:
     """Return ``(can_swap, sign_exp_delta)`` for adjacent ``a``, ``b``.
 
     The commutativity law between the pair governs whether the swap is
     permitted and, if so, the Koszul exponent it contributes:
 
-    * Either factor carries :class:`Scalar`, free swap, no sign.
+    * Either factor is an ℝ-CONSTANT (a numeral or a Scalar atom,
+      :func:`~jacopy.central.calculus.scalars.is_real_constant`),
+      free swap, no sign — checked FIRST: a constant commutes with
+      every ℝ-linear operator, also a :class:`NonCommuting` one (chef
+      contract decision: Scalar = ℝ-constant; ``D∘c = c∘D + D(c) =
+      c∘D``, consistent with :func:`product_rule` killing ``D(c)``).
     * Either factor carries :class:`NonCommuting`, swap forbidden.
     * Both carry :class:`AntiCommuting`, swap produces a flat ``-1``
       (parity delta ``1``).
@@ -169,7 +189,12 @@ def _swap_behavior(
       multivectors — the implicit Koszul default), swap produces
       ``(-1)^{|a||b|}``.
     """
-    if _is_scalar(a, registry) or _is_scalar(b, registry):
+    if constants is None:
+        a_const = _is_real_constant(a, registry)
+        b_const = _is_real_constant(b, registry)
+    else:  # classified once per factor by sort_product
+        a_const, b_const = a in constants, b in constants
+    if a_const or b_const:
         return (True, Degree.const(0))
     if registry.has(a, NonCommuting) or registry.has(b, NonCommuting):
         return (False, Degree.const(0))
@@ -280,6 +305,8 @@ def sort_product(
     # position, missing a grading is a modelling error, not a perf issue.
     for f in factors:
         _degree_of(f, registry)
+    # the ℝ-constant classification, once per distinct factor
+    constants = {f for f in set(factors) if _is_real_constant(f, registry)}
     sign_exp = Degree.const(neg_parity)
     n = len(factors)
     # Bubble sort: stable enough for our size, and each swap's sign
@@ -290,9 +317,9 @@ def sort_product(
     for i in range(n):
         for j in range(n - 1 - i):
             a, b = factors[j], factors[j + 1]
-            if not _should_swap(a, b, registry):
+            if not _should_swap(a, b, registry, constants):
                 continue
-            can_swap, delta = _swap_behavior(a, b, registry)
+            can_swap, delta = _swap_behavior(a, b, registry, constants)
             if not can_swap:
                 continue
             factors[j], factors[j + 1] = b, a

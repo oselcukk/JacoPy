@@ -47,7 +47,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-from jacopy.algebra.derivation import Act, Derivation
+from jacopy.algebra.derivation import Act, Derivation, degree_of
 from jacopy.algorithms.simplify import simplify
 from jacopy.brackets.base import BracketApply, GradedBracket
 from jacopy.core.expr import Expr, Integer, Neg, Sum
@@ -103,10 +103,17 @@ class DerivedBracket(GradedBracket):
     Q
         The generator, an :class:`Expr` of degree ``degree_Q``.
     degree_Q
-        Explicit generator degree. Defaults to ``0`` when unspecified.
-        The derived bracket's own degree is ``degree_Q + 2·|base|``
-        per the derived-bracket degree formula (each base layer
-        contributes its degree).
+        The generator's degree, measured in the BASE bracket's grading
+        (:meth:`~jacopy.brackets.base.GradedBracket.grading_degree`:
+        multivector degree for SN, so ``|π| = 2``). When omitted it is
+        DERIVED from ``Q`` through that hook; when ``Q``'s degree is
+        not determinable without a registry it stays SYMBOLIC
+        (``|Q|``), never a silent 0, so parity checks refuse. An
+        explicit value contradicting a determinable degree raises
+        :class:`ValueError`. The derived bracket's own degree is
+        ``degree_Q + 2·k_base`` with ``k_base`` the base's degree in
+        its own grading (``operand_shift``; −1 for SN), and −1 in
+        ``acting_on`` (Koszul) mode.
     name
         Optional display name. Defaults to a structured tag derived
         from the base bracket and generator.
@@ -132,7 +139,7 @@ class DerivedBracket(GradedBracket):
         base: GradedBracket,
         Q: Expr,
         *,
-        degree_Q: DegreeLike = 0,
+        degree_Q: Optional[DegreeLike] = None,
         name: Optional[str] = None,
         acting_on: Optional[Derivation] = None,
         d: Optional[Derivation] = None,
@@ -149,7 +156,44 @@ class DerivedBracket(GradedBracket):
             )
         self._base = base
         self._Q = Q
-        self._degree_Q = as_degree(degree_Q)
+        try:
+            q_deg = base.grading_degree(Q, None)
+        except (ValueError, TypeError):
+            q_deg = None
+        if degree_Q is None:
+            # derived from the base grading (review: DerivedBracket(SN,
+            # π) must not need an explicit |π|). Undeterminable (needs a
+            # registry, symbolic): a SYMBOLIC degree |Q| — never a silent
+            # 0; every parity that depends on it is then undecidable and
+            # refused (DerivedBracketStrategy, the obstructions)
+            self._degree_Q = (
+                q_deg if q_deg is not None
+                else Degree.var(f"|{Q._repr_inner()}|")
+            )
+        else:
+            self._degree_Q = as_degree(degree_Q)
+        if (
+            degree_Q is not None
+            and q_deg is not None
+            and q_deg.as_int() is not None
+            and self._degree_Q.as_int() is not None
+            and q_deg.as_int() != self._degree_Q.as_int()
+        ):
+            raise ValueError(
+                f"DerivedBracket: degree_Q = {self._degree_Q!r} but the "
+                f"generator {Q!r} has degree {q_deg!r} in the base "
+                f"bracket's grading; degree_Q is measured there"
+            )
+        if (
+            acting_on is not None
+            and self._degree_Q.as_int() is not None
+            and self._degree_Q.as_int() != 2
+        ):
+            raise ValueError(
+                "DerivedBracket: acting_on (Koszul) mode is the bracket of "
+                f"a BIVECTOR on 1-forms; the generator {Q!r} has degree "
+                f"{self._degree_Q!r} in the base grading"
+            )
         self._acting_on = acting_on
         # Cartan ops resolved lazily to avoid import-time cycles, only
         # used when acting_on is set.
@@ -165,9 +209,19 @@ class DerivedBracket(GradedBracket):
         # 2026-09-08 re-audit, finding 2) and Jacobi is conditional
         # on [Q, Q]_base = 0 + the theorem's preconditions, checked
         # by the proof layer. Both surfaced as non-claims here.
+        # The bracket's degree in its operands' grading (review D): the
+        # base contributes its degree IN ITS OWN grading
+        # (``operand_shift``: −1 for SN, so |{f, g}_π| = 0); in
+        # acting_on (Koszul) mode the bracket on Ω(M) has degree −1
+        # (two 1-forms give a 1-form).
+        if acting_on is not None:
+            own_degree = Degree.const(-1)
+        else:
+            k_b = base.operand_shift
+            own_degree = self._degree_Q + k_b + k_b
         super().__init__(
             display,
-            degree=self._degree_Q + base.degree + base.degree,
+            degree=own_degree,
             is_graded_antisymmetric=False,
             satisfies_leibniz=True,
             satisfies_graded_jacobi=None,
@@ -176,6 +230,112 @@ class DerivedBracket(GradedBracket):
     @property
     def base(self) -> GradedBracket:
         return self._base
+
+    # ---- grading hooks (audit 0b00e1b K1-3 family) ----------------- #
+    #
+    # The derived bracket lives on the BASE's module: same grading,
+    # same product. In that grading the base has degree
+    # ``k_b = base.operand_shift`` and ``|[[a,Q],b]| = |a| + |b| + |Q|
+    # + 2·k_b``, so the derived shift is ``|Q| + 2·k_b`` (``degree_Q``
+    # is the generator's degree in the base's grading). For a base
+    # whose grading is the operator grading this equals the recorded
+    # ``degree``; for an SN base (k_b = −1, multivector grading) the
+    # recorded ``degree`` (|Q| + 0) is not the right shift — the
+    # hooks below are.
+
+    #
+    # In ``acting_on`` (Koszul) mode the operands are NOT elements of
+    # the base module: they are forms, lifted by the anchor. There the
+    # bracket is the Koszul bracket of the bivector ``Q`` on Ω(M) —
+    # graded in the FORM degree (:func:`degree_of`) with degree −1
+    # (``|[α, β]_π| = |α| + |β| − 1``: two 1-forms give a 1-form),
+    # a derivation of ``∧``. So ``s(α) = |α| − 1``: on 1-forms
+    # ``s = 0`` and the claimed sign is the plain antisymmetry ε = −1.
+
+    def grading_degree(
+        self, x: Expr, registry: Optional[PropertyRegistry] = None
+    ) -> Degree:
+        if self._acting_on is not None:
+            return degree_of(x, registry)
+        return self._base.grading_degree(x, registry)
+
+    def generator_degree(
+        self, registry: Optional[PropertyRegistry] = None
+    ) -> Degree:
+        """``|Q|`` in the base grading, VALIDATED against the registry
+        (audit 0b00e1b K1-3 review #7): the degree the base's
+        :meth:`grading_degree` determines for ``Q`` under ``registry``
+        wins; a declared ``degree_Q`` that contradicts a determinable
+        degree raises :class:`ValueError`; when the registry cannot
+        determine it the declared value (possibly symbolic) stands."""
+        try:
+            q = self._base.grading_degree(self._Q, registry)
+        except (ValueError, TypeError):
+            q = None
+        declared = self._degree_Q
+        if q is None:
+            return declared
+        if (
+            q.as_int() is not None
+            and declared.as_int() is not None
+            and q.as_int() != declared.as_int()
+        ):
+            raise ValueError(
+                f"DerivedBracket: declared degree_Q = {declared!r} but the "
+                f"generator {self._Q!r} has degree {q!r} in the base "
+                "bracket's grading under this registry"
+            )
+        if q.as_int() is None and declared.as_int() is not None:
+            return declared
+        return q
+
+    def operand_degree(
+        self, x: Expr, registry: Optional[PropertyRegistry] = None
+    ) -> Degree:
+        """``s(x) = |x| + k`` with the derived shift ``k = |Q| + 2·k_base``
+        taken from the registry-validated :meth:`generator_degree`
+        (−1 in Koszul mode) — the ONE sign source of every claimed
+        skew / Jacobi / Leibniz sign of this bracket."""
+        if self._acting_on is not None:
+            return self.grading_degree(x, registry) + Degree.const(-1)
+        k_b = self._base.operand_shift
+        return (
+            self.grading_degree(x, registry)
+            + self.generator_degree(registry) + k_b + k_b
+        )
+
+    def koszul_well_typed(
+        self, a: Expr, b: Expr, registry: Optional[PropertyRegistry] = None
+    ) -> bool:
+        """Koszul (``acting_on``) mode is the bracket of a BIVECTOR
+        ``Q`` on 1-FORMS (audit 0b00e1b K1-3 review #9): the anchor
+        lift ``ρ(a)`` is a vector field and ``⟨b, ρ(a)⟩`` a pairing of
+        a 1-form with it. ``True`` only when the registry-validated
+        generator degree is ``2`` and both operands are certified
+        1-forms by the one type source
+        (:func:`~jacopy.central.objects.kind.kind_of`); anything else is
+        ill-typed (default-reject)."""
+        if self._acting_on is None:
+            return False
+        try:
+            if self.generator_degree(registry).as_int() != 2:
+                return False
+        except ValueError:
+            return False
+        from jacopy.central.objects.kind import kind_of  # noqa: WPS433 - objects sit above brackets
+
+        for x in (a, b):
+            k = kind_of(x, registry)
+            if k.kind != "form" or k.degree != Degree.const(1):
+                return False
+        return True
+
+    def module_product(self, b: Expr, c: Expr) -> Expr:
+        if self._acting_on is not None:
+            from jacopy.core.wedge import Wedge
+
+            return Wedge(b, c)
+        return self._base.module_product(b, c)
 
     @property
     def Q(self) -> Expr:
@@ -207,6 +367,8 @@ class DerivedBracket(GradedBracket):
         classical/derived equivalence theorem on Poisson manifolds.
         """
         if self._acting_on is not None:
+            if not self.koszul_well_typed(a, b, registry):
+                return BracketApply(self, a, b)  # ill-typed: stays inert
             return self._koszul_expand(a, b, registry)
         inner = self._base.expand(a, self._Q, registry)
         return self._base.expand(inner, b, registry)
@@ -248,6 +410,26 @@ class DerivedBracket(GradedBracket):
             Neg(Act(lie_factory(rho_b), a)),
             Neg(d_term),
         )
+
+    def leibniz_obstruction(
+        self,
+        a: Expr,
+        b: Expr,
+        c: Expr,
+        registry: Optional[PropertyRegistry] = None,
+    ) -> Expr:
+        """As the base class — except in Koszul (``acting_on``) mode,
+        where ``[a, b∧c]`` has a 2-form in its second slot and the
+        anchor-lifted formula is defined on 1-forms only: the
+        obstruction is ill-typed and REFUSED (:class:`ValueError`),
+        never built with an undefined pairing (K1-3 review #9)."""
+        if self._acting_on is not None:
+            raise ValueError(
+                f"{self.name}: the Koszul (acting_on) formula is defined on "
+                "1-forms; the Leibniz obstruction [a, b∧c] needs a 2-form "
+                "slot and is ill-typed in this mode"
+            )
+        return super().leibniz_obstruction(a, b, c, registry)
 
     def expand_definition(
         self,
@@ -332,7 +514,7 @@ def derived_bracket(
     base: GradedBracket,
     Q: Expr,
     *,
-    degree_Q: DegreeLike = 0,
+    degree_Q: Optional[DegreeLike] = None,
     name: Optional[str] = None,
 ) -> DerivedBracket:
     """Construct a :class:`DerivedBracket`, mirror of the class

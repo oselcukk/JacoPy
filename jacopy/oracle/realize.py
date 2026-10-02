@@ -49,7 +49,7 @@ from jacopy.central.objects.vector_field import VectorField
 from jacopy.core.expr import Integer, Neg, Power, Product, Rational, Sum, Symbol
 from jacopy.core.multi_eval import MultiEval
 from jacopy.core.pairing import Pairing
-from jacopy.core.properties import Graded, Scalar
+from jacopy.core.properties import AntiCommuting, Graded, NonCommuting, Scalar
 from jacopy.core.wedge import Wedge
 from jacopy.packages.poisson.core import HamiltonianVF, PoissonBracketValue, SharpVF
 from jacopy.packages.poisson.koszul import KoszulBracket
@@ -410,17 +410,80 @@ def _rational(e, env, path):
     return env.R.const(Q(e.p, e.q))
 
 
+def _declared_constant(e, env) -> bool:
+    """The Scalar contract restated INDEPENDENTLY of the engine (chef
+    decision, gate 5/6: the oracle must not import the engine's
+    predicate, or a wrong "constant" there would be modelled here too
+    and the DISAGREE masked). From the registry's public declaration
+    data alone (:meth:`~jacopy.core.registry.PropertyRegistry.lookup`
+    raw answers with their specificity ranks, ``strict_axioms_only``,
+    ``axiom_whitelist``), for an atom the caller already knows to be of
+    function kind (a Symbol, a degree-0 Form / PVector):
+
+    * a ``Scalar`` declared at any level (exact / class / predicate)
+      that is VISIBLE: not filtered out by an ``axioms`` whitelist
+      without ``Scalar``, not a DERIVED property in strict mode;
+    * SHADOWED — not a constant — by a strictly more specific (rank:
+      exact < class by MRO depth < predicate) raw ``Graded`` (any
+      degree) / ``NonCommuting`` / ``AntiCommuting``;
+    * not a constant when a raw ``NonCommuting`` / ``AntiCommuting``
+      exists, or the raw ``Graded`` degree is not the constant ``0`` (a
+      symbolic degree certifies nothing). Raw: a filter never hides a
+      clash (gate-5 F1).
+
+    ``tests/test_audit_0b00e1b_p1_core_tur3.py`` locks this against the
+    engine's predicate differentially (class hierarchy, every ``axioms``
+    subset, strict / DERIVED)."""
+    reg = env.registry
+    if reg is None:
+        return False
+    own = getattr(e, "degree", None)
+    if own is not None and own.as_int() != 0:
+        return False  # a form / multivector symbol of non-zero or symbolic degree (gate7 q3)
+    scalar, _, rank = reg.lookup(e, Scalar)
+    if scalar is None:
+        return False
+    graded, _, g_rank = reg.lookup(e, Graded)
+    nc, _, nc_rank = reg.lookup(e, NonCommuting)
+    ac, _, ac_rank = reg.lookup(e, AntiCommuting)
+    for other, other_rank in ((graded, g_rank), (nc, nc_rank), (ac, ac_rank)):
+        if other is not None and other_rank < rank:
+            return False  # shadowed: a graded element, not a constant
+    if reg.strict_axioms_only and scalar.provenance.name == "DERIVED":
+        return False
+    wl = reg.axiom_whitelist
+    if wl is not None and type(scalar) not in wl:
+        return False  # the registry filters by the EXACT property type (cr7/p04: a Scalar subclass)
+    if nc is not None or ac is not None:
+        return False
+    return graded is None or graded.degree.as_int() == 0
+
+
+def _compound_declared(e, env, path) -> None:
+    """A Neg / Sum / Product that ITSELF carries a raw declaration the
+    engine treats as a constancy clash (``Graded(k ≠ 0)``,
+    ``NonCommuting``, ``AntiCommuting``) is modelled by neither side
+    (cr7 F5): the oracle does not guess — UNSUPPORTED."""
+    reg = env.registry
+    if reg is None:
+        return
+    for cls in (Graded, NonCommuting, AntiCommuting):
+        own = reg.lookup(e, cls).prop
+        if own is not None and (cls is not Graded or own.degree.as_int() != 0):
+            raise Unsupported(f"{type(e).__name__}[declared {cls.__name__}]", path)
+
+
 @register(Symbol)
 def _symbol(e, env, path):
-    """Scalar contract (SPEC §7): a ``Scalar``-declared symbol is a
+    """Scalar contract (SPEC §7): a ``Scalar`` symbol (any declaration level) is a
     CONSTANT; a ``Graded(0)`` symbol is a function (``functions(...)``);
     anything else (undeclared, graded ≠ 0) has no model."""
     reg = env.registry
     if reg is None:
         raise Unsupported("Symbol[no-registry]", path)
-    if reg.has(e, Scalar):
+    if _declared_constant(e, env):
         return env.model.constant(("Symbol", e.name))
-    g = reg.get(e, Graded)
+    g = reg.peek(e, Graded)
     if g is not None:
         if g.degree.as_int() == 0:
             return env.model.function(("Symbol", e.name))
@@ -430,6 +493,7 @@ def _symbol(e, env, path):
 
 @register(Neg)
 def _neg(e, env, path):
+    _compound_declared(e, env, path)
     v = env.value(e.arg, path + (0,))
     if isinstance(v, OpV):
         return op_scale(v, -1, env.R)
@@ -438,6 +502,7 @@ def _neg(e, env, path):
 
 @register(Sum)
 def _sum(e, env, path):
+    _compound_declared(e, env, path)
     return add([env.value(c, path + (i,)) for i, c in enumerate(e.children)], env.R, path)
 
 
@@ -453,6 +518,7 @@ def _power(e, env, path):
 
 @register(Product)
 def _product(e, env, path):
+    _compound_declared(e, env, path)
     R = env.R
     vals = [env.value(c, path + (i,)) for i, c in enumerate(e.children)]
     opish = [isinstance(v, (OpV, VecV)) for v in vals]
@@ -656,6 +722,8 @@ def _form(e, env, path):
     p = env.degree(e.degree, path)
     if p < 0:
         raise Unsupported("Form[negative degree]", path)
+    if p == 0 and _declared_constant(e, env):
+        return env.model.constant(("Form", e.name))
     if not _is_tm(e):
         return _eform_atom(e, env, p, path)
     return norm(env.model.form(e.name, p), env.R)
@@ -667,6 +735,8 @@ def _pvector(e, env, path):
     p = env.degree(e.degree, path)
     if p < 0:
         raise Unsupported("PVector[negative degree]", path)
+    if p == 0 and _declared_constant(e, env):
+        return env.model.constant(("PVector", e.name))
     return norm(env.model.multivector(e.name, p), env.R)
 
 

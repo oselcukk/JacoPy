@@ -188,6 +188,7 @@
  "jacopy.packages.poisson.tilde.TildeInteriorEvalDefinition": "definition",
  "jacopy.proof.expansion.ActOverSumOpDefinition": "definition",
  "jacopy.proof.expansion.ExplicitAssumption": "assumption",
+ "jacopy.proof.expansion.ScalarConstantContract": "definition",
  "jacopy.proof.theorems.TheoremDefinition": "theorem",
  "jacopy.research.engine_assembly.WedgeGradedOrderDefinition": "definition",
  "jacopy.research.engine_assembly.WedgeScalarFactorDefinition": "definition",

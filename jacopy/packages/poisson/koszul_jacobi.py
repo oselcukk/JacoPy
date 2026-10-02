@@ -310,7 +310,8 @@ class _GenericFunction:
 
     def __init__(self, avoid: Expr, registry) -> None:
         from jacopy.core.expr import Symbol
-        from jacopy.core.properties import Graded, Scalar
+        from jacopy.core.properties import Graded
+        from jacopy.central.calculus.scalars import is_real_constant
 
         text = avoid._repr_inner()
         k = 0
@@ -321,7 +322,7 @@ class _GenericFunction:
             k += 1
         registry.declare(f, Graded(degree=0))
         props = list(registry.all_for(f))
-        if registry.has(f, Scalar) or len(props) != 1:
+        if is_real_constant(f, registry) or len(props) != 1:
             raise ProofFailure(
                 f"generic function {f._repr_inner()} is not unconstrained "
                 f"in this registry: {props}"

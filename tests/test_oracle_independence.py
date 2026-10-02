@@ -20,6 +20,8 @@ ALLOWED_NON_NODES = {
     ("jacopy.central.objects.bundle", "TM"),
     ("jacopy.core.properties", "Scalar"),
     ("jacopy.core.properties", "Graded"),
+    ("jacopy.core.properties", "NonCommuting"),
+    ("jacopy.core.properties", "AntiCommuting"),
 }
 
 

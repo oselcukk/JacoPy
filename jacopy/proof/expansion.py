@@ -29,6 +29,7 @@ from jacopy.algebra.derivation import Act, Derivation, compose, degree_of
 from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
+from jacopy.proof.registry_facts import current_context
 from jacopy.proof.step import ProofStep, _mint
 
 
@@ -185,6 +186,41 @@ class ExplicitAssumption(Definition):
 # --------------------------------------------------------------------- #
 # Built-in definitions                                                   #
 # --------------------------------------------------------------------- #
+
+
+class ScalarConstantContract(Definition):
+    """``D(c) = 0`` for a certified derivation ``D`` and an ℝ-constant
+    ``c`` (a Scalar atom, :func:`~jacopy.central.calculus.scalars.is_real_constant`)
+    — the Scalar contract (audit 0b00e1b M1-1, chef decision). Built
+    into every engine and consulted BEFORE the registered rules, so no
+    rule ever sees ``Act(D, c)``: a user rule giving a Scalar a non-zero
+    derivative is simply never used (the declaration wins; declare a
+    function ``Graded(0)``). The step records "``c`` is Scalar" as its
+    registry hypothesis."""
+
+    name = "Scalar contract: D(c)=0 (c declared ℝ-constant)"
+    role = "definition"
+
+    def matches(self, expr: Expr) -> bool:
+        if not isinstance(expr, Act) or not (
+            expr.arg.is_atom or isinstance(expr.arg, (Neg, Sum, Product))
+        ):
+            return False
+        ctx = current_context()
+        registry = ctx[0] if ctx is not None else None
+        if not isinstance(registry, PropertyRegistry):
+            return False
+        # the ONE predicate, resolved through product_rule's cached
+        # late import (jacopy.central imports the proof layer)
+        from jacopy.algorithms.product_rule import _annihilates
+
+        return _annihilates(expr.op, expr.arg, registry)
+
+    def rewrite(self, expr: Expr) -> Expr:
+        return Integer(0)
+
+
+_SCALAR_CONTRACT = ScalarConstantContract()
 
 
 def _is_degree_zero(expr: Expr, registry: Optional[PropertyRegistry]) -> bool:
@@ -432,6 +468,9 @@ class ExpansionEngine:
         during the one ``matches`` call that decided (no second call:
         review 2026-10-01 #6 — a modulo match is a full normalization)."""
         candidates = self._candidates(expr)
+        if isinstance(expr, Act):
+            # the Scalar contract precedes every registered rule
+            candidates = [(None, _SCALAR_CONTRACT)] + list(candidates)
         if not candidates:
             return None
         from jacopy.core.registry import begin_reads, end_reads

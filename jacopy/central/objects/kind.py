@@ -509,16 +509,21 @@ def _kind_of_impl(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispat
 
 
 def _registry_graded(expr, registry) -> Kind:
-    """A symbol declared ``Scalar`` in the registry is a function; one
-    declared ``Graded(k)`` is an abstract graded element: a function
-    for ``k = 0``, otherwise graded like a ``k``-form — the convention
-    the degree-carrying atoms follow (0 = function, k = k-form).
-    Undeclared (or no registry): unknown, never guessed."""
+    """A symbol the registry certifies as an ℝ-constant
+    (:func:`~jacopy.central.calculus.scalars.declared_real_constant`,
+    the registry half of THE constant predicate — ``kind_of`` is its
+    structural half, so the structural predicate itself cannot be
+    called here) is a (constant) function; one declared ``Graded(k)``
+    is an abstract graded element: a function for ``k = 0``, otherwise
+    graded like a ``k``-form — the convention the degree-carrying atoms
+    follow (0 = function, k = k-form). Undeclared (or no registry):
+    unknown, never guessed."""
     if registry is None:
         return UNKNOWN
-    from jacopy.core.properties import Graded, Scalar
+    from jacopy.central.calculus.scalars import declared_real_constant  # noqa: WPS433 - calculus imports objects
+    from jacopy.core.properties import Graded
 
-    if registry.has(expr, Scalar):
+    if declared_real_constant(expr, registry):
         return FUNCTION
 
     graded = registry.get(expr, Graded)

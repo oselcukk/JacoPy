@@ -86,6 +86,11 @@ class RegistryFact:
     expr: Expr
     prop_cls: type
     value: Optional[tuple]
+    #: a RAW-declaration fact (:meth:`PropertyRegistry.lookup`): the
+    #: Scalar contract's clash check reads the raw declarations, so its
+    #: hypotheses are checked against the raw declarations of the
+    #: citing registry, not its filtered view (gate-6 cr6/p05)
+    raw: bool = False
 
     @property
     def declared(self) -> bool:
@@ -93,10 +98,11 @@ class RegistryFact:
 
     def describe(self) -> str:
         what = self.prop_cls.__name__
+        tag = " (raw declaration)" if self.raw else ""
         if self.value is None:
-            return f"{self.expr._repr_inner()} has no {what} declared"
+            return f"{self.expr._repr_inner()} has no {what} declared{tag}"
         payload = ", ".join(f"{k}={v}" for k, v in self.value[1])
-        return f"{what}({payload}) on {self.expr._repr_inner()}"
+        return f"{what}({payload}) on {self.expr._repr_inner()}{tag}"
 
     def __str__(self) -> str:
         return self.describe()
@@ -105,8 +111,12 @@ class RegistryFact:
 def facts_from_log(log: Iterable[tuple]) -> Tuple[RegistryFact, ...]:
     """Deduplicated facts of a :func:`track_reads` log (first-seen order)."""
     out: dict = {}
-    for expr, prop_cls, visible in log:
-        f = RegistryFact(expr, prop_cls, property_content(visible))
+    from jacopy.core.registry import RAW_READ
+
+    for entry in log:
+        expr, prop_cls, visible = entry[:3]
+        raw = len(entry) > 3 and entry[3] == RAW_READ
+        f = RegistryFact(expr, prop_cls, property_content(visible), raw=raw)
         out.setdefault(f, None)
     return tuple(out)
 
@@ -116,6 +126,8 @@ def answer(registry, fact: RegistryFact) -> Optional[tuple]:
     nothing declared)."""
     if registry is None:
         return None
+    if fact.raw:
+        return property_content(registry.lookup(fact.expr, fact.prop_cls).prop)
     return property_content(registry.get(fact.expr, fact.prop_cls))
 
 

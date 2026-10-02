@@ -5,11 +5,18 @@ A graded bracket is a bilinear operation ``[·, ·]`` on a graded module.
 Each bracket carries:
 
 * a ``degree``, shifts total grade by this amount: ``|[a, b]| = |a| + |b| + degree``.
-* ``is_graded_antisymmetric``, whether ``[a, b] = −(−1)^{|a||b|} [b, a]`` holds.
-* ``satisfies_leibniz``, whether ``[a, b*c] = [a, b]*c + (−1)^{|a||b|} b*[a, c]`` holds.
+* ``is_graded_antisymmetric``, whether ``[a, b] = −(−1)^{s(a)s(b)} [b, a]`` holds.
+* ``satisfies_leibniz``, whether ``[a, b*c] = [a, b]*c + (−1)^{s(a)|b|} b*[a, c]`` holds.
 * ``satisfies_graded_jacobi``, whether the graded Jacobi identity holds
   (``True``, ``False``, or ``None`` for *conditional* brackets like the
   derived bracket, whose Jacobi is controlled by a separate condition).
+
+Here ``s(x) = |x| + degree`` is the SHIFTED degree
+(:meth:`GradedBracket.operand_degree`) and ``|·|`` the module's own
+grading (:meth:`GradedBracket.grading_degree`: the operator grading by
+default, the multivector grading for Schouten–Nijenhuis, where
+``s = m − 1``). For a degree-0 bracket in the operator grading these
+are the plain ``|a||b|`` signs.
 
 Brackets are *not* Exprs: they are Python-level operators. Applying a
 bracket to two Exprs builds an inert :class:`BracketApply` node in the
@@ -173,16 +180,76 @@ class GradedBracket(ABC):
     def __call__(self, a: Expr, b: Expr) -> BracketApply:
         return BracketApply(self, a, b)
 
-    # ---- sign-convention hooks ------------------------------------- #
+    # ---- grading hooks (the ONE sign source of the obstructions) --- #
     #
-    # The closure-axiom rules in :mod:`jacopy.calculus.bracket_apply_axioms`
-    # consult these hooks instead of hardcoding signs, so subclasses with
-    # genuine graded-sign behavior on their operands (e.g. a future
-    # Schouten-Nijenhuis rule layer) can override without rewriting the
-    # rules. Defaults preserve the *literal-antisym* convention used by
-    # the existing degree-0 brackets (Koszul, Lie bracket on TM, …):
-    # ``[a, b] = −[b, a]`` and the cyclic Jacobi ``Σ_cyclic [A, [B, C]] = 0``
-    # carries no per-term sign factor.
+    # A degree-``k`` bracket on a graded module ``A`` is a graded Lie
+    # bracket on the SHIFTED module ``A[k]``: its antisymmetry and
+    # Jacobi signs use the shifted degree ``s(x) = |x| + k``, while
+    # its Leibniz sign over the module product pairs ``s(a)`` with the
+    # UNSHIFTED ``|b|`` of the factor it passes. Which grading ``|·|``
+    # is meant is the bracket's business: the operator grading
+    # (:func:`degree_of`) by default, the MULTIVECTOR grading for
+    # Schouten–Nijenhuis (whose vector fields have operator degree 0
+    # but multivector degree 1 — audit 0b00e1b K1-3: the obstructions
+    # used the operator degree and claimed ``[π, π]_SN = 0`` for every
+    # bivector). Subclasses override :meth:`grading_degree` /
+    # :meth:`operand_degree` / :meth:`module_product`; the three
+    # obstruction helpers read their signs only through
+    # :meth:`claimed_swap_sign`, :meth:`jacobi_term_sign` and
+    # :meth:`leibniz_term_sign`; :meth:`pair_swap_sign` is the rewrite
+    # licence (declines on a bracket not asserted antisymmetric).
+
+    def grading_degree(
+        self, x: Expr, registry: Optional[PropertyRegistry] = None
+    ) -> Degree:
+        """``|x|`` — the operand's degree in the module's own grading
+        (the grading of :meth:`module_product`). Default: the operator
+        grading :func:`degree_of`. Raises :class:`ValueError` when the
+        degree is undeterminable."""
+        return degree_of(x, registry)
+
+    @property
+    def operand_shift(self) -> Degree:
+        """``k`` measured in :meth:`grading_degree`'s grading: the
+        bracket's degree there (default: :attr:`degree`; for SN it is
+        ``−1`` in the multivector grading although :attr:`degree` is
+        recorded in the already-shifted convention)."""
+        return self._degree
+
+    def operand_degree(
+        self, x: Expr, registry: Optional[PropertyRegistry] = None
+    ) -> Degree:
+        """``s(x) = |x| + k`` — the SHIFTED degree in which the bracket
+        is graded antisymmetric and satisfies graded Jacobi."""
+        return self.grading_degree(x, registry) + self.operand_shift
+
+    def module_product(self, b: Expr, c: Expr) -> Expr:
+        """The product the Leibniz axiom distributes over (default:
+        :class:`Product`)."""
+        return Product(b, c)
+
+    def claimed_swap_sign(
+        self,
+        a: Expr,
+        b: Expr,
+        registry: Optional[PropertyRegistry] = None,
+    ) -> Optional[int]:
+        """``ε`` in the graded-antisymmetry CLAIM ``[a, b] = ε·[b, a]``:
+        ``ε = −(−1)^{s(a)s(b)}`` with ``s`` = :meth:`operand_degree`.
+
+        The sign the axiom STATES (what
+        :meth:`graded_antisymmetry_obstruction` builds and a skew check
+        tests), whether or not the bracket satisfies it. ``None`` when
+        the parity is symbolic; an undeterminable degree raises
+        :class:`ValueError`.
+        """
+        p = (
+            self.operand_degree(a, registry)
+            * self.operand_degree(b, registry)
+        ).parity()
+        if p is None:
+            return None
+        return -1 if p == 0 else 1
 
     def pair_swap_sign(
         self,
@@ -190,18 +257,18 @@ class GradedBracket(ABC):
         b: Expr,
         registry: Optional[PropertyRegistry] = None,
     ) -> Optional[int]:
-        """Sign such that ``[a, b] = pair_swap_sign · [b, a]``.
-
-        Returns ``±1`` for a decidable swap, ``None`` when undecidable
-        (the rule should then decline). Default: ``−1`` for a
-        graded-antisymmetric bracket (literal antisym), ``None``
-        otherwise. Subclasses implementing the full graded convention
-        ``[a, b] = −(−1)^{|a||b|}[b, a]`` should override to compute
-        ``-1 if (degree_of(a) * degree_of(b)).parity() == 0 else +1``.
-        """
+        """Sign ``ε`` such that ``[a, b] = ε·[b, a]`` HOLDS — a rewrite
+        licence: :meth:`claimed_swap_sign` for a bracket asserted
+        graded antisymmetric, ``None`` (decline: do not rewrite) for
+        any other bracket, a symbolic parity OR an undeterminable
+        operand degree (audit 0b00e1b K1-3 review #8: a licence never
+        raises — an unknown degree means no rule fires, no closure)."""
         if not self._is_graded_antisymmetric:
             return None
-        return -1
+        try:
+            return self.claimed_swap_sign(a, b, registry)
+        except ValueError:
+            return None
 
     def jacobi_term_sign(
         self,
@@ -210,16 +277,35 @@ class GradedBracket(ABC):
         C: Expr,
         registry: Optional[PropertyRegistry] = None,
     ) -> Optional[int]:
-        """Per-term sign for the ``[A, [B, C]]`` summand in cyclic Jacobi.
+        """Sign ``(−1)^{s(A)s(C)}`` of the ``[A, [B, C]]`` summand in the
+        cyclic graded Jacobi ``Σ_cyc (−1)^{s(A)s(C)} [A, [B, C]] = 0``
+        (``s`` = :meth:`operand_degree`). ``None`` when symbolic."""
+        p = (
+            self.operand_degree(A, registry)
+            * self.operand_degree(C, registry)
+        ).parity()
+        if p is None:
+            return None
+        return 1 if p == 0 else -1
 
-        Cyclic Jacobi reads
-        ``Σ_cyclic jacobi_term_sign(A, B, C) · [A, [B, C]] = 0``.
-        Default: ``+1`` (literal Jacobi, no per-term Koszul factor).
-        Subclasses with full graded behavior override to return
-        ``+1 if (degree_of(A) * degree_of(C)).parity() == 0 else −1``.
-        Returns ``None`` for undecidable parity.
-        """
-        return 1
+    def leibniz_term_sign(
+        self,
+        a: Expr,
+        b: Expr,
+        registry: Optional[PropertyRegistry] = None,
+    ) -> Optional[int]:
+        """Sign ``(−1)^{s(a)|b|}`` of ``b·[a, c]`` in the Leibniz claim
+        ``[a, b·c] = [a, b]·c + (−1)^{s(a)|b|} b·[a, c]``: ``ad_a`` has
+        degree ``s(a) = |a| + k`` and passes ``b`` of UNSHIFTED degree
+        ``|b|`` (audit 0b00e1b K1-4/M1X-7: the ``k`` was missing).
+        ``None`` when symbolic."""
+        p = (
+            self.operand_degree(a, registry)
+            * self.grading_degree(b, registry)
+        ).parity()
+        if p is None:
+            return None
+        return 1 if p == 0 else -1
 
     @abstractmethod
     def expand(
@@ -248,35 +334,27 @@ class GradedBracket(ABC):
         b: Expr,
         registry: Optional[PropertyRegistry] = None,
     ) -> Expr:
-        """``[a, b] + (−1)^{(|a|+k)(|b|+k)} [b, a]`` for a degree-``k``
-        bracket.
+        """``[a, b] + (−1)^{s(a)s(b)} [b, a]`` (``= [a, b] − ε[b, a]``
+        with ``ε`` = :meth:`claimed_swap_sign`).
 
-        Claims to be zero exactly when the bracket is
-        graded-antisymmetric on the pair ``(a, b)``. The Koszul sign
-        uses the degrees SHIFTED by the bracket's own degree — the
-        convention in which a degree-``k`` bracket is a graded Lie
-        bracket on the ``k``-shifted module. For ``k = 0`` this is the
-        plain ``|a||b|`` sign; using unshifted degrees for ``k ≠ 0``
-        built the WRONG obstruction (2026-09-08 second re-audit: six
-        unshifted skew checks passed while the unshifted cyclic
-        expression evaluated to ``2E₂₁ ≠ 0``). Undecidable parity
-        raises :class:`ValueError` so the caller can narrow degrees.
+        Claims to be zero exactly when the bracket is graded
+        antisymmetric on ``(a, b)`` in its shifted convention
+        ``s = |·| + k`` (:meth:`operand_degree`; for Schouten–Nijenhuis
+        ``s = m − 1``, the multivector degree minus one). Unshifted
+        degrees for ``k ≠ 0`` built the WRONG obstruction (2026-09-08
+        re-audit), and the operator degree for SN claimed
+        ``[π, π]_SN = 0`` for every bivector (audit 0b00e1b K1-3).
+        Undecidable parity raises :class:`ValueError`.
         """
-        k = self._degree
-        parity = (
-            (degree_of(a, registry) + k)
-            * (degree_of(b, registry) + k)
-        ).parity()
-        if parity is None:
+        eps = self.claimed_swap_sign(a, b, registry)
+        if eps is None:
             raise ValueError(
                 f"antisymmetry obstruction parity is symbolic for "
                 f"({a!r}, {b!r}); narrow the operand degrees"
             )
         ab = BracketApply(self, a, b)
         ba = BracketApply(self, b, a)
-        # (−1)^{|a||b|} = +1 when parity==0, −1 when parity==1.
-        second = ba if parity == 0 else Neg(ba)
-        return Sum(ab, second)
+        return Sum(ab, ba if eps == -1 else Neg(ba))
 
     def graded_jacobi_obstruction(
         self,
@@ -285,37 +363,26 @@ class GradedBracket(ABC):
         c: Expr,
         registry: Optional[PropertyRegistry] = None,
     ) -> Expr:
-        """Cyclic Jacobi with Koszul signs, SHIFTED by the bracket's
-        own degree ``k``:
+        """Cyclic Jacobi with Koszul signs in the shifted convention:
 
-            (−1)^{(|a|+k)(|c|+k)} [a, [b, c]]
-          + (−1)^{(|b|+k)(|a|+k)} [b, [c, a]]
-          + (−1)^{(|c|+k)(|b|+k)} [c, [a, b]]
+            (−1)^{s(a)s(c)} [a, [b, c]]
+          + (−1)^{s(b)s(a)} [b, [c, a]]
+          + (−1)^{s(c)s(b)} [c, [a, b]]
 
-        — the graded Jacobi identity of a degree-``k`` bracket in the
-        ``k``-shifted convention (identical to the plain signs for
-        ``k = 0``; unshifted signs for ``k ≠ 0`` produced a non-zero
-        "identity" — 2026-09-08 second re-audit). Undecidable parity
-        raises :class:`ValueError`.
+        with ``s`` = :meth:`operand_degree` and each sign read from
+        :meth:`jacobi_term_sign`. Undecidable parity raises
+        :class:`ValueError`.
         """
-        k = self._degree
-        deg_a = degree_of(a, registry) + k
-        deg_b = degree_of(b, registry) + k
-        deg_c = degree_of(c, registry) + k
         terms = []
-        for x, y, z, p in (
-            (a, b, c, (deg_a * deg_c).parity()),
-            (b, c, a, (deg_b * deg_a).parity()),
-            (c, a, b, (deg_c * deg_b).parity()),
-        ):
-            if p is None:
+        for x, y, z in ((a, b, c), (b, c, a), (c, a, b)):
+            sign = self.jacobi_term_sign(x, y, z, registry)
+            if sign is None:
                 raise ValueError(
                     "Jacobi obstruction parity is symbolic; narrow "
                     "operand degrees"
                 )
-            inner = BracketApply(self, y, z)
-            outer = BracketApply(self, x, inner)
-            terms.append(outer if p == 0 else Neg(outer))
+            outer = BracketApply(self, x, BracketApply(self, y, z))
+            terms.append(outer if sign == 1 else Neg(outer))
         return Sum(*terms)
 
     def leibniz_obstruction(
@@ -325,24 +392,24 @@ class GradedBracket(ABC):
         c: Expr,
         registry: Optional[PropertyRegistry] = None,
     ) -> Expr:
-        """``[a, b*c] − [a, b]*c − (−1)^{|a||b|} b*[a, c]``.
+        """``[a, b·c] − [a, b]·c − (−1)^{s(a)|b|} b·[a, c]``, ``·`` =
+        :meth:`module_product`, sign from :meth:`leibniz_term_sign`.
 
         Claims to be zero when the bracket acts as a graded derivation
         in its second slot. Undecidable sign parity raises.
         """
-        parity = (degree_of(a, registry) * degree_of(b, registry)).parity()
-        if parity is None:
+        sign = self.leibniz_term_sign(a, b, registry)
+        if sign is None:
             raise ValueError(
                 "Leibniz obstruction parity is symbolic; narrow "
                 "operand degrees"
             )
-        left = BracketApply(self, a, Product(b, c))
-        t1 = Product(BracketApply(self, a, b), c)
-        t2 = Product(b, BracketApply(self, a, c))
-        # Axiom: left − t1 − (−1)^{|a||b|} t2. Fold the sign directly
-        # rather than stacking Neg(Neg(…)).
-        third = Neg(t2) if parity == 0 else t2
-        return Sum(left, Neg(t1), third)
+        mul = self.module_product
+        left = BracketApply(self, a, mul(b, c))
+        t1 = mul(BracketApply(self, a, b), c)
+        t2 = mul(b, BracketApply(self, a, c))
+        # Fold the sign directly rather than stacking Neg(Neg(…)).
+        return Sum(left, Neg(t1), Neg(t2) if sign == 1 else t2)
 
     # ---- identity / hashing ---------------------------------------- #
 
