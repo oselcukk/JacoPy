@@ -334,7 +334,7 @@ def assemble_engine(
     family rules. ``declare_fi=True`` DECLARES the fundamental identity
     of the first structure — an explicit assumption, recorded in the
     report."""
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.proof.ownership import check_owners
     from jacopy.research.structure_kinds import family_rules, structure_kind_of
 

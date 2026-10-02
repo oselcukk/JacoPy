@@ -226,7 +226,7 @@ class ComponentInput:
         audit, finding 4 — the result must depend on the expression
         and THIS data set only, not on prior calls)."""
         from jacopy.proof.expansion import ExpansionEngine
-        from jacopy.packages.metric_affine.engine import (
+        from jacopy.packages.metric_affine.metric_affine_expansion import (
             metric_affine_engine,
         )
         from jacopy.packages.poisson.tilde import (

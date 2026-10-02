@@ -223,7 +223,7 @@ class HolonomicFrameDefinition(Definition):
 
 
 def _engine(registry, holonomic_frames=()):
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     return tangent_engine(
         registry=registry, holonomic_frames=holonomic_frames

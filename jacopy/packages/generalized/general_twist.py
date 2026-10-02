@@ -57,7 +57,7 @@ from jacopy.central.algebroid.context import (
     Algebroid,
     algebroid,
 )
-from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 from jacopy.packages.generalized.bourbaki_precalculus import (
     _SlotAtom,
     _split_scalar,

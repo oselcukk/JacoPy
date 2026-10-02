@@ -135,6 +135,12 @@ class Zero(Operator):
         return True
 
 
+#: Unambiguous name of the zero block operator (audit 0B00E1B-FULL T2
+#: names): ``Zero`` alone is also :data:`jacopy.core.expr.Zero`, the
+#: zero EXPRESSION. ``Zero`` stays importable here (same class).
+ZeroOperator = Zero
+
+
 class Identity(Operator):
     name = "1"
 

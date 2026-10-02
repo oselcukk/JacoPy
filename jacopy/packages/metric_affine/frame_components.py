@@ -442,7 +442,7 @@ class FramePairingSplitDefinition(Definition):
 
 
 def _engine(registry: Optional[PropertyRegistry], conn=None, fr=None):
-    from jacopy.packages.metric_affine.engine import metric_affine_engine
+    from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
 
     engine = metric_affine_engine(registry=registry)
     if conn is not None and fr is not None:
@@ -540,7 +540,7 @@ def prove_cartan_first_structure(
 
 
 def _decomposed_engine(conn: Connection, fr: Frame, registry):
-    from jacopy.packages.metric_affine.engine import metric_affine_engine
+    from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
 
     engine = metric_affine_engine(
         registry=registry, decompositions=((conn, fr),)

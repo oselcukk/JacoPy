@@ -20,6 +20,13 @@ handles this with a small **repair loop**: on such a failure it proves
 ``V = 0`` on a generic function (agreement on generators), registers
 the instance as a theorem, cites it into the engine and retries — the
 mechanized form of "the residual is exactly ⟨ω, Jacobi⟩".
+
+Naming: this module holds the operator ``L`` and the PROVED Cartan
+theorems (``prove_*``). The structure-free Cartan REWRITE RULES
+(``Definition`` classes an engine registers) live next door in
+:mod:`jacopy.central.tangent.cartan_rules` — the ``*_rules`` suffix is
+the package convention for rule-class modules (as in
+:mod:`jacopy.central.calculus.slot_rules`).
 """
 
 from __future__ import annotations
@@ -53,7 +60,7 @@ def L(X: Expr, T: Expr) -> Act:
 
 
 def _engine(registry: Optional[PropertyRegistry]):
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     return tangent_engine(registry=registry)
 

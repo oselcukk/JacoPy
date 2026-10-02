@@ -44,7 +44,7 @@ from jacopy.proof.step import ProofStep
 from jacopy.proof.strategies import ProofFailure
 from jacopy.proof.theorems import Theorem, TheoremDefinition
 from jacopy.central.algebroid.context import Algebroid, algebroid
-from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 from jacopy.central.algebroid.theorems import (
     _coefficient_of_generic_section,
     _normalize,

@@ -93,7 +93,7 @@ def bridge_engine(N, registry: Optional[PropertyRegistry] = None):
         SharpActionDefinition,
         SharpEvaluationDefinition,
     )
-    from jacopy.packages.poisson.koszul import (
+    from jacopy.packages.poisson.koszul_forms import (
         KoszulBracketDefinition,
         SharpVFLinearityDefinition,
     )
@@ -131,7 +131,7 @@ def _normalize(
 
 
 def _poisson_jacobiator(pi, a: Expr, b: Expr, c: Expr, X: Expr) -> Expr:
-    from jacopy.packages.poisson.koszul import KoszulBracket
+    from jacopy.packages.poisson.koszul_forms import KoszulBracket
 
     def J(x, y, z):
         return Pairing(KoszulBracket(pi, x, KoszulBracket(pi, y, z)), X)
@@ -162,7 +162,7 @@ def prove_koszul_dialects_agree(
     bracket (``ℒ_{Πω}η − ι_{Πη}dω``) and the Poisson-dialect atom
     (``ℒ_{π♯ω}η − ℒ_{π♯η}ω − dπ(ω,η)``) are the same 1-form, for ANY
     bivector (declaration-free; Cartan magic + sharp evaluation)."""
-    from jacopy.packages.poisson.koszul import KoszulBracket
+    from jacopy.packages.poisson.koszul_forms import KoszulBracket
     from jacopy.packages.poisson.nambu import nambu_koszul_bracket
 
     engine = bridge_engine(N, registry)

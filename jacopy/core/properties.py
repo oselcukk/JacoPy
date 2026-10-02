@@ -46,6 +46,12 @@ class Provenance(Enum):
     DERIVED = "derived"
 
 
+#: Unambiguous name (audit 0B00E1B-FULL T2 names): ``Provenance`` alone
+#: is also :class:`jacopy.proof.result.Provenance`, a proof result's
+#: derivation ingredient. Same enum.
+PropertyProvenance = Provenance
+
+
 @dataclass(frozen=True)
 class ProofRef:
     """Lightweight pointer to a derivation.

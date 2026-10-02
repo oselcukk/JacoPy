@@ -215,3 +215,10 @@ def normalize(
     raise RuntimeError(
         f"normalize did not converge after {max_iter} iterations"
     )
+
+
+#: Unambiguous name of the rule-list fixed-point driver (audit
+#: 0B00E1B-FULL T2 names): ``normalize`` alone is also
+#: :func:`jacopy.proof.normalize.normalize` (``jacopy.normalize``), the
+#: engine normal form. Same function object.
+rewrite_to_fixpoint = normalize

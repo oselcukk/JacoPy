@@ -199,7 +199,7 @@ class NonMetricityFormEvaluationDefinition(Definition):
 
 
 def _engine(registry, conn, g, fr, *, decomposed: bool = False):
-    from jacopy.packages.metric_affine.engine import metric_affine_engine
+    from jacopy.packages.metric_affine.metric_affine_expansion import metric_affine_engine
     from jacopy.packages.metric_affine.frame_components import (
         ConnectionFormEvaluationDefinition,
     )

@@ -73,7 +73,7 @@ def _double_engine(alg: Algebroid, registry):
     engine — the calculus rules alone never see the declared axioms
     (anchor-morphism, Leibniz, locality), which is exactly what the
     sweep is about."""
-    from jacopy.central.algebroid.engine import algebroid_engine
+    from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 
     eng = _engine(alg, registry)
     for d in algebroid_engine(alg, registry=registry).definitions:

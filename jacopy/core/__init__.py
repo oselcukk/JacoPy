@@ -20,7 +20,8 @@ from jacopy.core.symbolic_degree import (
     as_degree,
 )
 from jacopy.core.properties import (
-    Provenance,
+    Provenance,  # old name of PropertyProvenance (kept, not in __all__)
+    PropertyProvenance,
     ProofRef,
     Property,
     Scalar,
@@ -93,7 +94,7 @@ __all__ = [
     "DegreeLike",
     "as_degree",
     # properties
-    "Provenance",
+    "PropertyProvenance",
     "ProofRef",
     "Property",
     "Scalar",

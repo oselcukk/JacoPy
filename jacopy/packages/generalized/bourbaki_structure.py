@@ -50,7 +50,7 @@ from jacopy.proof.theorems import Theorem
 from jacopy.bibliography import cite
 from jacopy.central.calculus.scalars import is_scalar_function
 from jacopy.central.algebroid.context import Algebroid, algebroid
-from jacopy.central.algebroid.engine import algebroid_engine
+from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
 from jacopy.central.algebroid.theorems import _fresh_section
 from jacopy.algorithms.simplify import simplify
 from jacopy.packages.generalized.bourbaki_precalculus import (

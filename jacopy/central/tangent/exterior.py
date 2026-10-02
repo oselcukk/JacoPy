@@ -67,7 +67,7 @@ def d(omega: Expr) -> Act:
 
 
 def _engine(registry: Optional[PropertyRegistry]):
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     return tangent_engine(registry=registry)
 

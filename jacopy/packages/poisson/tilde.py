@@ -55,7 +55,7 @@ from jacopy.central.objects.tilde_interior import TildeInterior
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 from jacopy.central.tangent.schouten import multivector_degree
 from jacopy.packages.poisson.core import PoissonStructure
-from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.koszul_forms import KoszulBracket
 from jacopy.packages.poisson.showcase import showcase_engine
 
 
@@ -395,7 +395,7 @@ def tilde_anholonomy_coefficient(
     """``γ̃_c^{ab}`` in canonical form (``a > b`` normalizes to
     ``−γ̃_c^{ba}``, ``a == b`` gives 0 — the Koszul antisymmetry as a
     canonical form, theorem-backed by
-    :func:`~jacopy.packages.poisson.koszul.prove_koszul_antisymmetry`)."""
+    :func:`~jacopy.packages.poisson.koszul_forms.prove_koszul_antisymmetry`)."""
     a = _index_str(first)
     b = _index_str(second)
     c = _index_str(lower)

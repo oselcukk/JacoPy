@@ -185,7 +185,7 @@ class StructureKind:
         by default the tangent (Cartan) engine; the structure's own
         rules (provider protocol) are then added and reported by
         ``assemble_engine`` (see :attr:`host_includes_rules`)."""
-        from jacopy.central.tangent.engine import tangent_engine
+        from jacopy.central.tangent.tangent_expansion import tangent_engine
 
         return tangent_engine(registry=registry)
 

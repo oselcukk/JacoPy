@@ -118,7 +118,7 @@ def prove_h_bilinearity(
         InteriorVectorLinearityDefinition,
         MultiEvalArgLinearityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.packages.drinfeld.double import _ev
 
     def eng():
@@ -642,7 +642,7 @@ class PsiTwistedFIDeclaration(Definition):
         )
 
     def rewrite(self, expr: Expr) -> Expr:
-        from jacopy.packages.poisson.koszul import koszul_bracket
+        from jacopy.packages.poisson.koszul_forms import koszul_bracket
         from jacopy.packages.poisson.core import SharpVF
 
         om, et = expr.X.alpha, expr.Y.alpha
@@ -708,7 +708,7 @@ def prove_psi_twisted_fi_consistency(
     from jacopy.proof.strategies import ExpandAndSimplify
     from jacopy.central.tangent.lie_bracket import lie_bracket
     from jacopy.packages.poisson.core import SharpVF
-    from jacopy.packages.poisson.koszul import koszul_bracket
+    from jacopy.packages.poisson.koszul_forms import koszul_bracket
     from jacopy.packages.poisson.showcase import showcase_engine
     from jacopy.central.calculus import (
         ActExpansionDefinition,

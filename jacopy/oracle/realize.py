@@ -52,7 +52,7 @@ from jacopy.core.pairing import Pairing
 from jacopy.core.properties import AntiCommuting, Graded, NonCommuting, Scalar
 from jacopy.core.wedge import Wedge
 from jacopy.packages.poisson.core import HamiltonianVF, PoissonBracketValue, SharpVF
-from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.koszul_forms import KoszulBracket
 from jacopy.packages.poisson.nambu import NambuSharpVF
 
 from jacopy.oracle import values as V

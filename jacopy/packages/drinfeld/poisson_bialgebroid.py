@@ -43,7 +43,7 @@ from jacopy.central.objects.interior import Interior
 _AUX_COUNTER = 0
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 from jacopy.packages.poisson.core import PoissonStructure, SharpVF
-from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.koszul_forms import KoszulBracket
 
 
 def _L(X: Expr, x: Expr) -> Expr:
@@ -141,7 +141,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
             )
             names.append(nm)
     bare = showcase_engine(P, registry=registry, declare_poisson=False)
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     tm_only = tangent_engine(registry=registry)
     for k, (a, b) in enumerate(

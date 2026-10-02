@@ -69,7 +69,7 @@ from jacopy.packages.poisson.core import (
     SharpEvaluationDefinition,
     SharpVF,
 )
-from jacopy.packages.poisson.koszul import (
+from jacopy.packages.poisson.koszul_forms import (
     KoszulBracket,
     koszul_bracket,
 )
@@ -659,7 +659,7 @@ class _SeedProvers:
         """``J = 0`` for a vector-field combination, by agreement on a
         FRESH generic function (:class:`_GenericFunction`)."""
         def build():
-            from jacopy.central.tangent.engine import tangent_engine
+            from jacopy.central.tangent.tangent_expansion import tangent_engine
             from jacopy.core.registry import PropertyRegistry
             from jacopy.proof.strategies import AgreementOnGenerators
 

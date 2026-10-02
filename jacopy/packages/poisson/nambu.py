@@ -388,7 +388,7 @@ def nambu_engine(
     from jacopy.central.calculus.indexed_rules import (
         WedgeEvalDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -504,7 +504,7 @@ def prove_dorfman_form_reduces_to_koszul_at_p1(
     formula — definitional)."""
     from jacopy.core.pairing import Pairing
     from jacopy.packages.poisson.core import SharpVF
-    from jacopy.packages.poisson.koszul import koszul_bracket
+    from jacopy.packages.poisson.koszul_forms import koszul_bracket
     from jacopy.packages.poisson.showcase import showcase_engine
 
     lhs = Sum(

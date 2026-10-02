@@ -85,7 +85,7 @@ def poisson_double(
         lie_tilde_vf,
     )
     from jacopy.packages.poisson.core import SharpVF
-    from jacopy.packages.poisson.koszul import KoszulBracket
+    from jacopy.packages.poisson.koszul_forms import KoszulBracket
 
     dtilde_iota = Neg(SharpVF(P.pi, d(Pairing(eta, U))))
     vec = Sum(
@@ -128,7 +128,7 @@ def _double_engine(registry):
     from jacopy.central.calculus import (
         MultiEvalArgLinearityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )

@@ -97,7 +97,7 @@ def _bn_engine(registry):
         InteriorVectorLinearityDefinition,
         MultiEvalArgLinearityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -867,7 +867,7 @@ def prove_exceptional_twist_linear(
     from jacopy.packages.poisson.nambu import (
         NambuSharpLinearityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     vec_s, _, _ = exceptional_pi_twist(
         N3, N6, Product(f, U), Product(f, om2), Product(f, om5)
@@ -907,7 +907,7 @@ def prove_exceptional_twist_inverse(
     """``Ψ_Π⁻¹ ∘ Ψ_Π = id`` on the vector component (the Π-blocks
     cancel; forms are untouched). Probe ``h``."""
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     v1, f2, f5 = exceptional_pi_twist(N3, N6, U, om2, om5)
     v2, _, _ = exceptional_pi_twist_inverse(N3, N6, v1, f2, f5)

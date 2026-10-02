@@ -344,7 +344,7 @@ def prove_b_twist_vec_unchanged(
     untouched ``[U,V]_Lie`` [TW (7.18) with zero tilde side]. Acting
     on ``h``; declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     tw_vec, _ = twisted_dorfman(
         lambda v, f: b_twist(B, v, f),
@@ -388,7 +388,7 @@ def prove_b_twist_severa(
         InteriorVectorLinearityDefinition,
         OperatorSlotAdditivityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -567,7 +567,7 @@ def prove_b_twist_severa_h(
         MultiEvalArgLinearityDefinition,
         OperatorSlotAdditivityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -737,7 +737,7 @@ def _m_twist_engine(registry):
         EndoInverseDefinition,
         EndoLinearityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )
@@ -976,7 +976,7 @@ def prove_b_twists_compose_additively(
         MultiEvalArgLinearityDefinition,
         OperatorSlotAdditivityDefinition,
     )
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.lie_bracket import (
         LieBracketLeibnizDefinition,
     )

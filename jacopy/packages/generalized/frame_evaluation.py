@@ -52,14 +52,14 @@ from jacopy.central.tangent.anholonomy import (
     anholonomy_coefficient,
 )
 from jacopy.central.tangent.cartan import L as _L
-from jacopy.central.tangent.engine import tangent_engine
+from jacopy.central.tangent.tangent_expansion import tangent_engine
 from jacopy.central.tangent.exterior import d
 from jacopy.central.tangent.lie_bracket import lie_bracket
 from jacopy.packages.poisson.core import (
     PoissonStructure,
     SharpVF,
 )
-from jacopy.packages.poisson.koszul import KoszulBracket
+from jacopy.packages.poisson.koszul_forms import KoszulBracket
 from jacopy.packages.poisson.tilde import (
     TildeAnholonomyDefinition,
     tilde_anholonomy_coefficient,

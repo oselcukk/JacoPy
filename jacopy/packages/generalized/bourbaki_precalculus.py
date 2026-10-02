@@ -447,7 +447,7 @@ def bourbaki_engine(
     """Definitional rules of the quintet + the declared (9.14),
     layered on the tangent engine (for ``[U,V]`` bookkeeping) —
     or on ``base_engine`` for an INDEPENDENT abstract A (13k)."""
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
 
     eng = ExpansionEngine(
         [
@@ -705,7 +705,7 @@ def prove_cartan_satisfies_914(
     ``(ι, d, ω∧·, ℒ, ℒ)``: ``ℒ_U ι_V ω = ι_{[U,V]} ω + ι_V ℒ_U ω``
     — the ``[ℒ, ι]`` commutator, evaluated on the probe slots."""
     from jacopy.central.tangent.cartan import L as _L
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.objects.interior import Interior
     from jacopy.packages.drinfeld.double import _ev
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -740,7 +740,7 @@ def prove_cartan_satisfies_915(
     magic turns each parenthesis into ``ι dω``, and ``ι² = 0``
     (alternation) kills the symmetric sum."""
     from jacopy.central.tangent.cartan import L as _L
-    from jacopy.central.tangent.engine import tangent_engine
+    from jacopy.central.tangent.tangent_expansion import tangent_engine
     from jacopy.central.tangent.exterior import d
     from jacopy.central.objects.interior import Interior
     from jacopy.packages.drinfeld.double import _ev

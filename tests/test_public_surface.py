@@ -263,18 +263,14 @@ class TestTopLevelSurface:
 
 # Names that two different objects carry across the subpackage __all__
 # lists, each owned outside the facade lane; a NEW collision fails.
+# The other nine (Provenance, Zero, antisymmetrize, normalize, the four
+# central prove_cartan_magic_* / prove_d_squared_zero_* pairs and
+# prove_jacobi) were resolved by unambiguous names in the second
+# package's __all__ (audit 0B00E1B-FULL T2 names); the old names stay
+# importable as attributes (tests/test_audit_0b00e1b_arch_names.py).
 _KNOWN_COLLISIONS = {
     "Metric",  # central atom vs metric_affine context (ROADMAP 5f adapter)
     "metric",
-    "Provenance",  # core.properties vs proof.result
-    "Zero",  # core.expr vs research.block_matrix
-    "antisymmetrize",  # core.symmetrize vs research.antisymmetrize
-    "normalize",  # algorithms.rewrite vs proof.normalize
-    "prove_cartan_magic_on_functions",  # central.tangent vs central.algebroid
-    "prove_cartan_magic_on_one_forms",
-    "prove_d_squared_zero_on_functions",
-    "prove_d_squared_zero_on_one_forms",
-    "prove_jacobi",  # central.tangent vs proof.verifier
 }
 
 
