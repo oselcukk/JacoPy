@@ -86,6 +86,10 @@ def test_prove_closes_with_declared_jacobi(alg):
     assert res2.closed and res2.chain.final == Sum(Integer(0), Integer(0))
 
 
+@pytest.mark.oracle_exempt(
+    reason="builds the deliberately false Theorem X = Y (thm3) to check that a "
+           "Theorem record is kept as CLOSED/declared; it tests record keeping, "
+           "not mathematics, so the oracle's DISAGREE is the expected verdict")
 def test_legacy_assumptions_are_kept_not_dropped(alg):
     reg, f, E, u, v, w = alg
     X, Y = vector_fields("X Y")
