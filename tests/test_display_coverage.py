@@ -202,6 +202,7 @@ def _recipes():
 
 
 def test_every_expr_subclass_has_a_recipe():
+    pytest.importorskip("sympy")  # walks every module, jacopy.oracle included (sympy extra)
     classes = {c.__name__ for c in _all_expr_subclasses()} - _INTERNAL
     recipes = _recipes()
     missing = sorted(classes - set(recipes))

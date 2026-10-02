@@ -1,187 +1,535 @@
 # jacopy v3 — Architecture
 
-*Status as of Phase 2.F: ~13,500 lines, 388 tests. Layer contents grow
-with the phases (see `ROADMAP.md`), but the layer* **boundaries** *and
-dependency rules below are permanent.*
+*Measured on 2026-10-02 (branch `docs/arch-docs`, based on
+`refactor/arch-names` at `baa1ecb`): 186 Python modules, about 70,600
+lines under `jacopy/`; 117 test files; the fast suite is
+2,523 passed, 12 skipped, 5 xfailed (`pytest tests -q`). These numbers change with every merge;
+the layer boundaries and the trust model below are the part of this
+document that is meant to stay true.*
 
-The one-sentence summary: **bottom-up layers, with dependency arrows
-always pointing downward** — an upper layer knows the one below it,
-the lower one never knows the upper. This keeps the proof engine
-independent of geometry and the geometry independent of the packages
-(the structural guarantee behind PDF requirement 5, "packages must be
-compatible").
+This document describes what the code does **today**. Anything that
+is not implemented yet is marked *planned*.
+
+---
+
+## 1. Layer map
 
 ```
-core  →  algorithms  →  algebra  →  proof
-                                      │
-                     central/objects  │
-                     central/calculus │   (central knows proof;
-                     central/tangent  │    proof never knows central)
-                     central/algebroid┘
+                         display            (reads everything, changes nothing)
                             │
-                        packages/     (empty skeletons until Phase 4+)
+                         research           (assemble an engine for a user question)
+                            │
+   packages:  poisson ── drinfeld ── generalized        metric_affine
+                            │
+   central:   objects ── calculus ── tangent ── algebroid
+                            │
+                          proof             (engine, strategies, results, theorems)
+                            │
+   foundation: algebra · algorithms · brackets · bibliography
+                            │
+                           core             (expression tree, properties, registry)
+
+   oracle  — a separate falsifier; the proof layer imports only its
+             engine-free hook (jacopy/oracle/hook.py)
 ```
 
-The few unavoidable upward references are `late imports` inside
-function bodies, each marked with a comment explaining why.
+The rule is **"arrows point down"**: a module may import from its own
+layer and from the layers below it. Measured with an AST scan of every
+`import` under `jacopy/` (2026-10-02):
 
----
+* **No module-level import points up.** Importing `jacopy.proof` loads
+  `core`, `algebra`, `algorithms`, `brackets`, `proof` and
+  `jacopy.oracle.hook` — no `central`, no `packages`, no sympy.
+* **29 deferred imports point up** (inside a function body, executed
+  only when that function runs). They are the known exceptions of
+  audit finding T2-2:
 
-## 1. `core/` — expression tree and algebraic primitives
+  | From → to | Count | Where |
+  |---|---|---|
+  | `core` → `algebra` | 1 | `core/multi_eval.py` |
+  | `algebra` → `central` | 4 | `algebra/grading.py`, `algebra/derivation.py`, `algebra/lie_bracket_vf.py` |
+  | `algorithms` → `central` | 9 | `algorithms/product_rule.py`, `algorithms/sort_product.py`, `algorithms/factor_terms.py` |
+  | `brackets` → `central` | 2 | `brackets/derived.py` |
+  | `bibliography` → `display` | 1 | `bibliography.py` |
+  | `proof` → `central` | 7 | `proof/strategies.py`, `proof/diagnostic_rules.py`, `proof/result.py` |
+  | `proof` → `jacopy` | 1 | `proof/result.py` (version fallback) |
+  | `central.objects` → `packages.metric_affine` | 1 | `central/objects/metric.py` (recognises the metric-affine `Metric`) |
+  | `packages` → `research` | 3 | `packages/drinfeld/examples.py`, `packages/generalized/frame_evaluation.py`, `packages/generalized/exceptional_double.py` |
 
-The atoms of the system. Depends on nothing; contains *representation*
-only, no mathematical computation.
+* **Sideways edges inside a layer** exist too. Among the packages,
+  `drinfeld` imports `poisson` at module level and `generalized`
+  imports `drinfeld` at module level; the reverse directions
+  (`poisson` → `drinfeld`/`generalized`, `drinfeld` → `generalized`,
+  `metric_affine` → `poisson`, `generalized` → `metric_affine`) are
+  deferred imports. Inside `central`, `objects` → `calculus` and
+  `algebroid` → `tangent` are deferred.
+* Of all 2,412 `jacopy` imports, 1,068 are deferred; most of them are
+  not upward, they keep `import jacopy` light.
+* There is **no automated layering test yet** (*planned*: an import
+  linter with an explicit allow-list of the edges above, as proposed in
+  T2-2).
 
-| File | Contents |
+## 2. What each layer does
+
+### `core/` — expression tree, properties, registry
+
+| Module | Role |
 |---|---|
-| `expr.py` | The tree itself: `Expr` base + `Atom`, `Symbol`, `Integer`, `Rational`, `Neg`, `Sum`, `Product`, `Power`. Structural equality (`_key`), `walk()`, `_rebuild()`. Every node is **inert** — construction never computes. |
-| `symbolic_degree.py` | `Degree` — a symbolic degree *polynomial* (`Degree.var("p") + 1`). Parity decisions for Koszul signs come from here; this is what makes arbitrary-p forms possible. |
-| `registry.py`, `properties.py` | `PropertyRegistry` — attaching properties (`Scalar`, `Graded`) to nodes from the outside. Generic atoms like `Symbol` have context-dependent degrees; the registry keeps that state local. |
-| `pairing.py`, `multi_eval.py` | Evaluation primitives: `⟨α, X⟩` (`Pairing`) and `ω(Y_1,…,Y_k)` (`MultiEval` — `alternating` flag, `vector/covector/mixed` slot kinds). |
-| `wedge.py`, `tensor_product.py`, `symmetrize.py`, `hodge.py` | `∧`, `⊗`, `Sym`/`Alt`, `⋆` nodes — *algebraic* primitives, so they live in core; their geometric reading is added in `central`. |
-| `indexed_sum.py`, `wildcards.py`, `equality.py` | Symbolic `Σᵢ` (reserved for the symbolic-p route), pattern matching, equality helpers. |
+| `expr.py` | `Expr`, `Atom`, `Symbol`, `Integer`, `Rational`, `Sum`, `Product`, `Power`, `Neg`. Nodes are inert: construction never computes. |
+| `symbolic_degree.py` | `Degree`, a symbolic degree polynomial (arbitrary-p forms). |
+| `properties.py`, `registry.py` | `Property` types (`Scalar`, `Graded`, `NonCommuting`, …) and `PropertyRegistry`, which attaches them to expressions from the outside. |
+| `pairing.py`, `multi_eval.py`, `wedge.py`, `tensor_product.py`, `symmetrize.py`, `hodge.py`, `indexed_sum.py` | Algebraic node types: `⟨α, X⟩`, `ω(Y₁,…,Y_k)`, `∧`, `⊗`, Sym/Alt, `⋆`, `Σ_i`. |
+| `wildcards.py`, `traverse.py`, `equality.py` | Pattern matching, the read-only walker, equality helpers. |
 
-**Why this shape:** representation and computation are separated. The
-tree being "dumb" is what allows every computational step to be
-recorded as a *rule firing* — the precondition for step-by-step proof
-display.
+### Foundation: `algebra/`, `algorithms/`, `brackets/`, `bibliography.py`
 
-## 2. `algorithms/` — structural algebra passes
+* `algebra/` — `Derivation` and `Act` (the inert application `D(x)`),
+  `degree_of`, the exterior-degree contract (`grading.py`), the graded
+  `Commutator`, the opaque vector-field bracket `LieBracketVF`.
+* `algorithms/` — structural passes that hold in every geometry:
+  `simplify` (flatten, canonicalize, normalize alternating forms,
+  distribute, sort, collect), the graded Leibniz `product_rule`,
+  Koszul-signed `sort_product`, `factor_terms`, `rewrite_to_fixpoint`.
+* `brackets/` — the abstract `GradedBracket`, `BracketApply` and the
+  derived-bracket machinery (`DerivedBracket`, `VanishingCondition`).
+* `bibliography.py` — the reference table and APA 7 rendering
+  (`cite`, `apa_reference`, `references_block`, `bibtex_entry`).
 
-Transformations over core trees, ignorant of any geometry.
+### `proof/` — the proof engine
 
-| File | Contents |
+| Module | Role |
 |---|---|
-| `simplify.py` | Pipeline driver: flatten → canonicalize → `normalize_alternating` → distribute → sort_product → collect_terms fix-point, plus a final *collecting* phase (`factor_common`, `collect_pairings`) accepted only when strictly smaller. |
-| `product_rule.py` | **Graded Leibniz**: `D(a·b) = D(a)·b + (−1)^{|D||a|} a·D(b)`, operator-composition unfolding, `D(0) = 0`, `D(numeric) = 0`, and the `is_constant` protocol (`D(δ^a_b) = 0`). |
-| `normalize_alternating.py` | Canonical forms for symmetry: alternating `MultiEval` (sorted args + permutation-parity sign + repeated-arg zero) and `Wedge` of odd-degree factors (same, plus Neg/zero pull-out). Makes orientation-flipped terms cancel in `collect_terms` with **no engine rule**. |
-| `factor_terms.py` | The collecting direction: common lead-factor grouping (`f·A + f·B → f·(A+B)`) and pairing/MultiEval slot collection (`Σ sᵢ⟨ω,Vᵢ⟩ → ⟨ω, Σ sᵢVᵢ⟩`) — what exposes bracket-identity residuals to cited theorems. |
-| `canonicalize.py`, `sort_product.py`, `flatten.py`, `distribute.py`, `collect_terms.py`, `rewrite.py` | Neg folding, numeric-coefficient consolidation, Koszul-signed graded-commutative sorting (scalars to the front), associativity flattening, distribution, like-term cancellation. |
+| `expansion.py` | `Definition` (one rewrite rule: `matches` / `rewrite`, `anchor`, `role`, `owner`, `identity`, `source`) and `ExpansionEngine` (registers rules, fires the leftmost-innermost match, records each firing as a `ProofStep`). |
+| `strategies.py` | `ExpandAndSimplify`, `AgreementOnGenerators`, `UnrollToFoundations`, `PortfolioStrategy`; `ProofFailure` carries the surviving residual. |
+| `verifier.py`, `search.py` | `show_equal`; `prove` (deterministic, or `SearchStrategy` with `prefer="shortest"`, `"readable"` or `"elementary"`). |
+| `result.py` | `ProofResult` (`CLOSED` / `RESIDUAL` / `BUDGET` / `INVALID`), `Goal`, `Assumption`, `Provenance`; the driver `prove(engine, lhs, rhs)`. |
+| `theorems.py` | `Theorem`, `TheoremBook`, `TheoremDefinition`, `cite`, `check_citation`. |
+| `step.py`, `chain.py` | `ProofStep` / `ProofChain`; minting of library-produced steps. |
+| `replay.py` | Chain-shape replay: does a theorem's chain really run from `lhs` to `rhs`? |
+| `registry_facts.py` | Registry answers a proof relied on, recorded as requirements. |
+| `ownership.py` | Which structure owns a rule, theorem or step. |
+| `normalize.py`, `diagnostics.py`, `diagnostic_rules.py`, `recognizers.py` | Normal forms, residual diagnostics, shape recognisers. |
 
-**Why separate from `proof/`:** these are not rules; they belong to
-graded algebra itself and hold in every geometry. Rules (`Definition`s)
-depend on declared definitions.
+### `central/` — objects and calculus valid on `TM` and on an algebroid `E`
 
-## 3. `algebra/` — operator algebra
+The central-code principle (course guideline, item 8a): every object is
+defined so that `E = TM`, `ρ_E = id`, `[·,·]_E = [·,·]_Lie` gives back
+the usual tangent-bundle version.
 
-| File | Contents |
+* `central/objects/` — building blocks, no rewrite rules:
+  `Bundle`/`TM`, functions, vector fields, forms, p-vectors, tensors,
+  metric and inverse metric, Hodge star, connection, frame/coframe,
+  interior and tilde interior, multivector interior, musical maps,
+  partial evaluation, endomorphisms, and `kind.py` (the shared type
+  query).
+* `central/calculus/` — the calculus of an `(anchor, bracket)` pair,
+  independent of `TM`: `BracketCalculus`, `ExteriorDerivative`,
+  `LieDerivative` and their intrinsic definitions
+  (`bracket_calculus.py`); interior, symmetrization, partial-evaluation,
+  indexed-sum and tensor rules; `scalars.py` with `is_real_constant`,
+  the single "Scalar = ℝ-constant" predicate; and `slot_rules.py`, the
+  structure-free slot-hygiene rules (`PairingArgSplitDefinition`,
+  `FormProductToWedgeDefinition`, …) moved here from the packages
+  (audit T2-1).
+* `central/tangent/` — the `TM` instance: `lie_bracket.py`,
+  `anholonomy.py` (`γ^c_ab`), `exterior.py` (`d`), `cartan.py` (`L`
+  and the Cartan relations, proved as theorems), `cartan_rules.py`
+  (structure-free Cartan rewrite rules such as
+  `MagicFormulaDefinition`, moved here in T2-1), `schouten.py`
+  (Schouten–Nijenhuis), `definitions.py`, and `tangent_expansion.py`
+  with `tangent_engine()`, the assembly point of the definitional
+  rules.
+* `central/algebroid/` — the algebroid instance: `context.py`
+  (anchored bundle, opaque bracket, coboundary), `declarations.py`
+  (declared axioms: right/left Leibniz, Jacobi, …), `operators.py`
+  (Jacobiator, Derivator, Predator), `locality.py` (locality
+  projector), `calculus.py` (`d_E`, `L^E`), `theorems.py` (relations
+  between the axioms), `defect_formulas.py`, `rules.py`, and
+  `algebroid_expansion.py` with `algebroid_engine()`.
+
+### `packages/` — geometry built on the central code
+
+Each package has a facade (`from jacopy.packages.<name> import …`).
+
+* `poisson/` — `core.py` (Poisson bivector, `{f,g}`, `π♯`),
+  `koszul_forms.py` (Koszul bracket on 1-forms), `koszul_jacobi.py`
+  (its general Jacobi identity), `tilde.py` (tilde calculus),
+  `symplectic.py`, `nambu.py` (Nambu–Poisson and the higher Koszul
+  bracket), `showcase.py`.
+* `drinfeld/` — calculus on algebroids and Drinfel'd doubles:
+  `calculus_conditions.py` (𝒦 operator), `double.py`,
+  `poisson_bialgebroid.py`, `tilde_calculus.py`, `twist.py`
+  (π/B/H/R/M twists), `roytenberg.py`, `bracket_morphism.py`,
+  `metric_invariance.py`, `abstract_double.py`, `examples.py`.
+* `generalized/` — Courant algebroids: `courant_axioms.py` and
+  `dorfman_axioms.py` (Uchino redundancy theorems),
+  `standard_courant.py`, `twisted_courant.py`, `general_twist.py`,
+  `poisson_generalized.py`, `r_twisted.py`, `roytenberg_courant.py`,
+  the Bourbaki family (`bourbaki_*.py`), `exact_locality_projector.py`,
+  `exceptional_double.py`, `exceptional_rotation.py`,
+  `frame_evaluation.py`, `dialect_bridge.py`.
+* `metric_affine/` — `torsion_curvature.py`, `metric.py`,
+  `metric_koszul.py` (Koszul formula), `bianchi.py`,
+  `nonmetricity_forms.py`, `frame_components.py`,
+  `component_workflow.py` (concrete component input), the
+  E-connection family (`e_connection.py`, `e_bianchi.py`,
+  `e_cartan.py`, `e_koszul.py`, `admissible.py`, `modified.py`,
+  `derived.py`), and `metric_affine_expansion.py` with the package
+  engine.
+
+The old module paths `poisson/koszul.py`, `metric_affine/koszul.py`,
+`metric_affine/engine.py`, `central/tangent/engine.py` and
+`central/algebroid/engine.py` still import: each is a compatibility
+alias that *is* the renamed module.
+
+### `research/` — the research interface (guideline item 15)
+
+`sections.py` (generalized sections `U ⊕ ω₂ ⊕ …`), `block_matrix.py`
+(block-operator automorphisms `Ψ`), `engine_assembly.py`
+(`Scan`, `assemble_engine`, `assembly_report`: build the engine from
+the expressions to be checked), `axiom_suite.py` (`AlgebroidData`,
+`AxiomSuite`: run the Courant-type conditions), `antisymmetrize.py`
+(`antisymmetrize_indices`), `providers.py` (the structure-provider
+protocol), `structure_kinds.py` (the registry `assemble_engine` reads)
+and `nambu_kind.py` (the built-in Nambu–Poisson kind).
+
+### `display/` — rendering
+
+`ascii.py`, `latex.py` (expressions, `gather*` proof transcripts,
+theorem paragraphs, standalone documents, TikZ), `jupyter.py`
+(`_repr_latex_` / `_repr_html_`), `terminal.py` (coloured trees with
+the optional `rich`). The display layer reads expressions and chains;
+it never changes them. New node types register a LaTeX handler with
+`jacopy.display.register`.
+
+### `oracle/` — the model oracle
+
+`hook.py` (engine-side entry point, no engine imports), `check.py`
+(`check_equal`, `check_chain`), `realize.py` / `realize_e.py`
+(expression → concrete values), `models/` (tangent and algebroid
+models), `select.py`, `values.py`, `report.py`. See section 5.
+
+## 3. How a proof runs
+
+```
+expression ──► engine rules (Definitions) ──► ExpansionEngine ──► ProofChain / ProofResult
+                                                                        │
+                                   Theorem (+ requires) ◄───────────────┘
+                                        │
+                  cite() into another engine, or display: LaTeX + APA references
+```
+
+1. **Build an expression** from the factories (`functions`,
+   `vector_fields`, `forms`, `exterior_d()`, `lie_derivative(X)`,
+   `interior(X)`, `pairing`, …). Operators are applied by calling
+   them: `d(omega)`, `L_X(omega)`.
+2. **Choose an engine.** `tangent_engine()`, `algebroid_engine(E)`, a
+   package engine, or `research.assemble_engine(expr, structures=…)`.
+   An engine is a list of `Definition` rules; the base engine contains
+   no geometry, each layer registers its own.
+3. **Run a strategy.** `show_equal(lhs, rhs, engine=…)` uses
+   `ExpandAndSimplify` and returns a `ProofChain` or raises
+   `ProofFailure` with the residual. `jacopy.proof.result.prove(engine,
+   lhs, rhs)` returns a `ProofResult` that also lists what the result
+   depends on.
+4. **Record a theorem.** A `Theorem` stores `lhs`, `rhs`, its chain, a
+   generality tag (`operator-level`, `generic-function`, `symbolic-p`,
+   `instance`) and its requirements; `TheoremBook` holds them and
+   `cite(engine, book, name)` turns one into a derived rule of another
+   engine. Citation is the only way a proven result enters a proof.
+5. **Display.** `to_latex`, `print_chain`, `chain_to_latex`,
+   `theorem_to_latex_document(..., references="apa")`. A rule's
+   `source` (a `bibliography.cite(...)` citation) is copied onto every
+   step it produces and printed with it.
+
+Runnable example (Cartan's formula on a 1-form, evaluated on a vector
+field):
+
+```python
+import jacopy
+from jacopy.central.tangent import tangent_engine
+from jacopy.proof.result import prove as prove_result
+
+reg = jacopy.PropertyRegistry()
+X, Y = jacopy.vector_fields("X Y")
+(omega,) = jacopy.forms("omega", degree=1)
+d, L_X, i_X = jacopy.exterior_d(), jacopy.lie_derivative(X), jacopy.interior(X)
+
+lhs = jacopy.pairing(L_X(omega), Y)
+rhs = jacopy.pairing(i_X(d(omega)), Y) + jacopy.pairing(d(i_X(omega)), Y)
+
+res = prove_result(tangent_engine(registry=reg), lhs, rhs, registry=reg)
+assert res.status == "CLOSED"
+print(res.summary())   # "... — assumption-free", the definitions used, the budget
+```
+
+## 4. Trust model
+
+**What a closed result means.** `CLOSED` says the engine rewrote both
+sides to the same normal form using the rules it was given. It is
+always shown *under its assumptions*. There is no `DISPROVED`: a
+residual is not a certificate that an identity is false.
+
+**Requirements (`ProofResult.requires`, `Theorem.requires`).** Every
+`Assumption` has one of the kinds in
+`jacopy.proof.result.ASSUMPTION_KINDS`:
+
+| Kind | Meaning |
 |---|---|
-| `derivation.py` | `Derivation` (a named operator atom carrying a degree), `Act` (the inert application node `D(x)`), **`degree_of`** (all degree laws: `|D(x)| = |D|+|x|`, wedge/⊗ sums with the `wedge_degree` lift, `Sym/Alt` preservation, `|⋆ω| = n−|ω|`, …), `compose`. |
-| `commutator.py` | The graded `[A, B]` node with Koszul-signed expansion. |
-| `lie_bracket_vf.py` | `LieBracketVF` — the opaque `[X, Y]` Derivation atom (a vector field in its own right). |
+| `declared` | A declared axiom of a structure that actually fired (owner, number of instances, the rule's structural key). |
+| `structure` | The structure object those axioms belong to. |
+| `registry` | A registry answer the steps relied on (`x` is `Scalar`, `p` has `Graded(0)`, "nothing declared" …). |
+| `scope` | An instance proof (generality `instance`); never upgraded to a general one. |
+| `textual` | A `from_axioms` prose entry no step accounts for: kept visible, not a verification input. |
+| `legacy` | Recorded but not structurally verified (a step whose rule has no role, an unverified citation, a chain that does not prove its claim). |
+| `unreplayed` | The requirements were derived, but the chain does not replay into `lhs = rhs`. |
 
-"Being an operator" (carrying a degree, participating in Leibniz) is an
-algebra concept that precedes geometry: `VectorField`, `Interior`,
-`LieDerivative`, `ExteriorDerivative` are all subclasses of
-`Derivation`.
+A rule's `role` decides how a fired step is classified: `definition`
+(no assumption), `assumption` (a declared axiom, giving `declared` and
+`structure` entries), `theorem` (a citation; its requirements are
+folded in transitively).
 
-## 4. `proof/` — the proof engine
+**Minting.** Only the library's own producers (engine, normalization
+passes, strategies) mark a `ProofStep` as minted
+(`jacopy.proof.step.is_minted`). A step built by hand through the
+public API is never minted, whatever metadata it carries. Minting
+certifies origin, not mathematical correctness.
 
-The mechanism is entirely geometry-independent (preserved from v2,
-strengthened in the interim engine phase E).
+**Replay.** `jacopy.proof.replay.chain_verdict` checks that a
+theorem's chain is connected and runs between the two sides of the
+claim. `Theorem.chain_replayed` is true only when the requirements were
+derived and no `unreplayed` or `legacy` entry remains.
 
-| File | Contents |
-|---|---|
-| `expansion.py` | `Definition` ABC (`matches`/`rewrite` + **`anchor`** dispatch + axiom/theorem classification) and `ExpansionEngine` (leftmost-innermost fix-point, step recording, `efficient`/`foundational` modes). `default_engine` contains only `ActOverSumOp` — **the purification decision**: the engine ships no geometry rules; each layer registers its own. |
-| `strategies.py` | `ExpandAndSimplify` (obstruction `lhs − rhs` → [expand ↔ product_rule] fix-point → simplify, in outer rounds so collected shapes re-enter the engine), `AgreementOnGenerators`, `UnrollToFoundations`, `PortfolioStrategy`, `ProofFailure` (carrying the machine-readable `residual`). |
-| `theorems.py` | `Theorem` (the equation itself + a **generality tag**: operator-level / generic-function / symbolic-p / instance + the proof), `TheoremBook`, `TheoremDefinition` + `cite()` — "prove once, cite forever". Citation is the only sanctioned way a proven result enters a proof (no circular proofs). |
-| `search.py` | `SearchStrategy`: bounded exhaustive BFS over the memoized expression *state graph* (different rule orders reconverging to the same expression collapse into one node) + greedy beam fallback; scorers (`shortest` / `readable` / `elementary`); the `prove(lhs, rhs, prefer=…)` API. An e-graph backend is a planned drop-in behind the same interface. |
-| `chain.py`, `step.py` | `ProofChain`/`ProofStep` — before/after/rule/provenance-tag/sub-steps; the output format of every proof. |
-| `diagnostics.py`, `diagnostic_rules.py` | Structural classification of a non-closing residual — the report attached to `ProofFailure`. |
-| `recognizers.py`, `verifier.py` | Shape recognizers and higher-level proof helpers. |
+**Citation — default reject.** `check_citation` refuses a citation
+unless every `declared`/`structure` requirement is met by a structure
+of the same name in the citing engine (same or stronger declarations)
+*and* the same licensing rule is registered there, and every
+`registry` requirement is answered the same way by the citing registry
+(when the citing registry is unknown, a registry-dependent theorem is
+not citable). A `legacy` or `unreplayed` record is citable only with an
+explicit `allow_legacy=True`, and the citing result then carries the
+marker.
 
-## 5. `brackets/` — abstract bracket framework
+**The Scalar contract.** `Scalar` means a real constant. The single
+predicate is `jacopy.central.calculus.scalars.is_real_constant`; the
+engine, `product_rule`, `sort_product`, `degree_of`, `kind_of`,
+`AgreementOnGenerators`, the diagnostics and the model oracle all call
+it. A declaration that contradicts the contract (Scalar together with
+`Graded(k ≠ 0)`, `NonCommuting` or `AntiCommuting`) raises
+`ScalarContractError`. The facts the predicate read become `registry`
+requirements of the step.
 
-`GradedBracket` (name, degree, axiom flags, abstract `expand`),
-`BracketApply` (the inert `[a, b]` node), `DerivedBracket` /
-`VanishingCondition` (Jacobi machinery). Concrete brackets subclass
-this: `SchoutenBracket` today; Koszul, Courant, Dorfman in later
-phases.
+## 5. The model oracle
 
-## 6. `central/` — the PDF's "central code" (the actual geometry)
+The oracle is an independent falsifier. When the engine closes
+`lhs = rhs`, it can evaluate both sides in random concrete coordinate
+models (sympy polynomials on `ℝⁿ`; algebroid models `E = ℝⁿ × ℝʳ`
+with a polynomial anchor and a concrete bracket) and compare them.
 
-Split into four sub-groups on purpose:
+* **Verdicts** (`jacopy.oracle.report.VERDICTS`): `AGREE` (not refuted
+  in the sampled models — never a proof), `DISAGREE`, `UNSUPPORTED`
+  (a node the realizers do not cover, a dimension above the cap, …),
+  `AMBIGUOUS` (the two readings of a `Product` disagree),
+  `ASSUMPTION_LEAK` (a declared Poisson property the proof record does
+  not use turns out to be needed: the equation fails in a non-Poisson
+  counter-model).
+* **Modes.** `JACOPY_ORACLE=off|warn|strict` (default `off`: nothing
+  is imported), the `oracle=` keyword of `show_equal` /
+  `proof.result.prove`, or `jacopy.oracle.hook.oracle_mode`. `warn`
+  emits `OracleWarning` on a refutation; `strict` raises
+  `OracleDisagreement`.
+* **Tests.** `pytest --oracle=warn|strict [--oracle-report PATH]`
+  (see `docs/TESTING.md`).
+* **Requires** the `oracle` extra (`pip install -e ".[oracle]"`).
 
-### `central/objects/` — PDF item 8: *objects, no computation*
+```python
+import jacopy
+from jacopy.oracle import check_equal
 
-`Bundle`/`TM` context; `VectorField` (a Derivation!); `Form`/`PVector`
-(degree-carrying atoms); `Tensor` (+ `signature_of` (q,r)-type
-tracking); `Metric`/`InverseMetric`; `Connection`/`CovariantOp`;
-`Frame`/`Coframe` (+ `KroneckerDelta`, an `is_constant` atom);
-`Interior`/`TildeInterior` (+ `contract_all`, the alternating case of
-item 8w); musical `Flat`/`Sharp`. Common pattern: every object carries
-a bundle reference and arity/type guards, but **no computation rules**
-— it builds nodes, nothing else. The object/rule split is the file-level
-shadow of the definition policy.
+reg = jacopy.PropertyRegistry()
+X, Y = jacopy.vector_fields("X Y")
+(omega,) = jacopy.forms("omega", degree=1)
+d, L_X, i_X = jacopy.exterior_d(), jacopy.lie_derivative(X), jacopy.interior(X)
+lhs = jacopy.pairing(L_X(omega), Y)
 
-**Grading convention** (decided in the Phase 1 audit): vector fields
-carry *operator* degree 0 (so `U(f)` is again degree 0); the
-*multivector* grading lives on `PVector` and, via the `wedge_degree`
-lift, on wedges of vector fields (`|X∧Y| = 2`).
+good = jacopy.pairing(i_X(d(omega)), Y) + jacopy.pairing(d(i_X(omega)), Y)
+bad = jacopy.pairing(i_X(d(omega)), Y)
+assert check_equal(lhs, good, registry=reg).verdict == "AGREE"
+assert check_equal(lhs, bad, registry=reg).verdict == "DISAGREE"
+```
 
-### `central/calculus/` — the *generic* machine (definition policy §4)
+## 6. Extension points
 
-`BracketCalculus(name, anchor, bracket)` — an `(ρ, [·,·])` pair as a
-context object — and the operators derived from it:
-`ExteriorDerivative` (`d`, degree +1) and `LieDerivative` (`L_X`,
-degree 0), both carrying their calculus identity. The canonical
-definitions live here as engine rules:
+**A new rule: subclass `Definition`.** Give it `matches` and
+`rewrite`. A rule that is a hypothesis of the user's structure sets
+`role = "assumption"` and an `owner`; it then appears in `requires`.
 
-- `IntrinsicDDefinition` — the Palais formula (no combinatorial
-  prefactor, matching the determinant wedge convention),
-- `IntrinsicLDefinition` — `L_X f = ρ(X)f`, `L_X Y = [X,Y]`, and the
-  evaluation formula on covariant slots,
-- `interior_rules.py` — `ι_X` slot insertion (calculus-independent),
-- `symmetrize_rules.py` — `Sym`/`Alt` permutation unfolding (`1/k!`),
-- `SlotZero`/`SlotNeg` — multilinearity of the evaluation primitives,
-- `scalars.py` — conservative scalar-function recognition.
+```python
+import jacopy
+from jacopy.central.tangent import tangent_engine
+from jacopy.proof.result import prove as prove_result
 
-**Nothing here knows TM.** The same files will serve the algebroid
-(`(ρ_E, [·,·]_E)`, Phase 3) and the Poisson cotangent case
-(`(π^♯, [·,·]_Kos)` giving `d̃`/`L̃`, Phase 5). Per PDF item 8a, the
-usual operators *are* the `(id, Lie)` instantiation — not a separate
-code path.
+class Flux(jacopy.Symbol):
+    """A new atom: the flux H of a user structure."""
+    __slots__ = ()
 
-### `central/tangent/` — PDF item 9: the TM instantiation + its theorems
+class FluxIsClosed(jacopy.Definition):
+    """The user's axiom dH = 0."""
+    name = "user axiom: dH = 0"
+    role = "assumption"
 
-| File | Contents |
-|---|---|
-| `lie_bracket.py` | The commutator definition `[U,V] = U∘V − V∘U` as an engine rule; the 2.A property proofs (antisymmetry, Jacobi, Leibniz, ℝ-bilinearity); `BracketOrientationDefinition` (theorem-backed canonical orientation). |
-| `definitions.py` | The Phase 1 deferrals: `∇_X f = X(f)` (with the scalar guard) and frame duality `⟨e^a, e_b⟩ = δ^a_b`. |
-| `exterior.py` | `CARTAN_TM = BracketCalculus("Cartan-TM", id, Lie)`; `d(ω)`; `d² = 0` on functions + TheoremBook registration. |
-| `cartan.py` | `L(X, T)`; the Cartan relations proved as theorems (magic `L_X = dι_X + ι_X d` above all — an *axiom* in v2, a *theorem* here); the **repair loop** `prove_with_bracket_identities` (proves residual bracket identities on a generic function, cites them, retries) closing `d² = 0` for p ≥ 1. |
-| `anholonomy.py` | `γ^c_ab := ⟨e^c, [e_a, e_b]⟩` (coefficient extraction — no dimension sum, works at symbolic dimension); the frame writing of the bracket properties; holonomic-frame mode. |
-| `schouten.py` | The Schouten-Nijenhuis bracket on `Wedge` multivectors (v2 sign convention: shifted grading, four base cases + wedge-Leibniz recursion); its theorems. |
-| `engine.py` | `tangent_engine()` — the single assembly point of every definitional rule (plus the canonical-form normalizations, which are theorem-classified but always-on by documented exception). |
+    def matches(self, expr):
+        return (isinstance(expr, jacopy.Act) and isinstance(expr.arg, Flux)
+                and expr.op == jacopy.exterior_d())
 
-### `central/algebroid/` — empty placeholder
+    def rewrite(self, expr):
+        return jacopy.Integer(0)
 
-Reserved for PDF item 10 (Phase 3): anchor, algebroid bracket,
-Jacobiator/Derivator/Predator, locality.
+class HStructure:
+    name = "H-structure"
+    def __repr__(self):
+        return "HStructure"
 
-## 7. `packages/` — empty skeletons
+reg = jacopy.PropertyRegistry()
+eng = tangent_engine(registry=reg)
+rule = FluxIsClosed()
+rule.owner = HStructure()
+eng.register(rule)
 
-`metric_affine/`, `poisson/`, `generalized/`, `algebroid_calculus/`,
-`research/` — the PDF item 7 package list, to be filled in Phases 4-8.
-Their early existence documents, at the directory level, that the
-central code precedes and never depends on the packages.
+d = jacopy.exterior_d()
+res = prove_result(eng, d(Flux("H")), jacopy.Integer(0), registry=reg)
+assert res.status == "CLOSED"
+assert {a.kind for a in res.requires} == {"declared", "structure"}
+```
 
-## 8. `tests/` — one file per delivery slice
+**A new structure type for `assemble_engine`: register a
+`StructureKind`.** No library file changes. A structure is a provider
+(`name`, `declarations`, `declares`, `with_declarations`,
+`engine_rules`); its kind tells the assembler how to recognise it and
+which key its nodes carry. The built-in kinds, families and family
+rules always load first, whenever the user registers (unless
+`first=True` is passed on purpose), and `register_family_rule` is
+idempotent.
 
-Naming follows the layers: `test_foundation` (core), `test_central_*`
-(Phase 1 objects, one file per module family), `test_tangent_*`
-(Phase 2 proofs), `test_engine_upgrades` (interim phase E). Every proof
-family ships *sanity tests* — a deliberately false identity that the
-prover must reject.
+```python
+import jacopy
+from jacopy.proof.result import prove as prove_result
+from jacopy.research import assemble_engine, assembly_report
+from jacopy.research.structure_kinds import (
+    StructureKind, register_family, register_structure_kind, unregister,
+)
 
----
+class Flux(jacopy.Symbol):
+    """A node owned by the structure of the same name."""
+    __slots__ = ()
 
-## Cross-cutting decisions (where to look them up)
+class FluxVanishes(jacopy.Definition):
+    name = "flux vanishes: H = 0"
+    role = "assumption"
+    anchor = Flux
+    def matches(self, expr):
+        return isinstance(expr, Flux)
+    def rewrite(self, expr):
+        return jacopy.Integer(0)
 
-| Decision | Recorded in |
-|---|---|
-| Definition policy (one canonical definition per operator; everything else a theorem; definitional vs derived rules; concrete-p unroll vs symbolic-p routes) | `ROADMAP.md`, Phase 2 header |
-| Theorem generality tags | `proof/theorems.py` |
-| Canonical-form family (alternating sort, wedge sort, γ index order, bracket orientation) — theorem-backed, always-on | rule docstrings + the policy-guard test in `test_engine_upgrades.py` |
-| Grading convention (operator vs multivector; the Wedge lift) | `central/objects/multivector.py`, `vector_field.py` docstrings |
-| Import-direction exceptions | inline comments at each late import |
+class FluxStructure:
+    def __init__(self, name, declarations=()):
+        self.name, self.declarations = name, frozenset(declarations)
+    def declares(self, key):
+        return key in self.declarations
+    def with_declarations(self, *keys):
+        return FluxStructure(self.name, self.declarations | set(keys))
+    def engine_rules(self, registry=None, *, phase=None):
+        rule = FluxVanishes()
+        rule.owner, rule.identity = self, ("FluxVanishes", self.name)
+        return [rule]
+
+class FluxKind(StructureKind):
+    name = "flux"
+    def accepts(self, s):
+        return isinstance(s, FluxStructure)
+    def key(self, s):
+        return s.name
+
+kind = register_structure_kind(FluxKind())
+family = register_family(Flux, "flux", owner_key=lambda node: node.name)
+try:
+    reg = jacopy.PropertyRegistry()
+    H = FluxStructure("H")
+    eng = assemble_engine(Flux("H"), registry=reg, structures=(H,))
+    print("\n".join(assembly_report(eng)))   # which rules were added, and why
+    assert prove_result(eng, Flux("H"), jacopy.Integer(0), registry=reg).status == "CLOSED"
+finally:
+    for entry in (family, kind):
+        unregister(entry)
+```
+
+**A new node type in the display:** `jacopy.display.register` adds
+its LaTeX handler.
+
+## 7. Public surface and support levels
+
+The levels are those of the `jacopy` module docstring:
+
+1. **Stable — `jacopy.__all__`** (66 names): expression classes,
+   object factories, tangent operators, proof entry points
+   (`show_equal`, `prove`, `ProofChain`, `ProofResult`, `Theorem`,
+   `cite`, `Definition`, `ExpansionEngine`, …) and display helpers.
+   Each name is the very object its subpackage defines; everything but
+   the expression classes loads lazily.
+2. **Stable extension protocols:** `Expr` / `Atom`, `Definition`,
+   `jacopy.display.register`.
+3. **Public, still evolving:** the subpackage facades
+   (`jacopy.research`, `jacopy.packages.<name>`,
+   `jacopy.central.objects`, `jacopy.central.tangent`, `jacopy.proof`,
+   `jacopy.display`) — each package's `__all__`.
+4. **Internal:** every other module path and every `_`-prefixed name.
+
+Same name, different object (also listed in the docstring):
+`jacopy.cite` is `proof.theorems.cite` (not `bibliography.cite`);
+`jacopy.prove` is `proof.search.prove` (not `proof.result.prove`);
+`jacopy.Zero` is the expression zero (not `research.ZeroOperator`);
+`jacopy.normalize` is `proof.normalize` (not
+`algorithms.rewrite_to_fixpoint`); `Metric`/`metric` are the central
+metric atom (not the metric-affine context).
+
+## 8. Known limits (2026-10-02)
+
+* **AoG domain** — an `AgreementOnGenerators` identity can still be
+  cited outside its own algebra (audit cases cr7/p06, cr8/p02). The
+  five tests that describe the correct behaviour are strict `xfail`
+  in `tests/test_audit_0b00e1b_p1_core_tur4.py`; the fix has its own
+  lane.
+* **Legacy and unreplayed theorem chains** — several library theorems
+  (for example algebroid theorems and `poisson_jacobi`) are
+  requirements-derived but their chains do not replay into the claim.
+  They carry an `unreplayed` requirement, are citable only with
+  `allow_legacy=True`, and pass the marker on to every citing result.
+* **Layering** — the 29 deferred upward imports and the package
+  cycles of section 1 (audit T2-2); no layering test yet (*planned*).
+* **Large modules** — eight modules exceed 1,000 lines
+  (`generalized/courant_axioms.py` 1,789, `display/latex.py` 1,627,
+  `central/calculus/bracket_calculus.py` 1,287, `drinfeld/twist.py`
+  1,190, `central/algebroid/theorems.py` 1,081,
+  `drinfeld/tilde_calculus.py` 1,078, `poisson/tilde.py` 1,059,
+  `poisson/koszul_jacobi.py` 1,031). Splitting them (audit T2-11) is
+  *planned*.
+* **Private imports** — 80 `from jacopy… import _name` imports remain
+  inside the library, 28 of them across subpackages; the notebooks use
+  none.
+* **Research results** — `AxiomSuite` reports its own `CheckResult`
+  (`CLOSED` / `RESIDUAL` / `FAILED`), not a `ProofResult` with
+  requirements (audit T2-10).
+* **Web interface** — the course guideline's page-based interface
+  (item 3) is *planned*; today jacopy is a Python library with example
+  notebooks.
+* **Notebook smoke run** — on 2026-10-02 two of the four notebooks
+  stop early: `algebroid_declarations_demo.ipynb` (cell 11 cites a
+  theorem whose chain is not replayed, so the trust gate raises
+  `LegacyTheoremError`) and `bracket_twist_research_interface.ipynb`
+  (cell 13 leaves a residual). Both fail the same way on
+  `refactor/arch-names`; the notebooks need updating to the stricter
+  trust model.
+* `docs/CITATIONS.md` and several docstrings refer to `ROADMAP.md` and
+  to "PDF item N" (the Math 595 guideline); neither file is part of
+  the repository.

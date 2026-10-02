@@ -1,166 +1,167 @@
 # jacopy
 
-Dereceli cebir, bracket kalkülüsü ve diferansiyel geometri için sembolik
-hesaplama kütüphanesi. Ayırt edici özelliği: her manipülasyon **adım adım
-izlenebilir bir kanıt zinciri** (`ProofChain`) olarak üretilir — sonuçlar
-kara kutudan çıkmaz, her adımın hangi tanım/aksiyom/teoremle atıldığı
-kayıtlıdır ve bir özdeşlik kapanmadığında kalan engel (kalıntı) açıkça
-raporlanır.
+jacopy is a symbolic library for graded algebra, bracket calculus and
+differential geometry — on the tangent bundle `TM` and on algebroids
+`E` — in which every manipulation is recorded as a step-by-step proof.
+A closed identity comes with its proof chain, the rule behind each step
+(definition, declared axiom or cited theorem, with its literature
+source) and the list of assumptions it depends on; an identity that
+does not close reports the residual that is left. An optional model
+oracle checks closed identities numerically in random coordinate
+models. jacopy is pure Python with no required dependencies.
 
-Kapsam: Cartan kalkülüsü (d, L, ι), Lie / Courant-ailesi algebroid'leri
-(beyan sistemi), Schouten-Nijenhuis, Poisson / symplectic / Nambu-Poisson
-geometrisi, Koszul bracket'leri, metric-affine geometri (torsiyon,
-eğrilik, Bianchi, Cartan yapı denklemleri), bialgebroid kalkülüsü.
+Coverage today: Cartan calculus (`d`, `L`, `ι`), Lie and
+Schouten–Nijenhuis brackets, algebroids with declared axioms
+(Jacobiator, Derivator, Predator, locality), metric-affine geometry
+(torsion, curvature, non-metricity, Bianchi, Cartan structure
+equations, Koszul formula, E-connections), Poisson / symplectic /
+Nambu–Poisson geometry with the Koszul bracket and tilde calculus,
+Drinfel'd doubles and twists, Courant algebroids and generalized
+geometry, and a research interface for user-defined brackets.
 
-Saf Python'dur; çalışmak için hiçbir dış pakete ihtiyaç duymaz.
+## Installation
 
----
+jacopy is installed from source (it is not on PyPI). Python 3.10 or
+newer.
 
-## Kurulum — adım adım (hiç kurulum yapmamış biri için)
-
-### 1. Python'u kurun (3.10 veya üstü)
-
-- **macOS / Linux**: Terminal'i açıp şunu yazın; `3.10` veya daha
-  büyük bir sürüm görüyorsanız bu adımı atlayın:
-
-  ```bash
-  python3 --version
-  ```
-
-- Kurulu değilse [python.org/downloads](https://www.python.org/downloads/)
-  adresinden indirin (Windows'ta kurulum sırasında **"Add Python to
-  PATH"** kutusunu işaretleyin).
-
-### 2. Projeyi indirin
-
-Terminal'de (Windows'ta "PowerShell"):
-
-```bash
+```sh
 git clone https://github.com/oselcukk/JacoPy.v.3.git
 cd JacoPy.v.3
-```
-
-> `git` yoksa: [git-scm.com/downloads](https://git-scm.com/downloads)
-> adresinden kurun, ya da GitHub sayfasındaki yeşil **Code ▸ Download
-> ZIP** düğmesiyle indirip klasöre girin.
-
-### 3. Sanal ortam oluşturun ve etkinleştirin
-
-Sanal ortam, projenin kendi izole Python alanıdır — sisteminize hiçbir
-şey bulaştırmaz.
-
-```bash
 python3 -m venv .venv
-source .venv/bin/activate        # macOS / Linux
-# Windows PowerShell'de bunun yerine:  .venv\Scripts\Activate.ps1
-```
-
-Satır başında `(.venv)` görüyorsanız hazırsınız.
-
-### 4. Paketi kurun
-
-```bash
+source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -e ".[test]"
+pytest -q                          # the fast test suite
 ```
 
-### 5. Testleri çalıştırıp doğrulayın
+Optional extras (from `pyproject.toml`):
 
-```bash
-pytest -q
-```
+| Extra | Installs | For |
+|---|---|---|
+| `test` | pytest | the test suite |
+| `oracle` | sympy | the model oracle (`jacopy.oracle`, `pytest --oracle=…`) |
+| `rich` | rich | coloured proof trees in the terminal (plain text without it) |
+| `docs` | ipykernel | a Jupyter kernel for the example notebooks |
+| `dev` | all of the above | development (`make setup` creates `.venv` with it) |
 
-Sonunda `passed` yazan yeşil bir satır görmelisiniz (800+ test).
-Görüyorsanız kurulum tamamdır.
+## Quick start
 
-### 6. İlk kanıtınız
-
-Aşağıdakini `ilk_kanit.py` adıyla kaydedin ve `python ilk_kanit.py`
-ile çalıştırın:
+Cartan's formula `L_X ω = ι_X dω + d ι_X ω` on a 1-form, evaluated on a
+vector field `Y`, proved from the definitions of `d`, `L` and `ι`:
 
 ```python
-from jacopy.core.registry import PropertyRegistry
-from jacopy.central.objects import functions, vector_fields
-from jacopy.central.tangent.cartan import prove_cartan_magic_on_functions
+import jacopy
+from jacopy.central.tangent import tangent_engine
 
-reg = PropertyRegistry()
-(f,) = functions("f", registry=reg)
-(X,) = vector_fields("X")
+reg = jacopy.PropertyRegistry()
+X, Y = jacopy.vector_fields("X Y")
+(omega,) = jacopy.forms("omega", degree=1)
+d, L_X, i_X = jacopy.exterior_d(), jacopy.lie_derivative(X), jacopy.interior(X)
 
-# Cartan'ın sihirli formülü fonksiyonlarda: L_X f = ι_X(df) + d(ι_X f)
-chain = prove_cartan_magic_on_functions(X, f, registry=reg)
+lhs = jacopy.pairing(L_X(omega), Y)
+rhs = jacopy.pairing(i_X(d(omega)), Y) + jacopy.pairing(d(i_X(omega)), Y)
 
-print(f"Kanıt {len(chain.steps)} adımda kapandı:")
-for step in chain.steps:
-    print(f"  [{step.provenance_tag}] {step.rule}")
+chain = jacopy.show_equal(lhs, rhs, registry=reg, engine=tangent_engine(registry=reg))
+print(f"closed in {len(chain.steps)} steps")
+print(jacopy.to_latex(lhs), "=", jacopy.to_latex(rhs))
+jacopy.print_chain(chain)   # each step with the rule that justifies it
 ```
 
-Çıktıda her adımın hangi kuralla atıldığını göreceksiniz — `axiom`
-etiketi tanımsal kuralları, `theorem` etiketi kanıtlanmış sonuçların
-alıntılanmasını gösterir.
+Output (first lines):
 
----
+```
+closed in 6 steps
+\langle \mathcal{L}_{X}\!\left(omega\right),\, Y \rangle = \langle \iota_{X}\!\left(d\!\left(omega\right)\right),\, Y \rangle + \langle d\!\left(\iota_{X}\!\left(omega\right)\right),\, Y \rangle
+Proof (6 steps)
+├── [intrinsic L (Cartan-TM): L_X f = ρ(X)(f), L_X Y = [X,Y], (L_X ω)(Y…) = ...
+```
 
-## Hızlı tur
+A false identity is refused and the residual is reported:
 
 ```python
-from jacopy.core.registry import PropertyRegistry
-from jacopy.central.objects import Bundle, forms, functions, vector_fields
+import jacopy
+from jacopy.central.tangent import tangent_engine
 
-reg = PropertyRegistry()
-f, g, h = functions("f g h", registry=reg)     # skaler fonksiyonlar
-X, Y = vector_fields("X Y")                     # vektör alanları
-(omega,) = forms("ω", degree=2)                 # 2-form
+reg = jacopy.PropertyRegistry()
+X, Y = jacopy.vector_fields("X Y")
+(omega,) = jacopy.forms("omega", degree=1)
+d, L_X, i_X = jacopy.exterior_d(), jacopy.lie_derivative(X), jacopy.interior(X)
 
-# Poisson geometrisi — Jacobi, [π,π]=0 beyanı altında kanıtlanır:
-from jacopy.packages.poisson import poisson_structure, prove_poisson_jacobi
-P = poisson_structure()
-chain, cited = prove_poisson_jacobi(P, f, g, h, registry=reg)
-
-# Soyut algebroid + beyan sistemi:
-from jacopy.central.algebroid import algebroid
-E = algebroid("E", Bundle("E"), declare=("local", "regular", "jacobi"))
-u, v = E.sections("u v")
+try:
+    jacopy.show_equal(jacopy.pairing(L_X(omega), Y), jacopy.pairing(i_X(d(omega)), Y),
+                      registry=reg, engine=tangent_engine(registry=reg))
+except jacopy.ProofFailure as failure:
+    print("residual:", failure.residual)     # residual: Y(⟨omega, X⟩)
 ```
 
-Bir kanıt kapanmazsa `ProofFailure` fırlatılır ve **kalıntı**
-(kapatılamayan terimler) mesajda görünür — çoğu zaman bu kalıntı, hangi
-aksiyomu beyan etmeniz gerektiğini söyler.
+The example notebooks in `examples/` go further:
+`proof_system_demo.ipynb` (proof chains, results, theorems),
+`algebroid_declarations_demo.ipynb` (algebroids and declared axioms),
+`bracket_twist_walkthrough.ipynb` and
+`bracket_twist_research_interface.ipynb` (Drinfel'd doubles, twists and
+the research interface).
 
-## Mimari
+## Packages and the course guideline (Math 595)
 
-```
-jacopy/
-├── core/         # ifade ağacı: Expr, Sum, Product, Wedge, MultiEval, degree
-├── algorithms/   # simplify, product_rule (graded Leibniz), distribute, ...
-├── algebra/      # Act, Derivation, komütatörler, Lie bracket
-├── brackets/     # GradedBracket soyutlaması
-├── proof/        # kanıt motoru: ProofChain, ExpansionEngine, TheoremBook
-├── central/      # hem TM hem algebroid E üzerinde ortak katman
-│   ├── objects/  #   fonksiyon, vektör alanı, form, multivektör, frame, metrik
-│   ├── tangent/  #   TM özel hâli: Lie bracket, d/L/ι, Schouten-Nijenhuis
-│   └── algebroid/#   beyan sistemi (leibniz/lie/courant seviyeleri), locality
-└── packages/     # alan paketleri
-    ├── metric_affine/  # konneksiyon, T/R/Q, Bianchi, Koszul, E-versiyonlar
-    ├── poisson/        # Poisson, symplectic, Koszul bracket, tilde, Nambu
-    └── drinfeld/       # bialgebroid kalkülüsü (geliştiriliyor)
-```
+The project follows the Math 595 "JacoPy" guideline. Where each item
+lives today:
 
-**Central-code ilkesi:** her nesne öyle tanımlanır ki `E = TM`,
-`ρ_E = id`, `[·,·]_E = [·,·]_Lie` alındığında algebroid versiyonu her
-zamanki (usual) versiyona indirgenir.
+| Guideline item | Where | Status |
+|---|---|---|
+| 1. English, integrated with LaTeX | `jacopy.display` (LaTeX, proof transcripts, standalone documents), `jacopy.bibliography` (APA 7 sources) | done |
+| 2. Coherent definitions of every object and operation | one canonical `Definition` per operator; everything else is a proved theorem | done |
+| 3. Page-based interface (Dorfman/Courant blocks, proof buttons) | — | *planned* (today: Python API and notebooks) |
+| 4, 15. Research interface | `jacopy.research` (`assemble_engine`, `AxiomSuite`, `BlockMatrix`, `register_structure_kind`) | available, evolving |
+| 5. Compatible packages | all packages share one expression tree, registry and engine model | partial: cross-package use is tested in places, no documented combined workflow yet |
+| 6. Two-fold packages (`TM` and `E`) | `jacopy.central` (`tangent` and `algebroid`), E-versions in `metric_affine` | done for the central code and metric-affine |
+| 7f, 8. Central code: basic objects | `jacopy.central.objects`, `jacopy.central.calculus` | done |
+| 9. Tangent-bundle case | `jacopy.central.tangent` | done |
+| 10. Algebroid case | `jacopy.central.algebroid` | done |
+| 7g, 11. Metric-affine geometry | `jacopy.packages.metric_affine` | done |
+| 7h, 12. Symplectic, Poisson, Nambu–Poisson | `jacopy.packages.poisson` | done |
+| 7a, 13. Calculus on algebroids, Drinfel'd doubles, twists | `jacopy.packages.drinfeld` | done |
+| 7b, 14. Generalized geometry | `jacopy.packages.generalized` | done |
+| 7d. Exceptional generalized geometry | `exceptional_double`, `exceptional_rotation` in `jacopy.packages.generalized` | first examples; full package *planned* |
+| 7i, 7j. Conformal/projective geometry, various tensors | — | *planned* |
+| 16. Euler–Lagrange, SUGRA, dualities, spinors, … | — | *planned* |
 
-## Tasarım ilkeleri
+"Done" means implemented and covered by tests; the known limits are
+listed in `docs/ARCHITECTURE.md`, section 8.
 
-1. **Tek kanonik tanım** — her operatörün bir tanımı vardır; geri kalan
-   her şey teoremdir ve mekanik olarak türetilir.
-2. **Türetilebilir özellikler asla sessizce varsayılmaz** — aksiyomlar
-   (Jacobi, antisimetri, metrik-invarians, FI, dω=0, ...) açık
-   **beyanlarla** girer; beyansız denemeler dürüstçe başarısız olur.
-3. **Her adım izlenebilir** — zincirde her adımın kaynağı görünür:
-   `axiom` (tanımsal kural), `theorem` (kanıtlanmış sonucun alıntısı)
-   ya da açıkça etiketlenmiş sentetik çıkarım.
+## Proof trust and the model oracle
 
-## Lisans
+A closed result is shown *under its assumptions*:
+`jacopy.proof.result.prove(engine, lhs, rhs)` returns a `ProofResult`
+whose `requires` lists the declared axioms and structures that fired,
+the property-registry answers the steps relied on, and markers for
+instance proofs or unverified citations. A theorem can be cited into
+another proof only where the same requirements hold. Steps are minted
+by the library's own producers, and a theorem's chain is replayed
+against its claim. Details: `docs/ARCHITECTURE.md`, section 4.
 
-Kaynağı açık, tescilli lisans — ayrıntılar için [LICENSE](LICENSE)
-dosyasına bakın.
+The model oracle (`pip install -e ".[oracle]"`) is an independent
+falsifier: it evaluates both sides of a closed identity in random
+concrete coordinate models. `AGREE` means "not refuted", never
+"proved". Turn it on per call (`show_equal(..., oracle="warn")`), with
+`JACOPY_ORACLE=warn|strict`, or for the test suite with
+`pytest --oracle=strict`.
+
+## Documentation
+
+* `docs/ARCHITECTURE.md` — layers, proof flow, trust model, oracle,
+  extension points, known limits.
+* `docs/TESTING.md` — the fast suite, slow suites, the oracle, notebook
+  and wheel checks.
+* `docs/CITATIONS.md` — which code label was checked against which
+  page of which paper.
+* `CHANGELOG.md` — changes since `0.0.1`.
+
+## License
+
+jacopy is **source-available, not open source**: you may read, run and
+cite it for personal, educational or research use; modification for
+anything beyond local experimentation, redistribution and commercial
+use need written permission. See [LICENSE](LICENSE).
+
+## Citing
+
+Please cite jacopy using the metadata in [CITATION.cff](CITATION.cff).

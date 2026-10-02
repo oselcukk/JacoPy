@@ -30,7 +30,10 @@ Hand counterexamples on TM (anchor = id, frame = coordinate frame):
 from __future__ import annotations
 
 import pytest
-import sympy as sp
+
+# sympy is the optional ``oracle`` extra: the four hand-model tests below
+# import it themselves (pytest.importorskip), so the rest of this module
+# still runs from a wheel installed without sympy (CI ``wheel`` job).
 
 from jacopy.algebra.derivation import Act
 from jacopy.core.expr import Integer, Power, Product, Sum
@@ -93,6 +96,7 @@ def _rho(ctx, X, g):
 
 
 def test_hand_counterexamples_are_genuinely_false():
+    sp = pytest.importorskip("sympy")
     x, y = sp.symbols("x y")
     # cubic: h = 2x+3y, z = (1, 2)
     h = 2 * x + 3 * y
@@ -245,6 +249,7 @@ def _eq(x, y):
 
 
 def test_concrete_frame_witness_gamma_2_20_is_7():
+    sp = pytest.importorskip("sympy")
     x, y, z = sp.symbols("x y z")
     coords = (x, y, z)
     frame_vf = [
@@ -360,6 +365,7 @@ from jacopy.core.multi_eval import MultiEval  # noqa: E402
 
 
 def test_dorfman_d_mu_is_not_tensorial():
+    sp = pytest.importorskip("sympy")
     # E = TR ⊕ T*R, sections a∂ + b dx, ρ = projection to ∂-part,
     # ⟨a∂+b dx, c∂+e dx⟩ = a e + c b, D h = h' dx,
     # Dorfman [a∂+b dx, c∂+e dx] = (a c' − c a')∂ + (a e)' dx
@@ -611,6 +617,7 @@ def test_coefficient_left_of_operator_still_closes(cr):
 
 
 def test_nonmetricity_and_connection_form_are_tensorial_sympy():
+    sp = pytest.importorskip("sympy")
     # Generic ∇ (Γ^k_ij) and metric g_ij on ℝ²:
     # Q(X,Y,Z) := X(g(Y,Z)) − g(∇_X Y, Z) − g(Y, ∇_X Z) is C^∞-linear in
     # every slot, and ω^a_b(X) := ⟨e^a, ∇_X e_b⟩ in X (∇_{hX} = h∇_X).

@@ -280,6 +280,7 @@ def _combos():
 
 @pytest.mark.contract_table
 def test_4_oracle_and_engine_agree_over_hierarchy_filters_and_strict():
+    pytest.importorskip("sympy")  # the model oracle needs the optional ``oracle`` extra
     # ONE test over the whole table: 1–2 declarations from {S, DERIVED S,
     # G0, G1, Gk, NC, DERIVED NC, AC} at exact / class (subclass, Symbol,
     # Atom) / predicate level × every axioms subset × axiom / strict mode
@@ -308,6 +309,7 @@ def test_4_oracle_and_engine_agree_over_hierarchy_filters_and_strict():
 
 
 def test_4_oracle_corners_from_the_probes():
+    pytest.importorskip("sympy")  # the model oracle needs the optional ``oracle`` extra
     from jacopy.oracle.realize import _declared_constant
 
     (h,) = forms("h", degree=0)
