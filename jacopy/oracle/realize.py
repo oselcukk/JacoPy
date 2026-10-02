@@ -411,17 +411,16 @@ def _rational(e, env, path):
 
 
 def _declared_constant(e, env) -> bool:
-    """The SAME ℝ-constant as the engine's ``is_real_constant`` (audit
-    0b00e1b M1-1, one contract): an atom of function kind (here a
-    Symbol, or a degree-0 Form / PVector) whose EFFECTIVE registry
-    answer is ``Scalar`` — exact, class or predicate level — with no
-    ``Graded(k ≠ 0)``. Restated from registry data: the oracle imports
-    no engine logic (SPEC §1)."""
-    reg = env.registry
-    if reg is None or reg.peek(e, Scalar) is None:
-        return False
-    g = reg.peek(e, Graded)
-    return g is None or g.degree.as_int() == 0
+    """THE engine predicate
+    :func:`~jacopy.central.calculus.scalars.is_real_constant` itself
+    (audit 0b00e1b M1-1 review #4: a restatement drifted — it lacked
+    the function-kind condition and accepted a symbolic degree). The
+    oracle models a constant exactly where the engine treats one;
+    ``record=False`` keeps the oracle's reads out of every proof's
+    hypotheses (SPEC §1: the oracle mints nothing)."""
+    from jacopy.central.calculus.scalars import is_real_constant  # noqa: WPS433
+
+    return is_real_constant(e, env.registry, record=False)
 
 
 @register(Symbol)
