@@ -120,6 +120,32 @@ _TEXT_PUNCT: Dict[str, str] = {
     "\u00a0": "~", "\u202f": "\\,", "\u2009": "\\,",
 }
 
+#: Greek letter NAMES spelled in ASCII (``forms("omega")``, ``Pi``,
+#: ``alpha_ij``) → LaTeX commands. Lowercase: every letter LaTeX has a
+#: command for (omicron has none; the ``var`` forms included).
+#: Uppercase: only the letters with a distinct glyph — ``Alpha``,
+#: ``Beta``, ``Eta`` … look like Latin capitals and stay as written.
+_GREEK_NAMES = frozenset(
+    "alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta "
+    "iota kappa varkappa lambda mu nu xi pi varpi rho varrho sigma "
+    "varsigma tau upsilon phi varphi chi psi omega digamma "
+    "Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega".split()
+)
+#: a Greek name as a whole word: not inside a longer identifier
+#: (``omegax``, ``Pinv``, ``epsilon0``'s ``epsilon`` IS matched — a
+#: digit ends the word) and not already a command (``\omega``)
+_GREEK_WORD_RE = re.compile(
+    r"(?<![A-Za-z\\])(" + "|".join(sorted(_GREEK_NAMES, key=len, reverse=True)) + r")(?![A-Za-z])"
+)
+
+
+def _greek_words(name: str) -> str:
+    """``omega_1`` → ``\\omega_1``, ``Pi`` → ``\\Pi``; a following
+    letter is impossible (whole words only), so no separating space is
+    needed."""
+    return _GREEK_WORD_RE.sub(lambda m: "\\" + m.group(1), name)
+
+
 _SUBSCRIPT_DIGITS = dict(zip("₀₁₂₃₄₅₆₇₈₉", "0123456789"))
 _SUPERSCRIPT_DIGITS = dict(zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789"))
 _SUB_RUN = re.compile("[₀₁₂₃₄₅₆₇₈₉]+")
@@ -178,7 +204,10 @@ def latex_name(name: str) -> str:
     ``\\hat{\\Pi}``), converts Unicode sub/superscript digits
     (``ω₂`` → ``\\omega_{2}``, ``Ψ⁻¹`` → ``\\Psi^{-1}``), braces nested
     subscripts, replaces Unicode math glyphs with LaTeX commands, and
-    braces multi-character subscripts (``X_ab`` → ``X_{ab}``).
+    braces multi-character subscripts (``X_ab`` → ``X_{ab}``). Greek
+    letter names spelled in ASCII become commands as whole words
+    (``omega`` → ``\\omega``, ``omega_1`` → ``\\omega_1``, ``Pi`` →
+    ``\\Pi``; ``omegax`` stays a plain identifier).
     """
     if not isinstance(name, str):
         raise TypeError("latex_name: expected a str")
@@ -194,6 +223,7 @@ def latex_name(name: str) -> str:
     name = _script_letters(name)
     name = _scripts(name)
     name = _brace_nested_subscripts(name)
+    name = _greek_words(name)
     name = _glyphs(name)
     name = _MULTICHAR_SUB.sub(lambda m: "_{" + m.group(1) + "}", name)
     return _fix_scripts(_math_fallback(name))
