@@ -302,7 +302,7 @@ def test_5_function_times_derivation_is_a_derivation():
     reg.declare(x, NonCommuting())
     gens = (g,)                                              # a commutative algebra of functions
     assert _is_derivation_expr(Product(f, X), reg, gens)
-    assert _is_derivation_expr(Product(f, g, X), reg, gens)
+    assert not _is_derivation_expr(Product(f, g, X), reg, gens)  # gate 6: ONE atom coefficient
     assert _is_derivation_expr(Product(c, X, c), reg)        # constants need no algebra
     assert _is_derivation_expr(Product(Integer(2), f, X), reg, gens)
     assert not _is_derivation_expr(Product(f, X), reg)        # unknown algebra: refused
@@ -340,12 +340,12 @@ def test_6_negative_scalar_answers_are_not_hypotheses():
     (X,) = vector_fields("X")
     with track_reads() as log:
         assert not is_real_constant(f, reg)
-    assert not any(cls is Scalar for _, cls, _ in log)      # negative: silent
+    assert not any(entry[1] is Scalar for entry in log)      # negative: silent
     with track_reads() as log:
         c = Symbol("c")
         reg.declare(c, Scalar())
         assert is_real_constant(c, reg)
-    assert {cls for e, cls, v in log if e == c} == {Scalar, Graded, NonCommuting, AntiCommuting}
+    assert {entry[1] for entry in log if entry[0] == c} == {Scalar, Graded, NonCommuting, AntiCommuting}
     # the contract: a Leibniz proof for FUNCTIONS stays citable where
     # one of them is later a constant (constants are functions) …
     eng = tangent_engine(registry=reg)

@@ -186,7 +186,8 @@ def test_2_cD_eq_E_not_citable_where_c_is_noncommuting():
     chain = prove_operator_equation(Product(c, D), E, Alg(), registry=src, engine=ExpansionEngine([Gen()]))
     thm = Theorem("cD=E", "c·D = E", Product(c, D), E, chain).with_structural_requires()
     names = {str(f) for f in thm.registry_facts}
-    assert "c has no NonCommuting declared" in names and "x has no AntiCommuting declared" in names
+    assert any(n.startswith("c has no NonCommuting declared") for n in names)
+    assert any(n.startswith("x has no AntiCommuting declared") for n in names)
     eng = ExpansionEngine([Gen(), TheoremDefinition(thm)])
     assert not check_citation(thm, eng, registry=tgt).ok
     assert prove(eng, Product(c, D), E, registry=tgt).status == "RESIDUAL"
