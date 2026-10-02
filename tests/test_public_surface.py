@@ -156,3 +156,107 @@ def test_old_deep_paths_still_import():
     from jacopy.packages.poisson.tilde import _normalized_by  # noqa: F401
     from jacopy.packages.generalized.exceptional_rotation import _engine  # noqa: F401
     from jacopy.packages.metric_affine.metric import Metric, metric  # noqa: F401
+
+
+# --------------------------------------------------------------- T2-7
+_TOP_LEVEL = {
+    "jacopy.core.expr": [
+        "Expr", "Atom", "Symbol", "Integer", "Rational", "Sum", "Product",
+        "Power", "Neg", "Zero", "One", "NegOne",
+    ],
+    "jacopy.core": ["PropertyRegistry", "default_registry", "Wedge", "MultiEval"],
+    "jacopy.algebra": ["Act", "Derivation"],
+    "jacopy.central.objects": [
+        "Bundle", "TM", "tangent_bundle", "functions", "vector_fields", "forms",
+        "p_vectors", "bivector", "tensors", "metric", "Metric", "hodge",
+        "connection", "covariant_derivative", "frame", "coframe", "pairing",
+        "Pairing", "wedge", "multi_eval", "interior",
+    ],
+    "jacopy.central.tangent": [
+        "lie_bracket", "lie_derivative", "exterior_d", "sn_bracket",
+    ],
+    "jacopy.proof": [
+        "show_equal", "prove", "ProofChain", "ProofStep", "ProofFailure",
+        "ProofResult", "Goal", "Assumption", "Theorem", "TheoremBook", "cite",
+        "normalize", "NormalForm", "Definition", "ExpansionEngine",
+    ],
+    "jacopy.display": [
+        "display_expr", "display_chain", "display_theorem", "print_expr",
+        "print_chain", "to_latex", "to_ascii", "theorem_to_latex_document",
+    ],
+}
+
+
+class TestTopLevelSurface:
+    def test_all_is_exactly_the_documented_surface(self):
+        expected = [n for names in _TOP_LEVEL.values() for n in names]
+        assert sorted(jacopy.__all__) == sorted(expected)
+        assert len(jacopy.__all__) == len(set(jacopy.__all__))
+
+    @pytest.mark.parametrize("home", sorted(_TOP_LEVEL))
+    def test_every_name_is_its_home_object(self, home):
+        mod = importlib.import_module(home)
+        for name in _TOP_LEVEL[home]:
+            assert getattr(jacopy, name) is getattr(mod, name), name
+
+    def test_canonical_choice_for_shared_names(self):
+        from jacopy.central.objects.metric import Metric, metric
+        from jacopy.core.expr import Zero
+        from jacopy.proof.normalize import normalize
+        from jacopy.proof.result import ProofResult
+        from jacopy.proof.search import prove
+        from jacopy.proof.theorems import Theorem
+        from jacopy.proof.verifier import show_equal
+
+        assert jacopy.Zero is Zero
+        assert jacopy.metric is metric and jacopy.Metric is Metric
+        assert jacopy.normalize is normalize
+        assert jacopy.show_equal is show_equal and jacopy.prove is prove
+        assert jacopy.ProofResult is ProofResult and jacopy.Theorem is Theorem
+        for ambiguous in ("Provenance", "antisymmetrize", "prove_jacobi"):
+            assert ambiguous not in jacopy.__all__
+
+    def test_star_import_and_dir(self):
+        ns: dict = {}
+        exec("from jacopy import *", ns)
+        assert set(jacopy.__all__) <= set(ns)
+        assert set(jacopy.__all__) <= set(dir(jacopy))
+        with pytest.raises(AttributeError):
+            jacopy.no_such_name  # noqa: B018
+
+    def test_docstring_is_current(self):
+        doc = jacopy.__doc__
+        assert "under construction" not in doc
+        assert "will arrive" not in doc
+        for name in ("show_equal", "ProofResult", "Theorem", "jacopy.research"):
+            assert name in doc
+
+
+# Names that two different objects carry across the subpackage __all__
+# lists, each owned outside the facade lane; a NEW collision fails.
+_KNOWN_COLLISIONS = {
+    "Metric",  # central atom vs metric_affine context (ROADMAP 5f adapter)
+    "metric",
+    "Provenance",  # core.properties vs proof.result
+    "Zero",  # core.expr vs research.block_matrix
+    "antisymmetrize",  # core.symmetrize vs research.antisymmetrize
+    "normalize",  # algorithms.rewrite vs proof.normalize
+    "prove_cartan_magic_on_functions",  # central.tangent vs central.algebroid
+    "prove_cartan_magic_on_one_forms",
+    "prove_d_squared_zero_on_functions",
+    "prove_d_squared_zero_on_one_forms",
+    "prove_jacobi",  # central.tangent vs proof.verifier
+}
+
+
+def test_no_new_same_name_different_object():
+    owners: dict[str, dict[int, str]] = {}
+    packages = ["jacopy"] + [
+        m.name for m in pkgutil.walk_packages(jacopy.__path__, "jacopy.") if m.ispkg
+    ]
+    for pkg_name in packages:
+        pkg = importlib.import_module(pkg_name)
+        for name in getattr(pkg, "__all__", None) or ():
+            owners.setdefault(name, {})[id(getattr(pkg, name))] = pkg_name
+    clashes = {n for n, objs in owners.items() if len(objs) > 1}
+    assert clashes <= _KNOWN_COLLISIONS, sorted(clashes - _KNOWN_COLLISIONS)
