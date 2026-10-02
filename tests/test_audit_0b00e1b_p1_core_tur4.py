@@ -180,9 +180,9 @@ def test_1_musical_maps_are_not_plain_atoms():
     reg, f, n, a, x, y = _reg()
     for g in (Sharp(PI), Flat(f), EndoForm("m", f), PoissonBracketValue(PI, f, f)):
         assert g.is_atom
-        assert not _plain_atom(g, reg, ("function", "form", "zero"))
+        assert not _plain_atom(g, reg, ("function", "form"))
     g1 = _sym(reg, "g1", Graded(1))
-    assert _plain_atom(g1, reg, ("function", "form", "zero"))         # a plain odd symbol generator
+    assert _plain_atom(g1, reg, ("function", "form"))         # a plain odd symbol generator
     assert _cD_eq_E(reg, f, (x, g1)) is not None
 
 

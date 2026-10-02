@@ -226,19 +226,14 @@ def _operator_degree(op: Expr, registry: Optional[PropertyRegistry]) -> Degree:
     return degree_of(op, registry)
 
 
-#: the SYMBOL types a coefficient / generator of the f·D certificate may
-#: have: a plain symbol, a plain form symbol, a plain multivector symbol —
-#: EXACT types for the two atoms with a degree (EndoForm, Sharp, Flat …
-#: subclass or resemble them but carry operands outside ``children``,
-#: gate-7 cr7/p01), any Symbol subclass (a Symbol carries no operand)
-_SYMBOL_TYPES = ("Symbol", "Form", "PVector")
-
-
 def _is_symbol_atom(e: Expr) -> bool:
     """An EXPLICIT type allow-list (gate-7 P0): ``is_atom`` is not
     "has no operands" — opaque atoms (``m̃(n)``, ``{n, f}_π``,
     ``g(u, v)``, musical maps) keep their operands outside ``children``,
-    so a NonCommuting leaf hides in them. Only a true symbol passes."""
+    so a NonCommuting leaf hides in them. Only a true symbol passes:
+    any ``Symbol`` subclass (a Symbol carries no operand), and EXACT
+    ``Form`` / ``PVector`` (EndoForm, Sharp, Flat … subclass or resemble
+    them but carry operands outside ``children``, gate-7 cr7/p01)."""
     from jacopy.central.objects.form import Form
     from jacopy.central.objects.multivector import PVector
     from jacopy.core.expr import Symbol
@@ -297,7 +292,9 @@ def _commutes_with_generators(
         return False
     if not _plain_atom(coeff, registry, ("function",)):
         return False
-    return all(_plain_atom(x, registry, ("function", "form", "zero")) for x in generators)
+    # no "zero" kind here: a symbol atom (Symbol / Form / PVector) is
+    # typed function, form, multivector or unknown — never zero
+    return all(_plain_atom(x, registry, ("function", "form")) for x in generators)
 
 
 def _is_derivation_expr(
