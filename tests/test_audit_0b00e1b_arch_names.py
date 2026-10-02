@@ -249,3 +249,136 @@ def test_notebook_replacements_agree_with_the_old_helpers():
     assert nf.stopped_by != "steps" and nf.expr == old
     for slots in ((Y, Z), (X, Y, Z, W, Q)):
         assert _ev(om, slots) == jacopy.multi_eval(om, *slots)
+
+
+# ------------------------------------------------- arch-core gate L1..L3
+# Each scenario runs in a FRESH process: the registry state the gate
+# probes depend on is "what was touched first".
+_RULES_PROBE = (
+    "from jacopy.core.registry import PropertyRegistry\n"
+    "from jacopy.packages.poisson.nambu import nambu_structure\n"
+    "from jacopy.central.objects import forms, functions\n"
+    "from jacopy.core.wedge import Wedge\n"
+    "from jacopy.algebra.derivation import Act\n"
+    "from jacopy.research import assemble_engine\n"
+    "def rules():\n"
+    "    reg = PropertyRegistry(); (h,) = functions('h', registry=reg)\n"
+    "    (a,) = forms('a', degree=2); x, y = forms('x y', degree=1)\n"
+    "    N = nambu_structure('Π', p=2)\n"
+    "    eng = assemble_engine(Act(N.sharp_vf(Wedge(a, x)), h), Wedge(x, y), registry=reg, structures=(N,))\n"
+    "    return [(type(r).__name__, r.name) for r in eng.definitions]\n"
+)
+
+_GREEDY = (
+    "from jacopy.research.structure_kinds import StructureKind, register_structure_kind, structure_kind_of\n"
+    "class Greedy(StructureKind):\n"
+    "    name = 'greedy'\n"
+    "    def accepts(self, s): return hasattr(s, 'pi')\n"
+    "    def key(self, s): return s.pi\n"
+)
+
+
+def _probe(body: str) -> str:
+    r = subprocess.run([sys.executable, "-c", body], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[-3000:]
+    return r.stdout
+
+
+def test_l1_a_user_kind_registered_first_does_not_displace_the_builtin():
+    out = _probe(
+        _GREEDY + _RULES_PROBE
+        + "register_structure_kind(Greedy())\n"
+        "from jacopy.packages.poisson.nambu import nambu_structure as ns\n"
+        "print(structure_kind_of(ns('Π', p=2)).name)\n"
+        "print(rules())\n"
+    )
+    out_after = _probe(
+        _GREEDY + _RULES_PROBE
+        + "first = rules()\n"
+        "register_structure_kind(Greedy())\n"
+        "from jacopy.packages.poisson.nambu import nambu_structure as ns\n"
+        "print(structure_kind_of(ns('Π', p=2)).name)\n"
+        "print(rules())\n"
+    )
+    plain = _probe(_RULES_PROBE + "print('nambu-poisson'); print(rules())\n")
+    assert out.splitlines()[0] == "nambu-poisson"
+    assert out == out_after == plain
+
+
+def test_l1_first_true_still_puts_a_user_kind_in_front():
+    out = _probe(
+        _GREEDY
+        + "register_structure_kind(Greedy(), first=True)\n"
+        "from jacopy.packages.poisson.nambu import nambu_structure as ns\n"
+        "print(structure_kind_of(ns('Π', p=2)).name)\n"
+    )
+    assert out.strip() == "greedy"
+
+
+def test_l1_builtin_families_precede_a_user_family_registered_first():
+    out = _probe(
+        "from jacopy.research.structure_kinds import register_family, families\n"
+        "class Flux: pass\n"
+        "register_family(Flux, 'flux')\n"
+        "print([f.tag for f in families()])\n"
+    )
+    tags = eval(out)  # noqa: S307 - a printed list of str
+    assert tags[-1] == "flux" and tags.index("nambu_sharp") < tags.index("flux")
+    assert tags[0] == "act"
+
+
+def test_l2_readers_load_the_builtins():
+    out = _probe(
+        "from jacopy.research.structure_kinds import family_rules, families, additive_slot_tags\n"
+        "print(len(family_rules()), len(families()), sorted(additive_slot_tags()))\n"
+    )
+    ref = _probe(
+        _RULES_PROBE + "rules()\n"
+        "from jacopy.research.structure_kinds import family_rules, families, additive_slot_tags\n"
+        "print(len(family_rules()), len(families()), sorted(additive_slot_tags()))\n"
+    )
+    assert out == ref
+    n_rules = int(out.split()[0])
+    assert n_rules > 0
+
+
+def test_l3_registering_the_same_family_rule_twice_is_idempotent():
+    out = _probe(
+        _RULES_PROBE
+        + "from jacopy.research import nambu_kind\n"
+        "from jacopy.research.structure_kinds import family_rules, register_family_rule\n"
+        "before = len(family_rules()); r0 = rules()\n"
+        "nambu_kind.register(); nambu_kind.register()\n"
+        "same_engine = rules() == r0; mid = len(family_rules())\n"
+        "build = lambda registry: None\n"
+        "a = register_family_rule({'wedge', 'act'}, build, 'probe rule', order=99)\n"
+        "b = register_family_rule({'act', 'wedge'}, build, 'probe rule', order=99)\n"
+        "c = register_family_rule({'act', 'wedge'}, build, 'probe rule', order=98)\n"
+        "print(before, mid, len(family_rules()), a is b, a is c, same_engine)\n"
+    )
+    before, mid, after, same, other, same_engine = out.split()
+    assert mid == before and same_engine == "True"  # re-registering the built-ins adds nothing
+    assert int(after) == int(before) + 2  # the probe rule a(=b) and c only
+    assert same == "True" and other == "False"
+
+
+def test_l3_a_distinct_predicate_or_build_is_a_new_rule():
+    from jacopy.research.structure_kinds import family_rules, register_family_rule, unregister
+
+    def build(registry):
+        return None
+
+    def build2(registry):
+        return None
+
+    n = len(family_rules())
+    a = register_family_rule(lambda fam: False, build, "probe", order=99)
+    b = register_family_rule(lambda fam: False, build, "probe", order=99)
+    c = register_family_rule("never-a-tag", build2, "probe", order=99)
+    try:
+        assert a is not b and len(family_rules()) == n + 3
+        assert register_family_rule("never-a-tag", build2, "probe", order=99) is c
+    finally:
+        for r in (a, b, c):
+            unregister(r)
+    assert len(family_rules()) == n
