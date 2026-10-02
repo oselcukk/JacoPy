@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use jacopy in your research, please cite it as below."
+type: software
+title: "jacopy"
+abstract: >-
+  Graded algebra, bracket calculus, and metric-affine / generalized
+  geometry with step-by-step proofs (v3, central-code architecture).
+authors:
+  - family-names: "Selçuk"
+    given-names: "Oğuzhan"
+    # TODO: orcid, affiliation and email are not recorded anywhere in the
+    # repository; add them here once confirmed.
+# Kept in step with jacopy/__init__.py (__version__).
+version: "0.0.1"
+repository-code: "https://github.com/oselcukk/JacoPy.v.3"
+keywords:
+  - graded algebra
+  - lie algebroid
+  - courant algebroid
+  - generalized geometry
+  - metric-affine geometry
+  - poisson geometry
+  - cartan calculus
+  - symbolic computation
+# TODO: date-released and doi — no release has been tagged yet.
+# license: omitted on purpose. jacopy is proprietary, source-available
+# (see LICENSE); CFF accepts only SPDX identifiers and there is none
+# for this licence.

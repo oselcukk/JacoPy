@@ -260,3 +260,64 @@ def test_no_new_same_name_different_object():
             owners.setdefault(name, {})[id(getattr(pkg, name))] = pkg_name
     clashes = {n for n, objs in owners.items() if len(objs) > 1}
     assert clashes <= _KNOWN_COLLISIONS, sorted(clashes - _KNOWN_COLLISIONS)
+
+
+# --------------------------------------------------------------- T2-9
+_REPO = __import__("pathlib").Path(jacopy.__file__).resolve().parents[1]
+
+
+def test_py_typed_ships_with_the_package():
+    marker = __import__("pathlib").Path(jacopy.__file__).with_name("py.typed")
+    assert marker.is_file()
+
+
+def test_version_has_one_source():
+    from importlib import metadata
+
+    assert isinstance(jacopy.__version__, str) and jacopy.__version__
+    try:
+        installed = metadata.version("jacopy")
+    except metadata.PackageNotFoundError:  # pragma: no cover - source tree only
+        return
+    assert installed == jacopy.__version__
+
+
+def _pyproject():
+    tomllib = pytest.importorskip("tomllib")
+    path = _REPO / "pyproject.toml"
+    if not path.is_file():
+        pytest.skip("installed package: no pyproject.toml next to it")
+    return tomllib.loads(path.read_text(encoding="utf-8"))
+
+
+def test_pyproject_reads_the_version_from_the_package():
+    project = _pyproject()
+    assert "version" not in project["project"]
+    assert "version" in project["project"]["dynamic"]
+    assert project["tool"]["setuptools"]["dynamic"]["version"] == {
+        "attr": "jacopy.__version__"
+    }
+    assert "py.typed" in project["tool"]["setuptools"]["package-data"]["jacopy"]
+
+
+# extra requirement -> the import name it must be used under in jacopy/
+_IMPORT_NAME = {"sympy": "sympy", "rich": "rich", "pytest": None, "ipykernel": None}
+
+
+def test_runtime_extras_are_imported_somewhere():
+    """Every runtime extra (not the test/notebook tooling) names a
+    package that jacopy/ actually imports."""
+    extras = _pyproject()["project"]["optional-dependencies"]
+    sources = "\n".join(
+        p.read_text(encoding="utf-8") for p in (_REPO / "jacopy").rglob("*.py")
+    )
+    for extra, reqs in extras.items():
+        for req in reqs:
+            dist = re.split(r"[<>=!~\[; ]", req, maxsplit=1)[0]
+            assert dist in _IMPORT_NAME, f"extra {extra!r}: unknown {dist!r}"
+            mod = _IMPORT_NAME[dist]
+            if mod is not None:
+                assert re.search(rf"^\s*(import|from) {mod}\b", sources, re.M), (
+                    extra,
+                    dist,
+                )
