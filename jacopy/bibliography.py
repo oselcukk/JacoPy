@@ -372,29 +372,53 @@ def as_citations(source) -> Tuple[Citation, ...]:
     return out
 
 
+def work_locators(cits) -> dict:
+    """``{key: [locator, …]}`` in first-use order, each locator once; a
+    locator that only names the enclosing place of another one of the
+    same work (``Definition 4.1`` next to ``Definition 4.1, Eq.
+    (4.4)``) is dropped as subsumed. ``[]`` = the whole work."""
+    by_work: dict = {}
+    for c in as_citations(cits):
+        locs = by_work.setdefault(c.key, [])
+        if c.locator and c.locator not in locs:
+            locs.append(c.locator)
+    for k, locs in by_work.items():
+        by_work[k] = [l for l in locs if not any(o != l and o.startswith(l + ",") for o in locs)]
+    return by_work
+
+
 def in_text(source, style: str = "plain") -> str:
     """APA 7 parenthetical citation of one or several sources.
 
+    Every cited PLACE is one author–date–locator item, and items are
+    separated by semicolons (§8.12):
+
     * works in one parenthesis, alphabetical by the (accent-folded)
-      author string, separated by semicolons (§8.12);
-    * several locators of one work follow its year; several years of
-      the same authors are joined (``Dereli & Doğan, 2020, Definition
-      3.1, 2023, Proposition 3.7``);
+      author string, then by year;
+    * a locator always follows its own author and year — two places in
+      one work, or works of the same authors in different years, are
+      separate items (``Dereli & Doğan, 2020, Definition 3.1; Dereli &
+      Doğan, 2023, Proposition 3.7``), because a locator may itself
+      contain a comma (``Definition 4.1, Eq. [4.6]``) and a bare
+      ``…, 2022, Definition 4.1, Eq. [4.4], Definition 4.1, 2025, …``
+      cannot be read back;
+    * only works of the same authors cited WITHOUT a locator join their
+      years (``Dereli & Doğan, 2020, 2023``);
+    * a locator subsumed by a more specific one of the same work is
+      dropped (:func:`work_locators`);
     * parentheses inside a locator become brackets (§6.9):
       ``Eq. (3.10)`` → ``Eq. [3.10]``;
     * a work with no author is cited by its italic Title-Case title.
 
-    ``style``: ``"plain"`` (no markup), ``"markdown"`` or ``"latex"``
-    (escaped text, ``\\textit`` titles)."""
+    ``style`` selects the MARKUP only — the citation format is always
+    APA 7: ``"plain"`` (no markup; ``"apa"`` is accepted as its alias),
+    ``"markdown"`` or ``"latex"`` (escaped text, ``\\textit`` titles).
+    Any other value raises :class:`ValueError` naming the valid ones."""
     cits = as_citations(source)
+    it, esc = _fmt(style)
     if not cits:
         return ""
-    it, esc = _fmt(style)
-    by_work: dict = {}
-    for c in cits:
-        locs = by_work.setdefault(c.key, [])
-        if c.locator and c.locator not in locs:
-            locs.append(c.locator)
+    by_work = work_locators(cits)
     groups: dict = {}
     for k in by_work:
         groups.setdefault(_in_text_authors(BIBLIOGRAPHY[k]), []).append(k)
@@ -402,11 +426,22 @@ def in_text(source, style: str = "plain") -> str:
     for authors in sorted(groups, key=_fold):
         keys = sorted(groups[authors], key=lambda k: (year_label(BIBLIOGRAPHY[k]), k))
         head = it(esc(authors)) if not BIBLIOGRAPHY[keys[0]].authors else esc(authors)
-        bits = [head]
+        bare: list = []  # consecutive locator-free years of these authors
+
+        def flush():
+            if bare:
+                parts.append(", ".join([head, *bare]))
+                bare.clear()
+
         for k in keys:
-            bits.append(year_label(BIBLIOGRAPHY[k]))
-            bits.extend(esc(apa_locator(loc)) for loc in by_work[k])
-        parts.append(", ".join(bits))
+            year = year_label(BIBLIOGRAPHY[k])
+            if not by_work[k]:
+                bare.append(year)
+                continue
+            flush()
+            for loc in by_work[k]:
+                parts.append(f"{head}, {year}, {esc(apa_locator(loc))}")
+        flush()
     return "(" + "; ".join(parts) + ")"
 
 
@@ -517,9 +552,15 @@ def _author_list(ref: Reference) -> str:
     return ", ".join(names[:19]) + ", . . . " + names[-1]
 
 
+#: markup styles of :func:`in_text` / :func:`apa_reference` (the
+#: citation FORMAT is always APA 7; ``"apa"`` is an alias of ``"plain"``)
+TEXT_STYLES = ("plain", "markdown", "latex")
+
+
 def _fmt(style: str):
-    """Italic / escaping helpers for ``style`` in plain|markdown|latex."""
-    if style == "plain":
+    """Italic / escaping helpers for ``style`` in plain|markdown|latex
+    (``"apa"`` = ``"plain"``)."""
+    if style in ("plain", "apa"):
         return (lambda s: s), (lambda s: s)
     if style == "markdown":
         return (lambda s: f"*{s}*"), (lambda s: s)
@@ -529,7 +570,12 @@ def _fmt(style: str):
         from jacopy.display.latex import text_to_latex
 
         return (lambda s: r"\textit{" + s + "}"), text_to_latex
-    raise ValueError(f"unknown style {style!r}")
+    raise ValueError(
+        f"unknown style {style!r}: expected one of {TEXT_STYLES} — the style "
+        "selects markup only, the format is always APA 7 ('apa' is accepted "
+        "as an alias of 'plain'); for biblatex \\parencite commands use "
+        "jacopy.display.latex.cite_to_latex(source, style='biblatex')"
+    )
 
 
 def _end(s: str) -> str:
@@ -539,8 +585,8 @@ def _end(s: str) -> str:
 def apa_reference(key_or_ref, style: str = "plain") -> str:
     """The APA 7 reference-list entry for a key / :class:`Reference`.
 
-    ``style``: ``"plain"`` (no markup), ``"markdown"`` (``*italics*``)
-    or ``"latex"`` (``\\textit``, escaped text). A field the sources do
+    ``style``: ``"plain"`` (no markup; alias ``"apa"``), ``"markdown"``
+    (``*italics*``) or ``"latex"`` (``\\textit``, escaped text). A field the sources do
     not give is printed as ``[<field> not in source]``."""
     ref = key_or_ref if isinstance(key_or_ref, Reference) else reference(key_or_ref)
     it, esc = _fmt(style)

@@ -1300,18 +1300,17 @@ def cite_to_latex(source, style: str = "apa") -> str:
 
 def _parencites(cits) -> str:
     """ONE ``\\parencites`` group for all works of a source: works in APA
-    order, the locators of one work merged into one postnote."""
-    from jacopy.bibliography import BIBLIOGRAPHY, _ref_sort_key, apa_locator
+    order, one entry per cited place (a locator may contain a comma, so
+    two places of one work are never merged into one postnote — the
+    same rule as :func:`jacopy.bibliography.in_text`)."""
+    from jacopy.bibliography import BIBLIOGRAPHY, _ref_sort_key, apa_locator, work_locators
 
-    by_work: dict = {}
-    for c in cits:
-        locs = by_work.setdefault(c.key, [])
-        if c.locator and c.locator not in locs:
-            locs.append(c.locator)
+    by_work = work_locators(cits)
     parts = []
     for k in sorted(by_work, key=lambda k: _ref_sort_key(BIBLIOGRAPHY[k])):
-        note = ", ".join(apa_locator(l) for l in by_work[k])
-        parts.append((f"[{_bib_postnote(note)}]" if note else "") + f"{{{k}}}")
+        for note in by_work[k] or [""]:
+            note = apa_locator(note)
+            parts.append((f"[{_bib_postnote(note)}]" if note else "") + f"{{{k}}}")
     return "\\parencites" + "".join(parts)
 
 

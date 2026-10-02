@@ -58,17 +58,21 @@ def test_apa_in_text_author_rules():
     assert cite("MC", "Definition 3.1").key == "DereliDogan2020"
 
 
-def test_apa_in_text_groups_works_alphabetically_and_merges_locators():
+def test_apa_in_text_groups_works_alphabetically_one_item_per_place():
     src = (
         cite("Uchino2002", "Section 1, axiom [C5]"),
         cite("LiuWeinsteinXu1997"),
         cite("MC", "Definition 3.1"),
         cite("MC", "Eq. (3.10)"),
     )
-    # §6.9: parentheses inside the citation's parentheses become brackets
+    # §6.9: parentheses inside the citation's parentheses become brackets.
+    # Every cited place is its own author-date-locator item (display-
+    # polish 2026-10-02): a locator may contain a comma ("Section 1,
+    # axiom [C5]"), so "2020, Definition 3.1, Eq. [3.10]" could not be
+    # read back as two places
     assert in_text(src) == (
-        "(Dereli & Doğan, 2020, Definition 3.1, Eq. [3.10]; Liu et al., 1997; "
-        "Uchino, 2002, Section 1, axiom [C5])"
+        "(Dereli & Doğan, 2020, Definition 3.1; Dereli & Doğan, 2020, Eq. [3.10]; "
+        "Liu et al., 1997; Uchino, 2002, Section 1, axiom [C5])"
     )
 
 
@@ -81,12 +85,17 @@ def test_apa_in_text_order_folds_accents_and_joins_years():
         cite("ADM", "Proposition 3.7"),
         cite("MC", "Definition 3.1"),
     )
-    # Ç sorts as C, Š as S (§8.12); same authors, several years joined
+    # Ç sorts as C, Š as S (§8.12); same authors in several years: each
+    # LOCATED citation keeps its own author and year (display-polish
+    # 2026-10-02 — "2020, Definition 3.1, 2023, Proposition 3.7" mixed
+    # years into the locator list) …
     assert in_text(src) == (
         "(Çatal-Özer et al., 2022, Lemma 9.1; "
-        "Dereli & Doğan, 2020, Definition 3.1, 2023, Proposition 3.7; "
+        "Dereli & Doğan, 2020, Definition 3.1; Dereli & Doğan, 2023, Proposition 3.7; "
         "Roytenberg, 1999; Ševera, 2017; Uchino, 2002, Remark 1)"
     )
+    # … while locator-free works of the same authors still join years
+    assert in_text((cite("ADM"), cite("MC"))) == "(Dereli & Doğan, 2020, 2023)"
     order = [r.key for r in cited_references(src)]
     assert order == ["CatalOzerDereliDogan2022", "DereliDogan2020", "DereliDogan2023",
                      "Roytenberg1999", "Severa2017", "Uchino2002"]
