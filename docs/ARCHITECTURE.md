@@ -1,9 +1,9 @@
 # jacopy v3 — Architecture
 
-*Measured on 2026-10-02 (branch `docs/arch-docs`, based on
-`refactor/arch-names` at `baa1ecb`): 186 Python modules, about 70,600
-lines under `jacopy/`; 117 test files; the fast suite is
-2,523 passed, 12 skipped, 5 xfailed (`pytest tests -q`). These numbers change with every merge;
+*Measured on 2026-10-02 (branch `fix/display-polish`, based on `main`
+at `8b46a5d`): 186 Python modules, about 70,800 lines under `jacopy/`;
+122 test files; the fast suite is
+2,572 passed, 12 skipped, 5 xfailed (`pytest tests -q`). These numbers change with every merge;
 the layer boundaries and the trust model below are the part of this
 document that is meant to stay true.*
 
@@ -61,8 +61,22 @@ layer and from the layers below it. Measured with an AST scan of every
   imports `drinfeld` at module level; the reverse directions
   (`poisson` → `drinfeld`/`generalized`, `drinfeld` → `generalized`,
   `metric_affine` → `poisson`, `generalized` → `metric_affine`) are
-  deferred imports. Inside `central`, `objects` → `calculus` and
-  `algebroid` → `tangent` are deferred.
+  deferred imports. Inside `central` (order `objects` → `calculus` →
+  `tangent` → `algebroid`, upper imports lower), two edges against
+  that order are deferred only: `objects` → `calculus` (7, in
+  `objects/endomorphism.py`, `objects/kind.py`,
+  `objects/multivector_interior.py`) and `calculus` → `tangent` (1,
+  `calculus/tensor_calculus.py`, the TM `d` of the tensor calculus);
+  `algebroid` → `tangent` (8) is deferred as well, so loading the
+  algebroid layer does not load the tangent one.
+* **Oracle edges.** Besides the proof layer (`proof/result.py`,
+  `search.py`, `strategies.py`, `verifier.py` → `oracle.hook`, module
+  level), two more modules call the hook: `research/axiom_suite.py`
+  (module level) and `packages/poisson/koszul_jacobi.py` (deferred).
+  All three reach only `jacopy/oracle/hook.py`, which imports no
+  engine code; the rest of `oracle/` imports `core`, `algebra`,
+  `brackets`, `central` and `packages.poisson` at module level and is
+  never imported by the library itself.
 * Of all 2,412 `jacopy` imports, 1,068 are deferred; most of them are
   not upward, they keep `import jacopy` light.
 * There is **no automated layering test yet** (*planned*: an import
@@ -167,11 +181,16 @@ Each package has a facade (`from jacopy.packages.<name> import …`).
   `poisson_generalized.py`, `r_twisted.py`, `roytenberg_courant.py`,
   the Bourbaki family (`bourbaki_*.py`), `exact_locality_projector.py`,
   `exceptional_double.py`, `exceptional_rotation.py`,
-  `frame_evaluation.py`, `dialect_bridge.py`.
+  `frame_evaluation.py`, `dialect_bridge.py`; `_cited_rule.py` is the
+  internal `CitedTheoremMixin` for rules that rewrite by a proven,
+  cited theorem (role `theorem`, the citation's requirements flow on).
 * `metric_affine/` — `torsion_curvature.py`, `metric.py`,
   `metric_koszul.py` (Koszul formula), `bianchi.py`,
   `nonmetricity_forms.py`, `frame_components.py`,
-  `component_workflow.py` (concrete component input), the
+  `component_workflow.py` (concrete component input), `rules.py`
+  (the connection's linearity / Leibniz rules), `decomposition.py`
+  (opt-in frame decompositions and the `IndexedSum` operator pushes),
+  the
   E-connection family (`e_connection.py`, `e_bianchi.py`,
   `e_cartan.py`, `e_koszul.py`, `admissible.py`, `modified.py`,
   `derived.py`), and `metric_affine_expansion.py` with the package
@@ -508,7 +527,7 @@ metric atom (not the metric-affine context).
 * **Layering** — the 29 deferred upward imports and the package
   cycles of section 1 (audit T2-2); no layering test yet (*planned*).
 * **Large modules** — eight modules exceed 1,000 lines
-  (`generalized/courant_axioms.py` 1,789, `display/latex.py` 1,627,
+  (`generalized/courant_axioms.py` 1,789, `display/latex.py` 1,659,
   `central/calculus/bracket_calculus.py` 1,287, `drinfeld/twist.py`
   1,190, `central/algebroid/theorems.py` 1,081,
   `drinfeld/tilde_calculus.py` 1,078, `poisson/tilde.py` 1,059,
@@ -523,13 +542,13 @@ metric atom (not the metric-affine context).
 * **Web interface** — the course guideline's page-based interface
   (item 3) is *planned*; today jacopy is a Python library with example
   notebooks.
-* **Notebook smoke run** — on 2026-10-02 two of the four notebooks
-  stop early: `algebroid_declarations_demo.ipynb` (cell 11 cites a
-  theorem whose chain is not replayed, so the trust gate raises
-  `LegacyTheoremError`) and `bracket_twist_research_interface.ipynb`
-  (cell 13 leaves a residual). Both fail the same way on
-  `refactor/arch-names`; the notebooks need updating to the stricter
-  trust model.
+* **Notebook smoke run** — all four notebooks run to the end
+  (2026-10-02, `main` at `8b46a5d`). `algebroid_declarations_demo.ipynb`
+  cites the anchor-morphism record explicitly with `allow_legacy=True`
+  and shows its `unreplayed` requirement (M1-5);
+  `bracket_twist_research_interface.ipynb` closes D.19 at p = 3
+  (Claim 6) again since operator sums inherit alternation (M2-1
+  follow-up).
 * `docs/CITATIONS.md` and several docstrings refer to `ROADMAP.md` and
   to "PDF item N" (the Math 595 guideline); neither file is part of
   the repository.

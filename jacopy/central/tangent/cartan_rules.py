@@ -9,14 +9,24 @@ interface's :func:`~jacopy.research.engine_assembly.assemble_engine`)
 can reach them from the central layer (audit 0B00E1B-FULL T2-1):
 
 * :class:`MagicFormulaDefinition` — ``L_X ω = ι_X(dω) + d(ι_X ω)``
-  (THEOREM-classified; previously ``jacopy.packages.drinfeld.twist``);
+  (theorem-tagged; previously ``jacopy.packages.drinfeld.twist``);
 * :class:`LieIotaCommutatorDefinition` — ``ι_{[X,Y]} = ℒ_X ι_Y −
-  ι_Y ℒ_X`` (THEOREM-classified; previously
+  ι_Y ℒ_X`` (theorem-tagged; previously
   ``jacopy.packages.drinfeld.tilde_calculus``);
-* :class:`DSquaredZeroDefinition` — ``d(d(x)) = 0`` (THEOREM-classified;
+* :class:`DSquaredZeroDefinition` — ``d(d(x)) = 0`` (theorem-tagged;
   previously ``jacopy.packages.poisson.nambu``);
 * :class:`DWedgeLeibnizDefinition` — graded Leibniz of ``d`` over the
   wedge (previously ``jacopy.packages.poisson.nambu``).
+
+Role vs. tag: all four have the logical ROLE ``definition`` (they
+assume nothing beyond ``CARTAN_TM``; the reviewed role in
+``tests/rule_roles_inventory.json``), so no result lists them among
+its assumptions. The first three also carry a sub-proof builder
+(:attr:`~jacopy.proof.expansion.Definition.is_theorem`): their steps
+are TAGGED ``theorem`` — a relation proven elsewhere in the library,
+cited, and unfolded in foundational mode — and are displayed as
+``(theorem)``; the fourth has no builder, is tagged ``axiom`` and
+is displayed as ``(definition)``.
 
 The class bodies are moved verbatim (their docstrings still name the
 engine that first registered them); the old module paths re-export the
@@ -45,7 +55,8 @@ from jacopy.central.tangent.exterior import CARTAN_TM, d
 
 
 class MagicFormulaDefinition(Definition):
-    """THEOREM-classified Cartan magic as a form-level rewrite:
+    """Cartan magic as a form-level rewrite (role ``definition``;
+    theorem-tagged — it carries a sub-proof builder):
     ``L_X ω → ι_X(dω) + d(ι_X ω)`` for a TM Cartan Lie derivative on
     a determinable form of degree ≥ 1.
 
@@ -121,7 +132,7 @@ class MagicFormulaDefinition(Definition):
 
 
 class LieIotaCommutatorDefinition(Definition):
-    """THEOREM-classified Cartan relation ``ι_{[X,Y]} = ℒ_X ι_Y −
+    """Cartan relation (role ``definition``; theorem-tagged) ``ι_{[X,Y]} = ℒ_X ι_Y −
     ι_Y ℒ_X`` as an operator-level rewrite (proved in Phase 2 — the
     ``lie_iota`` relation; the always-on engines apply it at eval
     sites). Terminating: removes a bracket from an interior
@@ -181,7 +192,7 @@ class LieIotaCommutatorDefinition(Definition):
 
 
 class DSquaredZeroDefinition(Definition):
-    """``d(d(x)) → 0`` — THEOREM-classified (never in the always-on
+    """``d(d(x)) → 0`` — role ``definition``, theorem-tagged (never in the always-on
     engines; ``d² = 0`` is proven on TM up to p = 5 via cited Jacobi
     instances — the higher-degree audit). Registered opt-in by the
     Nambu engine, where ``d(dF∧…)`` shapes must die inside interior

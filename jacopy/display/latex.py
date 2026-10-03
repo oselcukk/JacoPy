@@ -120,6 +120,32 @@ _TEXT_PUNCT: Dict[str, str] = {
     "\u00a0": "~", "\u202f": "\\,", "\u2009": "\\,",
 }
 
+#: Greek letter NAMES spelled in ASCII (``forms("omega")``, ``Pi``,
+#: ``alpha_ij``) → LaTeX commands. Lowercase: every letter LaTeX has a
+#: command for (omicron has none; the ``var`` forms included).
+#: Uppercase: only the letters with a distinct glyph — ``Alpha``,
+#: ``Beta``, ``Eta`` … look like Latin capitals and stay as written.
+_GREEK_NAMES = frozenset(
+    "alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta "
+    "iota kappa varkappa lambda mu nu xi pi varpi rho varrho sigma "
+    "varsigma tau upsilon phi varphi chi psi omega digamma "
+    "Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega".split()
+)
+#: a Greek name as a whole word: not inside a longer identifier
+#: (``omegax``, ``Pinv``, ``epsilon0``'s ``epsilon`` IS matched — a
+#: digit ends the word) and not already a command (``\omega``)
+_GREEK_WORD_RE = re.compile(
+    r"(?<![A-Za-z\\])(" + "|".join(sorted(_GREEK_NAMES, key=len, reverse=True)) + r")(?![A-Za-z])"
+)
+
+
+def _greek_words(name: str) -> str:
+    """``omega_1`` → ``\\omega_1``, ``Pi`` → ``\\Pi``; a following
+    letter is impossible (whole words only), so no separating space is
+    needed."""
+    return _GREEK_WORD_RE.sub(lambda m: "\\" + m.group(1), name)
+
+
 _SUBSCRIPT_DIGITS = dict(zip("₀₁₂₃₄₅₆₇₈₉", "0123456789"))
 _SUPERSCRIPT_DIGITS = dict(zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789"))
 _SUB_RUN = re.compile("[₀₁₂₃₄₅₆₇₈₉]+")
@@ -178,7 +204,10 @@ def latex_name(name: str) -> str:
     ``\\hat{\\Pi}``), converts Unicode sub/superscript digits
     (``ω₂`` → ``\\omega_{2}``, ``Ψ⁻¹`` → ``\\Psi^{-1}``), braces nested
     subscripts, replaces Unicode math glyphs with LaTeX commands, and
-    braces multi-character subscripts (``X_ab`` → ``X_{ab}``).
+    braces multi-character subscripts (``X_ab`` → ``X_{ab}``). Greek
+    letter names spelled in ASCII become commands as whole words
+    (``omega`` → ``\\omega``, ``omega_1`` → ``\\omega_1``, ``Pi`` →
+    ``\\Pi``; ``omegax`` stays a plain identifier).
     """
     if not isinstance(name, str):
         raise TypeError("latex_name: expected a str")
@@ -194,6 +223,7 @@ def latex_name(name: str) -> str:
     name = _script_letters(name)
     name = _scripts(name)
     name = _brace_nested_subscripts(name)
+    name = _greek_words(name)
     name = _glyphs(name)
     name = _MULTICHAR_SUB.sub(lambda m: "_{" + m.group(1) + "}", name)
     return _fix_scripts(_math_fallback(name))
@@ -1270,18 +1300,17 @@ def cite_to_latex(source, style: str = "apa") -> str:
 
 def _parencites(cits) -> str:
     """ONE ``\\parencites`` group for all works of a source: works in APA
-    order, the locators of one work merged into one postnote."""
-    from jacopy.bibliography import BIBLIOGRAPHY, _ref_sort_key, apa_locator
+    order, one entry per cited place (a locator may contain a comma, so
+    two places of one work are never merged into one postnote — the
+    same rule as :func:`jacopy.bibliography.in_text`)."""
+    from jacopy.bibliography import BIBLIOGRAPHY, _ref_sort_key, apa_locator, work_locators
 
-    by_work: dict = {}
-    for c in cits:
-        locs = by_work.setdefault(c.key, [])
-        if c.locator and c.locator not in locs:
-            locs.append(c.locator)
+    by_work = work_locators(cits)
     parts = []
     for k in sorted(by_work, key=lambda k: _ref_sort_key(BIBLIOGRAPHY[k])):
-        note = ", ".join(apa_locator(l) for l in by_work[k])
-        parts.append((f"[{_bib_postnote(note)}]" if note else "") + f"{{{k}}}")
+        for note in by_work[k] or [""]:
+            note = apa_locator(note)
+            parts.append((f"[{_bib_postnote(note)}]" if note else "") + f"{{{k}}}")
     return "\\parencites" + "".join(parts)
 
 
@@ -1336,7 +1365,7 @@ def _step_rows(step: ProofStep, *, width: float, cite_style: str, depth: int, ma
     its sub-steps, indented)."""
     ind = "\\quad " * depth
     rows: list[str] = []
-    tag = f" ({step.provenance_tag})" if step.provenance_tag else ""
+    tag = f" ({step.classification})" if step.classification else ""
     for line in _wrap_words(f"[{step.rule}]{tag}", TEXT_WIDTH):
         rows.append(f"&{ind}\\text{{{_escape_text(line)}}}")
     rows.extend(_cite_rows(ind, "Source:", step.source, cite_style))
@@ -1347,7 +1376,10 @@ def _step_rows(step: ProofStep, *, width: float, cite_style: str, depth: int, ma
     for k, line in enumerate(after):
         rows.append(f"&{ind}\\to {line}" if k == 0 else f"&{ind}\\qquad {line}")
     just = step.justification or ""
-    just_strip = just.removeprefix("apply axiom: ").removeprefix("apply theorem: ").removeprefix("apply ")
+    just_strip = just
+    for label in ("axiom", "theorem", "definition", "assumption"):
+        just_strip = just_strip.removeprefix(f"apply {label}: ")
+    just_strip = just_strip.removeprefix("apply ")
     if just and just_strip != step.rule:
         for line in _wrap_words(f"--- {just}", TEXT_WIDTH):
             rows.append(f"&{ind}\\textit{{{_escape_text(line)}}}")
@@ -1364,7 +1396,7 @@ def step_to_latex(
     step: ProofStep, *, width: float = DEFAULT_WIDTH, cite_style: str = "apa", max_depth: int = 0
 ) -> str:
     r"""Render a :class:`ProofStep` as an ``aligned`` block (math mode):
-    the rule name and provenance tag (``\text{[rule] (axiom)}``), the
+    the rule name and classification (``\text{[rule] (definition)}``), the
     literature source of the rule (APA in-text citation), ``before`` and
     ``\to after`` broken at summand boundaries into lines of about
     ``width`` visible units, and the justification. Sub-steps are shown
@@ -1601,7 +1633,7 @@ def chain_to_tikz(chain: ProofChain, *, node_distance: str = "1.2cm") -> str:
             f"\\node[draw, rectangle, below=of e{i}] (e{i + 1}) {{${to_latex(step.after)}$}};"
         )
     for i, step in enumerate(chain.steps):
-        tag = f" ({step.provenance_tag})" if step.provenance_tag else ""
+        tag = f" ({step.classification})" if step.classification else ""
         rule = _escape_text(f"{step.rule}{tag}")
         lines.append(f"\\draw[->] (e{i}) -- node[right] {{\\small {rule}}} (e{i + 1});")
     lines.append(r"\end{tikzpicture}")

@@ -259,7 +259,10 @@ def magic_chain():
 
 def test_step_and_chain_latex(magic_chain):
     s = step_to_latex(magic_chain.steps[0])
-    assert r"\to" in s and r"\text{[" in s and "(axiom)" in s
+    # the Cartan definitions are labelled as ProofResult counts them —
+    # "(definition)", no longer the bare provenance tag "(axiom)"
+    # (display-polish 2026-10-02)
+    assert r"\to" in s and r"\text{[" in s and "(definition)" in s and "(axiom)" not in s
     body = chain_to_latex(magic_chain)
     assert body.startswith("{\\allowdisplaybreaks") and r"\begin{gather*}" in body
     assert not _NON_ASCII.search(body)

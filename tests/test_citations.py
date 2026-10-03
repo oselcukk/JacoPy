@@ -58,17 +58,21 @@ def test_apa_in_text_author_rules():
     assert cite("MC", "Definition 3.1").key == "DereliDogan2020"
 
 
-def test_apa_in_text_groups_works_alphabetically_and_merges_locators():
+def test_apa_in_text_groups_works_alphabetically_one_item_per_place():
     src = (
         cite("Uchino2002", "Section 1, axiom [C5]"),
         cite("LiuWeinsteinXu1997"),
         cite("MC", "Definition 3.1"),
         cite("MC", "Eq. (3.10)"),
     )
-    # §6.9: parentheses inside the citation's parentheses become brackets
+    # §6.9: parentheses inside the citation's parentheses become brackets.
+    # Every cited place is its own author-date-locator item (display-
+    # polish 2026-10-02): a locator may contain a comma ("Section 1,
+    # axiom [C5]"), so "2020, Definition 3.1, Eq. [3.10]" could not be
+    # read back as two places
     assert in_text(src) == (
-        "(Dereli & Doğan, 2020, Definition 3.1, Eq. [3.10]; Liu et al., 1997; "
-        "Uchino, 2002, Section 1, axiom [C5])"
+        "(Dereli & Doğan, 2020, Definition 3.1; Dereli & Doğan, 2020, Eq. [3.10]; "
+        "Liu et al., 1997; Uchino, 2002, Section 1, axiom [C5])"
     )
 
 
@@ -81,12 +85,17 @@ def test_apa_in_text_order_folds_accents_and_joins_years():
         cite("ADM", "Proposition 3.7"),
         cite("MC", "Definition 3.1"),
     )
-    # Ç sorts as C, Š as S (§8.12); same authors, several years joined
+    # Ç sorts as C, Š as S (§8.12); same authors in several years: each
+    # LOCATED citation keeps its own author and year (display-polish
+    # 2026-10-02 — "2020, Definition 3.1, 2023, Proposition 3.7" mixed
+    # years into the locator list) …
     assert in_text(src) == (
         "(Çatal-Özer et al., 2022, Lemma 9.1; "
-        "Dereli & Doğan, 2020, Definition 3.1, 2023, Proposition 3.7; "
+        "Dereli & Doğan, 2020, Definition 3.1; Dereli & Doğan, 2023, Proposition 3.7; "
         "Roytenberg, 1999; Ševera, 2017; Uchino, 2002, Remark 1)"
     )
+    # … while locator-free works of the same authors still join years
+    assert in_text((cite("ADM"), cite("MC"))) == "(Dereli & Doğan, 2020, 2023)"
     order = [r.key for r in cited_references(src)]
     assert order == ["CatalOzerDereliDogan2022", "DereliDogan2020", "DereliDogan2023",
                      "Roytenberg1999", "Severa2017", "Uchino2002"]
@@ -255,13 +264,17 @@ def test_c3_ascii_shows_every_axiom_source(c3):
     text = chain_to_ascii(chain, references=True)
     for s in _walk(chain.steps):
         if s.provenance_tag == "axiom":
-            assert f"[{s.rule}] (axiom) — {in_text(s.source)}" in text
+            # the label is the step's classification (the declared C3/C5
+            # axioms print as "(assumption)", display-polish 2026-10-02)
+            assert f"[{s.rule}] ({s.classification}) — {in_text(s.source)}" in text
     assert "\n\nReferences\n" in text
     assert "\nLiu, Z.-J., Weinstein, A., & Xu, P. (1997). Manin triples for Lie bialgebroids." in text
     assert "Uchino, K. (2002). Remarks on the definition of a Courant algebroid" in text
     plain = render_chain(chain, styles=False, references=True)
-    # the rich tree wraps long lines at 120 columns
-    assert "(Liu et al., 1997; Uchino, 2002," in plain and "\nReferences\n" in plain
+    # the rich tree wraps long lines at 120 columns (where depends on the
+    # label length — "(assumption)" since display-polish 2026-10-02)
+    flat = re.sub(r"\s*\n[│ ]*", " ", plain)
+    assert "(Liu et al., 1997; Uchino, 2002," in flat and "\nReferences\n" in plain
 
 
 def test_c3_latex_shows_every_axiom_source(c3):

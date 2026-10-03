@@ -3,7 +3,9 @@
 The protected test set is the union of the groups below. A change is
 green when all of them are; the counts change as the suite grows and
 are not the criterion — the commands are. (For orientation: on
-2026-10-02 the fast suite was 2,523 passed, 12 skipped, 5 xfailed.)
+2026-10-02 the fast suite was 2,572 passed, 12 skipped, 5 xfailed in
+122 test files, branch `fix/display-polish`; `main` at `8b46a5d` had
+2,528 / 12 / 5 in 118 files. The notebook smoke run passes 4/4.)
 
 ## 1. Fast suite (every push, every supported Python)
 

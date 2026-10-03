@@ -16,6 +16,7 @@ from jacopy.display.ascii import (
     chain_to_ascii,
     references_suffix,
     source_suffix,
+    tag_suffix,
     step_to_ascii,
     to_ascii,
 )
@@ -55,10 +56,13 @@ _STYLE_SOURCE = "magenta"
 def _step_head(step: ProofStep, verbosity: str = "full"):  # pragma: no cover
     t = Text()
     t.append(f"[{step.rule}]", style=_STYLE_RULE)
-    if step.provenance_tag == "axiom":
-        t.append(f" ({step.provenance_tag})", style=_STYLE_TAG_AXIOM)
-    elif step.provenance_tag == "theorem":
-        t.append(f" ({step.provenance_tag})", style=_STYLE_TAG_THEOREM)
+    label = step.classification
+    if label == "theorem":
+        t.append(tag_suffix(step), style=_STYLE_TAG_THEOREM)
+    elif label in ("axiom", "assumption", "definition"):
+        t.append(tag_suffix(step), style=_STYLE_TAG_AXIOM)
+    elif label:
+        t.append(tag_suffix(step))
     src = source_suffix(step)
     if src:
         t.append(src, style=_STYLE_SOURCE)

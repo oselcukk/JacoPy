@@ -141,6 +141,16 @@ def _check_verbosity(verbosity: str) -> None:
         )
 
 
+def tag_suffix(step: ProofStep) -> str:
+    """`` (definition)`` / `` (assumption)`` / `` (theorem)`` …: the
+    step's :attr:`~jacopy.proof.step.ProofStep.classification` — the
+    terms :class:`~jacopy.proof.result.ProofResult` counts it with —
+    or ``""``. Shared by the ASCII, terminal, Jupyter and LaTeX
+    renderers."""
+    label = getattr(step, "classification", None)
+    return f" ({label})" if label else ""
+
+
 def source_suffix(step: ProofStep) -> str:
     """`` — (Uchino, 2002, Section 1, axiom [C5])``: the APA in-text
     citation of the rule's literature source, or ``""``."""
@@ -162,8 +172,7 @@ def step_to_ascii(
         raise TypeError("step_to_ascii: expected a ProofStep")
     _check_verbosity(verbosity)
     pad = "  " * indent
-    tag = f" ({step.provenance_tag})" if step.provenance_tag else ""
-    tag += source_suffix(step)
+    tag = tag_suffix(step) + source_suffix(step)
     if verbosity == "compact":
         return f"{pad}[{step.rule}]{tag}"
     head = f"{pad}[{step.rule}]{tag} {to_ascii(step.before)} -> {to_ascii(step.after)}"

@@ -11,6 +11,71 @@ commit `0b00e1b` ("DENETİM 0B00E1B-FULL", 2026-09-30).
 
 ## [Unreleased]
 
+### Display polish before the 2026-10-05 demo (`fix/display-polish`), 2026-10-02
+
+Rendering and documentation only; no rule, role, tag or proof changes.
+
+- LaTeX: Greek letter names spelled in ASCII render as commands, as
+  whole words — `forms("omega")` → `\omega`, `omega_1` → `\omega_1`,
+  `alpha_ij` → `\alpha_{ij}`, `Pi` → `\Pi`; `omegax` and the
+  Latin-looking capitals (`Alpha`, `Eta`, `Mu`) stay as written. The
+  ASCII renderer keeps the name as typed.
+- Step labels follow the role, in the terms `ProofResult` counts them
+  with: `(definition)` / `(assumption)` / `(theorem)` (and `(axiom)`
+  only for a step that records no role), in the ASCII, terminal,
+  LaTeX, TikZ and Jupyter renderers and in `ProofStep.format`; engine
+  justifications read `apply definition: …` / `apply assumption: …`.
+  New: `ProofStep.classification`, `jacopy.proof.step.classification_label`.
+  Before, `print_chain` labelled definition steps `(axiom) … apply
+  axiom` while `ProofResult` called the proof assumption-free.
+- APA 7 in-text citations: one author–date–locator item per cited
+  place, items separated by semicolons; only locator-free works of the
+  same authors join years. The "Sub-steps cite" row of the
+  anchor-morphism document read `…, 2022, Definition 4.1, Eq. [4.4],
+  Definition 4.1, 2025, Eq. [3.20]; …` and now reads `…, 2022,
+  Definition 4.1, Eq. [4.4]; Çatal-Özer et al., 2025, Eq. [3.20]; …`.
+  A locator subsumed by a more specific one of the same work is
+  dropped (`bibliography.work_locators`); biblatex `\parencites` emit
+  one entry per place.
+- `bibliography.in_text` / `apa_reference` accept `style="apa"` (alias
+  of `"plain"`: the style selects markup, the format is always APA 7);
+  an unknown style raises `ValueError` naming `TEXT_STYLES`.
+- `central/tangent/cartan_rules.py` docstrings: the four rules have
+  role `definition` (as in `tests/rule_roles_inventory.json`); three are
+  theorem-*tagged* because they carry a sub-proof builder. They were
+  described as "THEOREM-classified".
+- Docs: `docs/ARCHITECTURE.md` (measured numbers, notebook smoke 4/4,
+  the deferred `calculus` → `tangent` edge inside `central`, the oracle
+  hook edges of `research/axiom_suite.py` and
+  `poisson/koszul_jacobi.py`, the `metric_affine/rules.py`,
+  `metric_affine/decomposition.py` and `generalized/_cited_rule.py`
+  modules), `docs/TESTING.md` counts, and the `jacopy` docstring's
+  layer order (display on top, as in the architecture map).
+- Changed test expectations: `tests/test_display.py` (the Cartan step is
+  `(definition)`), `tests/test_citations.py` (two in-text strings, the
+  C3/C5 `(assumption)` label). New tests:
+  `tests/test_display_greek.py`, `tests/test_display_step_labels.py`,
+  `tests/test_citation_places.py`, `tests/test_cartan_rules_docs.py`.
+
+### Example notebooks run 4/4 (`fix/notebooks`, merged at `8b46a5d`), 2026-10-02
+
+- Operator sums inherit alternation (M2-1 follow-up, `273e18b`):
+  `admits_alternation` (default reject since M2-1) did not certify an
+  operator `Sum`/`Neg` such as `(L_U + L_Πω)`, which vector-slot
+  linearity produces from `L_{U+Πω}`; the enclosing alternating
+  `MultiEval` was rebuilt plain and DD (D.19) at p = 3 (Claim 6,
+  `bracket_twist_research_interface.ipynb` §1.5) left a residual. An
+  operator sum now inherits when every summand declares `"inherit"`;
+  tensors, the `d` of a non-skew calculus and mixed sums stay rejected.
+  D.19 at p = 3 closes again (913 steps); the wrong-sign variant does
+  not (`tests/test_audit_0b00e1b_notebooks.py`).
+- `algebroid_declarations_demo.ipynb` cites the anchor-morphism record
+  explicitly with `allow_legacy=True` (M1-5, `83ca05f`): since `d1b807b`
+  that record is requirements-derived but its chain does not replay,
+  so `cite()` refuses it otherwise. The notebook prints the record
+  status and the citing result's requirements, including `unreplayed`;
+  its outputs were re-executed in a clean kernel.
+
 ### Documentation and test portability (audit T2-8)
 
 - `README.md` rewritten in English: what jacopy is, installation with

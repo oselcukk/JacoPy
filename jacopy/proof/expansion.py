@@ -30,7 +30,7 @@ from jacopy.core.expr import Expr, Integer, Neg, Product, Sum
 from jacopy.core.registry import PropertyRegistry
 from jacopy.core.symbolic_degree import Degree
 from jacopy.proof.registry_facts import current_context
-from jacopy.proof.step import ProofStep, _mint
+from jacopy.proof.step import ProofStep, _mint, classification_label
 
 
 
@@ -495,17 +495,21 @@ class ExpansionEngine:
     def _build_step(self, expr: Expr, after: Expr, d: Definition) -> ProofStep:
         """Create the :class:`ProofStep` for a fired rewrite, with mode-dependent children."""
         tag = "theorem" if d.is_theorem else "axiom"
+        role = _step_role(d, tag)
         step = ProofStep(
             expr,
             after,
             rule=d.name,
-            justification=f"apply {tag}: {d.name}",
+            # the justification names the step as ProofResult counts it
+            # ("apply definition: …", "apply assumption: …"), not by the
+            # bare provenance tag (display-polish 2026-10-02)
+            justification=f"apply {classification_label(tag, role)}: {d.name}",
             provenance_tag=tag,
             owner=getattr(d, "owner", None),
             # an assumption stays an assumption even when theorem-tagged
             # (a theorem-classified consequence of a declared axiom); an
             # explicitly-unverified citation is marked as such
-            role=_step_role(d, tag),
+            role=role,
             cites=(getattr(d, "theorem", None) if tag == "theorem" else None),
             key=d.key,
             source=getattr(d, "source", None),
