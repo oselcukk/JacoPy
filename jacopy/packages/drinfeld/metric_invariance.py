@@ -193,10 +193,10 @@ def prove_dual_mixing_condition(
 
     Declaration-free (lie-iota + the ℒ̃ definition).
 
-    Citation caveat: the printed DD (D.18) mixes ``V`` and ``W`` (its
-    left side contracts with ``ι_V``, its right side is
-    ``2ℒ_{Πω} ι_W η``) and carries the paper's ``g_Z`` factor 2, so it
-    does not match this identity term by term. Expanding ``ℒ̃_ω W``
+    Citation note: the identity is stated here with a single vector
+    field ``W`` on both sides and without the ``g_Z`` normalization
+    factor used in DD, so it is compared with DD (D.18) up to these
+    conventions rather than term by term. Expanding ``ℒ̃_ω W``
     (DD (6.6)) the statement here is the standard Cartan identity
     ``ℒ_{Πω} ι_W η = ι_W ℒ_{Πω} η + ι_{[Πω,W]} η`` — the content the
     first dual condition of DD (4.50) needs."""
