@@ -171,7 +171,7 @@ from jacopy.packages.generalized.standard_courant import (
     prove_dorfman_invariance_std,
 )
 
-# Facade alignment (DENETİM 0B00E1B-FULL T2-6): the remaining user-path
+# Facade alignment (audit 0b00e1b T2-6): the remaining user-path
 # constructors, prove_* theorems and package-specific declarations/rules.
 from jacopy.packages.generalized.bourbaki_severa import (
     severa_engine,

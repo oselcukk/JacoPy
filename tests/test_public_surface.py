@@ -1,4 +1,4 @@
-"""Public surface of the library (DENETİM 0B00E1B-FULL T2-5/T2-6/T2-7/T2-9).
+"""Public surface of the library (audit 0b00e1b T2-5/T2-6/T2-7/T2-9).
 
 * every ``:mod:`` path a facade docstring points at imports and is not
   an empty placeholder (T2-5);

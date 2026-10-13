@@ -549,6 +549,6 @@ metric atom (not the metric-affine context).
   `bracket_twist_research_interface.ipynb` closes D.19 at p = 3
   (Claim 6) again since operator sums inherit alternation (M2-1
   follow-up).
-* `docs/CITATIONS.md` and several docstrings refer to `ROADMAP.md` and
+* Several docstrings refer to `ROADMAP.md` and
   to "PDF item N" (the Math 595 guideline); neither file is part of
   the repository.

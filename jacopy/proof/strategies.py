@@ -570,7 +570,7 @@ class UnrollToFoundations(Strategy):
     leaves, so the transcript bottoms out exactly at the declared
     foundations of the theory.
 
-    This is the ispat mode the plan calls "full unroll": you pay the
+    This is the proof mode the plan calls "full unroll": you pay the
     construction cost of every theorem's justification, but the chain
     is self-contained. When a caller passes an ``engine`` that is
     already foundational the strategy uses it verbatim; an efficient

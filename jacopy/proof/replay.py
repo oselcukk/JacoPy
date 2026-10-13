@@ -156,8 +156,8 @@ def accountable(step) -> bool:
     strategy's inference (:func:`jacopy.proof.step.is_minted`; threat
     model there) — or it is an identity (``before == after``). Any step
     built through the public ``ProofStep`` constructor is a hand-built
-    claim, whatever tag or key it carries (audit 0b00e1b-FULL M1-5:
-    "etiketsiz el yapımı adım"; review 2026-10-01 #3)."""
+    claim, whatever tag or key it carries (audit 0b00e1b M1-5:
+    "unlabelled hand-built step"; review 2026-10-01 #3)."""
     from jacopy.proof.step import is_minted
 
     # (review 2026-10-01 #3) the caller-supplied tag / key are NOT

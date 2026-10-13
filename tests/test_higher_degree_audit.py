@@ -322,7 +322,7 @@ class TestPairingVectorScalar:
         assert out == Product(f, Pairing(al, Yv))
 
     def test_sum_slot_stays(self):
-        """⟨α, X+Y⟩ split stays EXCLUDED (collect_pairings çifti)."""
+        """⟨α, X+Y⟩ split stays EXCLUDED (collect_pairings pair)."""
         from jacopy.central.tangent.engine import tangent_engine
         from jacopy.core.pairing import Pairing
 

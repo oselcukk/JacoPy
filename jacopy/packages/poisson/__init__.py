@@ -80,7 +80,7 @@ from jacopy.packages.poisson.core import (
     prove_poisson_leibniz,
 )
 
-# Facade alignment (DENETİM 0B00E1B-FULL T2-6): the remaining user-path
+# Facade alignment (audit 0b00e1b T2-6): the remaining user-path
 # constructors, prove_* theorems and package-specific declarations/rules.
 from jacopy.packages.poisson.koszul_jacobi import (
     KoszulJacobiCertificate,
