@@ -367,17 +367,14 @@ def prove_projected_d_squared_associator(
     combination is exactly the Phase 3.F ``d²α`` obstruction shape,
     now for ``b̂``.
 
-    Sign note (lane-C citation check, 2026-10-01): ADM (3.44) prints
-    ``d̂(∇)²Ω(u,v,w) = Ω(Assoc(u,v,w))`` with the associator (3.45)
-    ``[u,[v,w]] − [[u,v],w] − [v,[u,w]]``. For an admissible ``∇``
-    (``b̂`` anti-symmetric) that associator equals MINUS the
-    combination above, so the printed (3.44) has the opposite overall
-    sign. The combination here follows from the Palais formula (3.42)
-    itself — at ``ρ = 0`` (a Lie algebra) ``d(dα)(u,v,w) =
-    α([[u,v],w] − [[u,w],v] + [[v,w],u])`` — and agrees with
-    [TW (A.5), arXiv:2409.11973]: ``d²μ(U,V,W) = … − μ(J(U,V,W))``.
-    The ADM citation is for the statement's structure, not its
-    printed sign."""
+    Sign conventions: in JacoPy's sign conventions (the Palais
+    formula as implemented by ``d_derived``; at ``ρ = 0``, a Lie
+    algebra, ``d(dα)(u,v,w) = α([[u,v],w] − [[u,w],v] + [[v,w],u])``,
+    consistent with [TW (A.5), arXiv:2409.11973]:
+    ``d²μ(U,V,W) = … − μ(J(U,V,W))``) the identity closes in the form
+    above; the opposite overall sign does not close
+    (regression-tested in ``tests/test_citations.py``). The structure
+    follows ADM (3.44)-(3.45)."""
     from jacopy.core.pairing import Pairing
     from jacopy.packages.metric_affine.e_bianchi import (
         projected_modified_bracket,

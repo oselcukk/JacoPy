@@ -455,7 +455,7 @@ def test_r_flux_closure_declaration_is_sourced():
     assert RFluxClosureDeclaration.source.key == "AsakawaMurakiSasaWatamura2015"
 
 
-# ---- ADM printed-sign regressions (M8-1 = M7-3; lane-C finding) ----- #
+# ---- ADM sign-convention regressions (Eqs. (3.35), (3.44)) --------- #
 
 
 @pytest.fixture(scope="module")
@@ -471,10 +471,11 @@ def adm():
     return reg, E, u, v, w, e_connection(E), Frame("e", bundle=E.bundle), locality_projector(E)
 
 
-def test_adm_3_35_printed_signs_are_rejected(adm):
-    """ADM (3.35) prints the (1−𝒫)Λ block and [[u,v]^∇,w]^∇ with +; with
-    the paper's own definitions both enter with − (the library's form,
-    which closes). The printed form must NOT close (admissible ∇)."""
+def test_adm_3_35_opposite_overall_sign_does_not_close(adm):
+    """E-Bianchi I, structure of ADM (3.35) [Prop. 3.7]: in JacoPy's
+    sign conventions the (1−𝒫)Λ block and the b(b(u,v),w) block enter
+    with − (the library's form, which closes). With both blocks taken
+    with + the identity must NOT close (admissible ∇)."""
     from jacopy.packages.metric_affine.admissible import AdmissibilityDeclaration, modified_bracket
     from jacopy.packages.metric_affine.e_bianchi import (
         _cyc,
@@ -492,22 +493,23 @@ def test_adm_3_35_printed_signs_are_rejected(adm):
     reg, E, u, v, w, nabla, fr, P = adm
     assert prove_e_bianchi_first_identity(E, nabla, fr, P, u, v, w, registry=reg, admissible=True).steps
     lhs = _cyc(lambda a, b, c: projected_curvature(E, nabla, fr, P, a, b, c), u, v, w)
-    printed = Sum(
+    flipped = Sum(
         _cyc(lambda a, b, c: covariant_modified_torsion_derivative(E, nabla, fr, a, b, c), u, v, w),
         _cyc(lambda a, b, c: modified_torsion(E, nabla, fr, modified_torsion(E, nabla, fr, a, b), c), u, v, w),
-        _cyc(lambda a, b, c: generalized_ricci_anomaly(E, nabla, fr, P, a, b, c), u, v, w),  # paper: +
-        _cyc(lambda a, b, c: modified_bracket(E, nabla, fr, modified_bracket(E, nabla, fr, a, b), c), u, v, w),  # paper: +
+        _cyc(lambda a, b, c: generalized_ricci_anomaly(E, nabla, fr, P, a, b, c), u, v, w),  # sign flipped
+        _cyc(lambda a, b, c: modified_bracket(E, nabla, fr, modified_bracket(E, nabla, fr, a, b), c), u, v, w),  # sign flipped
     )
     engine = _engine(E, fr, reg, projectors=(P,))
     engine.register(AdmissibilityDeclaration(E, nabla, fr))
     with pytest.raises(ProofFailure):
-        ExpandAndSimplify().prove(lhs, printed, registry=reg, engine=engine)
+        ExpandAndSimplify().prove(lhs, flipped, registry=reg, engine=engine)
 
 
-def test_adm_3_44_printed_sign_is_rejected(adm):
-    """d̂²α(u,v,w) = +⟨α, b̂(b̂(u,v),w) − b̂(b̂(u,w),v) + b̂(b̂(v,w),u)⟩
-    (Palais formula; TW (A.5)) closes; the opposite overall sign — what
-    ADM (3.44) prints for an admissible ∇ — does not."""
+def test_adm_3_44_opposite_overall_sign_does_not_close(adm):
+    """Structure of ADM (3.44): in JacoPy's sign conventions
+    d̂²α(u,v,w) = +⟨α, b̂(b̂(u,v),w) − b̂(b̂(u,w),v) + b̂(b̂(v,w),u)⟩
+    (Palais formula; TW (A.5)) closes; the opposite overall sign does
+    not."""
     from jacopy.central.objects import forms
     from jacopy.core.expr import Neg
     from jacopy.core.multi_eval import MultiEval

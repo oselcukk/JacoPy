@@ -17,8 +17,8 @@ and machine-verified, purely definitional):
 
 The ``(1−𝒫)Λ`` anomaly is the SAME gap as in the generalized Ricci
 identity [ADM Prop 3.8]; ``𝔖 b(b(u,v),w)`` is the modified-bracket
-Jacobiator block (ADM's ``[[u,v]^∇,w]^∇ + cycl`` extra term, with the
-opposite printed sign — see the sign note below); the last block is
+Jacobiator block (the ``[[u,v]^∇,w]^∇ + cycl`` extra term of ADM's
+statement; see the sign-convention note below); the last block is
 the anti-symmetry defect of ``b``.
 
 **Admissible specialization** [ADM Prop 3.7 proper]: for an
@@ -32,17 +32,15 @@ TM sanity: with ``L = 0`` and ``b`` the Lie bracket this reduces to
 the Phase 4.C torsionful Bianchi I (whose ``𝔖 [[u,v],w]`` block dies
 by the cited Jacobi instances).
 
-**Sign note (audit M8-1 ≡ M7-3).** ADM Eq. (3.35) (Proposition 3.7,
-the first identity) PRINTS the two blocks ``∇_{(1−𝒫)Λ(u,v)}w`` and
-``[[u,v]^∇,w]^∇`` with a PLUS sign. With the paper's own definitions —
-the modified bracket (3.12), the E-torsion (3.13) and the E-curvature
-(3.20) — both blocks come out with a MINUS sign, as written above.
-The code's signs are the correct ones: a point-model counterexample
-(``ρ = 0``, random bilinear ``∇``, antisymmetric ``b``, arbitrary
-``Λ``) leaves residual ≈ 1e-14 only for the (−, −) combination and
-O(10²) for the paper's (+, +) (audit 0b00e1b, ``exp/M8/
-bianchi_sign2.py``/``bianchi_sign3.py``). The ADM citation is for the
-statement's STRUCTURE, not its printed signs.
+**Sign conventions.** In JacoPy's sign conventions — the modified
+bracket, E-torsion and E-curvature as implemented in
+:mod:`jacopy.packages.metric_affine.admissible` and
+:mod:`jacopy.packages.metric_affine.modified` — the identity closes in
+the form written above, with both blocks ``∇_{(1−𝒫)Λ(u,v)}w`` and
+``b(b(u,v),w)`` entering with a MINUS sign; the opposite overall sign
+on these two blocks does not close (regression-tested in
+``tests/test_citations.py``). The structure of the identity follows
+ADM Eq. (3.35) [Prop. 3.7, first identity].
 """
 
 from __future__ import annotations
