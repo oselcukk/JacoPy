@@ -204,7 +204,7 @@ class CourantInvarianceDeclaration(Definition):
     metric-invariance rule C1 [B Eq. (4.10)].
     """
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = (
         cite("Uchino2002", "Section 1, axiom [C5]"),
         cite("LiuWeinsteinXu1997"),
@@ -256,7 +256,7 @@ class C3IdentityDeclaration(Definition):
     difference is exactly the Leibniz defect of ``D`` (Rem 2.1).
     """
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = (
         cite("Uchino2002", "Proposition 2.1(i)"),
         cite("Uchino2002", "Remark 2.1"),
@@ -582,7 +582,7 @@ class DNumericHomogeneityDeclaration(Definition):
     name is kept for API stability; ``Declaration`` is historical —
     the rule cites a theorem.)"""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
 
     anchor = CourantD
 

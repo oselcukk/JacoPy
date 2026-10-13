@@ -1,6 +1,6 @@
 """
 Minimal context identity — OWNERSHIP of rules, theorems and proof
-steps (Faz 8 step 2c).
+steps (Phase 8 step 2c).
 
 The expression tree names a structure by a STRING: an algebroid
 bracket is ``AlgebroidBracket("E", u, v)``, a sharp map carries the
@@ -91,7 +91,7 @@ def is_substructure(owner, of) -> bool:
     the same declarations: same tree-visible name and bundle, and
     ``owner.declarations ⊆ of.declarations``. Rules and theorems of a
     sub-structure are valid in the super-structure (they assume less);
-    the converse is not (Faz 8 step 3b refinement of 2c). Structures
+    the converse is not (Phase 8 step 3b refinement of 2c). Structures
     without a declaration record are compatible only when equal."""
     if _same_owner(owner, of):
         return True

@@ -617,7 +617,7 @@ def prove_lie_tilde_iota_commutator_on_vectors(
 
 
 def _normalized_by(engine, seed: Expr, registry) -> Expr:
-    """Engine normal form: Faz 8 step 4b adapter over
+    """Engine normal form: Phase 8 step 4b adapter over
     :func:`jacopy.proof.normalize.normalize` with THIS helper's historical
     defaults (10 rounds, 1024 steps per expansion pass). A step-budget
     exhaustion raises as ``engine.expand`` used to; a round exhaustion

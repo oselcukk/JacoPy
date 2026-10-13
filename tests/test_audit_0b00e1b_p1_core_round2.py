@@ -1,6 +1,6 @@
 """
-Audit 0b00e1b-FULL, fix/p1-core gate 5 (Fable, tur 2): every probe of
-``scratchpad-kopya/p1core-cr5`` and ``p1core-gate5`` as a permanent test.
+Audit 0b00e1b-FULL, fix/p1-core gate 5 (Fable, round 2): every probe of
+the scratch sets ``p1core-cr5`` and ``p1core-gate5`` as a permanent test.
 
 1. ``f·D`` is a derivation ONLY when the coefficient is certified to
    commute with every generator (cr5/p02 [a][b], gate5/p8, p7);

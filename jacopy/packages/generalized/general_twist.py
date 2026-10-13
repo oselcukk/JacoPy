@@ -337,7 +337,7 @@ def _cited_transport_theorem(
         ),
         provenance_tag="axiom",
         owner=owner,
-        role="assumption",  # a DECLARED axiom of the algebroid (Faz 8 step 3b)
+        role="assumption",  # a DECLARED axiom of the algebroid (Phase 8 step 3b)
         # the licensing rule's key: the algebroid's declaration when the
         # caller names one, else the caller's EXPLICIT instance assumption
         # (declare_r_axioms=True) — a citing engine must register the same

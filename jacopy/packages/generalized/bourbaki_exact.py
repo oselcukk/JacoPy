@@ -257,7 +257,7 @@ class SymPartChiSwapDeclaration(Definition):
     one). The swapped bracket keeps the INPUT's algebroid identity
     (2026-09-09 audit, finding 5 — no hardcoded ``"E"``)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = cite("CatalOzerDereliDogan2022", "Definition 6.2, Eq. (6.11)")
 
     anchor = AlgebroidBracket
@@ -343,7 +343,7 @@ class IsotropyDeclaration(Definition):
     φ-sections (resolved through the anchor morphism to a Lie
     bracket of M-vectors) and ``g(χz, χy) → 0``."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
 
     name = "declared g-isotropy: g(χz, u) = ι_ρ(u) z, g(χz, χy) = 0"
     source = cite("CatalOzerDereliDogan2022", "Proposition 9.1, proof (g-isotropy of χ)")

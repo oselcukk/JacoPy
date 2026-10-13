@@ -1,9 +1,9 @@
 r"""
-Indexed sum :math:`\Sigma_d \, \mathrm{body}`, Faz 17.E.
+Indexed sum :math:`\Sigma_d \, \mathrm{body}`, Phase 17.E.
 
 A :class:`IndexedSum` is a bound-index summation over a discrete range
 , the structural shape behind every "sum over frame indices" appearing
-in Faz 17 (and beyond). The dummy is an :class:`Atom` (typically a
+in Phase 17 (and beyond). The dummy is an :class:`Atom` (typically a
 :class:`~jacopy.calculus.local_frame.FrameIndex` with kind ``"bound"``);
 the range is an opaque domain object (typically a
 :class:`~jacopy.calculus.local_frame.LocalFrame`); the body is any

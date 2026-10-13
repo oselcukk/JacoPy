@@ -266,7 +266,7 @@ class Closed(Property):
     is loaded into an engine, ``Act(d, ω)`` collapses to ``0`` for any
     ``ω`` carrying this property, no inline ``DOmegaClosed``
     :class:`~jacopy.proof.expansion.Definition` reproduction needed in
-    notebook code (the 2a/2b pattern from the Faz 12 gap log).
+    notebook code (the 2a/2b pattern from the Phase 12 gap log).
 
     The property is type-agnostic about *why* ``ω`` is closed (an
     explicit symplectic 2-form, an exact form, a cohomology class

@@ -36,7 +36,7 @@ def _wedge_degree(c: Expr, registry) -> Optional[int]:
     """The EXTERIOR-algebra degree of a wedge factor as a concrete
     int, or ``None`` when it is not certain — the concrete view of the
     single contract :func:`jacopy.algebra.grading.exterior_degree`
-    (Faz 8 step 2a). Kept under its old name because the audit tests
+    (Phase 8 step 2a). Kept under its old name because the audit tests
     query it; it no longer computes anything itself. History: this
     helper used to grade on its own and the 2026-09-09/09-10/09-22
     audits each caught it sorting an odd factor (a vector field, a
@@ -358,7 +358,7 @@ def assemble_engine(
     if declare_fi and structures:
         # pre-4a spelling: the flag meant "the FIRST structure declares
         # the fundamental identity"; it is applied to that structure
-        # only and reported — never distributed (Faz 8 step 4a)
+        # only and reported — never distributed (Phase 8 step 4a)
         if not structures[0].declares("fundamental-identity"):
             structures[0] = structures[0].with_declarations("fundamental-identity")
         report.append(
@@ -388,7 +388,7 @@ def assemble_engine(
 
     def add(rule: Definition, why: str) -> None:
         # deduplicated by the rule's structural KEY (identity or
-        # class + name), not by class alone (Faz 8 step 4a / 1d)
+        # class + name), not by class alone (Phase 8 step 4a / 1d)
         if any(getattr(r, "key", None) == rule.key for r in eng.definitions):
             return
         eng.register(rule)

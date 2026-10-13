@@ -517,7 +517,7 @@ metric atom (not the metric-affine context).
 * **AoG domain** — an `AgreementOnGenerators` identity can still be
   cited outside its own algebra (audit cases cr7/p06, cr8/p02). The
   five tests that describe the correct behaviour are strict `xfail`
-  in `tests/test_audit_0b00e1b_p1_core_tur4.py`; the fix has its own
+  in `tests/test_audit_0b00e1b_p1_core_round4.py`; the fix has its own
   lane.
 * **Legacy and unreplayed theorem chains** — several library theorems
   (for example algebroid theorems and `poisson_jacobi`) are

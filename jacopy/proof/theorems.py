@@ -117,10 +117,10 @@ class Theorem:
     generality: str = "generic-function"
     from_axioms: Tuple[str, ...] = field(default_factory=tuple)
     notes: str = ""
-    #: The structure the theorem was proved in (Faz 8 step 2c);
+    #: The structure the theorem was proved in (Phase 8 step 2c);
     #: ``None`` = unowned / legacy record (step 3b marks these).
     owner: object = field(default=None, compare=False)
-    #: STRUCTURAL requirements (Faz 8 step 3b): the
+    #: STRUCTURAL requirements (Phase 8 step 3b): the
     #: :class:`~jacopy.proof.result.Assumption` records the proof
     #: depends on — declared axiom instances with their owners, the
     #: structures behind them, the scope, and anything legacy —
@@ -199,7 +199,7 @@ class Theorem:
         fields = {f.name: getattr(self, f.name) for f in _dc.fields(self)}
         return (_rebuild_theorem, (fields,))
 
-    # ---- Faz 8 step 3b ------------------------------------------------ #
+    # ---- Phase 8 step 3b ---------------------------------------------- #
 
     @property
     def legacy(self) -> bool:
@@ -292,7 +292,7 @@ class TheoremBook:
         """Register ``theorem``; raise :class:`KeyError` on name clash.
 
         A ``legacy`` record (requirements not structurally verified,
-        Faz 8 step 3b) is NOT accepted as a verified theorem: it raises
+        Phase 8 step 3b) is NOT accepted as a verified theorem: it raises
         :class:`LegacyTheoremError` unless ``unverified=True`` records
         it explicitly as an unverified assumption — every result that
         cites it then depends on that assumption visibly."""
@@ -357,7 +357,7 @@ class TheoremBook:
         """The theorem ``name``; with ``owner`` given, only when the
         record is owned by that structure (an owned record asked for
         under a different same-named structure is refused, never
-        silently reused — Faz 8 step 2c)."""
+        silently reused — Phase 8 step 2c)."""
         if name not in self._theorems:
             raise KeyError(f"no theorem named {name!r}; known: {self.names()}")
         thm = self._theorems[name]
@@ -403,7 +403,7 @@ class LegacyTheoremError(ValueError):
 
 @dataclass(frozen=True)
 class CitationCheck:
-    """Whether ``theorem`` may be cited in an engine (Faz 8 step 3b)."""
+    """Whether ``theorem`` may be cited in an engine (Phase 8 step 3b)."""
 
     ok: bool
     reasons: Tuple[str, ...] = ()
@@ -585,7 +585,7 @@ class TheoremDefinition(Definition):
         # ``unverified`` flag: the citation is a legacy assumption of the
         # citing proof, whatever the record's own requirements say
         self.unverified = bool(unverified)
-        # citation check (Faz 8 step 3b): None = not bound to an engine
+        # citation check (Phase 8 step 3b): None = not bound to an engine
         # yet — only the legacy rule applies; a bound copy carries the
         # engine's verdict
         self._check: Optional[CitationCheck] = None
@@ -609,7 +609,7 @@ class TheoremDefinition(Definition):
     def allow_legacy(self) -> bool:
         return self._allow_legacy
 
-    # ---- Faz 8 step 3b: binding to an engine ---------------------------- #
+    # ---- Phase 8 step 3b: binding to an engine -------------------------- #
 
     def bound_to(self, engine) -> "TheoremDefinition":
         """A copy bound to ``engine``, with the citation check run
@@ -872,7 +872,7 @@ def cite(
     A record the book holds as UNVERIFIED (legacy requirements) is
     cited only with ``allow_legacy=True`` — explicitly, never silently
     (:class:`LegacyTheoremError` otherwise); the citing result then
-    carries the "unverified citation" marker (Faz 8 step 3b).
+    carries the "unverified citation" marker (Phase 8 step 3b).
     """
     for n in names:
         thm = book.get(n)

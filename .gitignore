@@ -23,7 +23,7 @@ env/
 .DS_Store
 .claude/
 
-# Local-only presentation materials (Pazartesi ders sunumu)
+# Local-only presentation materials (Monday class presentation)
 presentation/
 
 # Heavy metric demo output / intermediate cache (Kerr-Newman-de Sitter
@@ -36,6 +36,7 @@ examples/*_output.txt
 # Course material, papers and dev-only planning — never published
 *.pdf
 ROADMAP.md
-ROADMAP.md.yedek-*
+# local dated backup copies of ROADMAP.md
+ROADMAP.md.*
 roadmap/
 .oracle/

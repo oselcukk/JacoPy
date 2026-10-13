@@ -419,7 +419,7 @@ class TwistedFIDeclaration(Definition):
 
     Opt-in; reduces to :class:`NambuMorphismDeclaration` at H = 0."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = cite(
         "CatalOzerDoganYetismisoglu2025",
         "Eq. (7.25)",
@@ -613,7 +613,7 @@ class PsiTwistedFIDeclaration(Definition):
 
     Opt-in; at ψ = 0 it is the plain FI."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
 
     anchor = None  # set in __init__
 

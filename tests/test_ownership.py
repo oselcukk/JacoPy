@@ -1,4 +1,4 @@
-"""Faz 8 step 2c — minimal context identity. Two structures with the
+"""Phase 8 step 2c — minimal context identity. Two structures with the
 SAME tree-visible name build identical expressions; the system must
 tell the owners apart or reject the ambiguous mixture explicitly —
 never guess. The tree does not change."""

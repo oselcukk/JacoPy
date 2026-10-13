@@ -1,4 +1,4 @@
-"""Faz 8 step 2a — the single exterior-degree contract
+"""Phase 8 step 2a — the single exterior-degree contract
 ``exterior_degree(expr, registry) -> Degree | Unknown`` built on
 ``kind_of``: the acceptance table of the roadmap, the one shared
 ``Unknown`` object, symbolic degrees kept apart from unknown ones, and

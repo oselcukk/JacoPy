@@ -1,4 +1,4 @@
-"""The common type query ``kind_of`` (Faz 8 step 1c/2a; audit 7a11162):
+"""The common type query ``kind_of`` (Phase 8 step 1c/2a; audit 7a11162):
 kind is not degree, a foreign bundle is not unknown, a known mixed sum
 is a mismatch, and bilinear combinations / calculus operators are
 looked through."""

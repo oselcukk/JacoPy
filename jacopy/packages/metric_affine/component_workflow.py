@@ -1,6 +1,6 @@
 """
 The GIVEN-INPUT evaluation workflow (PDF items 11e / 12f; 2026-09-08
-audit, compliance finding "input flow"): the user supplies concrete
+audit, compliance finding "input-flow"): the user supplies concrete
 COMPONENT DATA — connection coefficients ``Γ^a_{bc}``, metric
 components ``g_{ab}``, anholonomy coefficients ``γ^c_{ab}``, Poisson
 bivector components ``θ^{ab}`` — and the engine EVALUATES the

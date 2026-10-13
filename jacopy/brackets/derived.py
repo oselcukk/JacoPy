@@ -36,7 +36,7 @@ algorithmic level:
 The *Derived Bracket Theorem* itself — Loday Jacobi from a
 vanishing obstruction under the stated preconditions — is registered
 as a package-level theorem in
-Faz 9 and consulted from the proof layer. This module only provides
+Phase 9 and consulted from the proof layer. This module only provides
 the object; the theorem lives elsewhere so that each new
 ``DerivedBracket`` instance automatically inherits the result rather
 than re-proving it.

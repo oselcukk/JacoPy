@@ -1,4 +1,4 @@
-"""Faz 8 step 3b — structural theorem requirements and checked
+"""Phase 8 step 3b — structural theorem requirements and checked
 citations: a theorem carries the assumptions its chain used (and,
 transitively, those of the theorems it cites); a citation fires only
 where the engine's structures meet them and is reported otherwise; a

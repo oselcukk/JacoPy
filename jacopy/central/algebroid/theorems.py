@@ -84,7 +84,7 @@ def _normalize(
 ) -> Tuple[Expr, List[ProofStep]]:
     """Drive ``expr`` to the engine's normal form, mirroring the
     :class:`ExpandAndSimplify` reduction loop (expand + product-rule
-    fix-point, then canonical simplification, repeated). Faz 8 step
+    fix-point, then canonical simplification, repeated). Phase 8 step
     4b: an adapter over :func:`jacopy.proof.normalize.normalize` with
     this prover's defaults (8 outer rounds, 64 inner, 1024 steps);
     an inner loop that does not settle raises :class:`ProofFailure`
@@ -406,7 +406,7 @@ name=f"anchor_morphism_{alg.name}_{u_name}_{v_name}",
             "Section 4, remark after Definition 4.1",
         ),
     )
-    theorem = theorem.with_structural_requires()  # Faz 8 step 3b: structural requirements
+    theorem = theorem.with_structural_requires()  # Phase 8 step 3b: structural requirements
     return chain, theorem
 
 
@@ -678,7 +678,7 @@ name=f"right_leibniz_{alg.name}_{u_name}_{v_name}_{f_name}",
             "CatalOzerDereliDogan2022", "Eq. (4.11), first identity"
         ),
     )
-    theorem = theorem.with_structural_requires()  # Faz 8 step 3b: structural requirements
+    theorem = theorem.with_structural_requires()  # Phase 8 step 3b: structural requirements
     return chain, theorem
 
 
@@ -755,7 +755,7 @@ name=f"symmetric_part_swap_{alg.name}_{f._repr_inner()}"
         from_axioms=(f"symmetric part ({alg.name})",),
         source=SymmetricPartDeclaration.source,
     )
-    t_c2 = t_c2.with_structural_requires()  # Faz 8 step 3b: structural requirements
+    t_c2 = t_c2.with_structural_requires()  # Phase 8 step 3b: structural requirements
     step_c2 = ProofStep(
         t_c2.lhs,
         t_c2.rhs,
@@ -843,7 +843,7 @@ name=f"left_leibniz_{alg.name}_{f_name}_{u_name}_{v_name}",
             bib_cite("DereliDogan2020", "Proposition 4.1"),
         ),
     )
-    theorem = theorem.with_structural_requires()  # Faz 8 step 3b: structural requirements
+    theorem = theorem.with_structural_requires()  # Phase 8 step 3b: structural requirements
     return chain, theorem
 
 
@@ -1041,7 +1041,7 @@ name=(
             "DereliDogan2020", "Section 3, remark before Definition 3.10"
         ),
     )
-    theorem = theorem.with_structural_requires()  # Faz 8 step 3b: structural requirements
+    theorem = theorem.with_structural_requires()  # Phase 8 step 3b: structural requirements
     return chain, theorem
 
 

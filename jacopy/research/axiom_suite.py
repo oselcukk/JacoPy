@@ -77,7 +77,7 @@ class Bracket:
             out = GeneralizedSection(self._type, *out)
         elif out.type != self._type:
             # the user's function returned a section of another bundle
-            # (2026-09-22 library audit, Faz 8 step 1b)
+            # (2026-09-22 library audit, Phase 8 step 1b)
             raise TypeError(
                 f"{self.name} must return a section of {self._type}, got {out.type}"
             )
@@ -269,7 +269,7 @@ class AxiomSuite:
         """Engine normal form with this suite's expansion budget (the
         library default of 1024 rewrites is too small for the
         rotated exceptional 4-form checks; a true cycle still trips
-        the bound, just later). Faz 8 step 4b adapter over
+        the bound, just later). Phase 8 step 4b adapter over
         :func:`jacopy.proof.normalize.normalize` (12 rounds)."""
         from jacopy.proof.normalize import normalize
 

@@ -58,7 +58,7 @@ def _permutation_parity(before, after) -> int:
 def _odd_wedge_degree(child: Expr, registry=None) -> bool:
     """True when ``child`` certainly has odd EXTERIOR degree — the
     parity of the single contract
-    :func:`jacopy.algebra.grading.exterior_degree` (Faz 8 step 2a; the
+    :func:`jacopy.algebra.grading.exterior_degree` (Phase 8 step 2a; the
     pre-2a test read the node's own ``wedge_degree`` / ``degree``
     attribute only, so a vector sum or an indexed sum was never
     sorted). Unknown or symbolically undecidable parity returns False

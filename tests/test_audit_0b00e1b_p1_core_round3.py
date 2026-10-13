@@ -1,6 +1,6 @@
 """
-Audit 0b00e1b-FULL, fix/p1-core gate 6 (Fable, tur 3): every probe of
-``scratchpad-kopya/p1core-cr6`` (p01–p06) and ``p1core-gate6`` (g1–g4)
+Audit 0b00e1b-FULL, fix/p1-core gate 6 (Fable, round 3): every probe of
+the scratch sets ``p1core-cr6`` (p01–p06) and ``p1core-gate6`` (g1–g4)
 as a permanent test.
 
 1. f·D NARROWED: the coefficient is an ℝ-constant (compound constants

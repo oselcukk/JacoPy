@@ -124,7 +124,7 @@ branch and compare with the same commands on `main`:
 
 Known bugs are kept visible as strict `xfail` tests (for example the
 AgreementOnGenerators domain cases in
-`tests/test_audit_0b00e1b_p1_core_tur4.py`); a strict `xfail` that
+`tests/test_audit_0b00e1b_p1_core_round4.py`); a strict `xfail` that
 starts passing fails the run, so the fix must remove the marker.
 
 ## 6. Independent audit tests (outside the repository)

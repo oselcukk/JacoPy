@@ -23,7 +23,7 @@ come from two definitional rules:
 * :class:`MultivectorInteriorDecomposableDefinition` — the
   decomposable case unfolds into the iterated ordinary interior.
 
-This node closes the 6.H "kapsam notu" gap: with it the
+This node closes the 6.H "scope note" gap: with it the
 ``Π₃ ⊛ Π₃`` bundle map of the exceptional Ψ_Π twist is buildable
 (``(Π₃⊛Π₃)(ω₅) = ½ Π₃(ι_{Π₃} ω₅)``, see
 :mod:`jacopy.packages.drinfeld.examples`)."""
@@ -42,7 +42,7 @@ from jacopy.proof.expansion import Definition
 
 def _multivector_degree(P: Expr, registry: Optional[PropertyRegistry] = None) -> Degree:
     """The multivector degree of ``P`` — the single exterior-degree
-    contract :func:`jacopy.algebra.grading.exterior_degree` (Faz 8
+    contract :func:`jacopy.algebra.grading.exterior_degree` (Phase 8
     step 2a), raised to a :class:`ValueError` when it is unknown.
     ``f·Π₃`` grades like ``Π₃`` when ``f`` is a declared function of
     ``registry``; an undeclared symbol is NOT assumed to be a scalar

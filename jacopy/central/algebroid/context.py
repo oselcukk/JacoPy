@@ -661,7 +661,7 @@ class Algebroid:
         return isinstance(self._bundle, TangentBundle)
 
     def engine_rules(self, registry=None, *, phase=None):
-        """The rules THIS algebroid contributes to an engine (Faz 8
+        """The rules THIS algebroid contributes to an engine (Phase 8
         step 4a), all owned by it: phase ``"declared"`` — the rules
         licensed by its declarations; phase ``"coboundary"`` — the
         coboundary pairing/linearity definitions; phase

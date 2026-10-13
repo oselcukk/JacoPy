@@ -1,5 +1,5 @@
 """
-The common normalization contract (Faz 8 step 4b).
+The common normalization contract (Phase 8 step 4b).
 
 Every proof in the package drives an expression to an engine
 "normal form" with the same loop — definitional expansion, the

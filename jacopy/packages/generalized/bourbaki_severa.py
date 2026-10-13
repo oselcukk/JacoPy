@@ -282,11 +282,11 @@ class LSymbolViaChiDefinition(Definition):
 class SymPartCollectDeclaration(Definition):
     """DECLARED symmetric part (6.11), COLLECT orientation: a
     same-signed pair ``[a,b]_E … [b,a]_E`` inside a Sum is replaced
-    by ``𝔻g(a,b)`` (the Faz 3 SymmetricPartDeclaration pattern —
+    by ``𝔻g(a,b)`` (the Phase 3 SymmetricPartDeclaration pattern —
     the single-swap orientation would not terminate on generic
     slots)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
 
     name = "(6.11) collect: [a,b] + [b,a] → 𝔻g(a,b)"
     source = cite("CatalOzerDereliDogan2022", "Definition 6.2, Eq. (6.11)")
@@ -350,7 +350,7 @@ class PhiIsotropyDeclaration(Definition):
     """DECLARED g-isotropy of the SPLITTING ``φ`` (Cor 9.1's extra
     hypothesis): ``g(φU, φV) → 0`` — i.e. ``F = 0``."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
 
     name = "declared g-isotropic splitting: F(U,V) = g(φU,φV) = 0"
     source = cite("CatalOzerDereliDogan2022", "Corollary 9.1")

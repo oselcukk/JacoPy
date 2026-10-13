@@ -1,4 +1,4 @@
-"""Faz 8 step 4b — the common normalization contract: one loop,
+"""Phase 8 step 4b — the common normalization contract: one loop,
 ``NormalForm(expr, stopped_by ∈ {fixpoint, rounds, steps, target})``,
 ``converged`` = a fixpoint of the pipeline (not a unique canonical
 form), a raising layer on top, and the old helpers as adapters that

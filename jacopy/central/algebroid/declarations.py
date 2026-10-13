@@ -69,7 +69,7 @@ def _scalar_split(expr: Expr, registry) -> Optional[tuple]:
 class RightLeibnizDeclaration(Definition):
     """``[u, fv]_E → ρ(u)(f)·v + f·[u, v]_E`` (declared axiom)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = (
         cite("DereliDogan2020", "Definition 3.4, Eq. (3.10)"),
         cite("CatalOzerDereliDogan2022", "Definition 4.1, Eq. (4.4)"),
@@ -105,7 +105,7 @@ class LeftLeibnizDeclaration(Definition):
     """``[fu, v]_E → −ρ(v)(f)·u + f·[u, v]_E + L(Df, u, v)``
     (declared axiom; the locality term stays opaque until 3.E)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = cite("DereliDogan2020", "Definition 3.5, Eq. (3.11)")
 
     anchor = AlgebroidBracket
@@ -143,7 +143,7 @@ class AnchorMorphismDeclaration(Definition):
     "pre" property; PROVABLE from right-Leibniz + Jacobi, which is the
     Phase 3.D theorem)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = (
         cite("DereliDogan2020", "Eq. (3.19), Definition 3.8"),
         cite("CatalOzerDereliDogan2022", "Definition 4.1, Eq. (4.5)"),
@@ -175,7 +175,7 @@ class JacobiDeclaration(Definition):
     """``J^E(u, v, w) → 0`` (declared Leibniz-Jacobi identity, carried
     by the Jacobiator node)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = (
         cite("CatalOzerDereliDogan2022", "Definition 4.1, Eq. (4.6)"),
         cite("DereliDogan2020", "Eq. (3.20)"),
@@ -210,7 +210,7 @@ class AntisymmetryDeclaration(Definition):
     Fires on plain section slots only — linearity/Leibniz splits keep
     precedence via registration order."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = cite("DereliDogan2020", "Definition 3.15")
 
     anchor = AlgebroidBracket
@@ -249,7 +249,7 @@ class MetricInvarianceDeclaration(Definition):
     """``ρ(u)(g(v, w)) → g([u,v], w) + g(v, [u,w])`` (declared axiom
     C1 [B (4.10)] — the metric-compatibility of the bracket)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = cite("CatalOzerDereliDogan2022", "Definition 4.3, Eq. (4.10)")
 
     anchor = Act
@@ -302,7 +302,7 @@ class SymmetricPartDeclaration(Definition):
       as a section-level summand, so the loop path cannot re-fire it.
     """
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = (
         cite("CatalOzerDereliDogan2022", "Definition 4.2, Eq. (4.7)"),
         cite("CatalOzerDereliDogan2022", "Definition 4.3, Eq. (4.9)"),

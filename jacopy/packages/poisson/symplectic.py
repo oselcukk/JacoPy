@@ -225,7 +225,7 @@ class SymplecticClosedDeclaration(Definition):
     """``dω → 0`` — the DECLARED closedness of the symplectic form
     (node form and evaluated head form)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = bib_cite("Math595Midterm2026", "Question 2")
 
     anchor = (Act, MultiEval)
@@ -272,7 +272,7 @@ class SharpFlatIdentityDeclaration(Definition):
     """``π♯(ι_X ω) → X`` — the primitive face of the DECLARED
     compatibility ``π = ω⁻¹`` (sharp ∘ flat = id)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = bib_cite("Math595Midterm2026", "Question 2")
 
     anchor = SharpVF
@@ -308,7 +308,7 @@ class PoissonOmegaBridgeDeclaration(Definition):
     first-slot interior convention: ``ω(X_g, X_f) = (ι_{X_g}ω)(X_f)
     = ⟨dg, X_f⟩ = X_f(g) = {f, g}``)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
 
     anchor = MultiEval
 
@@ -388,7 +388,7 @@ def symplectic_engine(
 
 
 def _normalized_by(engine, seed: Expr, registry) -> Expr:
-    """Engine normal form: Faz 8 step 4b adapter over
+    """Engine normal form: Phase 8 step 4b adapter over
     :func:`jacopy.proof.normalize.normalize` with THIS helper's historical
     defaults (10 rounds, 1024 steps per expansion pass). A step-budget
     exhaustion raises as ``engine.expand`` used to; a round exhaustion

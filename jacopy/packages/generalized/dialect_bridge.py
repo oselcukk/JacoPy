@@ -120,7 +120,7 @@ def _normalize(
 ) -> Expr:
     """Engine normal form with a LARGE expansion budget — the bridged
     3-form Jacobiator needs a few thousand definitional steps in its
-    first pass (size, not a cycle). Faz 8 step 4b adapter over
+    first pass (size, not a cycle). Phase 8 step 4b adapter over
     :func:`jacopy.proof.normalize.normalize` (12 rounds, this budget)."""
     from jacopy.proof.normalize import normalize
 

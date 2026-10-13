@@ -1,5 +1,5 @@
 """
-The EXTERIOR-degree contract (Faz 8 step 2a).
+The EXTERIOR-degree contract (Phase 8 step 2a).
 
 Two gradings live in the package and they must not be confused:
 

@@ -1,4 +1,4 @@
-"""Faz 8 step 3a — ProofResult: goal + status, assumptions (requires)
+"""Phase 8 step 3a — ProofResult: goal + status, assumptions (requires)
 kept apart from derivation (provenance), legacy assumptions never
 dropped, CLOSED always "under" its assumptions, instance generality
 never upgraded, INVALID without running, BUDGET on exhaustion, the

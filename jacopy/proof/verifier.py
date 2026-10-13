@@ -2,7 +2,7 @@
 Public proof API.
 
 High-level entry points that select a :class:`Strategy`, feed it a
-pair of expressions, and return a :class:`ProofChain`. Faz 7 C adds
+pair of expressions, and return a :class:`ProofChain`. Phase 7 C adds
 :func:`prove_jacobi` (with automatic dispatch to
 :class:`DerivedBracketStrategy` for derived brackets),
 :func:`prove_operator_equation` (uses
@@ -102,7 +102,7 @@ def prove_jacobi(
     # residual bracket node downstream breaks the ExpandAndSimplify
     # pipeline. Unfold every bracket node to its definitional form here
     #, the pipeline then only sees ordinary :class:`Sum` / :class:`Neg`
-    # / :class:`Product` / atom shapes. Once Faz 7 adds a bracket-aware
+    # / :class:`Product` / atom shapes. Once Phase 7 adds a bracket-aware
     # definition to :class:`ExpansionEngine`, this pre-pass can move
     # into the engine and drop from the verifier layer.
     from jacopy.core.registry import track_reads
@@ -302,7 +302,7 @@ def unroll_property(prop: Property) -> ProofChain:
 
     The chain is intentionally shallow. A :class:`ProofRef` today only
     carries a rule name and a tuple of source specifiers, there is
-    no rehydratable proof tree to expand. Once the Theorem Book (Faz
+    no rehydratable proof tree to expand. Once the Theorem Book (Phase
     9) lets a :class:`ProofRef` resolve to a concrete proof builder,
     this helper will delegate to it and return the full unrolled
     chain; until then the one-step summary is the contract.

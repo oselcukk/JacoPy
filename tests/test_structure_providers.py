@@ -1,4 +1,4 @@
-"""Faz 8 step 4a — structure providers: every structure contributes
+"""Phase 8 step 4a — structure providers: every structure contributes
 ITS OWN rules (``engine_rules``) and carries ITS OWN declarations; a
 flag is never distributed across structures; the order of structures
 does not change what is assumed; rules are deduplicated by structural

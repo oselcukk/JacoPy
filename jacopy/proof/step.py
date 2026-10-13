@@ -162,12 +162,12 @@ class ProofStep:
         self._rule = rule
         self._justification = justification
         self._provenance_tag = provenance_tag
-        # the structure whose rule fired (Faz 8 step 2c; None = structure-free)
+        # the structure whose rule fired (Phase 8 step 2c; None = structure-free)
         self._owner = owner
-        # the logical role of the fired rule (Faz 8 step 3a):
+        # the logical role of the fired rule (Phase 8 step 3a):
         # "definition" | "assumption" | "theorem" | None (unrecorded)
         self._role = role
-        # the cited Theorem record when this step is a citation (Faz 8
+        # the cited Theorem record when this step is a citation (Phase 8
         # step 3b): its requirements propagate to the citing proof
         self._cites = cites
         # the structural key of the licensing rule (Definition.key); an

@@ -829,7 +829,7 @@ def prove_r_twisted_jacobi(
     )
     if cite_theta_jacobi:
         # [C'1] of the θ-double is NOT re-run here (about two minutes);
-        # it enters as an EXPLICIT ASSUMPTION of N (Faz 8 step 3b): the
+        # it enters as an EXPLICIT ASSUMPTION of N (Phase 8 step 3b): the
         # record is verified-with-assumptions, and every result citing it
         # shows "[C'1] … taken as an assumption" in its requirements
         c1_vec = c1_form = None

@@ -1,5 +1,5 @@
 """
-The result / assumption / provenance model (Faz 8 step 3a).
+The result / assumption / provenance model (Phase 8 step 3a).
 
 A proof attempt answers three different questions, and this module
 keeps the answers apart:
@@ -241,7 +241,7 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                     if cited is not None:
                         inherit(cited)
                 elif cited is not None and type(cited) is _theorem_class():
-                    # TRANSITIVE requirements (Faz 8 step 3b): a citation
+                    # TRANSITIVE requirements (Phase 8 step 3b): a citation
                     # contributes ALL its own requirements; an unverified
                     # (legacy) one is, in addition, a legacy assumption
                     if getattr(cited, "legacy", True):
@@ -619,7 +619,7 @@ def _theorem_requirements(theorem):
 
 def structural_requires(theorem) -> Tuple[Assumption, ...]:
     """The requirement records of a theorem derived from its OWN chain
-    (Faz 8 step 3b): declared axiom instances, the structures behind
+    (Phase 8 step 3b): declared axiom instances, the structures behind
     them, the transitive requirements of cited theorems, the registry
     answers the steps relied on (``registry``, audit 0b00e1b-FULL
     P0-3), a scope entry for an instance proof, a legacy entry for

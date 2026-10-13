@@ -65,14 +65,14 @@ class Definition(ABC):
     #: keeps the rule in the always-consulted fallback list.
     anchor = None
 
-    #: The structure this rule was built for (Faz 8 step 2c): the
+    #: The structure this rule was built for (Phase 8 step 2c): the
     #: algebroid of a declared axiom, the theorem's owner for a cited
     #: theorem, … ``None`` for structure-free rules. The engine refuses
     #: two rules whose owners share a tree-visible name but differ
     #: (:mod:`jacopy.proof.ownership`).
     owner = None
 
-    #: What the rule IS, logically (Faz 8 step 3a): ``"definition"`` —
+    #: What the rule IS, logically (Phase 8 step 3a): ``"definition"`` —
     #: a definitional unfolding or a structural law (no assumption);
     #: ``"assumption"`` — a DECLARED axiom of a structure (the
     #: ``*Declaration`` rules), i.e. a hypothesis the proof depends on;
@@ -85,7 +85,7 @@ class Definition(ABC):
     #: ``unverified``): its steps are classified as legacy assumptions.
     unverified = False
 
-    #: Structural IDENTITY of the rule (Faz 8 step 1d contract):
+    #: Structural IDENTITY of the rule (Phase 8 step 1d contract):
     #: ``None`` by default — the rule is never deduplicated by identity
     #: and its :attr:`key` falls back to ``(class name, display name)``.
     #: A rule that gives one returns ``(class, structure identity,
@@ -109,7 +109,7 @@ class Definition(ABC):
         ``(class name, display name)``. Recorded on every fired
         :class:`ProofStep` and on the resulting requirement records, so a
         citation can check that the SAME licensing rule is registered in
-        the citing engine (Faz 8 step 3b, audit dc44f79 F2)."""
+        the citing engine (Phase 8 step 3b, audit dc44f79 F2)."""
         ident = self.identity
         return ident if ident is not None else (type(self).__name__, self.name)
 
@@ -143,7 +143,7 @@ class ExplicitAssumption(Definition):
     ``assumption``; identity ``("ExplicitAssumption", owner name,
     instance, target)`` so that the same declaration in two engines is
     the same licensing rule — a theorem that used it is citable only
-    where it is registered again. The seed of ``assume_zero`` (Faz 8
+    where it is registered again. The seed of ``assume_zero`` (Phase 8
     step 5b): an exact-instance hypothesis, never a general identity."""
 
     role = "assumption"
@@ -371,7 +371,7 @@ class ExpansionEngine:
         # (2026-09-09 audit, finding F4).
         self.assembly_report: List[str] = []
         # tree-visible name -> owning structure of the registered rules
-        # (Faz 8 step 2c; see jacopy.proof.ownership)
+        # (Phase 8 step 2c; see jacopy.proof.ownership)
         self._owners: dict = {}
         # bumped on every registration: bound citations re-check their
         # verdict when it changes (audit dc44f79 F4)
@@ -392,7 +392,7 @@ class ExpansionEngine:
         # A theorem citation is bound to THIS engine (a bound copy: the
         # caller's object stays reusable elsewhere) and checked against
         # the engine's structures; a blocked citation is registered
-        # inert, reported, and claims no owner (Faz 8 step 3b).
+        # inert, reported, and claims no owner (Phase 8 step 3b).
         bind = getattr(definition, "bound_to", None)
         citable = True
         if bind is not None:
@@ -431,7 +431,7 @@ class ExpansionEngine:
     @property
     def owners(self) -> dict:
         """``{tree-visible name: structure}`` for the owned rules of
-        this engine (Faz 8 step 2c)."""
+        this engine (Phase 8 step 2c)."""
         return dict(self._owners)
 
     @property

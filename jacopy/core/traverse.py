@@ -1,5 +1,5 @@
 """
-The read-only walker (Faz 8 step 2b).
+The read-only walker (Phase 8 step 2b).
 
 An expression tree has two kinds of edges:
 

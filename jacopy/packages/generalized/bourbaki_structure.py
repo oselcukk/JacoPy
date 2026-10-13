@@ -339,7 +339,7 @@ class BourbakiInvarianceDeclaration(Definition):
     ``ℒ^R_{ρu}(g(v, w)) → g([u,v], w) + g(v, [u,w])`` — terminating
     (the ℒ^R node disappears)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = cite("CatalOzerDereliDogan2022", "Definition 7.1, Eq. (7.8)")
 
     anchor = BLieRE

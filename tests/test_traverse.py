@@ -1,4 +1,4 @@
-"""Faz 8 step 2b — the read-only walker ``iter_nodes`` and the
+"""Phase 8 step 2b — the read-only walker ``iter_nodes`` and the
 traversal CONFORMANCE of every ``Expr`` subclass, checked by protocol
 (not by class list): nodes with children round-trip through
 ``_rebuild``, nodes with slots round-trip through ``with_slots``, the

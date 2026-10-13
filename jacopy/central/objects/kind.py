@@ -1,6 +1,6 @@
 """
 The common TYPE query — kind, exterior degree and owning bundle of an
-expression (Faz 8 steps 1c/2a; audit rounds 2026-09-22/23: "degree is
+expression (Phase 8 steps 1c/2a; audit rounds 2026-09-22/23: "degree is
 not a type", "a foreign bundle is not unknown", "a known mixed sum is
 not unknown").
 

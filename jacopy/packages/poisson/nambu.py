@@ -62,7 +62,7 @@ from jacopy.central.tangent.cartan_rules import (  # noqa: F401  (re-export)
 )
 
 
-#: The declarable axioms of a Nambu-Poisson structure (Faz 8 step 4a):
+#: The declarable axioms of a Nambu-Poisson structure (Phase 8 step 4a):
 #: ``"fundamental-identity"`` — the Nambu fundamental identity (the
 #: Poisson condition for ``p = 1``): ``[Πω, Πη] = Π[ω, η]_Kos`` and its
 #: pairing-swap consequence. Nothing else is ever assumed.
@@ -72,7 +72,7 @@ NAMBU_DECLARATIONS = ("fundamental-identity",)
 class NambuPoissonStructure:
     """``(M, Π)`` — a Nambu-Poisson structure of order ``p``
     (``Π`` a ``(p+1)``-vector). The fundamental identity is a DECLARED
-    axiom carried BY THE STRUCTURE (Faz 8 step 4a: ``declare=(…)`` /
+    axiom carried BY THE STRUCTURE (Phase 8 step 4a: ``declare=(…)`` /
     :meth:`with_declarations`); a structure without it assumes
     nothing. Two structures with the same ``Π`` and different
     declarations are different owners (the weaker one is a
@@ -129,7 +129,7 @@ class NambuPoissonStructure:
         """``Πω`` — the induced vector field of a p-form."""
         return NambuSharpVF(self._pi, omega)
 
-    # ---- structure provider (Faz 8 step 4a) --------------------------- #
+    # ---- structure provider (Phase 8 step 4a) ------------------------- #
 
     def engine_rules(self, registry=None, *, phase=None):
         """The rules THIS structure contributes to an engine, each
@@ -542,7 +542,7 @@ class NambuFIDeclaration(Definition):
     the action rule turns into nested Nambu brackets — no ``L``-slot
     sharp survives, so the rewrite terminates."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
 
     anchor = Act
 

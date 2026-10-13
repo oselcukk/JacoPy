@@ -1,5 +1,6 @@
 """Every jacopy (sub)package imports on its own in a fresh interpreter
-(audit 0b00e1b T2-6/T2-7): widening the ``__init__`` facades must
+(independent audit of commit 0b00e1b,
+items T2-6/T2-7): widening the ``__init__`` facades must
 not create an import-order dependency or a cycle that only a warm
 ``sys.modules`` hides."""
 

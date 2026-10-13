@@ -1,6 +1,6 @@
 """
-Audit 0b00e1b-FULL, fix/p1-core gate 7 (Fable, tur 4): every probe of
-``scratchpad-kopya/p1core-cr7`` (p01–p07) and ``p1core-gate7`` (q1–q5)
+Audit 0b00e1b-FULL, fix/p1-core gate 7 (Fable, round 4): every probe of
+the scratch sets ``p1core-cr7`` (p01–p07) and ``p1core-gate7`` (q1–q5)
 as a permanent test.
 
 1. f·D: an EXPLICIT type allow-list for coefficient / generator symbols

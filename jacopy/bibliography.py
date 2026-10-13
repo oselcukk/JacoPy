@@ -455,7 +455,7 @@ def apa_locator(locator: str) -> str:
 # APA 7 formatting                                                       #
 # --------------------------------------------------------------------- #
 
-_TURKISH_FOLD = str.maketrans({"ı": "i", "İ": "I", "Ç": "C", "ç": "c", "Ş": "S", "ş": "s",
+_ACCENT_FOLD = str.maketrans({"ı": "i", "İ": "I", "Ç": "C", "ç": "c", "Ş": "S", "ş": "s",
                                "Ğ": "G", "ğ": "g", "Ö": "O", "ö": "o", "Ü": "U", "ü": "u"})
 
 
@@ -465,7 +465,7 @@ def _fold(text: str) -> str:
     ``catal-ozer``, ``Ševera`` as ``severa``."""
     import unicodedata
 
-    t = unicodedata.normalize("NFKD", text.translate(_TURKISH_FOLD))
+    t = unicodedata.normalize("NFKD", text.translate(_ACCENT_FOLD))
     return "".join(c for c in t if not unicodedata.combining(c)).casefold()
 
 

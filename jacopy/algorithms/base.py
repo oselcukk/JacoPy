@@ -6,7 +6,7 @@ distribute pass, a sort-product pass, a collect-terms pass. Each lives
 in its own module and exposes a free function, the free function is
 what callers actually use. This module gives those algorithms a
 shared :class:`Algorithm` facade and a :class:`StepResult` value type
-so proof-level machinery (Faz 7+) can record what each pass did.
+so proof-level machinery (Phase 7+) can record what each pass did.
 
 The plan calls for ``Algorithm.can_apply``, ``Algorithm.apply``,
 ``Algorithm.run``. ``run`` is the recommended entry point: it returns

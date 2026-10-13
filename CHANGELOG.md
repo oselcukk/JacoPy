@@ -7,7 +7,7 @@ has been tagged yet, so everything below is unreleased on top of
 `0.0.1`.
 
 Finding labels such as `P0-1` or `M1X-5` refer to the full audit of
-commit `0b00e1b` (2026-09-30).
+commit `0b00e1b` (independent audit, 2026-09-30).
 
 ## [Unreleased]
 

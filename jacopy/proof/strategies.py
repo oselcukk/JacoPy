@@ -2,8 +2,8 @@
 Proof strategies, algorithms that take two expressions and close the
 gap between them with a :class:`ProofChain`.
 
-Faz 7 A-scope ships only the base :class:`Strategy` interface and
-:class:`ExpandAndSimplify`. Later fazlar add
+Phase 7 A-scope ships only the base :class:`Strategy` interface and
+:class:`ExpandAndSimplify`. Later phases add
 :class:`AgreementOnGenerators` (operator-level equality via
 derivation-extension), :class:`UnrollToFoundations`
 (theorem-mode unrolling), and :class:`DerivedBracketStrategy`
@@ -140,7 +140,7 @@ class ExpandAndSimplify(Strategy):
             return chain
 
         obstruction: Expr = Sum(lhs, Neg(rhs))
-        # Faz 8 step 4b: the common normalization contract with this
+        # Phase 8 step 4b: the common normalization contract with this
         # strategy's shape (8 outer rounds, 64 inner, early stop at 0);
         # the historical failure modes are preserved
         from jacopy.proof.normalize import normalize

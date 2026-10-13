@@ -566,7 +566,7 @@ def test_probe_must_be_a_declared_scalar_and_default_avoids_form_names():
     assert probe != reserved
 
 
-# ---- Faz 8 step 1 (library audit 2026-09-22) pins ------------------- #
+# ---- Phase 8 step 1 (library audit 2026-09-22) pins ----------------- #
 
 
 def test_extra_rules_are_never_deduplicated():

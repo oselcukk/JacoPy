@@ -431,7 +431,7 @@ def _declared_constant(e, env) -> bool:
       symbolic degree certifies nothing). Raw: a filter never hides a
       clash (gate-5 F1).
 
-    ``tests/test_audit_0b00e1b_p1_core_tur3.py`` locks this against the
+    ``tests/test_audit_0b00e1b_p1_core_round3.py`` locks this against the
     engine's predicate differentially (class hierarchy, every ``axioms``
     subset, strict / DERIVED)."""
     reg = env.registry

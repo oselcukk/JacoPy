@@ -6,7 +6,7 @@ same children in the same order. That's the right default, it makes
 hashing well-defined and keeps the core layer free of semantic
 assumptions. But proofs need a few other notions of sameness, and
 this module collects the ones that are not deep enough to warrant
-the canonicalization machinery of Faz 2.
+the canonicalization machinery of Phase 2.
 
 * :func:`structural_equal`, a named alias for ``==``, for readable
   proof transcripts.

@@ -235,7 +235,7 @@ class PoissonStructure:
         return PoissonStructure(self._pi, declare=tuple(self._declarations) + tuple(declare))
 
     def engine_rules(self, registry=None, *, phase=None):
-        """The rules THIS structure contributes (Faz 8 step 4a), owned
+        """The rules THIS structure contributes (Phase 8 step 4a), owned
         by it and keyed by ``(class, π)``: phase ``"declared"`` — the
         ``[π,π]_SN = 0`` declaration ONLY when ``"poisson"`` is
         declared; phase ``"definitional"`` — bracket, Hamiltonian,
@@ -291,7 +291,7 @@ class PoissonStructure:
         return f"PoissonStructure({self._pi!r}{decl})"
 
 
-#: The declarable axioms of a Poisson structure (Faz 8 step 4a):
+#: The declarable axioms of a Poisson structure (Phase 8 step 4a):
 #: ``"poisson"`` — the Poisson condition ``[π, π]_SN = 0``.
 POISSON_DECLARATIONS = ("poisson",)
 
@@ -503,7 +503,7 @@ class PoissonSNDeclaration(Definition):
     """``[π, π]_SN → 0`` — the DECLARED Poisson axiom (the structure's
     integrability), never assumed silently."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
 
     anchor = BracketApply
 

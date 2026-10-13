@@ -373,7 +373,7 @@ class Axiom914Declaration(Definition):
     ABSTRACT algebroid bracket for INDEPENDENT A-data (PDF 13k —
     the quintet never assumed A = TM structurally)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Faz 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
     source = cite("CatalOzerDereliDogan2022", "Definition 9.1, Eq. (9.14)")
 
     anchor = BLieR

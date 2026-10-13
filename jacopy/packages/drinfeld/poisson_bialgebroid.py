@@ -175,7 +175,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
             engine=sharp_only,
         )
         S = Sum(n_compact, Neg(n_split))
-        n_tm, n_full = n_compact, n_split  # names used below
+        n_tm, n_full = n_compact, n_split  # names are defined below
         step1 = ProofStep(
             node, n_full,
             rule="sharp evaluation (full engine)",

@@ -156,7 +156,7 @@ def prove_bianchi_first(
 def _normalize(expr: Expr, engine, registry) -> Expr:
     """Engine normal form, nested shape (8 outer rounds of: expansion +
     product rule to their fixpoint in at most 64 inner rounds, then the
-    simplifier). Faz 8 step 4b adapter over
+    simplifier). Phase 8 step 4b adapter over
     :func:`jacopy.proof.normalize.normalize`."""
     from jacopy.proof.normalize import normalize
 
