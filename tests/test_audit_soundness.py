@@ -1,8 +1,8 @@
 """Soundness regressions from the 2026-09-07/08 independent audit.
 
 Each test is a counterexample that USED to close as a false equality
-(or crash) — see ``audit_jacopy_v3/REVIEW_TR.md`` findings 1-7 and
-``COMPLIANCE_TR.md`` finding 1. They pin the reliability pass: the
+(or crash) — review findings 1-7 and compliance finding 1 of that
+audit. They pin the reliability pass: the
 same rules must keep REJECTING these neighbours of true identities.
 """
 

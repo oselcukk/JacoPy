@@ -269,7 +269,7 @@ class TestTopLevelSurface:
 # package's __all__ (audit 0B00E1B-FULL T2 names); the old names stay
 # importable as attributes (tests/test_audit_0b00e1b_arch_names.py).
 _KNOWN_COLLISIONS = {
-    "Metric",  # central atom vs metric_affine context (ROADMAP 5f adapter)
+    "Metric",  # central atom vs metric_affine context (until the metric adapter lands)
     "metric",
 }
 

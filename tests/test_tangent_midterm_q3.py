@@ -3,7 +3,7 @@
 
 Q3's tilde-calculus half (d̃/L̃ from the Koszul bracket), the duality
 conditions (K/K̃, derivator) and the triangular-bialgebroid Courant
-bracket are Phase 5/6 deliverables — mapped in the ROADMAP.
+bracket are Phase 5/6 deliverables and are not covered here.
 """
 
 import pytest

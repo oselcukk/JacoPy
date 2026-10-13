@@ -284,7 +284,7 @@ class TestNonMetricityForms:
 
     def test_slot_is_the_direction_not_a_frame_leg(self, tm):
         """Q_ab(v) = Q(v, e_a, e_b) [ADM (2.12)] — NOT Q(e_a, ·, ·)
-        (the old ROADMAP:663 wording): Q_ab(e_c) ≠ Q(e_a, e_b, e_c)."""
+        (an earlier, wrong reading): Q_ab(e_c) ≠ Q(e_a, e_b, e_c)."""
         from jacopy.packages.metric_affine.metric import nonmetricity
         from jacopy.packages.metric_affine.nonmetricity_forms import (
             _engine,
