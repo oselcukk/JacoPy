@@ -29,5 +29,5 @@ keywords:
   - poisson geometry
   - cartan calculus
   - symbolic computation
-# TODO(owner): add date-released with the first tagged release.
+date-released: "2026-10-14"
 # TODO(owner): add doi (Zenodo) with the first tagged release.

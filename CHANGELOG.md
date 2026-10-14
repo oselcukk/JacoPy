@@ -11,9 +11,9 @@ of commit `0b00e1b` (2026-09-30).
 
 ## [Unreleased]
 
-## [0.1.0] - not yet released
+## [0.1.0] - 2026-10-14
 
-The first public pre-release. It contains every change below since the
+The first public release. It contains every change below since the
 internal version `0.0.1`.
 
 ### Changed: public release
