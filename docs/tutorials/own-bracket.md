@@ -120,7 +120,7 @@ CLOSED: [X,Y]_phi(h) = (-[Y,X]_phi(h))  — under the assumptions below
   via definition: graded Leibniz / Act linearity (slot-reachable product rule) ×5
   via canonicalization: simplify ×2
   via theorem: bracket orientation: [B, A] = −[A, B], [A, A] = 0
-  budget: 14/1024 steps; jacopy 0.1.0a1
+  budget: 14/1024 steps; jacopy 0.1.0
 ```
 
 Note the first `requires` line. JacoPy cannot check a rule written outside the

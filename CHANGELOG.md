@@ -11,7 +11,7 @@ of commit `0b00e1b` (2026-09-30).
 
 ## [Unreleased]
 
-## [0.1.0a1] - not yet released
+## [0.1.0] - not yet released
 
 The first public pre-release. It contains every change below since the
 internal version `0.0.1`.
@@ -21,7 +21,7 @@ internal version `0.0.1`.
 - License: JacoPy is now distributed under the BSD 3-Clause License
   (`LICENSE`, SPDX `BSD-3-Clause` in `pyproject.toml` and
   `CITATION.cff`). The earlier source-available terms no longer apply.
-- Version: `0.0.1` becomes `0.1.0a1`, the first public pre-release. The
+- Version: `0.0.1` becomes `0.1.0`, the first public release (published on PyPI). The
   version string is the only release number; internal codenames do not
   appear in it.
 - Repository: renamed to `oselcukk/JacoPy`

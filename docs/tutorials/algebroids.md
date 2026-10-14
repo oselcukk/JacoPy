@@ -76,7 +76,7 @@ CLOSED: d_K(d_K(f))(u, v) = 0  — under the assumptions below
   via definition: intrinsic d (Cartan-K): Palais formula dω(X_0,…,X_p) = Σ(−1)^i ρ(X_i)(ω(…)) + Σ(−1)^{i+j} ω([X_i,X_j],…) ×4
   via definition: Lie bracket definition: [X, Y](f) = X(Y(f)) - Y(X(f))
   via canonicalization: simplify
-  budget: 7/1024 steps; jacopy 0.1.0a1
+  budget: 7/1024 steps; jacopy 0.1.0
 ```
 
 The result is closed *under assumptions*, and the first `requires` line names the

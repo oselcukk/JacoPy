@@ -423,7 +423,7 @@ CLOSED: ⟨L_X(omega), Y⟩ = (⟨ι_X(d(omega)), Y⟩ + ⟨d(ι_X(omega)), Y⟩
   via definition: intrinsic d (Cartan-TM): Palais formula dω(X_0,…,X_p) = Σ(−1)^i ρ(X_i)(ω(…)) + Σ(−1)^{i+j} ω([X_i,X_j],…) ×2
   via definition: interior product: ι_X f = 0, ι_X ω = ⟨ω, X⟩ (deg 0 / 1)
   via definition: interior product evaluation: (ι_X ω)(Y_1,…,Y_k) = ω(X, Y_1,…,Y_k)
-  budget: 6/1024 steps; jacopy 0.1.0a1
+  budget: 6/1024 steps; jacopy 0.1.0
 ```
 
 The result is *assumption-free*: it rests on no declared axiom and uses
@@ -490,7 +490,7 @@ CLOSED: d(H) = 0  — under the assumptions below
   generality: generic-function
   requires declared: user axiom: dH = 0 [HStructure]
   requires structure: HStructure [HStructure]
-  budget: 1/1024 steps; jacopy 0.1.0a1
+  budget: 1/1024 steps; jacopy 0.1.0
 ```
 
 **A new structure type for `assemble_engine`: register a

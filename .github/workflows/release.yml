@@ -2,7 +2,7 @@ name: release
 
 # Publishes JacoPy to PyPI with trusted publishing (no API tokens).
 #
-# * Push a tag `vX.Y.Z` (PEP 440, e.g. `v0.1.0a1`) whose version equals
+# * Push a tag `vX.Y.Z` (PEP 440, e.g. `v0.1.0`) whose version equals
 #   `jacopy.__version__`: the sdist and wheel are built, checked and
 #   uploaded to PyPI from the `pypi` environment.
 # * Run the workflow by hand (Actions > release > Run workflow) to build

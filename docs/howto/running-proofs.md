@@ -115,7 +115,7 @@ CLOSED True | L_X(Y) = [X,Y]_VF
 CLOSED: L_X(Y) = [X,Y]_VF  — assumption-free
   generality: generic-function
   via definition: intrinsic L (Cartan-TM): L_X f = ρ(X)(f), L_X Y = [X,Y], (L_X ω)(Y…) = ρ(X)(ω(Y…)) − Σ ω(…,[X,Y_i],…)
-  budget: 1/1024 steps; jacopy 0.1.0a1
+  budget: 1/1024 steps; jacopy 0.1.0
 CLOSED
 RESIDUAL | residual: ((-(d(f) * h)) + (-(d(h) * f)) + d((f * h)))
 ['registry: registry declaration: Graded(degree=0) on f', 'registry: registry declaration: Graded(degree=0) on h']

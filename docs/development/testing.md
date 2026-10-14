@@ -3,7 +3,7 @@
 This page lists the test groups that protect JacoPy and the commands
 that run them. A change is ready when all of them pass. The counts
 change as the suite grows and are not the criterion; the commands are.
-For orientation: at version 0.1.0a1 the fast suite reports 2,572
+For orientation: at version 0.1.0 the fast suite reports 2,572
 passed, 12 skipped and 5 xfailed tests in 122 test files, and the
 notebook smoke run passes 4/4.
 

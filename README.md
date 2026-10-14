@@ -5,6 +5,7 @@ with a step-by-step proof for every result.**
 
 [![tests](https://github.com/oselcukk/JacoPy/actions/workflows/tests.yml/badge.svg)](https://github.com/oselcukk/JacoPy/actions/workflows/tests.yml)
 [![docs](https://github.com/oselcukk/JacoPy/actions/workflows/docs.yml/badge.svg)](https://oselcukk.github.io/JacoPy/)
+[![PyPI](https://img.shields.io/pypi/v/jacopy)](https://pypi.org/project/jacopy/)
 [![Python 3.10-3.14](https://img.shields.io/badge/python-3.10%E2%80%933.14-blue)](https://oselcukk.github.io/JacoPy/installation.html)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
 
@@ -18,25 +19,25 @@ not close reports the residual that is left. An optional model oracle
 checks closed identities numerically in random coordinate models.
 JacoPy is pure Python with no required dependencies.
 
-JacoPy is alpha software (version 0.1.0a1): the public API may still
+JacoPy is alpha software (version 0.1.0): the public API may still
 change between minor versions, and every change is recorded in the
 [changelog](CHANGELOG.md).
 
 ## Installation
 
-JacoPy needs Python 3.10 or newer. It is not yet on PyPI; a release
-there is planned. Install it from GitHub:
+JacoPy needs Python 3.10 or newer and has no required dependencies:
 
 ```sh
-pip install "git+https://github.com/oselcukk/JacoPy"
+pip install jacopy
 ```
 
 Optional extras: `oracle` (SymPy, for the model oracle), `rich`
 (colored proof trees in the terminal), `test` (pytest) and `dev` (all
-of these). For example,
-`pip install "jacopy[oracle] @ git+https://github.com/oselcukk/JacoPy"`.
-See the [installation guide](https://oselcukk.github.io/JacoPy/installation.html)
-for a development install.
+of these), for example `pip install "jacopy[oracle]"`. See the
+[installation guide](https://oselcukk.github.io/JacoPy/installation.html)
+for details and the
+[development guide](https://oselcukk.github.io/JacoPy/development/index.html)
+for an editable checkout.
 
 ## Quick example
 
@@ -131,7 +132,7 @@ repository"). In BibTeX:
 @software{Selcuk_JacoPy,
   author  = {Sel{\c{c}}uk, O{\u{g}}uzhan},
   title   = {{JacoPy}},
-  version = {0.1.0a1},
+  version = {0.1.0},
   year    = {2026},
   url     = {https://github.com/oselcukk/JacoPy},
   license = {BSD-3-Clause}

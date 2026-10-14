@@ -16,7 +16,7 @@ authors:
     email: "oguzhanselcuk@gtu.edu.tr"
 # Must equal jacopy.__version__ (jacopy/__init__.py); pinned by
 # tests/test_citation_metadata.py.
-version: "0.1.0a1"
+version: "0.1.0"
 license: BSD-3-Clause
 repository-code: "https://github.com/oselcukk/JacoPy"
 url: "https://oselcukk.github.io/JacoPy/"
