@@ -1,19 +1,22 @@
 cff-version: 1.2.0
-message: "If you use jacopy in your research, please cite it as below."
+message: "If you use JacoPy in your research, please cite it as below."
 type: software
-title: "jacopy"
+title: "JacoPy"
 abstract: >-
-  Graded algebra, bracket calculus, and metric-affine / generalized
-  geometry with step-by-step proofs (v3, central-code architecture).
+  JacoPy is a pure-Python library for graded algebra, bracket calculus,
+  and metric-affine and generalized geometry in which every
+  manipulation is recorded as a step-by-step proof with its rules,
+  literature sources and assumptions.
 authors:
   - family-names: "Selçuk"
     given-names: "Oğuzhan"
-    # TODO: orcid, affiliation and email are not recorded anywhere in the
-    # repository; add them here once confirmed.
+    # TODO(owner): add orcid and affiliation once confirmed.
 # Must equal jacopy.__version__ (jacopy/__init__.py); pinned by
 # tests/test_citation_metadata.py.
-version: "0.0.1"
-repository-code: "https://github.com/oselcukk/JacoPy.v.3"
+version: "0.1.0a1"
+license: BSD-3-Clause
+repository-code: "https://github.com/oselcukk/JacoPy"
+url: "https://oselcukk.github.io/JacoPy/"
 keywords:
   - graded algebra
   - lie algebroid
@@ -23,7 +26,4 @@ keywords:
   - poisson geometry
   - cartan calculus
   - symbolic computation
-# TODO: date-released and doi — no release has been tagged yet.
-# license: omitted on purpose. jacopy is proprietary, source-available
-# (see LICENSE); CFF accepts only SPDX identifiers and there is none
-# for this licence.
+# TODO(owner): add date-released and doi (Zenodo) with the first tagged release.

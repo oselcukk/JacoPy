@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a new structure, rule, operation, or improvement.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What do you want to express or prove that is difficult or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the feature. Where possible, sketch the Python you would like to write.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Mathematical references
+      description: Papers or books that define the structure or identity, with section or equation numbers.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, or other designs.
