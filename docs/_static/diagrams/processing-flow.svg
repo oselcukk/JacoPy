@@ -1,0 +1,120 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1500' height='1085' viewBox='0 0 1500 1085' font-family='Helvetica, Arial, sans-serif'>
+<title>JacoPy proof pipeline</title>
+<defs><marker id='ok-asagi' viewBox='0 0 10 10' refX='9' refY='5' markerUnits='userSpaceOnUse' markerWidth='10' markerHeight='10' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#94a3b8'/></marker><marker id='ok-yukari' viewBox='0 0 10 10' refX='9' refY='5' markerUnits='userSpaceOnUse' markerWidth='10' markerHeight='10' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#dc2626'/></marker><marker id='ok-yan' viewBox='0 0 10 10' refX='9' refY='5' markerUnits='userSpaceOnUse' markerWidth='10' markerHeight='10' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#2563eb'/></marker><marker id='ok-kahin' viewBox='0 0 10 10' refX='9' refY='5' markerUnits='userSpaceOnUse' markerWidth='10' markerHeight='10' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#0f766e'/></marker><marker id='ok-akis' viewBox='0 0 10 10' refX='9' refY='5' markerUnits='userSpaceOnUse' markerWidth='10' markerHeight='10' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#1f2937'/></marker></defs>
+<rect x='0' y='0' width='1500' height='1085' fill='#ffffff'/>
+<text x='24.0' y='36.0' font-size='22' text-anchor='start' font-weight='bold' fill='#111827'>JacoPy — the path of an expression through the proof pipeline</text>
+<text x='24.0' y='62.0' font-size='13' text-anchor='start' font-weight='normal' fill='#374151'>Mathematical reading: build the term → state the hypotheses → choose the axiom/definition set → apply the axioms (rewriting) → record the derivation → store as a theorem, cite it elsewhere → print.</text>
+<text x='24.0' y='82.0' font-size='13' text-anchor='start' font-weight='normal' fill='#374151'>File names in the boxes are the modules that do this job in the code; read 1–4 (top row) left to right, 5–8 (bottom row) right to left. The oracle tries to refute from a side branch.</text>
+<rect x='30.0' y='110.0' width='330.0' height='200.0' rx='10' fill='#dbeafe' stroke='#1d4ed8' stroke-width='2' />
+<text x='44.0' y='136.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>1. Expression (term)</text>
+<text x='44.0' y='156.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>core/expr.py · central/objects/</text>
+<text x='44.0' y='184.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Expr tree: Sum, Product, Act,</text>
+<text x='44.0' y='203.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Pairing … Constructors do not compute</text>
+<text x='44.0' y='222.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>(inert): the tree only carries the term.</text>
+<text x='44.0' y='241.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Example: ⟨L_X ω, Y⟩</text>
+<text x='44.0' y='296.0' font-size='12' text-anchor='start' font-weight='bold' fill='#1d4ed8'>Analogy: formal term</text>
+<rect x='395.0' y='110.0' width='330.0' height='200.0' rx='10' fill='#dbeafe' stroke='#1d4ed8' stroke-width='2' />
+<text x='409.0' y='136.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>2. Hypotheses (registry)</text>
+<text x='409.0' y='156.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>core/registry.py · core/properties.py</text>
+<text x='409.0' y='184.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>PropertyRegistry: properties such</text>
+<text x='409.0' y='203.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>as &#x27;x Scalar&#x27;, &#x27;p Graded(0)&#x27; are</text>
+<text x='409.0' y='222.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>attached from outside the term.</text>
+<text x='409.0' y='241.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Those used → requires: registry</text>
+<text x='409.0' y='296.0' font-size='12' text-anchor='start' font-weight='bold' fill='#1d4ed8'>Analogy: list of hypotheses</text>
+<rect x='760.0' y='110.0' width='330.0' height='200.0' rx='10' fill='#fef9c3' stroke='#a16207' stroke-width='2' />
+<text x='774.0' y='136.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>3. Rules (Definition)</text>
+<text x='774.0' y='156.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>proof/expansion.py · tangent_expansion.py</text>
+<text x='774.0' y='184.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Each rule: matches + rewrite.</text>
+<text x='774.0' y='203.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>role = definition · assumption ·</text>
+<text x='774.0' y='222.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>theorem. Engine = set of rules,</text>
+<text x='774.0' y='241.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>e.g. tangent_engine() (25 rules)</text>
+<text x='774.0' y='296.0' font-size='12' text-anchor='start' font-weight='bold' fill='#a16207'>Analogy: axiom / definition schema</text>
+<rect x='1125.0' y='110.0' width='330.0' height='200.0' rx='10' fill='#dcfce7' stroke='#15803d' stroke-width='2' />
+<text x='1139.0' y='136.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>4. Engine (ExpansionEngine)</text>
+<text x='1139.0' y='156.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>proof/expansion.py · strategies.py</text>
+<text x='1139.0' y='184.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Applies a rule at the leftmost-</text>
+<text x='1139.0' y='203.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>innermost match; ExpandAndSimplify</text>
+<text x='1139.0' y='222.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>reduces both sides to the same normal</text>
+<text x='1139.0' y='241.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>form, then compares them.</text>
+<text x='1139.0' y='296.0' font-size='12' text-anchor='start' font-weight='bold' fill='#15803d'>Analogy: applying an axiom</text>
+<rect x='1125.0' y='390.0' width='330.0' height='200.0' rx='10' fill='#dcfce7' stroke='#15803d' stroke-width='2' />
+<text x='1139.0' y='416.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>5. Derivation (ProofChain)</text>
+<text x='1139.0' y='436.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>proof/step.py · chain.py · result.py</text>
+<text x='1139.0' y='464.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Each rule application = ProofStep;</text>
+<text x='1139.0' y='483.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>sequence = ProofChain. ProofResult:</text>
+<text x='1139.0' y='502.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>CLOSED / RESIDUAL / BUDGET /</text>
+<text x='1139.0' y='521.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>INVALID + requires list</text>
+<text x='1139.0' y='576.0' font-size='12' text-anchor='start' font-weight='bold' fill='#15803d'>Analogy: derivation (proof lines)</text>
+<rect x='760.0' y='390.0' width='330.0' height='200.0' rx='10' fill='#dcfce7' stroke='#15803d' stroke-width='2' />
+<text x='774.0' y='416.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>6. Theorem + requires</text>
+<text x='774.0' y='436.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>proof/theorems.py · replay.py</text>
+<text x='774.0' y='464.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Theorem: lhs, rhs, chain, generality</text>
+<text x='774.0' y='483.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>label, requires (declared ·</text>
+<text x='774.0' y='502.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>structure · registry · scope ·</text>
+<text x='774.0' y='521.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>textual · legacy · unreplayed)</text>
+<text x='774.0' y='576.0' font-size='12' text-anchor='start' font-weight='bold' fill='#15803d'>Analogy: theorem + its hypotheses</text>
+<rect x='395.0' y='390.0' width='330.0' height='200.0' rx='10' fill='#dcfce7' stroke='#15803d' stroke-width='2' />
+<text x='409.0' y='416.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>7. Citation (cite)</text>
+<text x='409.0' y='436.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>proof/theorems.py: cite, check_citation</text>
+<text x='409.0' y='464.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>A proved theorem enters another</text>
+<text x='409.0' y='483.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>engine as a derived rule.</text>
+<text x='409.0' y='502.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Default: REJECT — if the hypotheses</text>
+<text x='409.0' y='521.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>are not met there exactly.</text>
+<text x='409.0' y='576.0' font-size='12' text-anchor='start' font-weight='bold' fill='#15803d'>Analogy: citing a lemma</text>
+<rect x='30.0' y='390.0' width='330.0' height='200.0' rx='10' fill='#f3e8ff' stroke='#7e22ce' stroke-width='2' />
+<text x='44.0' y='416.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>8. Output (display)</text>
+<text x='44.0' y='436.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>display/latex.py · ascii.py · terminal.py</text>
+<text x='44.0' y='464.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>print_chain, chain_to_latex,</text>
+<text x='44.0' y='483.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>theorem_to_latex_document</text>
+<text x='44.0' y='502.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>(with APA bibliography). Reads,</text>
+<text x='44.0' y='521.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>changes nothing.</text>
+<text x='44.0' y='576.0' font-size='12' text-anchor='start' font-weight='bold' fill='#7e22ce'>Analogy: typesetting the proof</text>
+<line x1='363.0' y1='210.0' x2='390.0' y2='210.0' stroke='#1f2937' stroke-width='2.4' opacity='1.0' marker-end='url(#ok-akis)'/>
+<line x1='392.0' y1='490.0' x2='365.0' y2='490.0' stroke='#1f2937' stroke-width='2.4' opacity='1.0' marker-end='url(#ok-akis)'/>
+<line x1='728.0' y1='210.0' x2='755.0' y2='210.0' stroke='#1f2937' stroke-width='2.4' opacity='1.0' marker-end='url(#ok-akis)'/>
+<line x1='757.0' y1='490.0' x2='730.0' y2='490.0' stroke='#1f2937' stroke-width='2.4' opacity='1.0' marker-end='url(#ok-akis)'/>
+<line x1='1093.0' y1='210.0' x2='1120.0' y2='210.0' stroke='#1f2937' stroke-width='2.4' opacity='1.0' marker-end='url(#ok-akis)'/>
+<line x1='1122.0' y1='490.0' x2='1095.0' y2='490.0' stroke='#1f2937' stroke-width='2.4' opacity='1.0' marker-end='url(#ok-akis)'/>
+<line x1='1290.0' y1='313.0' x2='1290.0' y2='385.0' stroke='#1f2937' stroke-width='2.4' opacity='1.0' marker-end='url(#ok-akis)'/>
+<path d='M659.0,388 C659.0,340 859.0,360 859.0,314' fill='none' stroke='#15803d' stroke-width='2.2' opacity='1.0' marker-end='url(#ok-akis)' stroke-dasharray='7,4'/>
+<text x='645.0' y='358.0' font-size='12.5' text-anchor='end' font-weight='bold' fill='#15803d'>citation = new derived rule for the engine</text>
+<path d='M1455.0,450 q 26,0 26,40 l 0,110' fill='none' stroke='#b45309' stroke-width='2' opacity='1.0' marker-end='url(#ok-akis)' stroke-dasharray='4,3'/>
+<text x='1240.0' y='616.0' font-size='12' text-anchor='start' font-weight='bold' fill='#b45309'>RESIDUAL: the remaining term is reported</text>
+<text x='1240.0' y='632.0' font-size='12' text-anchor='start' font-weight='normal' fill='#b45309'>(not a proof of falsity; there is no DISPROVED)</text>
+<rect x='760.0' y='690.0' width='700.0' height='168.0' rx='10' fill='#ccfbf1' stroke='#0f766e' stroke-width='2' stroke-dasharray='7,4' />
+<text x='774.0' y='716.0' font-size='15' text-anchor='start' font-weight='bold' fill='#111827'>Side branch: model oracle</text>
+<text x='774.0' y='736.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#374151' font-style='italic'>oracle/hook.py → check.py · realize.py · realize_e.py · models/</text>
+<text x='774.0' y='762.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>After a CLOSED result (JACOPY_ORACLE=warn|strict): both sides are evaluated on random concrete models</text>
+<text x='774.0' y='781.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>(fields with polynomial coefficients on ℝⁿ; for an algebroid E = ℝⁿ × ℝʳ, polynomial anchor and bracket).</text>
+<text x='774.0' y='800.0' font-size='12.5' text-anchor='start' font-weight='normal' fill='#111827'>Verdict: AGREE (not refuted — not a proof) · DISAGREE · UNSUPPORTED · AMBIGUOUS · ASSUMPTION_LEAK</text>
+<text x='774.0' y='844.0' font-size='12' text-anchor='start' font-weight='bold' fill='#0f766e'>Analogy: searching numerically for a counterexample</text>
+<path d='M1224.0,593 L1224.0,685' fill='none' stroke='#0f766e' stroke-width='2.2' opacity='1.0' marker-end='url(#ok-kahin)' stroke-dasharray='7,4'/>
+<text x='1216.0' y='666.0' font-size='12.5' text-anchor='end' font-weight='bold' fill='#0f766e'>CLOSED → test</text>
+<rect x='30.0' y='690.0' width='676.0' height='108.0' rx='6' fill='#f9fafb' stroke='#9ca3af' stroke-width='1' />
+<text x='40.0' y='708.0' font-size='12' text-anchor='start' font-weight='bold' fill='#111827'>Color legend</text>
+<rect x='40.0' y='715.0' width='22.0' height='14.0' rx='3' fill='#dbeafe' stroke='#1d4ed8' stroke-width='1.2' />
+<text x='70.0' y='726.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#111827'>core: terms and hypotheses</text>
+<rect x='40.0' y='735.0' width='22.0' height='14.0' rx='3' fill='#fef9c3' stroke='#a16207' stroke-width='1.2' />
+<text x='70.0' y='746.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#111827'>central: rules</text>
+<rect x='40.0' y='755.0' width='22.0' height='14.0' rx='3' fill='#dcfce7' stroke='#15803d' stroke-width='1.2' />
+<text x='70.0' y='766.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#111827'>proof: engine, derivation, theorem</text>
+<rect x='40.0' y='775.0' width='22.0' height='14.0' rx='3' fill='#f3e8ff' stroke='#7e22ce' stroke-width='1.2' />
+<text x='70.0' y='786.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#111827'>display: output</text>
+<rect x='370.0' y='715.0' width='22.0' height='14.0' rx='3' fill='#ccfbf1' stroke='#0f766e' stroke-width='1.2' />
+<text x='400.0' y='726.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#111827'>oracle: side branch (refuter)</text>
+<line x1='370.0' y1='742.0' x2='392.0' y2='742.0' stroke='#1f2937' stroke-width='2.2' opacity='1.0'/>
+<text x='400.0' y='746.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#111827'>main flow</text>
+<line x1='370.0' y1='762.0' x2='392.0' y2='762.0' stroke='#15803d' stroke-width='2.2' opacity='1.0' stroke-dasharray='7,4'/>
+<text x='400.0' y='766.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#111827'>citation feedback</text>
+<line x1='370.0' y1='782.0' x2='392.0' y2='782.0' stroke='#b45309' stroke-width='2.2' opacity='1.0' stroke-dasharray='4,3'/>
+<text x='400.0' y='786.0' font-size='11.5' text-anchor='start' font-weight='normal' fill='#111827'>non-closure (residual)</text>
+<rect x='30.0' y='882.0' width='1440.0' height='187.0' rx='8' fill='#f9fafb' stroke='#9ca3af' stroke-width='1' />
+<text x='44.0' y='908.0' font-size='13.5' text-anchor='start' font-weight='bold' fill='#111827'>Worked example — output of this code, run on the repository (2026-10-14): Cartan formula ⟨L_X ω, Y⟩ = ⟨ι_X dω, Y⟩ + ⟨d ι_X ω, Y⟩, X, Y vector fields, ω a 1-form</text>
+<text x='44.0' y='932.0' font-size='12' text-anchor='start' font-weight='normal' fill='#1f2937'>ProofResult.status = CLOSED · show_equal chain: 6 steps · tangent_engine() has 25 rules · requires = ∅ (no assumptions)</text>
+<text x='44.0' y='950.0' font-size='12' text-anchor='start' font-weight='normal' fill='#1f2937'>  step 1: intrinsic L (Cartan-TM): L_X f = ρ(X)(f), L_X Y = [X,Y], (L_X ω)(Y…) = ρ(X)(ω(Y…)) − Σ ω(…,[X,Y_i],…)</text>
+<text x='44.0' y='968.0' font-size='12' text-anchor='start' font-weight='normal' fill='#1f2937'>  step 2: interior product evaluation: (ι_X ω)(Y_1,…,Y_k) = ω(X, Y_1,…,Y_k)</text>
+<text x='44.0' y='986.0' font-size='12' text-anchor='start' font-weight='normal' fill='#1f2937'>  step 3: intrinsic d (Cartan-TM): Palais formula dω(X_0,…,X_p) = Σ(−1)^i ρ(X_i)(ω(…)) + Σ(−1)^{i+j} ω([X_i,X_j],…)</text>
+<text x='44.0' y='1004.0' font-size='12' text-anchor='start' font-weight='normal' fill='#1f2937'>  step 4: interior product: ι_X f = 0, ι_X ω = ⟨ω, X⟩ (deg 0 / 1)</text>
+<text x='44.0' y='1022.0' font-size='12' text-anchor='start' font-weight='normal' fill='#1f2937'>  step 5: intrinsic d (Cartan-TM): Palais formula dω(X_0,…,X_p) = Σ(−1)^i ρ(X_i)(ω(…)) + Σ(−1)^{i+j} ω([X_i,X_j],…)</text>
+<text x='44.0' y='1040.0' font-size='12' text-anchor='start' font-weight='normal' fill='#1f2937'>  step 6: simplify</text>
+</svg>
