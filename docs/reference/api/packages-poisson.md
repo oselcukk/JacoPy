@@ -1,0 +1,94 @@
+# Poisson geometry
+
+Symplectic, Poisson and Nambu–Poisson geometry: the Poisson bivector and its bracket, Hamiltonian and sharp maps, the Koszul bracket, the cotangent algebroid, the tilde calculus, and Roytenberg and Nambu–Poisson structures. The names below form the public facade `jacopy.packages.poisson` (its `__all__`); the facade is public but still evolving.
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated
+
+   jacopy.packages.poisson.d_tilde
+   jacopy.packages.poisson.HamiltonianActionDefinition
+   jacopy.packages.poisson.HamiltonianVF
+   jacopy.packages.poisson.koszul_bracket
+   jacopy.packages.poisson.koszul_jacobi_certificate
+   jacopy.packages.poisson.KoszulBracket
+   jacopy.packages.poisson.KoszulBracketDefinition
+   jacopy.packages.poisson.KoszulJacobiCertificate
+   jacopy.packages.poisson.lie_tilde
+   jacopy.packages.poisson.LieDCommutationDefinition
+   jacopy.packages.poisson.nambu_engine
+   jacopy.packages.poisson.nambu_koszul_bracket
+   jacopy.packages.poisson.nambu_structure
+   jacopy.packages.poisson.NambuFIDeclaration
+   jacopy.packages.poisson.NambuPoissonStructure
+   jacopy.packages.poisson.NambuSharpActionDefinition
+   jacopy.packages.poisson.NambuSharpLinearityDefinition
+   jacopy.packages.poisson.NambuSharpVF
+   jacopy.packages.poisson.NambuToPoissonSharpDefinition
+   jacopy.packages.poisson.poisson_engine
+   jacopy.packages.poisson.poisson_structure
+   jacopy.packages.poisson.poisson_view
+   jacopy.packages.poisson.PoissonBracketDefinition
+   jacopy.packages.poisson.PoissonBracketValue
+   jacopy.packages.poisson.PoissonOmegaBridgeDeclaration
+   jacopy.packages.poisson.PoissonSNDeclaration
+   jacopy.packages.poisson.PoissonStructure
+   jacopy.packages.poisson.prove_bracket_via_double_iota
+   jacopy.packages.poisson.prove_bracket_via_iota
+   jacopy.packages.poisson.prove_bracket_via_omega
+   jacopy.packages.poisson.prove_d_tilde_on_functions
+   jacopy.packages.poisson.prove_d_tilde_palais_on_vectors
+   jacopy.packages.poisson.prove_d_tilde_squared_on_exacts
+   jacopy.packages.poisson.prove_dorfman_form_reduces_to_koszul_at_p1
+   jacopy.packages.poisson.prove_general_koszul_jacobi
+   jacopy.packages.poisson.prove_hamiltonian_flow_invariance
+   jacopy.packages.poisson.prove_hamiltonian_is_sharp
+   jacopy.packages.poisson.prove_hamiltonian_morphism
+   jacopy.packages.poisson.prove_koszul_antisymmetry
+   jacopy.packages.poisson.prove_koszul_on_exact_forms
+   jacopy.packages.poisson.prove_koszul_right_leibniz
+   jacopy.packages.poisson.prove_koszul_zero_by_certificate
+   jacopy.packages.poisson.prove_lie_tilde_commutator_on_exacts
+   jacopy.packages.poisson.prove_lie_tilde_d_iota_commutation_general
+   jacopy.packages.poisson.prove_lie_tilde_d_iota_commutation_on_exacts
+   jacopy.packages.poisson.prove_lie_tilde_d_iota_exact_general
+   jacopy.packages.poisson.prove_lie_tilde_d_iota_exact_on_exacts
+   jacopy.packages.poisson.prove_lie_tilde_iota_commutator_on_vectors
+   jacopy.packages.poisson.prove_nambu_leibniz_jacobi_on_exacts
+   jacopy.packages.poisson.prove_nambu_right_leibniz
+   jacopy.packages.poisson.prove_nambu_symmetric_part_exact
+   jacopy.packages.poisson.prove_poisson_antisymmetry
+   jacopy.packages.poisson.prove_poisson_constant
+   jacopy.packages.poisson.prove_poisson_jacobi
+   jacopy.packages.poisson.prove_poisson_leibniz
+   jacopy.packages.poisson.prove_sharp_flat_identity
+   jacopy.packages.poisson.prove_sn_eval_views_agree_on_exacts
+   jacopy.packages.poisson.prove_tilde_gamma_antisymmetry
+   jacopy.packages.poisson.prove_tilde_magic_on_functions
+   jacopy.packages.poisson.prove_tilde_magic_on_vectors
+   jacopy.packages.poisson.PVectorEvalLinearityDefinition
+   jacopy.packages.poisson.SharpActionDefinition
+   jacopy.packages.poisson.SharpEvaluationDefinition
+   jacopy.packages.poisson.SharpFlatIdentityDeclaration
+   jacopy.packages.poisson.SharpPairingLinearityDefinition
+   jacopy.packages.poisson.SharpVF
+   jacopy.packages.poisson.SharpVFLinearityDefinition
+   jacopy.packages.poisson.showcase_engine
+   jacopy.packages.poisson.SNBivectorExactEvalDefinition
+   jacopy.packages.poisson.SNBivectorGeneralEvalDefinition
+   jacopy.packages.poisson.symplectic_engine
+   jacopy.packages.poisson.symplectic_structure
+   jacopy.packages.poisson.SymplecticClosedDeclaration
+   jacopy.packages.poisson.SymplecticHamiltonianDefinition
+   jacopy.packages.poisson.SymplecticHamiltonianVF
+   jacopy.packages.poisson.SymplecticStructure
+   jacopy.packages.poisson.tilde_anholonomy_coefficient
+   jacopy.packages.poisson.tilde_calculus
+   jacopy.packages.poisson.tilde_engine
+   jacopy.packages.poisson.tilde_multivector_degree
+   jacopy.packages.poisson.TildeAnholonomyCoefficient
+   jacopy.packages.poisson.TildeAnholonomyDefinition
+   jacopy.packages.poisson.TildeInteriorActDefinition
+   jacopy.packages.poisson.TildeInteriorEvalDefinition
+   jacopy.packages.poisson.ZeroSeed
+```
