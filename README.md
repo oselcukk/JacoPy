@@ -7,6 +7,7 @@ with a step-by-step proof for every result.**
 [![docs](https://github.com/oselcukk/JacoPy/actions/workflows/docs.yml/badge.svg)](https://oselcukk.github.io/JacoPy/)
 [![PyPI](https://img.shields.io/pypi/v/jacopy)](https://pypi.org/project/jacopy/)
 [![Python 3.10-3.14](https://img.shields.io/badge/python-3.10%E2%80%933.14-blue)](https://oselcukk.github.io/JacoPy/installation.html)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23361717.svg)](https://doi.org/10.5281/zenodo.23361717)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
 
 JacoPy is a symbolic library for graded algebra, bracket calculus and
@@ -126,7 +127,9 @@ the trust model, the API reference, and the development guides
 
 If you use JacoPy in your research, please cite it. The metadata is in
 [CITATION.cff](CITATION.cff) (GitHub shows it under "Cite this
-repository"). In BibTeX:
+repository"). Every release is archived on Zenodo; the DOI
+[10.5281/zenodo.23361717](https://doi.org/10.5281/zenodo.23361717)
+always points to the latest version. In BibTeX:
 
 ```bibtex
 @software{Selcuk_JacoPy,
@@ -134,6 +137,7 @@ repository"). In BibTeX:
   title   = {{JacoPy}},
   version = {0.1.0},
   year    = {2026},
+  doi     = {10.5281/zenodo.23361717},
   url     = {https://github.com/oselcukk/JacoPy},
   license = {BSD-3-Clause}
 }
