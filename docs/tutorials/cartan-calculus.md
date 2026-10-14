@@ -89,7 +89,7 @@ CLOSED: ⟨L_X(omega), Y⟩ = (⟨ι_X(d(omega)), Y⟩ + ⟨d(ι_X(omega)), Y⟩
   via definition: intrinsic d (Cartan-TM): Palais formula dω(X_0,…,X_p) = Σ(−1)^i ρ(X_i)(ω(…)) + Σ(−1)^{i+j} ω([X_i,X_j],…) ×2
   via definition: interior product: ι_X f = 0, ι_X ω = ⟨ω, X⟩ (deg 0 / 1)
   via definition: interior product evaluation: (ι_X ω)(Y_1,…,Y_k) = ω(X, Y_1,…,Y_k)
-  budget: 6/1024 steps; jacopy 0.0.1
+  budget: 6/1024 steps; jacopy 0.1.0a1
 ```
 
 The result is *assumption-free*: no axiom and no registry entry was used, only the
@@ -143,7 +143,7 @@ RESIDUAL: d(d(omega))(X, Y, Z) = 0
   via theorem: bracket orientation: [B, A] = −[A, B], [A, A] = 0 ×3
   via definition: slot linearity: Neg pulls out of evaluation slots ×3
   via canonicalization: simplify
-  budget: 20/1024 steps; jacopy 0.0.1
+  budget: 20/1024 steps; jacopy 0.1.0a1
 ```
 
 The status is `RESIDUAL`, which means "not closed with these rules", not "false".

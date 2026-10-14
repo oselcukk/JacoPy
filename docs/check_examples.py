@@ -101,8 +101,13 @@ def parse_blocks(text: str) -> list[Block]:
     return blocks
 
 
+_TIMING = re.compile(r"\d+(?:\.\d+)?\s?s\b")
+
+
 def _normalise(output: str) -> str:
-    return "\n".join(ln.rstrip() for ln in output.strip("\n").splitlines())
+    # Wall-clock timings such as "( 0.04s)" or "1.1 s" vary between runs.
+    text = "\n".join(ln.rstrip() for ln in output.strip("\n").splitlines())
+    return _TIMING.sub("<time>", text)
 
 
 def run_page(path: Path, compare_outputs: bool) -> dict:

@@ -130,9 +130,10 @@ raises `ValueError`.
 | Is $\omega$ closed? | `reg.has(omega, Closed)` | declaration query (returns `True` after the declaration above) | |
 | The declaration itself | `reg.get(omega, Closed)` | the property object, with provenance `AXIOM` | |
 
-The same queries in a script:
+The declaration and the same queries in a script:
 
 ```python
+reg.declare(omega, Closed())
 print(reg.has(lam, Scalar), reg.has(omega, Closed))
 print(reg.get(omega, Closed))
 ```

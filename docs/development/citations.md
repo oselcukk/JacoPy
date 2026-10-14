@@ -50,6 +50,7 @@ reference list named in the entry's `secondary` field. A bracketed gap
 marks a field that no source gives.
 
 <!-- references:begin -->
+
 Asakawa, T., Muraki, H., Sasa, S., & Watamura, S. (2015). Poisson-generalized geometry and R-flux. *International Journal of Modern Physics A*, *30*, Article 1550097. [issue, DOI not in source] arXiv:1408.2649
 
 Çatal-Özer, A., Dereli, T., & Doğan, K. (2022). *Pre-metric-Bourbaki algebroids: Cartan calculus for M-theory* (arXiv:2210.00548). arXiv. https://doi.org/10.48550/arXiv.2210.00548
@@ -68,15 +69,12 @@ Kosmann-Schwarzbach, Y. (2004). Derived brackets. *Letters in Mathematical Physi
 
 Liu, Z.-J., Weinstein, A., & Xu, P. (1997). Manin triples for Lie bialgebroids. *Journal of Differential Geometry*, *45*, 547–574. [issue, DOI not in source] arXiv:dg-ga/9508013
 
-*Math 595 – JacoPy* [Unpublished course project guidelines]. (n.d.).
-
-*Math 595 midterm, Spring 2026* [Unpublished course examination, Gebze Technical University]. (2026).
-
 Roytenberg, D. (1999). *Courant algebroids, derived brackets and even symplectic supermanifolds* [Doctoral dissertation, University of California, Berkeley]. arXiv. https://doi.org/10.48550/arXiv.math/9910078
 
 Ševera, P. (2017). *Letters to Alan Weinstein about Courant algebroids* (arXiv:1707.00265). arXiv. https://doi.org/10.48550/arXiv.1707.00265
 
 Uchino, K. (2002). *Remarks on the definition of a Courant algebroid* (arXiv:math/0204010). arXiv. https://doi.org/10.48550/arXiv.math/0204010
+
 <!-- references:end -->
 
 ## Sources of the reference fields

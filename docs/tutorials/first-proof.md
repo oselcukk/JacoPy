@@ -160,7 +160,7 @@ CLOSED: [X,(f * Y)]_VF(g) = ((X(f) * Y(g)) + (f * [X,Y]_VF(g)))  — under the a
   via definition: graded Leibniz / Act linearity (slot-reachable product rule) ×4
   via definition: Lie bracket definition: [X, Y](f) = X(Y(f)) - Y(X(f)) ×2
   via canonicalization: simplify ×2
-  budget: 9/1024 steps; jacopy 0.0.1
+  budget: 9/1024 steps; jacopy 0.1.0a1
 ```
 
 The `requires` lines say that the proof used the registry entries "$f$ and $g$
@@ -192,7 +192,7 @@ CLOSED: ([X,[Y,Z]_VF]_VF(h) + [Y,[Z,X]_VF]_VF(h) + [Z,[X,Y]_VF]_VF(h)) = 0  — 
   via definition: graded Leibniz / Act linearity (slot-reachable product rule) ×6
   via theorem: bracket orientation: [B, A] = −[A, B], [A, A] = 0 ×2
   via canonicalization: simplify
-  budget: 18/1024 steps; jacopy 0.0.1
+  budget: 18/1024 steps; jacopy 0.1.0a1
 ```
 
 ## LaTeX

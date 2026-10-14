@@ -178,6 +178,9 @@ def test_every_reference_records_its_provenance():
         as_citations(("not a citation",))
 
 
+DOC_EXCLUDED_KEYS = frozenset({"Math595Guideline", "Math595Midterm2026"})
+
+
 def test_citations_doc_reference_list_is_generated():
     """docs/development/citations.md carries the APA list generated from
     the table (single source of truth)."""
@@ -186,7 +189,10 @@ def test_citations_doc_reference_list_is_generated():
         pytest.skip("docs/development/citations.md is not next to the tests (wheel run)")
     doc = path.read_text(encoding="utf-8")
     block = doc.split("<!-- references:begin -->")[1].split("<!-- references:end -->")[0]
-    expected = "\n\n".join(apa_reference(r, "markdown") for r in cited_references([cite(k) for k in BIBLIOGRAPHY]))
+    # Course materials are cited in the code but are not listed in the
+    # public documentation.
+    keys = [k for k in BIBLIOGRAPHY if k not in DOC_EXCLUDED_KEYS]
+    expected = "\n\n".join(apa_reference(r, "markdown") for r in cited_references([cite(k) for k in keys]))
     assert block.strip() == expected.strip()
 
 

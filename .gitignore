@@ -36,10 +36,10 @@ examples/*_output.txt
 
 # Local reference PDFs and development planning notes (not tracked)
 *.pdf
-ROADMAP.md
+/ROADMAP.md
 # local dated backup copies of ROADMAP.md
-ROADMAP.md.*
-roadmap/
+/ROADMAP.md.*
+/roadmap/
 .oracle/
 
 # Sphinx build output and generated API stubs

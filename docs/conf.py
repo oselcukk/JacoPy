@@ -38,7 +38,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
-    "sphinx.ext.viewcode",
+    # viewcode is off: source listings are browsed on GitHub.
     "sphinx_copybutton",
 ]
 
@@ -196,8 +196,20 @@ def _verbatim_docstring(app, what, name, obj, options, lines):
         lines[:] = ["::", "", *body, ""]
 
 
+# Course materials are cited in the code but are not listed in the public
+# documentation: rule attributes whose citation points to them are not shown.
+DOC_EXCLUDED_CITATION_KEYS = {"Math595Guideline", "Math595Midterm2026"}
+
+
+def _skip_course_citations(app, what, name, obj, skip, options):
+    if getattr(obj, "key", None) in DOC_EXCLUDED_CITATION_KEYS:
+        return True
+    return None
+
+
 def setup(app):
     app.connect("autodoc-process-docstring", _verbatim_docstring)
+    app.connect("autodoc-skip-member", _skip_course_citations)
 
 
 # Keep the build deterministic: autodoc imports never trigger the model oracle.
