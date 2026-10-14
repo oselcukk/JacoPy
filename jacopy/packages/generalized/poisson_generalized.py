@@ -165,8 +165,7 @@ def theta_courant(
     eta: Expr,
 ) -> Tuple[Expr, Expr]:
     """The TILDE-Courant bracket — the skew-symmetrization:
-    ``[x,y]_{C,θ} = [x,y]_{D,θ} − D_θ⟨x,y⟩₊`` component-wise
-    [Watamura §2]."""
+    ``[x,y]_{C,θ} = [x,y]_{D,θ} − D_θ⟨x,y⟩₊`` component-wise."""
     vec, form = theta_dorfman(N, U, omega, V, eta)
     D_vec, D_form = d_operator_theta(
         N, canonical_pairing(U, omega, V, eta)

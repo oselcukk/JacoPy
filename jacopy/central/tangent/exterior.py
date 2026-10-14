@@ -16,8 +16,10 @@ definition); :func:`prove_d_squared_zero_on_functions` proves it and
 :func:`register_d_squared_zero` stores it in a
 :class:`~jacopy.proof.theorems.TheoremBook` for citation. The ``p ≥ 1``
 cases additionally need the vector-level Jacobi identity inside
-pairing slots and are proved with the Cartan relations
-(:mod:`jacopy.central.tangent.cartan`).
+pairing slots: ``p = 1`` is proved in
+:mod:`jacopy.central.tangent.cartan`
+(``prove_d_squared_zero_on_one_forms``), and higher ``p`` is checked
+mechanically up to ``p = 5``; there is no proof for general ``p``.
 """
 
 from __future__ import annotations
@@ -144,7 +146,7 @@ def register_d_squared_zero(
     Returns the registered :class:`Theorem`. Its lhs is the evaluated
     node ``(ddf)(X, Y)`` and its rhs ``0``, so citing it rewrites that
     evaluation away in one step. Generality: ``generic-function`` (any
-    ``f``); the ``p ≥ 1`` cases are proved with the Cartan relations.
+    ``f``); the ``p = 1`` case is proved in the Cartan module and higher ``p`` is checked mechanically up to ``p = 5``.
     """
     chain = prove_d_squared_zero_on_functions(f, X, Y, registry=registry)
     thm = Theorem(

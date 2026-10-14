@@ -17,7 +17,7 @@ The bracket is built ENTIRELY from the existing TM Cartan machinery
 (``L``, ``ι``, ``d``) plus the single new atom ``Πω``
 (:class:`NambuSharpVF`, the SharpVF pattern at arity p).
 
-Mechanical theorems (concrete ``p``, e.g. p = 2, 3):
+Mechanical theorems (concrete ``p``; checked for p = 2 and p = 3):
 
 * **p = 1 consistency**: for a bivector the Dorfman-type formula
   equals the Koszul bracket on 1-forms (via the magic formula —
@@ -26,7 +26,7 @@ Mechanical theorems (concrete ``p``, e.g. p = 2, 3):
   the Leibniz-algebroid anchor property, declaration-free.
 * **exact symmetric part**: ``[ω,η]_Π + [η,ω]_Π =
   d(ι_{Πω}η + ι_{Πη}ω)`` — the bracket is NOT antisymmetric for
-  p ≥ 2 (Leibniz, not Lie: spec 12r's point), but its symmetric
+  p ≥ 2 (Leibniz, not Lie), but its symmetric
   part is EXACT (the Dorfman pattern); at p = 1 the inner sum
   vanishes by alternation and antisymmetry is recovered.
 """

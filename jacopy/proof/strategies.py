@@ -615,7 +615,7 @@ class UnrollToFoundations(Strategy):
 class DerivedBracketStrategy:
     """Apply the Derived Bracket Theorem to discharge Jacobi.
 
-    The theorem [Kosmann-Schwarzbach; see https://oselcukk.github.io/JacoPy/development/citations.html]: over a graded LIE base
+    The theorem [Kosmann-Schwarzbach; the year of the original reference (1996 or 2004) is not yet confirmed, see https://oselcukk.github.io/JacoPy/development/citations.html]: over a graded LIE base
     with an ODD shifted generator, ``[Q, Q]_base = 0`` makes the
     derived bracket ``{a, b}_Q = [[a, Q], b]`` a LODAY
     (left-Leibniz-Jacobi) bracket. The CYCLIC Lie-form Jacobi that

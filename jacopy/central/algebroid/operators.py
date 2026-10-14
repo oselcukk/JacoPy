@@ -17,7 +17,7 @@ Three operators, each measuring the failure of a structural property
   ``P^E_Φ(u,v) := Φ[u,v]_E − [Φu, Φv]_Lie`` for a ``C^∞``-linear
   ``Φ: E → TM``; ``P^E_Φ ≡ 0`` ⟺ Φ is a morphism onto the Lie
   bracket. **In particular ``P^E_ρ ≡ 0`` ⟺ the pre-Leibniz
-  (anchor-morphism) property** — proved as a closing theorem of this module.
+  (anchor-morphism) property** — proved as ``prove_anchor_predator_vanishes`` in :mod:`jacopy.central.algebroid.theorems`.
 
 ``C^∞``-linear maps are modelled like the anchor: a :class:`SectionMap`
 context produces opaque :class:`MappedSection` atoms ``Φ(u)`` (again
