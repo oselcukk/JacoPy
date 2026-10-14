@@ -90,7 +90,7 @@ from jacopy.core.expr import (
 
 # The single version source: pyproject.toml reads this literal
 # ([tool.setuptools.dynamic] version = {attr = "jacopy.__version__"}).
-__version__ = "0.0.1"
+__version__ = "0.1.0a1"
 
 _CORE = "jacopy.core"
 _ALGEBRA = "jacopy.algebra"

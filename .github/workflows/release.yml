@@ -1,0 +1,90 @@
+name: release
+
+# Publishes JacoPy to PyPI with trusted publishing (no API tokens).
+#
+# * Push a tag `vX.Y.Z` (PEP 440, e.g. `v0.1.0a1`) whose version equals
+#   `jacopy.__version__`: the sdist and wheel are built, checked and
+#   uploaded to PyPI from the `pypi` environment.
+# * Run the workflow by hand (Actions > release > Run workflow) to build
+#   the current branch and upload it to TestPyPI from the `testpypi`
+#   environment, as a dry run before tagging.
+#
+# One-time setup: on PyPI and on TestPyPI, add a trusted publisher for
+# the project `jacopy` with owner `oselcukk`, repository `JacoPy`,
+# workflow `release.yml` and environment `pypi` (TestPyPI: `testpypi`);
+# create both environments under Settings > Environments.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: python -m pip install --upgrade pip build twine
+      - name: Check that the tag matches jacopy.__version__
+        if: github.event_name == 'push'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(python -c "import ast, pathlib; t = ast.parse(pathlib.Path('jacopy/__init__.py').read_text(encoding='utf-8')); print(next(n.value.value for n in t.body if isinstance(n, ast.Assign) and getattr(n.targets[0], 'id', '') == '__version__'))")
+          echo "tag: $TAG, __version__: $version"
+          test "$TAG" = "v$version"
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Check the distributions
+        run: python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi:
+    name: Publish to PyPI
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/jacopy/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/jacopy/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/

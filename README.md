@@ -1,49 +1,44 @@
-# jacopy
+# JacoPy
 
-jacopy is a symbolic library for graded algebra, bracket calculus and
-differential geometry — on the tangent bundle `TM` and on algebroids
-`E` — in which every manipulation is recorded as a step-by-step proof.
-A closed identity comes with its proof chain, the rule behind each step
-(definition, declared axiom or cited theorem, with its literature
-source) and the list of assumptions it depends on; an identity that
-does not close reports the residual that is left. An optional model
-oracle checks closed identities numerically in random coordinate
-models. jacopy is pure Python with no required dependencies.
+**Graded algebra, bracket calculus and differential geometry in Python,
+with a step-by-step proof for every result.**
 
-Coverage today: Cartan calculus (`d`, `L`, `ι`), Lie and
-Schouten–Nijenhuis brackets, algebroids with declared axioms
-(Jacobiator, Derivator, Predator, locality), metric-affine geometry
-(torsion, curvature, non-metricity, Bianchi, Cartan structure
-equations, Koszul formula, E-connections), Poisson / symplectic /
-Nambu–Poisson geometry with the Koszul bracket and tilde calculus,
-Drinfel'd doubles and twists, Courant algebroids and generalized
-geometry, and a research interface for user-defined brackets.
+[![tests](https://github.com/oselcukk/JacoPy/actions/workflows/tests.yml/badge.svg)](https://github.com/oselcukk/JacoPy/actions/workflows/tests.yml)
+[![docs](https://github.com/oselcukk/JacoPy/actions/workflows/docs.yml/badge.svg)](https://oselcukk.github.io/JacoPy/)
+[![Python 3.10-3.14](https://img.shields.io/badge/python-3.10%E2%80%933.14-blue)](https://oselcukk.github.io/JacoPy/installation.html)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
+
+JacoPy is a symbolic library for graded algebra, bracket calculus and
+differential geometry, on the tangent bundle `TM` and on algebroids `E`,
+in which every manipulation is recorded as a step-by-step proof. A
+closed identity comes with its proof chain, the rule behind each step
+(a definition, a declared axiom or a cited theorem, with its literature
+source) and the list of assumptions it depends on. An identity that does
+not close reports the residual that is left. An optional model oracle
+checks closed identities numerically in random coordinate models.
+JacoPy is pure Python with no required dependencies.
+
+JacoPy is alpha software (version 0.1.0a1): the public API may still
+change between minor versions, and every change is recorded in the
+[changelog](CHANGELOG.md).
 
 ## Installation
 
-jacopy is installed from source (it is not on PyPI). Python 3.10 or
-newer.
+JacoPy needs Python 3.10 or newer. It is not yet on PyPI; a release
+there is planned. Install it from GitHub:
 
 ```sh
-git clone https://github.com/oselcukk/JacoPy.v.3.git
-cd JacoPy.v.3
-python3 -m venv .venv
-source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
-pip install -e ".[test]"
-pytest -q                          # the fast test suite
+pip install "git+https://github.com/oselcukk/JacoPy"
 ```
 
-Optional extras (from `pyproject.toml`):
+Optional extras: `oracle` (SymPy, for the model oracle), `rich`
+(colored proof trees in the terminal), `test` (pytest) and `dev` (all
+of these). For example,
+`pip install "jacopy[oracle] @ git+https://github.com/oselcukk/JacoPy"`.
+See the [installation guide](https://oselcukk.github.io/JacoPy/installation.html)
+for a development install.
 
-| Extra | Installs | For |
-|---|---|---|
-| `test` | pytest | the test suite |
-| `oracle` | sympy | the model oracle (`jacopy.oracle`, `pytest --oracle=…`) |
-| `rich` | rich | coloured proof trees in the terminal (plain text without it) |
-| `docs` | ipykernel | a Jupyter kernel for the example notebooks |
-| `dev` | all of the above | development (`make setup` creates `.venv` with it) |
-
-## Quick start
+## Quick example
 
 Cartan's formula `L_X ω = ι_X dω + d ι_X ω` on a 1-form, evaluated on a
 vector field `Y`, proved from the definitions of `d`, `L` and `ι`:
@@ -64,104 +59,108 @@ chain = jacopy.show_equal(lhs, rhs, registry=reg, engine=tangent_engine(registry
 print(f"closed in {len(chain.steps)} steps")
 print(jacopy.to_latex(lhs), "=", jacopy.to_latex(rhs))
 jacopy.print_chain(chain)   # each step with the rule that justifies it
-```
 
-Output (first lines):
-
-```
-closed in 6 steps
-\langle \mathcal{L}_{X}\!\left(omega\right),\, Y \rangle = \langle \iota_{X}\!\left(d\!\left(omega\right)\right),\, Y \rangle + \langle d\!\left(\iota_{X}\!\left(omega\right)\right),\, Y \rangle
-Proof (6 steps)
-├── [intrinsic L (Cartan-TM): L_X f = ρ(X)(f), L_X Y = [X,Y], (L_X ω)(Y…) = ...
-```
-
-A false identity is refused and the residual is reported:
-
-```python
-import jacopy
-from jacopy.central.tangent import tangent_engine
-
-reg = jacopy.PropertyRegistry()
-X, Y = jacopy.vector_fields("X Y")
-(omega,) = jacopy.forms("omega", degree=1)
-d, L_X, i_X = jacopy.exterior_d(), jacopy.lie_derivative(X), jacopy.interior(X)
-
+# A false identity is refused, and the residual is reported.
 try:
-    jacopy.show_equal(jacopy.pairing(L_X(omega), Y), jacopy.pairing(i_X(d(omega)), Y),
+    jacopy.show_equal(lhs, jacopy.pairing(i_X(d(omega)), Y),
                       registry=reg, engine=tangent_engine(registry=reg))
 except jacopy.ProofFailure as failure:
-    print("residual:", failure.residual)     # residual: Y(⟨omega, X⟩)
+    print("residual:", failure.residual)
 ```
 
-The example notebooks in `examples/` go further:
-`proof_system_demo.ipynb` (proof chains, results, theorems),
-`algebroid_declarations_demo.ipynb` (algebroids and declared axioms),
-`bracket_twist_walkthrough.ipynb` and
-`bracket_twist_research_interface.ipynb` (Drinfel'd doubles, twists and
-the research interface).
+Output (the middle four proof steps are omitted here):
 
-## Packages and the course guideline (Math 595)
+```text
+closed in 6 steps
+\langle \mathcal{L}_{X}\!\left(\omega\right),\, Y \rangle = \langle \iota_{X}\!\left(d\!\left(\omega\right)\right),\, Y \rangle + \langle d\!\left(\iota_{X}\!\left(\omega\right)\right),\, Y \rangle
+Proof (6 steps)
+├── [intrinsic L (Cartan-TM): L_X f = ρ(X)(f), L_X Y = [X,Y], (L_X ω)(Y…) = 
+│   ρ(X)(ω(Y…)) − Σ ω(…,[X,Y_i],…)] (definition) ⟨L_X(omega), Y⟩ → X(⟨omega, Y⟩)
+│   - ⟨omega, [X,Y]_VF⟩ , apply definition: intrinsic L (Cartan-TM): L_X f = 
+│   ρ(X)(f), L_X Y = [X,Y], (L_X ω)(Y…) = ρ(X)(ω(Y…)) − Σ ω(…,[X,Y_i],…)
+...
+└── [simplify] (X(⟨omega, Y⟩) - ⟨omega, [X,Y]_VF⟩) - ((X(⟨omega, Y⟩) - Y(⟨omega,
+    X⟩) - ⟨omega, [X,Y]_VF⟩) + Y(⟨omega, X⟩)) → 0 , canonical-form pipeline
+residual: Y(⟨omega, X⟩)
+```
 
-The project follows the Math 595 "JacoPy" guideline. Where each item
-lives today:
+The notebooks in [`examples/`](examples/) go further: proof chains,
+results and theorems; algebroids and declared axioms; Drinfel'd doubles,
+twists and the research interface.
 
-| Guideline item | Where | Status |
-|---|---|---|
-| 1. English, integrated with LaTeX | `jacopy.display` (LaTeX, proof transcripts, standalone documents), `jacopy.bibliography` (APA 7 sources) | done |
-| 2. Coherent definitions of every object and operation | one canonical `Definition` per operator; everything else is a proved theorem | done |
-| 3. Page-based interface (Dorfman/Courant blocks, proof buttons) | — | *planned* (today: Python API and notebooks) |
-| 4, 15. Research interface | `jacopy.research` (`assemble_engine`, `AxiomSuite`, `BlockMatrix`, `register_structure_kind`) | available, evolving |
-| 5. Compatible packages | all packages share one expression tree, registry and engine model | partial: cross-package use is tested in places, no documented combined workflow yet |
-| 6. Two-fold packages (`TM` and `E`) | `jacopy.central` (`tangent` and `algebroid`), E-versions in `metric_affine` | done for the central code and metric-affine |
-| 7f, 8. Central code: basic objects | `jacopy.central.objects`, `jacopy.central.calculus` | done |
-| 9. Tangent-bundle case | `jacopy.central.tangent` | done |
-| 10. Algebroid case | `jacopy.central.algebroid` | done |
-| 7g, 11. Metric-affine geometry | `jacopy.packages.metric_affine` | done |
-| 7h, 12. Symplectic, Poisson, Nambu–Poisson | `jacopy.packages.poisson` | done |
-| 7a, 13. Calculus on algebroids, Drinfel'd doubles, twists | `jacopy.packages.drinfeld` | done |
-| 7b, 14. Generalized geometry | `jacopy.packages.generalized` | done |
-| 7d. Exceptional generalized geometry | `exceptional_double`, `exceptional_rotation` in `jacopy.packages.generalized` | first examples; full package *planned* |
-| 7i, 7j. Conformal/projective geometry, various tensors | — | *planned* |
-| 16. Euler–Lagrange, SUGRA, dualities, spinors, … | — | *planned* |
+## Features
 
-"Done" means implemented and covered by tests; the known limits are
-listed in `docs/ARCHITECTURE.md`, section 8.
-
-## Proof trust and the model oracle
-
-A closed result is shown *under its assumptions*:
-`jacopy.proof.result.prove(engine, lhs, rhs)` returns a `ProofResult`
-whose `requires` lists the declared axioms and structures that fired,
-the property-registry answers the steps relied on, and markers for
-instance proofs or unverified citations. A theorem can be cited into
-another proof only where the same requirements hold. Steps are minted
-by the library's own producers, and a theorem's chain is replayed
-against its claim. Details: `docs/ARCHITECTURE.md`, section 4.
-
-The model oracle (`pip install -e ".[oracle]"`) is an independent
-falsifier: it evaluates both sides of a closed identity in random
-concrete coordinate models. `AGREE` means "not refuted", never
-"proved". Turn it on per call (`show_equal(..., oracle="warn")`), with
-`JACOPY_ORACLE=warn|strict`, or for the test suite with
-`pytest --oracle=strict`.
+- **Cartan calculus** on `TM` and on algebroids: `d`, `L` and `ι`, with
+  Lie and Schouten-Nijenhuis brackets.
+- **Algebroids with declared axioms**: Jacobiator, Derivator, Predator
+  and locality, so that a proof states exactly which axioms it used.
+- **Metric-affine geometry**: torsion, curvature, non-metricity, the
+  Bianchi identities, the Cartan structure equations, the Koszul
+  formula and E-connections.
+- **Poisson, symplectic and Nambu-Poisson geometry**, with the Koszul
+  bracket and tilde calculus.
+- **Drinfel'd doubles and twists, Courant algebroids and generalized
+  geometry.**
+- **A research interface** (`jacopy.research`) for user-defined
+  brackets: assemble an engine and check the bracket axioms.
+- **Proofs you can inspect and reuse**: each step names its rule and
+  source; `jacopy.proof.result.prove` returns a `ProofResult` whose
+  `requires` lists the axioms, structures and registry facts the proof
+  relied on, and a proved theorem can be cited into another proof only
+  where the same requirements hold.
+- **Output** as plain text, LaTeX (including standalone documents),
+  HTML for Jupyter, and colored terminal trees, with APA 7 citations.
+- **A model oracle** (`jacopy.oracle`) that evaluates both sides of a
+  closed identity in random coordinate models. `AGREE` means "not
+  refuted", never "proved".
 
 ## Documentation
 
-* `docs/ARCHITECTURE.md` — layers, proof flow, trust model, oracle,
-  extension points, known limits.
-* `docs/TESTING.md` — the fast suite, slow suites, the oracle, notebook
-  and wheel checks.
-* `docs/CITATIONS.md` — which code label was checked against which
-  page of which paper.
-* `CHANGELOG.md` — changes since `0.0.1`.
+The documentation is at **https://oselcukk.github.io/JacoPy/**. It
+contains tutorials, how-to guides, explanations of the architecture and
+the trust model, the API reference, and the development guides
+(testing, citations, changelog).
+
+## Citing JacoPy
+
+If you use JacoPy in your research, please cite it. The metadata is in
+[CITATION.cff](CITATION.cff) (GitHub shows it under "Cite this
+repository"). In BibTeX:
+
+```bibtex
+@software{Selcuk_JacoPy,
+  author  = {Sel{\c{c}}uk, O{\u{g}}uzhan},
+  title   = {{JacoPy}},
+  version = {0.1.0a1},
+  year    = {2026},
+  url     = {https://github.com/oselcukk/JacoPy},
+  license = {BSD-3-Clause}
+}
+```
+
+## Acknowledgments
+
+JacoPy builds on the work of others:
+
+- The model oracle uses [SymPy](https://www.sympy.org) to evaluate
+  expressions in coordinate models: A. Meurer et al., "SymPy: symbolic
+  computing in Python", *PeerJ Computer Science* 3:e103 (2017),
+  https://doi.org/10.7717/peerj-cs.103.
+- The definitions, axioms and theorems that JacoPy's rules implement are
+  drawn from the mathematical literature on Lie and Courant algebroids,
+  derived brackets, metric-affine and generalized geometry, and
+  Drinfel'd doubles. Each rule cites its source, and the full list is on
+  the [bibliography page](https://oselcukk.github.io/JacoPy/reference/bibliography.html).
+
+## Contributing
+
+Bug reports, mathematical corrections and pull requests are welcome.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) and follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Ask questions in
+[GitHub Discussions](https://github.com/oselcukk/JacoPy/discussions),
+and report security problems as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-jacopy is **source-available, not open source**: you may read, run and
-cite it for personal, educational or research use; modification for
-anything beyond local experimentation, redistribution and commercial
-use need written permission. See [LICENSE](LICENSE).
-
-## Citing
-
-Please cite jacopy using the metadata in [CITATION.cff](CITATION.cff).
+JacoPy is distributed under the [BSD 3-Clause License](LICENSE).
+Copyright (c) 2026, Oğuzhan Selçuk.

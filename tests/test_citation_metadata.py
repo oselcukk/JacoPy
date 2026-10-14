@@ -33,5 +33,5 @@ def test_citation_version_matches_package_version():
 
 
 @pytest.mark.skipif(not CFF.is_file(), reason="CITATION.cff is not next to the tests (wheel run)")
-def test_citation_title_is_the_distribution_name():
-    assert _cff_field("title") == "jacopy"
+def test_citation_title_is_the_project_name():
+    assert _cff_field("title") == "JacoPy"

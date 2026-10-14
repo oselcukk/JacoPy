@@ -1,11 +1,11 @@
 # Testing
 
-The protected test set is the union of the groups below. A change is
-green when all of them are; the counts change as the suite grows and
-are not the criterion — the commands are. (For orientation: on
-2026-10-02 the fast suite was 2,572 passed, 12 skipped, 5 xfailed in
-122 test files, branch `fix/display-polish`; `main` at `8b46a5d` had
-2,528 / 12 / 5 in 118 files. The notebook smoke run passes 4/4.)
+This page lists the test groups that protect JacoPy and the commands
+that run them. A change is ready when all of them pass. The counts
+change as the suite grows and are not the criterion; the commands are.
+For orientation: at version 0.1.0a1 the fast suite reports 2,572
+passed, 12 skipped and 5 xfailed tests in 122 test files, and the
+notebook smoke run passes 4/4.
 
 ## 1. Fast suite (every push, every supported Python)
 
@@ -29,7 +29,7 @@ with only `pytest` next to it (no sympy): the wheel is built with
 are executed from a copy of `tests/` outside the repository so the
 source tree cannot shadow the package. Tests that need a repository
 file (`pyproject.toml`, `examples/`, `CITATION.cff`,
-`docs/CITATIONS.md`) skip with a reason. The same check locally:
+`docs/development/citations.md`) skip with a reason. The same check locally:
 
 ```sh
 make test-wheel
@@ -112,7 +112,7 @@ it in the `slow` job.
 ## 5. Merge gate
 
 Before a branch is merged into `main`, run all of the following on the
-branch and compare with the same commands on `main`:
+branch and compare the results with the same commands on `main`:
 
 1. the fast suite (section 1) — same pass/skip/xfail counts, plus the
    branch's new tests;
@@ -126,27 +126,6 @@ Known bugs are kept visible as strict `xfail` tests (for example the
 AgreementOnGenerators domain cases in
 `tests/test_audit_0b00e1b_p1_core_round4.py`); a strict `xfail` that
 starts passing fails the run, so the fix must remove the marker.
-
-## 6. Independent audit tests (outside the repository)
-
-The audit directory `../audit_jacopy_v3/` (next to the repository
-checkout) holds the reviewer's counterexample tests. They are part of
-the protected set and are re-run after every fix round:
-
-```sh
-cd ../audit_jacopy_v3 && ../jacopy_v3/.venv/bin/python -m pytest -q
-```
-
-Files: `test_review_regressions.py`, `test_fix_recheck.py`,
-`test_second_fix_recheck.py`, `test_compliance_gaps.py`,
-`test_new_developments_audit.py`, `test_e6e9c1e_recheck.py`,
-`test_research_notebook_audit.py`, `test_post_f685_audit.py`,
-`test_f6b6791_recheck.py`, `test_library_api_audit.py` (the six
-library-API contracts), `test_4dd888e_progress.py`,
-`test_1b3c4b3_recheck.py`, `test_0058df0_k3_audit.py`,
-`test_7a11162_recheck.py`, `test_dc44f79_progress.py`, plus the
-coordinate oracles they import.
-The audit files are not published with the package.
 
 ## Optional dependencies
 

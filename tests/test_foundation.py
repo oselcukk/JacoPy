@@ -37,7 +37,7 @@ from jacopy.brackets import GradedBracket, BracketApply, DerivedBracket
 
 def test_top_level_import():
     import jacopy
-    assert jacopy.__version__ == "0.0.1"
+    assert jacopy.__version__ == "0.1.0a1"
 
 
 def test_package_skeleton_importable():

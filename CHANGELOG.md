@@ -1,17 +1,47 @@
 # Changelog
 
-All notable changes to jacopy are recorded here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The version
-is defined once, in `jacopy/__init__.py` (`__version__`); no release
-has been tagged yet, so everything below is unreleased on top of
-`0.0.1`.
+All notable changes to JacoPy are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
+project uses [PEP 440](https://peps.python.org/pep-0440/) version
+numbers. The version is defined once, in `jacopy/__init__.py`
+(`__version__`).
 
-Finding labels such as `P0-1` or `M1X-5` refer to the full audit of
-commit `0b00e1b` (independent audit, 2026-09-30).
+Finding labels such as `P0-1` or `M1X-5` refer to an independent audit
+of commit `0b00e1b` (2026-09-30).
 
 ## [Unreleased]
 
-### Display polish before the 2026-10-05 demo (`fix/display-polish`), 2026-10-02
+## [0.1.0a1] - not yet released
+
+The first public pre-release. It contains every change below since the
+internal version `0.0.1`.
+
+### Changed: public release
+
+- License: JacoPy is now distributed under the BSD 3-Clause License
+  (`LICENSE`, SPDX `BSD-3-Clause` in `pyproject.toml` and
+  `CITATION.cff`). The earlier source-available terms no longer apply.
+- Version: `0.0.1` becomes `0.1.0a1`, the first public pre-release. The
+  version string is the only release number; internal codenames do not
+  appear in it.
+- Repository: renamed to `oselcukk/JacoPy`
+  (https://github.com/oselcukk/JacoPy); the project URLs in
+  `pyproject.toml` and `CITATION.cff` follow the new name.
+- Documentation: a public documentation site
+  (https://oselcukk.github.io/JacoPy/) with installation notes,
+  tutorials, how-to guides, explanations, an API reference and
+  development pages. `docs/TESTING.md` moved to
+  `docs/development/testing.md` and `docs/CITATIONS.md` to
+  `docs/development/citations.md`.
+- Sources: comments, docstrings, documentation and test names are in
+  English only.
+- Project files for contributors: `CONTRIBUTING.md`,
+  `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue
+  forms, a pull request template, Dependabot configuration and a
+  release workflow that publishes to PyPI through trusted publishing.
+
+
+### Display polish (`fix/display-polish`), 2026-10-02
 
 Rendering and documentation only; no rule, role, tag or proof changes.
 
@@ -76,12 +106,12 @@ Rendering and documentation only; no rule, role, tag or proof changes.
   status and the citing result's requirements, including `unreplayed`;
   its outputs were re-executed in a clean kernel.
 
-### Documentation and test portability (audit T2-8)
+### Documentation and test portability
 
 - `README.md` rewritten in English: what jacopy is, installation with
   the extras, a quick start through the top-level surface, the
-  packages mapped to the Math 595 guideline items (planned items
-  marked), proof trust and the oracle, licence and citation.
+  packages and their status (planned items marked), proof trust and
+  the oracle, licence and citation.
 - `docs/ARCHITECTURE.md` rewritten for the current tree: measured layer
   map with the 29 deferred upward imports listed (T2-2), the proof
   flow, the trust model (requirement kinds, minting, replay,
@@ -102,7 +132,7 @@ Rendering and documentation only; no rule, role, tag or proof changes.
   checks that it equals `jacopy.__version__`.
 - The research-interface notebook uses `antisymmetrize_indices`.
 
-### Unambiguous names (audit T2 names, T2-4; arch-core follow-up), 2026-10-02
+### Unambiguous names, 2026-10-02
 
 - Module files that shared a basename were renamed; each old path is a
   compatibility alias that *is* the moved module:
@@ -140,7 +170,7 @@ Rendering and documentation only; no rule, role, tag or proof changes.
   built-ins; `register_family_rule` is idempotent for the same
   condition, builder, reason and order.
 
-### Architecture (audit T2-1, T2-3), merged 2026-10-02
+### Architecture, merged 2026-10-02
 
 - Nine structure-free rule classes moved, byte-identical, into the
   central layer: `central.tangent.cartan_rules`
@@ -160,7 +190,7 @@ Rendering and documentation only; no rule, role, tag or proof changes.
   `jacopy.research.nambu_kind`. A structure without a registered kind
   raises a `TypeError` that names `register_structure_kind`.
 
-### Public surface and packaging (audit T2-5, T2-6, T2-7, T2-9)
+### Public surface and packaging
 
 - Top-level `jacopy` now exposes a stable, documented surface
   (`jacopy.__all__`, 66 names): the expression classes, the object
@@ -183,7 +213,7 @@ Rendering and documentation only; no rule, role, tag or proof changes.
   marker; `[project.urls]`; `requirements.txt` reduced to `-e .[dev]`;
   this changelog and `CITATION.cff`.
 
-### Fixed — audit fixes merged 2026-09-30 … 2026-10-02
+### Fixed — findings of an independent audit, merged 2026-09-30 … 2026-10-02
 
 - **Metric-affine** (P0-6 / M7-1, M7-2): `CoframeRecombinationDefinition`
   no longer fires at non-linear positions (it closed a false equality);

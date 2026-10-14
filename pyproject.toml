@@ -1,15 +1,16 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "jacopy"
 # Single version source: jacopy/__init__.py (__version__), read below.
 dynamic = ["version"]
-description = "Graded algebra, bracket calculus, and metric-affine / generalized geometry with step-by-step proofs (v3, central-code architecture)."
+description = "Graded algebra, bracket calculus, and metric-affine and generalized geometry with step-by-step proofs."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary, Source-Available, Personal Use Only" }
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 authors = [{ name = "Oğuzhan Selçuk" }]
 keywords = [
     "graded algebra",
@@ -22,11 +23,18 @@ keywords = [
     "symbolic computation",
 ]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Mathematics",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
 ]
 dependencies = []
 
@@ -46,8 +54,11 @@ dev = [
 ]
 
 [project.urls]
-Repository = "https://github.com/oselcukk/JacoPy.v.3"
-Changelog = "https://github.com/oselcukk/JacoPy.v.3/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/oselcukk/JacoPy"
+Documentation = "https://oselcukk.github.io/JacoPy/"
+Repository = "https://github.com/oselcukk/JacoPy"
+Issues = "https://github.com/oselcukk/JacoPy/issues"
+Changelog = "https://github.com/oselcukk/JacoPy/blob/main/CHANGELOG.md"
 
 [tool.setuptools.dynamic]
 version = { attr = "jacopy.__version__" }
