@@ -1,7 +1,7 @@
 """``check_equal`` / ``check_chain``: evaluate both sides of a closed
 equation in random concrete models and compare.
 
-Model selection (F1):
+Model selection:
 
 * D-models: ``R^n`` with ``n = max(3, D + 1)``, ``D`` an upper bound of
   the exterior / multivector degree of EVERY subnode (operator results
@@ -13,7 +13,7 @@ Model selection (F1):
   ``poisson`` (or ``fundamental-identity``), GENERIC when the owners are
   known and do not declare it, and UNSUPPORTED(owners-unknown) when no
   owner information is available.
-* ASSUMPTION_LEAK (F1: the ``poisson`` declaration only): every declared
+* ASSUMPTION_LEAK (the ``poisson`` declaration only): every declared
   Poisson π occurring in the equation (also as a plain PVector) whose
   declaration the proof record does not use must also hold in a
   verified non-Poisson counter-model; an unknown record or a failing
@@ -23,7 +23,7 @@ Model selection (F1):
   ``MAX_ASSIGNMENTS``.
 * Operators are compared on the test basis of every form / multivector
   degree ``0..n`` (domain rule in :func:`values_equal`).
-* Determinism: model seed ``sha256(base_seed, goal, index)`` (SPEC §4);
+* Determinism: model seed ``sha256(base_seed, goal, index)``;
   a DISAGREE is re-run automatically with a second base seed.
 """
 
@@ -152,7 +152,7 @@ def _lowering(expr) -> int:
     return total
 
 
-#: Owner classes whose declared axioms the F1 models understand. Any other
+#: Owner classes whose declared axioms the random models understand. Any other
 #: owner whose names occur in the equation constrains the atoms in ways
 #: the random model does not reproduce (e.g. a symplectic ω with π = ω⁻¹)
 #: → UNSUPPORTED instead of a false DISAGREE.
@@ -277,7 +277,7 @@ def _poisson_bivector_owner(o) -> bool:
 
 
 def unmodeled_assumption(requires=None, chain=None):
-    """The first DECLARED assumption the proof used that the F1 models do
+    """The first DECLARED assumption the proof used that the models do
     not satisfy (anything but a Poisson bivector's declaration), as an
     UNSUPPORTED kind — a D-model must satisfy every used axiom, else a
     DISAGREE would be the model's fault. ``None`` when all are modeled."""
@@ -286,7 +286,7 @@ def unmodeled_assumption(requires=None, chain=None):
         if owner is not None and _poisson_bivector_owner(owner):
             return None
         if owner is not None and SEL.is_algebroid(owner):
-            # F2: the hierarchy axioms are modeled (select.py); any other
+            # the hierarchy axioms are modeled (select.py); any other
             # algebroid-owned assumption (package rules citing
             # bourbaki/courant theorems, projectors) is not
             ax = SEL.axiom_of_rule(rule or "")
@@ -636,7 +636,7 @@ def check_equal(lhs, rhs, *, registry=None, owners=None, samples: int = 2, seed:
     info = _structure_info(owners)
     if info is None and names:
         # unknown owners: whether a structure bivector is Poisson is not
-        # known — no charitable guess (review: owners-unknown)
+        # known — no charitable guess (owners-unknown)
         return OracleReport(UNSUPPORTED, unsupported_type="owners-unknown", unsupported_path=(),
                             detail=f"structure bivector(s) {sorted(names)} without owner information",
                             elapsed=time.monotonic() - t0, **base)
@@ -747,7 +747,7 @@ def _leak_budget(base, t0, timeout, what, common):
 
 def check_chain(chain, **kw) -> ChainReport:
     """Check every step ``before = after`` of a proof chain; the first
-    refuted step names the rule that broke the equation (K4-2)."""
+    refuted step names the rule that broke the equation."""
     reports, first, rule = [], None, None
     for i, s in enumerate(getattr(chain, "steps", chain)):
         r = check_equal(s.before, s.after, **kw)

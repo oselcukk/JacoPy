@@ -1,7 +1,6 @@
 """
 Structure kinds and node families — the registry behind
-:func:`~jacopy.research.engine_assembly.assemble_engine` (audit
-0B00E1B-FULL T2-3).
+:func:`~jacopy.research.engine_assembly.assemble_engine`.
 
 ``assemble_engine`` used to know the Nambu-Poisson structure by name: it
 imported ``NambuSharpVF`` to scan, keyed structures by ``s.pi``, called

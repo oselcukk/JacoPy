@@ -1,6 +1,6 @@
 """
 Minimal context identity — OWNERSHIP of rules, theorems and proof
-steps (Phase 8 step 2c).
+steps.
 
 The expression tree names a structure by a STRING: an algebroid
 bracket is ``AlgebroidBracket("E", u, v)``, a sharp map carries the
@@ -18,7 +18,7 @@ the tree itself does not change:
   algebroid, its definitional expansions, a cited
   :class:`~jacopy.proof.theorems.TheoremDefinition`);
 * every :class:`~jacopy.proof.theorems.Theorem` proved in a structure
-  records it as ``owner`` (``None`` = unowned / legacy, see step 3b);
+  records it as ``owner`` (``None`` = unowned / legacy);
 * every :class:`~jacopy.proof.step.ProofStep` fired by an owned rule
   records that owner — a closed proof's step list is its exact
   assumption record, now down to the structure OBJECT and not only
@@ -91,7 +91,7 @@ def is_substructure(owner, of) -> bool:
     the same declarations: same tree-visible name and bundle, and
     ``owner.declarations ⊆ of.declarations``. Rules and theorems of a
     sub-structure are valid in the super-structure (they assume less);
-    the converse is not (Phase 8 step 3b refinement of 2c). Structures
+    the converse is not. Structures
     without a declaration record are compatible only when equal."""
     if _same_owner(owner, of):
         return True

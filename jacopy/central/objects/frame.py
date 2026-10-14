@@ -1,5 +1,5 @@
 """
-Frame ``(e_a)`` and coframe ``(e^a)`` (PDF items 8o-p).
+Frame ``(e_a)`` and coframe ``(e^a)``.
 
 A **frame** ``(e_a)`` is a local basis of sections of a bundle — the
 usual vector-field frame on ``TM``, a local basis of ``E`` for a
@@ -21,8 +21,8 @@ Implementation:
 Duality ``⟨e^a, e_b⟩ = δ^a_b``: the pairing node
 (:class:`~jacopy.core.pairing.Pairing`) is built by
 :meth:`Frame.pairing`; its *evaluation* to ``δ^a_b`` is an expansion
-rule (definition) and will be added to the engine layer in Phase 2
-alongside d/L. :func:`kronecker_delta` supplies the scalar directly
+rule (definition) in the engine layer, alongside d/L.
+:func:`kronecker_delta` supplies the scalar directly
 (``δ^a_b``; ``1`` for equal labels).
 """
 
@@ -39,7 +39,7 @@ from jacopy.central.objects.vector_field import VectorField
 class FrameIndex(Atom):
     """A frame-index ATOM — the bound dummy of an
     :class:`~jacopy.core.indexed_sum.IndexedSum` over frame labels
-    (Phase 4.D.2), and the target of index substitution.
+    and the target of index substitution.
 
     Index substitution is NAME-BASED: indexed atoms (frame fields,
     coefficients, deltas) store their indices as strings; their
@@ -90,8 +90,8 @@ def _index_str(index: IndexLike) -> str:
 
 
 #: Public name of :func:`_index_str` — the string name of a frame index
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
-#: example notebooks). Same function object; the private name stays.
+#: (used across packages and by the example notebooks). Same function
+#: object; the private name stays.
 frame_index_str = _index_str
 
 
@@ -193,7 +193,7 @@ class CoframeField(Form):
 
 
 class Coframe:
-    """``(e^a)`` — the dual 1-form basis of a frame (item 8p)."""
+    """``(e^a)`` — the dual 1-form basis of a frame."""
 
     __slots__ = ("_name", "_bundle")
 
@@ -243,7 +243,7 @@ class Coframe:
 
 
 class Frame:
-    """``(e_a)`` — a local basis of sections of a bundle (item 8o).
+    """``(e_a)`` — a local basis of sections of a bundle.
 
     A context object (not an Expr). Produces the indexed frame fields
     (:meth:`field`) and the dual coframe (:meth:`dual`).
@@ -283,9 +283,9 @@ class Frame:
         return Coframe(self._name, bundle=self._bundle)
 
     def pairing(self, upper: IndexLike, lower: IndexLike) -> Pairing:
-        """``⟨e^a, e_b⟩`` — the duality pairing node (item 8p).
+        """``⟨e^a, e_b⟩`` — the duality pairing node.
 
-        Its evaluation to ``δ^a_b`` comes with the Phase 2 expansion
+        Its evaluation to ``δ^a_b`` is an engine expansion
         rule; for the scalar use :func:`kronecker_delta`.
         """
         return Pairing(self.dual().field(upper), self.field(lower))
@@ -379,7 +379,7 @@ def kronecker_delta(upper: IndexLike, lower: IndexLike) -> Expr:
     Note: labels here denote **fixed** indices — equal labels mean the
     same single index, so ``δ^a_a = 1``. This is *not* the
     Einstein-summed trace (``δ^a_a = n`` under summation); summed
-    traces belong to the frame-component layer (Phase 4).
+    traces belong to the frame-component layer.
     """
     a = _index_str(upper)
     b = _index_str(lower)

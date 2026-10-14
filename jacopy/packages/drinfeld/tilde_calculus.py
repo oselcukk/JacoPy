@@ -2,7 +2,7 @@
 The Nambu tilde calculus IS a calculus — App D instantiation of the
 drinfeld paper [DD = arXiv:2312.06584], eqs DD (D.5)-(D.13).
 
-The 6.D/6.E layers built the tilde elements ``ℒ̃`` (:func:`~jacopy.
+The double and twist modules built the tilde elements ``ℒ̃`` (:func:`~jacopy.
 packages.drinfeld.double.lie_tilde_nambu`), ``ι̃_ω V = ι_V ω`` and
 ``d̃ = −Πd`` from a ``(p+1)``-vector Π. Here they are shown to
 satisfy the CALCULUS conditions DD (C.1)-(C.3)/(4.34) in their tilde
@@ -19,7 +19,7 @@ of brackets"), consumed as the opt-in declaration
 
     [Πω, Πη]_Lie → Π [ω, η]_Kos
 
-— exactly ``R′ = 0`` (the 6.E R-twist). Without the declaration the
+— exactly ``R′ = 0`` (the R-twist). Without the declaration the
 conditions honestly FAIL with the R-twist as the residual; the Lie
 side enters through cited vector-field Jacobi instances (the repair
 loop). The simple Jacobi compatibility conditions DD (D.9), (D.12),
@@ -48,8 +48,8 @@ from jacopy.packages.poisson.nambu import (
     nambu_koszul_bracket,
 )
 
-# Structure-free Cartan rule, moved to the central layer (audit
-# 0B00E1B-FULL T2-1); re-exported here (the SAME class object).
+# Structure-free Cartan rule, moved to the central layer; re-exported
+# here (the SAME class object).
 from jacopy.central.tangent.cartan_rules import (  # noqa: F401  (re-export)
     LieIotaCommutatorDefinition,
 )
@@ -76,7 +76,7 @@ def kappa_tilde_nambu(N, eta: Expr, W: Expr) -> Expr:
 
 class NambuMorphismDeclaration(Definition):
     """DECLARED fundamental identity, bracket-morphism face
-    [DD (6.9) / the vanishing of the 6.E R-twist]:
+    [DD (6.9) / the vanishing of the R-twist]:
 
         [Πω, Πη]_Lie → Π [ω, η]_Kos.
 
@@ -85,7 +85,7 @@ class NambuMorphismDeclaration(Definition):
     honest residual. Terminating direction: a bracket of two sharps
     becomes a single sharp."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = cite("CatalOzerDoganYetismisoglu2024", "Eq. (6.9)")
 
     anchor = LieBracketVF
@@ -167,7 +167,7 @@ def _is_cartan_tm_d(op) -> bool:
     """Is ``op`` the ``d`` of the TM Cartan calculus? The fundamental
     identity is a statement about that calculus only; the shared
     default-reject scope guard ``belongs_to`` (calculus OBJECT identity,
-    reserved ``Cartan-TM`` name) decides (audit 0B00E1B-FULL M3-1/M3-2)."""
+    reserved ``Cartan-TM`` name) decides."""
     from jacopy.central.calculus.bracket_calculus import belongs_to
     from jacopy.central.tangent.exterior import CARTAN_TM
 
@@ -191,10 +191,10 @@ class FISharpPairingSwapDefinition(Definition):
     [a,b] + [b,a] = d g_Z(a,b) this forces Π(d g_Z(a,b)) = 0, i.e.
     Π(dι_{Πa}b) = −Π(dι_{Πb}a). THIS is the g_Z-family residual of
     the DD (D.5)-(D.7) diagnosis — not an extra assumption, a derivable
-    face of the FI itself (found 2026-08-05 via the twisted-FI
+    face of the FI itself (it surfaces as the twisted-FI
     consistency residual)."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
 
     anchor = NambuSharpVF
 
@@ -280,8 +280,8 @@ class NambuSharpPairingEvalDefinition(Definition):
     At p = 1 it lets the canonical alternating sort merge ``⟨η,Πω⟩``
     with ``−⟨ω,Πη⟩`` (the g_Z degeneration); at p ≥ 2 on a
     decomposable coframe wedge it produces the multivector's frame
-    components (the E6-paper (4.13) ↔ ⊛ bridge, 2026-09-10; that paper
-    is not in the repository, label unverified — NOT DD (4.13), which
+    components (the E6-paper (4.13) ↔ ⊛ bridge; that paper's
+    label is unverified — NOT DD (4.13), which
     is the symmetric-part decomposition). Opaque p-forms
     stay inert (honest)."""
 
@@ -345,7 +345,7 @@ def _tilde_engine(N, registry, *, declare_fi: bool = False):
     structure's own pairing and declared rules
     (:meth:`~jacopy.packages.poisson.nambu.NambuPoissonStructure.engine_rules`).
 
-    ``declare_fi=True`` is the pre-4a spelling of "N declares the
+    ``declare_fi=True`` is the historical spelling of "N declares the
     fundamental identity": it is applied to ``N`` itself
     (``N.with_declarations("fundamental-identity")``) — the flag is
     never distributed to other structures. Prefer declaring on the
@@ -365,7 +365,7 @@ def _tilde_engine(N, registry, *, declare_fi: bool = False):
 
 
 #: Public name of :func:`_tilde_engine` — the tilde-calculus engine of a Nambu structure (not :func:`jacopy.packages.poisson.tilde.tilde_engine`)
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 nambu_tilde_engine = _tilde_engine
 
@@ -384,7 +384,7 @@ def _fi_key(engine, N):
 
 def _cite_fi_instances(engine, N, omega, eta, W, h, registry):
     """Register DECLARED-FI instances in their composed-action face
-    (the 6.B two-normal-form technique): the defect
+    (the two-normal-form technique): the defect
 
         Π(ω)(Π(η)(s)) − Π(η)(Π(ω)(s)) − Π([ω,η]_Kos)(s)
 
@@ -459,13 +459,13 @@ def _cite_fi_instances(engine, N, omega, eta, W, h, registry):
                     ).with_structural_requires(),
                     # a hand-built axiom-instance step (+ congruence) whose
                     # endpoints are not the record's sides: not a proof
-                    # record (audit 0b00e1b-FULL M1-5, review #3) — an
+                    # record — an
                     # explicit unverified assumption, visible when cited
                     unverified=True,
                 )
                 names.append(nm)
     for nm in names:
-        engine.register(TheoremDefinition(book.get(nm), allow_legacy=True, unverified=True))  # pre-3b records: explicit
+        engine.register(TheoremDefinition(book.get(nm), allow_legacy=True, unverified=True))  # legacy records: explicit
 
 
 def _prove_condition(
@@ -496,7 +496,7 @@ def _prove_condition(
             max_steps=max_steps,
         )
     except ProofFailure:
-        # 6.J fallback (the p = 1 face): stall-time difference-test
+        # Fallback (the p = 1 face): stall-time difference-test
         # citation with the deep-instance families. Honest: raises
         # again if the residual survives.
         if not (declare_fi and instance_args is not None and N.p == 1):
@@ -937,7 +937,7 @@ def prove_jacobi_compat_d10(
 
 
 # ------------------------------------------------------------------- #
-# 6.J — stall-time difference-test citation (closes the p = 1 face)    #
+# Stall-time difference-test citation (closes the p = 1 face)          #
 # ------------------------------------------------------------------- #
 
 
@@ -956,8 +956,8 @@ def _node_size(x: Expr) -> int:
 
 
 def _p1_deep_instances(engine, N, omega, eta, W, h, registry):
-    """The p = 1 deep-instance normal forms (6.J): the s-BRIDGE
-    (⟨b,[W,Πa]⟩ = W(Π(a,b)) + Π-legs — the 5.E.2b family, derivable
+    """The p = 1 deep-instance normal forms: the s-BRIDGE
+    (⟨b,[W,Πa]⟩ = W(Π(a,b)) + Π-legs — the general-Koszul-Jacobi family, derivable
     from the pairing Leibniz + magic, packaged as a declared-FI /
     congruence instance) and the FI-ON-EXACTS family (θ = d(Wh)),
     each in ±, d-, W- and Π-PAIRED lifts, normalized by the CITING
@@ -1024,7 +1024,7 @@ def _p1_deep_instances(engine, N, omega, eta, W, h, registry):
 def _stall_difference_prove(
     engine, node, instances, registry, *, max_rounds: int = 10
 ):
-    """6.J stall-time citation: normalize ``node`` to its stall
+    """Stall-time citation: normalize ``node`` to its stall
     residual, then repeatedly subtract instance lhs's whenever the
     result is STRICTLY SMALLER (node-size metric ⟹ termination).
     Soundness: each accepted step rewrites

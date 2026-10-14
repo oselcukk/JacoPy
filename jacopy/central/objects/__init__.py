@@ -1,8 +1,8 @@
-"""Central code — basic objects (PDF item 8).
+"""Central code — basic objects.
 
-Phase 1.A: bundle context + functions + vector fields with the
-``U(f)`` action. Later sub-phases added forms, p-vectors, tensors,
-metric, connection, frame, interior/wedge, etc.
+The bundle context, functions and vector fields with the ``U(f)``
+action, together with forms, p-vectors, tensors, metric, connection,
+frame, interior/wedge, etc.
 """
 
 from jacopy.central.objects.bundle import (
@@ -126,7 +126,7 @@ __all__ = [
     "Sharp",
     "flat",
     "sharp",
-    # item 8w generalization: partial evaluation of k-linear maps
+    # partial evaluation of k-linear maps
     "PartialEval",
     "Kind",
     "kind_of",

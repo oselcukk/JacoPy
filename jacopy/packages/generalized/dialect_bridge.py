@@ -1,11 +1,11 @@
 """
-The Nambu ↔ Poisson DIALECT BRIDGE (2026-09-10): the Poisson
+The Nambu ↔ Poisson DIALECT BRIDGE: the Poisson
 package (``SharpVF``, ``KoszulBracket``, ``PoissonStructure``) and the
 Nambu package (``NambuSharpVF``, the ``ℒ_{Πω}η − ι_{Πη}dω`` Koszul
 formula, ``NambuPoissonStructure``) describe the SAME order-1
 geometry with two node families that the engine never bridged; the
 Watamura [C'1] proof therefore re-proved the Koszul Jacobi identity
-in the Nambu dialect instead of citing the 5.E.2b theorem.
+in the Nambu dialect instead of citing the general Koszul Jacobi theorem.
 
 The bridge is one definitional rule,
 :class:`~jacopy.packages.poisson.nambu.NambuToPoissonSharpDefinition`
@@ -120,7 +120,7 @@ def _normalize(
 ) -> Expr:
     """Engine normal form with a LARGE expansion budget — the bridged
     3-form Jacobiator needs a few thousand definitional steps in its
-    first pass (size, not a cycle). Phase 8 step 4b adapter over
+    first pass (size, not a cycle). An adapter over
     :func:`jacopy.proof.normalize.normalize` (12 rounds, this budget)."""
     from jacopy.proof.normalize import normalize
 
@@ -224,7 +224,7 @@ def prove_theta_form_jacobi_by_citation(
     1. the Nambu-dialect Jacobiator equals the Poisson-dialect one
        (declaration-free, the bridge);
     2. the Poisson-dialect Jacobiator vanishes under the declared
-       Poisson condition — the 5.E.2b theorem
+       Poisson condition — the general Koszul Jacobi theorem
        :func:`~jacopy.packages.poisson.koszul_jacobi.prove_general_koszul_jacobi`,
        run and attached as the cited sub-proof.
 

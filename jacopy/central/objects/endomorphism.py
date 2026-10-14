@@ -1,5 +1,5 @@
 """
-Invertible bundle endomorphisms (Phase 6.E.3) — the primitive behind
+Invertible bundle endomorphisms — the primitive behind
 the frame-change twist ``Ψ_m = [[m, 0], [0, m̃]]`` [TW (7.11),
 arXiv:2409.11973].
 
@@ -113,7 +113,7 @@ class EndoForm(Atom):
 
     @property
     def degree(self) -> Degree:
-        # The Λᵖ-side acts on FORMS only (audit 0b00e1b follow-up): a
+        # The Λᵖ-side acts on FORMS only: a
         # vector field's instance degree is its OPERATOR degree 0, so
         # reading it made m̃(X) a "0-form", i.e. a scalar function.
         # Anything not typed as a form (or a 0-form) has no degree here.

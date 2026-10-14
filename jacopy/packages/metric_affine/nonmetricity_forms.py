@@ -1,5 +1,5 @@
 """
-Non-metricity 1-forms ``Q_ab(∇, g)`` (Math 595 guideline item 11l)
+Non-metricity 1-forms ``Q_ab(∇, g)``
 [ADM Eqs. (2.4), (2.5), (2.12), (2.13)].
 
 Definition [ADM (2.12)]: on a frame ``(e_a)``,

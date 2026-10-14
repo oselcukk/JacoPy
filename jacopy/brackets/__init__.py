@@ -10,9 +10,8 @@ For now this package carries only the **base bracket abstraction**:
   Q-twisted derived bracket and its vanishing condition.
 
 Concrete brackets (Lie, Schouten-Nijenhuis, Koszul, Dorfman, Courant,
-Roytenberg, Vinogradov, …) will be added step by step in v3 under the
-**central code** and the **generalized geometry / Poisson** packages,
-following the order in the PDF specification.
+Roytenberg, Vinogradov, …) live in the **central code** and the
+**generalized geometry / Poisson** packages.
 """
 
 from jacopy.brackets.base import (

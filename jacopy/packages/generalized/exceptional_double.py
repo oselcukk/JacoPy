@@ -59,7 +59,7 @@ Poisson).
     derivative (:func:`prove_r25_is_lie_tilde_equivariance_defect`);
   - ``R′₅₅`` is the anchor defect (bracket-morphism condition) of the
     bundle map ``Π̂: Λ⁵ → TM`` for its own Koszul-type bracket
-    ``ℒ_{Π̂ω}η − ι_{Π̂η}dω``. NOTE (2026-09-10 audit, F6): ``Π̂`` is a
+    ``ℒ_{Π̂ω}η − ι_{Π̂η}dω``. NOTE: ``Π̂`` is a
     ``TM``-valued map, NOT a 6-vector in general — ``Π₃⊛Π₃`` is
     alternating in its five covector slots but not in the sixth (the
     E6 paper's (4.13) has the free index ``c``; e.g. on ℝ⁵ with

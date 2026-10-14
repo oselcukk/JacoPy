@@ -10,15 +10,15 @@ is reserved for the non-commutative scalar/operator product (used for
 both ``f · g`` and ``D_1 ∘ D_2``), so we need a separate node to keep
 the two semantics from leaking into one another.
 
-Earlier stages (Phase 17.E.4) deferred the dedicated Wedge node on the
+One could defer a dedicated Wedge node on the
 basis that wedges that surface inside an :class:`IndexedSum` body
 already behave like a structural product for the rules that fire
-there. That deferral is local, the moment Cartan I/II structure
+there. That deferral is only local: the moment Cartan I/II structure
 equations expose ``α ∧ β`` to a :class:`~jacopy.core.multi_eval.MultiEval`
 and ask "what is its action on two vector fields?", a real Wedge node
 is needed: the alternating expansion ``(α ∧ β)(U, V) = α(U)·β(V) −
 α(V)·β(U)`` cannot be derived from Product semantics without further
-input. So Phase 17.F.1.5 introduces this node.
+input. Hence this node.
 
 The Expr node itself is purely structural, the action axiom
 ``MultiEval(Wedge(α₁, …, α_p), X_1, …, X_p) → det[α_i(X_j)]`` lives in

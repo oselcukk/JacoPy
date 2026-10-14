@@ -1,6 +1,5 @@
 """
-The GENERAL Ψ-twist procedure (project directive item 13j — "This is
-really important!"): given ANY bracket on ``E`` satisfying a set of
+The GENERAL Ψ-twist procedure: given ANY bracket on ``E`` satisfying a set of
 algebroid properties and ANY invertible bundle morphism
 ``Ψ : E → E``, the twisted bracket
 
@@ -13,8 +12,8 @@ inherits every property with the PRIMED operators separated out:
 
 mechanized here at FULL generality — ``Ψ`` is an opaque C∞-linear
 morphism with an opaque inverse (only ``Ψ⁻¹Ψ = ΨΨ⁻¹ = id`` and
-linearity are used), the bracket is the opaque Phase 3 algebroid
-bracket, and the R-VALUED metric layer is the 7.B.2f structure.
+linearity are used), the bracket is the opaque abstract algebroid
+bracket, and the R-VALUED metric layer is the Bourbaki structure.
 Property-transport theorems:
 
 * ℝ-bilinearity of ``[·,·]'`` (structural);
@@ -26,9 +25,9 @@ Property-transport theorems:
 * metric invariance transports with ``ℒ^R`` unchanged (its
   direction reads through ``ρ'``).
 
-The 6.E/7.B concrete twists (Ψ_Π, Ψ_B, Ψ_m, H/R) are instances;
-this module is the missing GENERAL procedure of 13j, with each
-primed operator separated exactly as the directive asks. The
+The concrete twists (Ψ_Π, Ψ_B, Ψ_m, H/R) are instances;
+this module is the GENERAL procedure, with each primed operator
+separated explicitly. The
 procedure itself is TW Eq. (7.3) (arXiv 2409.11973,
 ``[u,v]_Roy′ = Ψ⁻¹[Ψu, Ψv]_Roy``), here for an arbitrary bracket.
 """
@@ -186,9 +185,8 @@ def general_twist_engine(
     engine is built from a declaration-STRIPPED copy of the context:
     the structural legs of the transport proofs must close from Ψ
     invertibility + linearity + definitional rules alone, never by
-    silently invoking a declared axiom's auto-rewrite (2026-09-09
-    audit, finding 1 — the axioms enter ONLY as explicitly cited,
-    precondition-checked instances). ``declared_rules=True`` keeps
+    silently invoking a declared axiom's auto-rewrite (the axioms
+    enter ONLY as explicitly cited, precondition-checked instances). ``declared_rules=True`` keeps
     the context's declared rewrites — for provers that have ALREADY
     precondition-checked the declaration they rely on (the
     right-Leibniz transport)."""
@@ -324,7 +322,7 @@ def _cited_transport_theorem(
     instance ``instance → 0``. The RECORDED equation is the
     advertised target (``lhs = target``, ``rhs = 0``) — reusable by
     :class:`~jacopy.proof.theorems.TheoremDefinition` on the real
-    twisted goal (2026-09-09 audit, finding 6)."""
+    twisted goal."""
     structural = _structural_step(
         name, target, instance, engine, registry, label=label
     )
@@ -337,7 +335,7 @@ def _cited_transport_theorem(
         ),
         provenance_tag="axiom",
         owner=owner,
-        role="assumption",  # a DECLARED axiom of the algebroid (Phase 8 step 3b)
+        role="assumption",  # a DECLARED axiom of the algebroid
         # the licensing rule's key: the algebroid's declaration when the
         # caller names one, else the caller's EXPLICIT instance assumption
         # (declare_r_axioms=True) — a citing engine must register the same
@@ -362,7 +360,7 @@ def _cited_transport_theorem(
 
 def _require_some_structure(alg: Algebroid) -> None:
     """A Ψ-transport needs SOMETHING declared to transport: a bare
-    bracket honest-fails (2026-09-09 audit, finding 1)."""
+    bracket honest-fails."""
     if not alg.declarations:
         raise ProofFailure(
             "the Ψ-transport needs a declared algebroid "
@@ -385,7 +383,7 @@ def _conditional_transport_theorem(
 ) -> Tuple[ProofChain, Theorem]:
     """The CONDITIONAL (structural-only) transport: lhs = target,
     rhs = the Ψ-carried instance — NOT zero. Every step holds with
-    no axiom of the initial data (2026-09-09 recheck, finding A)."""
+    no axiom of the initial data."""
     structural = _structural_step(
         name, target, instance, engine, registry, label=label
     )
@@ -501,8 +499,8 @@ def prove_general_twist_jacobi(
     ``jacobi``. Without it (but with some declared algebroid
     structure) the CONDITIONAL/structural form is returned instead:
     ``J'(u,v,w) = Ψ⁻¹ J(Ψu,Ψv,Ψw)`` with ``rhs`` the instance, NOT
-    zero — every step of that chain holds with no Jacobi assumption
-    (2026-09-09 audit, findings 1 and 6). A bracket declaring
+    zero — every step of that chain holds with no Jacobi assumption.
+    A bracket declaring
     nothing at all honest-fails: there is no structure to
     transport."""
     _require_some_structure(alg)
@@ -602,7 +600,7 @@ def prove_general_twist_symmetric_part(
     (``BMetric``/``BDop``), which NO central declaration certifies —
     the scalar ``symmetric-part`` flag speaks about ``EMetric``, a
     different node family with no verified identification between
-    the two data sets (2026-09-09 recheck, finding A). Hence:
+    the two data sets. Hence:
 
     * ``declare_r_axioms=True`` — the caller EXPLICITLY declares
       B (6.11) for the R-valued data ``(g, 𝔻)`` used here; the full
@@ -698,7 +696,7 @@ def prove_general_twist_invariance(
     The cited B (7.8) instance lives in the R-VALUED layer
     (``BLieRE``/``BMetric``), which NO central declaration
     certifies — the scalar ``metric-invariance`` flag speaks about
-    ``EMetric`` (2026-09-09 recheck, finding A). Hence:
+    ``EMetric``. Hence:
 
     * ``declare_r_axioms=True`` — the caller EXPLICITLY declares
       B (7.8) for the R-valued data ``(g, ℒ^R)`` used here; the full

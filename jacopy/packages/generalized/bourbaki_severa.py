@@ -1,6 +1,6 @@
 """
 Theorem 9.2 + Corollary 9.1 — the Ševera-lite CLASSIFICATION of
-exact pre-metric-Bourbaki algebroids (Phase 7.B.2f.4; primary paper
+exact pre-metric-Bourbaki algebroids (primary paper
 Çatal-Özer, Dereli & Doğan (2022) [arXiv:2210.00548] §9 — bare equation
 numbers below are that paper's): every exact pre-metric-Bourbaki algebroid with g-isotropic
 ``χ`` is the STANDARD one twisted by a pair ``(F, H)``,
@@ -17,7 +17,7 @@ is mechanized here as its own theorem:
   with exactness + isotropy + the R-valued non-degeneracy strip;
 * ``Δ(U,V) := [φU, φV] − φ[U,V]`` is TENSORIAL in the second slot
   (right-Leibniz (7.2), cited as a theorem rule) and picks up the
-  ``χ l_{df} F`` anomaly in the first (left-Leibniz of 7.B.2f.2 +
+  ``χ l_{df} F`` anomaly in the first (left-Leibniz of :mod:`bourbaki_structure` +
   ``𝕃 = χl``) — exactly the (9.21) laws of ``H``;
 * ``ρ(Δ(U,V)) = 0`` — ``im Δ ⊂ im χ``, so ``χH = Δ`` defines ``H``;
 * **Cor 9.1**: ``Δ(U,V) + Δ(V,U) = χ(d F(U,V))`` — so for a
@@ -124,7 +124,7 @@ class RightLeibnizTheoremRule(CitedTheoremMixin, Definition):
     (7.2): ``[u, f·v]_E → f·[u,v]_E + ρ(u)(f)·v`` (composite
     second slot).
 
-    A CITATION, not a definition (audit 0B00E1B-FULL M1-4): the rule
+    A CITATION, not a definition: the rule
     carries the (7.2) theorem proved on ``alg`` itself
     (:func:`~jacopy.packages.generalized.bourbaki_structure.
     prove_right_leibniz_from_r_invariance`), so every step records
@@ -190,10 +190,10 @@ class RightLeibnizTheoremRule(CitedTheoremMixin, Definition):
 
 class LeftLeibnizTheoremRule(CitedTheoremMixin, Definition):
     """THEOREM-classified left-Leibniz on E, citing the proven
-    7.B.2f.2 corollary:
+    :mod:`bourbaki_structure` corollary:
     ``[f·u, v]_E → f·[u,v]_E − ρ(v)(f)·u + 𝕃_{df}(g(u,v))``.
 
-    A CITATION (audit 0B00E1B-FULL M1-4): the rule carries the
+    A CITATION: the rule carries the
     left-Leibniz theorem proved on ``alg``
     (:func:`~jacopy.packages.generalized.bourbaki_structure.
     prove_left_leibniz_bourbaki`); its requirements flow into every
@@ -282,11 +282,11 @@ class LSymbolViaChiDefinition(Definition):
 class SymPartCollectDeclaration(Definition):
     """DECLARED symmetric part (6.11), COLLECT orientation: a
     same-signed pair ``[a,b]_E … [b,a]_E`` inside a Sum is replaced
-    by ``𝔻g(a,b)`` (the Phase 3 SymmetricPartDeclaration pattern —
+    by ``𝔻g(a,b)`` (the SymmetricPartDeclaration pattern —
     the single-swap orientation would not terminate on generic
     slots)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
 
     name = "(6.11) collect: [a,b] + [b,a] → 𝔻g(a,b)"
     source = cite("CatalOzerDereliDogan2022", "Definition 6.2, Eq. (6.11)")
@@ -350,7 +350,7 @@ class PhiIsotropyDeclaration(Definition):
     """DECLARED g-isotropy of the SPLITTING ``φ`` (Cor 9.1's extra
     hypothesis): ``g(φU, φV) → 0`` — i.e. ``F = 0``."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
 
     name = "declared g-isotropic splitting: F(U,V) = g(φU,φV) = 0"
     source = cite("CatalOzerDereliDogan2022", "Corollary 9.1")
@@ -438,7 +438,7 @@ def _zero_theorem(
 ) -> Tuple[ProofChain, Theorem]:
     # keep the engine steps as the step's children: the rules that
     # fired — in particular the theorem-citing Leibniz rules — must
-    # reach the theorem's requirements (audit 0B00E1B-FULL M1-4)
+    # reach the theorem's requirements
     nf, fired = _normalize(engine, diff, registry, record=True)
     if nf != Integer(0):
         raise ProofFailure(

@@ -1,6 +1,5 @@
 """
-Functions — ``C^∞(M)``, smooth functions on the base manifold
-(PDF item 8d).
+Functions — ``C^∞(M)``, smooth functions on the base manifold.
 
 Functions are **bundle-independent**: whatever the bundle ``E`` is,
 scalar fields always live on the base manifold ``M`` and carry degree

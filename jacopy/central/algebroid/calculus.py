@@ -1,11 +1,11 @@
 """
-The algebroid Cartan calculus (Phase 3.F) — ``d_E``, ``L^E``, ``ι``
+The algebroid Cartan calculus — ``d_E``, ``L^E``, ``ι``
 from the pair ``(ρ_E, [·,·]_E)``.
 
 This module *instantiates* the generic
 :class:`~jacopy.central.calculus.bracket_calculus.BracketCalculus`
 with an algebroid's anchor and bracket — exactly how the TM case
-instantiates it with ``(id, [·,·]_Lie)`` (PDF item 8a); no parallel
+instantiates it with ``(id, [·,·]_Lie)``; no parallel
 operator code. The canonical definitions are inherited verbatim:
 
 * ``d_E`` — Palais intrinsic formula driven by ``ρ`` and ``[·,·]_E``:
@@ -18,7 +18,7 @@ operator code. The canonical definitions are inherited verbatim:
 * ``ι_u`` — the generic slot-insertion interior product (bundle-blind
   by construction).
 
-**Axiom-carrying operators (audit 0B00E1B-FULL M2-1/M2-2).** For a
+**Axiom-carrying operators.** For a
 general ℝ-bilinear bracket the Palais/Koszul expression is an ORDERED
 ℝ-multilinear map, not an exterior form:
 ``(d_E α)(u,u) = −α([u,u])``, which is nonzero on the Dorfman-type
@@ -47,7 +47,7 @@ their hierarchy declarations, and fail honestly otherwise:
   (any anchored bundle with an ℝ-bilinear bracket);
 * ``d_E² = 0`` on functions ⟺ the anchor is a bracket morphism
   (closes under ``anchor-morphism``; under ``leibniz`` it closes by
-  citing the Phase 3.D theorem instead);
+  citing the anchor-morphism theorem instead);
 * ``d_E² = 0`` on E-1-forms additionally needs the Leibniz-Jacobi
   identity, entering through Jacobiator-backed instance theorems
   (:func:`jacobi_combination_theorem`).
@@ -75,7 +75,7 @@ def algebroid_calculus(alg: Algebroid) -> BracketCalculus:
     """The bracket calculus of ``alg`` — ``(ρ_E, [·,·]_E)``.
 
     On the tangent algebroid this IS the TM Cartan calculus (the
-    reduction is literal, PDF item 8a).
+    reduction is literal).
     """
     if not isinstance(alg, Algebroid):
         raise TypeError("algebroid_calculus expects an Algebroid")
@@ -89,9 +89,9 @@ def algebroid_calculus(alg: Algebroid) -> BracketCalculus:
         bracket=alg.bracket,
         d_name=f"d_{alg.name}",
         lie_name=f"L^{alg.name}",
-        # d_E is an alternating form operator only for a skew bracket
-        # (M2-1); right Leibniz is a DECLARATION of an algebroid, whose
-        # rule acts on [u, f v]_E — L^E never assumes it (M2-2).
+        # d_E is an alternating form operator only for a skew bracket;
+        # right Leibniz is a DECLARATION of an algebroid, whose
+        # rule acts on [u, f v]_E — L^E never assumes it.
         skew=alg.declares("antisymmetric"),
         right_leibniz=False,
     )
@@ -100,8 +100,7 @@ def algebroid_calculus(alg: Algebroid) -> BracketCalculus:
 def evaluate(head: Expr, *args: Expr) -> Expr:
     """``head(args…)`` on sections. The alternation flag is decided by
     the :class:`MultiEval` constructor (``admits_alternation``): ``d_E``
-    of a non-antisymmetric algebroid is evaluated plain-multilinearly
-    (M2-1)."""
+    of a non-antisymmetric algebroid is evaluated plain-multilinearly."""
     if len(args) == 1:
         return Pairing(head, args[0])
     return MultiEval(head, *args, slot_kind="vector")
@@ -154,7 +153,7 @@ def prove_d_coincides_with_coboundary(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """``⟨d_E f, u⟩ = ⟨Df, u⟩`` — the calculus' exterior derivative
-    agrees on functions with the coboundary of Phase 3.A (both are
+    agrees on functions with the coboundary ``D`` (both are
     defined by ``ρ(u)(f)``; the design-coherence check)."""
     return ExpandAndSimplify().prove(
         Pairing(d_E(alg, f), u),
@@ -174,7 +173,7 @@ def prove_palais_on_one_forms(
 ) -> ProofChain:
     """``(d_E α)(u, v) = ρ(u)(α(v)) − ρ(v)(α(u)) − α([u,v]_E)`` — the
     ordered formula, valid on every algebroid; the evaluation is
-    alternating only under ``antisymmetric`` (M2-1)."""
+    alternating only under ``antisymmetric``."""
     lhs = evaluate(d_E(alg, alpha), u, v)
     rhs = Sum(
         Act(alg.anchor(u), Pairing(alpha, v)),
@@ -274,7 +273,7 @@ def prove_d_squared_zero_on_functions(
     ``[ρ(u),ρ(v)](f) − ρ([u,v])(f)``.
 
     Closes under a declared ``anchor-morphism``; on a Leibniz
-    algebroid pass an ``engine`` with the Phase 3.D theorem cited.
+    algebroid pass an ``engine`` with the anchor-morphism theorem cited.
     Fails honestly otherwise.
     """
     lhs = evaluate(d_E(alg, d_E(alg, f)), u, v)
@@ -301,7 +300,7 @@ def jacobi_combination_theorem(
     (definitional expansion with the declaration withheld).
 
     The citable bracket-level Jacobi fact — the algebroid analogue of
-    the TM repair loop's vector-level bracket identities (2.C/2.D);
+    the TM repair loop's vector-level bracket identities;
     ``d_E² = 0`` beyond functions consumes it.
     """
     from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
@@ -440,8 +439,8 @@ def prove_d_squared_zero_on_one_forms(
     return chain, used
 
 
-# Unambiguous names of the algebroid Cartan theorems (audit 0B00E1B-FULL
-# T2 names): the TM theorems of :mod:`jacopy.central.tangent` carry the
+# Unambiguous names of the algebroid Cartan theorems: the TM theorems
+# of :mod:`jacopy.central.tangent` carry the
 # bare names ``prove_cartan_magic_on_*`` / ``prove_d_squared_zero_on_*``
 # with a different signature (no algebroid argument). The bare names
 # stay importable here and on :mod:`jacopy.central.algebroid` (same

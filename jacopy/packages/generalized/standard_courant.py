@@ -1,11 +1,12 @@
 """
-The STANDARD Courant algebroid on ``TM ⊕ T*M`` (Phase 7.B; project
-directive item 14b-d): the Dorfman bracket's remaining Courant axioms, the Courant
+The STANDARD Courant algebroid on ``TM ⊕ T*M``: the
+Dorfman bracket's remaining Courant axioms, the Courant
 (skew) bracket, and the Dorfman↔Courant relation — all CONCRETE
 (component-wise on ``(vector, form)`` pairs), closing the loop with
-the ABSTRACT axiomatics of Phase 7.A.
+the ABSTRACT axiomatics of :mod:`courant_axioms`.
 
-Inventory: Phase 6.C already proved, for the standard double,
+Inventory: the Drinfel'd double module already proved, for the
+standard double,
 right-Leibniz [C'3], the exact symmetric part ``x∘x = D(x,x)``
 [C'4], and Leibniz-Jacobi [C'1]. This module adds
 
@@ -18,7 +19,7 @@ right-Leibniz [C'3], the exact symmetric part ``x∘x = D(x,x)``
 * its skew-symmetry and the relation theorem,
 * the LWX axiom **[C3]** for the Courant bracket — the Leibniz rule
   with the pairing defect ``−⟨x,y⟩·Df``, concrete here after being
-  proven redundant in the abstract setting (7.A).
+  proven redundant in the abstract setting (:mod:`courant_axioms`).
 
 Everything is engine-normalized on components; honest-fail
 throughout (no identity is asserted without the difference
@@ -248,7 +249,7 @@ def prove_courant_dorfman_relation(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """Directive item 14d — the relation (Uchino Remark 2.2 writes it
+    """The Dorfman↔Courant relation (Uchino Remark 2.2 writes it
     as ``x∘y := [x,y] + D(x,y)``):
 
     ``[x, y]_C = [x, y]_D − D⟨x, y⟩₊``
@@ -336,7 +337,7 @@ def prove_courant_c3_lwx_std(
     ``[x, f·y]_C = f·[x,y]_C + (ρ(x)f)·y − ⟨x,y⟩₊·D(f)``
 
     — the pairing-defect Leibniz rule whose REDUNDANCY was the
-    Phase 7.A abstract theorem; here it is verified on the nose.
+    abstract Uchino theorem; here it is verified on the nose.
     The scaled-direction Lie derivatives (``ℒ_{fV}``) open through
     the MAGIC FORMULA + interior C∞-linearity — no ``ℒ_{fX}`` law
     is assumed."""
@@ -463,7 +464,7 @@ def prove_courant_jacobi_dt_std(
     with ``T = ⅓Σcyc⟨[x,y]_C, z⟩₊`` and ``D h = (0, ½dh)``. The
     vector component is the VF Jacobi (cyclic form — closes on the
     action probe); the FORM component is evaluated on the given
-    probe slots and closes through the 6.C bracket-identity repair
+    probe slots and closes through the bracket-identity repair
     loop. Returns the form chain + the cited VF identities."""
     from jacopy.central.tangent.cartan import (
         prove_with_bracket_identities,

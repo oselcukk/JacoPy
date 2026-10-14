@@ -74,12 +74,12 @@ Rendering and documentation only; no rule, role, tag or proof changes.
   role `definition` (as in `tests/rule_roles_inventory.json`); three are
   theorem-*tagged* because they carry a sub-proof builder. They were
   described as "THEOREM-classified".
-- Docs: `docs/ARCHITECTURE.md` (measured numbers, notebook smoke 4/4,
+- Docs: `docs/explanation/architecture.md` (measured numbers, notebook smoke 4/4,
   the deferred `calculus` → `tangent` edge inside `central`, the oracle
   hook edges of `research/axiom_suite.py` and
   `poisson/koszul_jacobi.py`, the `metric_affine/rules.py`,
   `metric_affine/decomposition.py` and `generalized/_cited_rule.py`
-  modules), `docs/TESTING.md` counts, and the `jacopy` docstring's
+  modules), `docs/development/testing.md` counts, and the `jacopy` docstring's
   layer order (display on top, as in the architecture map).
 - Changed test expectations: `tests/test_display.py` (the Cartan step is
   `(definition)`), `tests/test_citations.py` (two in-text strings, the
@@ -112,16 +112,16 @@ Rendering and documentation only; no rule, role, tag or proof changes.
   the extras, a quick start through the top-level surface, the
   packages and their status (planned items marked), proof trust and
   the oracle, licence and citation.
-- `docs/ARCHITECTURE.md` rewritten for the current tree: measured layer
+- `docs/explanation/architecture.md` rewritten for the current tree: measured layer
   map with the 29 deferred upward imports listed (T2-2), the proof
   flow, the trust model (requirement kinds, minting, replay,
   default-reject citation, the Scalar contract), the model oracle,
   extension points (`Definition`, `StructureKind`) with runnable
   examples, the support levels and known limits.
-- `docs/TESTING.md`: sympy is the `oracle` extra; `--oracle`,
+- `docs/development/testing.md`: sympy is the `oracle` extra; `--oracle`,
   `--oracle-report`, the `oracle_exempt` and `contract_table` markers,
   the wheel run and the merge gate.
-- `docs/CITATIONS.md`: file paths follow the renamed modules.
+- `docs/development/citations.md`: file paths follow the renamed modules.
 - The `jacopy` docstring names the `cite` / `prove` homonyms.
 - The fast suite runs from a sympy-free wheel (CI job `wheel`): the
   module-level sympy import of `tests/test_audit_0b00e1b_metric_affine.py`
@@ -243,7 +243,7 @@ Rendering and documentation only; no rule, role, tag or proof changes.
   Σ-binder contract.
 - **Citations** (M8, M4-1, M4-2, T3-2 / K1-9): APA 7 rule sources
   (bibliography plus `Definition`/`Theorem` sources on proof steps),
-  LaTeX rendering fixes, `docs/CITATIONS.md`.
+  LaTeX rendering fixes, `docs/development/citations.md`.
 - **Poisson** (M3-1 / M3-2, M3-3): calculus-scoped TM rules (reserved
   Cartan-TM, `belongs_to`) and the Koszul–Jacobi certificate with
   replayed seeds.

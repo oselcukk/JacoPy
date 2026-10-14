@@ -1,5 +1,5 @@
 """
-Common-factor collection over sums (Engine pass E.2).
+Common-factor collection over sums.
 
 The main pipeline is expansion-oriented (``distribute`` always
 multiplies out), which is the right default for cancellation — but it
@@ -110,7 +110,7 @@ def collect_pairings(expr: Expr, registry=None) -> Expr:
     ``registry``): bilinearity is ``C∞(M)``-linearity. A vector field
     or other operator factor is not a coefficient — ``⟨α,U⟩·A`` is the
     vector field ``⟨α,U⟩A``, and moving ``A`` into the slot built the
-    non-vector ``A∘U`` (audit 0b00e1b K1-1 ≡ M1X-5). Without a registry
+    non-vector ``A∘U``. Without a registry
     only self-certifying scalars qualify (numerals, evaluations,
     degree-0 non-derivation atoms); declared symbols need the registry.
     A certified scalar commutes with the (scalar-valued) evaluation, so
@@ -144,8 +144,8 @@ def collect_pairings(expr: Expr, registry=None) -> Expr:
             core = core.arg
         # Scalar COEFFICIENTS fold into the varying slot
         # (``s·⟨α,V⟩`` contributes ``s·V`` — the full bilinearity
-        # the docstring promises; 2026-08-04, the Dorfman
-        # right-Leibniz residual needed the coefficient case).
+        # the docstring promises; the Dorfman right-Leibniz
+        # residual needs the coefficient case).
         coeffs: tuple = ()
         if isinstance(core, _Product) and len(core.children) >= 2:
             evals = [

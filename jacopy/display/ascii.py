@@ -2,7 +2,7 @@
 Plain-text renderer for :class:`~jacopy.core.expr.Expr` trees and
 proof transcripts.
 
-Every v3 node already carries a mathematical ``_repr_inner``; this
+Every node already carries a mathematical ``_repr_inner``; this
 module adds sign normalisation (``a + (-b)`` → ``a - b``) and
 precedence-aware parentheses on the core arithmetic nodes, and the
 verbosity-controlled step/chain layouts shared with the terminal and
@@ -80,7 +80,6 @@ def _int(expr: Integer, ctx: int) -> str:
 def _rat(expr: Rational, ctx: int) -> str:
     # a fraction is a quotient, not an atom: as a power base or
     # exponent it needs parentheses — ``3/2**2`` would read as 3/4
-    # (2026-09-23 audit, F5)
     text = f"{expr.p}/{expr.q}"
     return _wrap(text, _P_PRODUCT if expr.p >= 0 else _P_NEG, ctx)
 

@@ -1,6 +1,5 @@
 """
-The Bourbaki pre-calculus quintet (Phase 7.B.2f.1; PDF item 10h /
-7.B Bourbaki targets), from the PRIMARY paper Çatal-Özer, Dereli &
+The Bourbaki pre-calculus quintet, from the PRIMARY paper Çatal-Özer, Dereli &
 Doğan (2022) [arXiv:2210.00548] — Definition 9.1 and Theorem 9.1,
 mechanized. Bare equation numbers in this module are that paper's.
 
@@ -34,7 +33,7 @@ usual Cartan calculus IS a Bourbaki pre-calculus with
 ``(ι, d, ω∧·, ℒ, ℒ)`` — is verified concretely: (9.14) is the
 ``[ℒ,ι]`` commutator, (9.15) is Cartan magic + ``ι² = 0``, and the
 ℒ^Z laws are (2.10). The abstract layer NEVER identifies R or Z
-with form bundles — the audit's 10h scope point (the general
+with form bundles (the general
 R-valued structure, not its scalar shadow).
 """
 
@@ -370,10 +369,10 @@ class Axiom914Declaration(Definition):
     ``ℒ^R_U ι_V z → ι_{[U,V]} z + ι_V ℒ^Z_U z`` — terminating
     (the ℒ^R node disappears). ``bracket`` parametrizes the base
     bracket: the Lie bracket for ``A = TM`` (default), or an
-    ABSTRACT algebroid bracket for INDEPENDENT A-data (PDF 13k —
-    the quintet never assumed A = TM structurally)."""
+    ABSTRACT algebroid bracket for INDEPENDENT A-data (the
+    quintet never assumed A = TM structurally)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = cite("CatalOzerDereliDogan2022", "Definition 9.1, Eq. (9.14)")
 
     anchor = BLieR
@@ -487,8 +486,7 @@ def standard_bracket(
     """(9.17): ``[U+z, V+y]_S = [U,V] ⊕ (ℒ^Z_U y − ℒ^Z_V z +
     dι_V z)`` as a ``(vector, Z)`` component pair. ``bracket``
     parametrizes the A-side (default: the Lie bracket, A = TM;
-    pass an abstract algebroid's bracket for independent A-data,
-    PDF 13k)."""
+    pass an abstract algebroid's bracket for independent A-data)."""
     return (
         bracket(U, V),
         Sum(

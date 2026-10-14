@@ -1,4 +1,4 @@
-"""F2 realizers: algebroid nodes, the algebroid Cartan calculus, frames
+"""Realizers for algebroid nodes, the algebroid Cartan calculus, frames
 and indexed sums. Registered into :mod:`jacopy.oracle.realize`'s table.
 
 Conventions (each matched to the library, cited at the realizer):
@@ -403,7 +403,7 @@ def _e_wedge(vals, env, path):
 
 
 # --------------------------------------------------------------------- #
-# Frames, Kronecker delta, anholonomy, indexed sums (frame.py, F2)       #
+# Frames, Kronecker delta, anholonomy, indexed sums (frame.py)           #
 # --------------------------------------------------------------------- #
 
 

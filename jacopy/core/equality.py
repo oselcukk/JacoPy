@@ -6,7 +6,7 @@ same children in the same order. That's the right default, it makes
 hashing well-defined and keeps the core layer free of semantic
 assumptions. But proofs need a few other notions of sameness, and
 this module collects the ones that are not deep enough to warrant
-the canonicalization machinery of Phase 2.
+the canonicalization machinery of :mod:`jacopy.algorithms`.
 
 * :func:`structural_equal`, a named alias for ``==``, for readable
   proof transcripts.
@@ -77,8 +77,8 @@ def _alpha(
     if isinstance(p, Wildcard) and isinstance(q, Wildcard):
         if p.type_filter is not q.type_filter:
             return False
-        # The expr_type filter is part of what the hole accepts
-        # (audit 0B00E1B-FULL K1-12): ?A<Symbol> ≠ ?A<Sum>.
+        # The expr_type filter is part of what the hole accepts:
+        # ?A<Symbol> ≠ ?A<Sum>.
         if _type_set(p.expr_type) != _type_set(q.expr_type):
             return False
         return _bind_name(p.name, q.name, fwd, bwd)
@@ -96,7 +96,7 @@ def _alpha(
         return p == q
     if isinstance(p, IndexedSum):
         return _alpha_indexed_sum(p, q, fwd, bwd)
-    # Non-child identity payload (audit 0B00E1B-FULL M1X-6): bracket,
+    # Non-child identity payload: bracket,
     # alternating/skew flags, calculus, bound dummy, ... must agree
     # (up to the same wildcard renaming when a payload field is a hole).
     if not _alpha_payload(node_payload(p), node_payload(q), fwd, bwd):

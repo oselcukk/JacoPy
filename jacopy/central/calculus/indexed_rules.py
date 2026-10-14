@@ -1,5 +1,5 @@
 """
-IndexedSum and Wedge engine rules (Phase 4.D.2).
+IndexedSum and Wedge engine rules.
 
 The core nodes (:class:`~jacopy.core.indexed_sum.IndexedSum`,
 :class:`~jacopy.core.wedge.Wedge`) are inert structural containers;
@@ -98,8 +98,8 @@ def contains_index(expr: Expr, name: str) -> bool:
 
 class IndexedSumLinearityDefinition(Definition):
     """``Σ_s (a + b) → Σ_s a + Σ_s b``; ``Neg``/zero; factors free of
-    the bound index pull out — ORDER-PRESERVING (audit 0B00E1B-FULL
-    M7-1 root): ``Product`` is not commutative (operator factors such as
+    the bound index pull out — ORDER-PRESERVING:
+    ``Product`` is not commutative (operator factors such as
     vector fields compose), so only the maximal free PREFIX goes left and
     the maximal free SUFFIX goes right, in their order. A free factor in
     the middle is moved to the front only when it and every factor it
@@ -126,14 +126,14 @@ class IndexedSumLinearityDefinition(Definition):
         The SUFFIX is pulled only when every inner factor is a scalar
         function: otherwise the remaining ``Σ_s(… B_s)`` would be
         OPERATOR-valued, and a later scalar-action rule could misread
-        ``(Σ_s ⟨e^s,v⟩ ρ(e_s))(g)·h`` as a product (second review)."""
+        ``(Σ_s ⟨e^s,v⟩ ρ(e_s))(g)·h`` as a product."""
         if self._memo is not None and self._memo[0] is expr:
             return self._memo[1]
         dummy_name = expr.dummy._repr_inner()
         kids = list(expr.body.children)
         free = [not contains_index(c, dummy_name) for c in kids]
         if all(free) or not any(free):
-            # all-free needs the symbolic dimension (stays inert, 4.E.2)
+            # all-free needs the symbolic dimension (stays inert)
             return None
         lo = 0
         while free[lo]:
@@ -239,8 +239,7 @@ class IndexedSumEvalPushInDefinition(Definition):
 class WedgeEvalDefinition(Definition):
     """``(α₁ ∧ … ∧ α_n)(X₁, …, X_n) → Σ_σ sgn(σ) Π_i ⟨α_i, X_{σ(i)}⟩``
     — the determinant convention on n 1-form factors (definition
-    policy §1). Generalized from the 2-factor case in Phase 5.E.4
-    (closing the "Wedge n-factor eval" deferral); the 1-form guard is
+    policy §1). Valid for any number of factors; the 1-form guard is
     ``degree_of``-based so composite factors like ``d(f)`` qualify."""
 
     name = (
@@ -279,8 +278,8 @@ class WedgeEvalDefinition(Definition):
         return expr.arity == sum(degs)
 
     def rewrite(self, expr: Expr) -> Expr:
-        # General SHUFFLE expansion (mixed degrees — Phase 6 probe
-        # for the Vinogradov cross-term ``β ∧ dα``):
+        # General SHUFFLE expansion (mixed degrees, e.g. the
+        # Vinogradov cross-term ``β ∧ dα``):
         #   (α∧β∧…)(v₁..v_n) = Σ_shuffles sgn · α(v_S₁) β(v_S₂) …
         # For all-1-form factors this reduces to the determinant.
         from itertools import combinations

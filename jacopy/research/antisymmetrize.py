@@ -1,5 +1,5 @@
 """
-Index antisymmetrisation (research interface, Phase 8 brick 5): the
+Index antisymmetrisation (research interface): the
 bracket notation of the papers,
 
     T^{[a₁…a_n]} := (1/n!) Σ_σ sign(σ) T^{a_{σ(1)}…a_{σ(n)}},
@@ -67,7 +67,7 @@ def antisymmetrize(
     return Product(Rational(1, factorial(n)), total)
 
 
-#: Unambiguous name (audit 0B00E1B-FULL T2 names): ``antisymmetrize``
+#: Unambiguous name: ``antisymmetrize``
 #: alone is also :func:`jacopy.core.symmetrize.antisymmetrize`, the
 #: slot antisymmetrizer of an expression. Same function object.
 antisymmetrize_indices = antisymmetrize

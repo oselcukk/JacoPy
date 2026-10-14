@@ -1,6 +1,5 @@
 """
-The two-fold E-Cartan structure equations [ADM Prop 3.9, Eq. (3.48)]
-(Phase 4.F.4b / 4.F.6; audit 0b00e1b-FULL M7-4).
+The two-fold E-Cartan structure equations [ADM Prop 3.9, Eq. (3.48)].
 
 ADM writes the Cartan structure equations on an anti-commutable local
 pre-Leibniz algebroid with TWO different exterior derivatives:
@@ -103,7 +102,7 @@ def e_cartan_engine(
     bracket's bridge is DERIVED from ``derived`` itself: ``E^∇̂`` bridges
     to ``[·,·] − Λ̂`` (needs ``projector``), ``E^∇`` to ``[·,·] − Λ``; any
     other context is refused (a mismatched pair would let ``d_{E^∇}``
-    compute with ``Λ̂`` — gate 2026-10-01). A projected curvature may
+    compute with ``Λ̂``). A projected curvature may
     still be paired with the unprojected ``E^∇`` (``projector`` given):
     the "wrong derivative" honest-fail tests. ``decomposed`` registers
     the opt-in frame-decomposition declaration."""

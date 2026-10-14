@@ -16,8 +16,7 @@ plan's "expand definitions first, then simplify" proof shape, and it
 means a strategy can choose when to interleave or defer each pass.
 
 Built-in definitions live in this module. More can be plugged in via
-:meth:`ExpansionEngine.register`. Future phases will add
-:class:`DerivedBracket` and operator-equation definitions here.
+:meth:`ExpansionEngine.register`.
 """
 
 from __future__ import annotations
@@ -65,14 +64,14 @@ class Definition(ABC):
     #: keeps the rule in the always-consulted fallback list.
     anchor = None
 
-    #: The structure this rule was built for (Phase 8 step 2c): the
+    #: The structure this rule was built for: the
     #: algebroid of a declared axiom, the theorem's owner for a cited
     #: theorem, … ``None`` for structure-free rules. The engine refuses
     #: two rules whose owners share a tree-visible name but differ
     #: (:mod:`jacopy.proof.ownership`).
     owner = None
 
-    #: What the rule IS, logically (Phase 8 step 3a): ``"definition"`` —
+    #: What the rule IS, logically: ``"definition"`` —
     #: a definitional unfolding or a structural law (no assumption);
     #: ``"assumption"`` — a DECLARED axiom of a structure (the
     #: ``*Declaration`` rules), i.e. a hypothesis the proof depends on;
@@ -85,7 +84,7 @@ class Definition(ABC):
     #: ``unverified``): its steps are classified as legacy assumptions.
     unverified = False
 
-    #: Structural IDENTITY of the rule (Phase 8 step 1d contract):
+    #: Structural IDENTITY of the rule:
     #: ``None`` by default — the rule is never deduplicated by identity
     #: and its :attr:`key` falls back to ``(class name, display name)``.
     #: A rule that gives one returns ``(class, structure identity,
@@ -109,7 +108,7 @@ class Definition(ABC):
         ``(class name, display name)``. Recorded on every fired
         :class:`ProofStep` and on the resulting requirement records, so a
         citation can check that the SAME licensing rule is registered in
-        the citing engine (Phase 8 step 3b, audit dc44f79 F2)."""
+        the citing engine."""
         ident = self.identity
         return ident if ident is not None else (type(self).__name__, self.name)
 
@@ -143,8 +142,8 @@ class ExplicitAssumption(Definition):
     ``assumption``; identity ``("ExplicitAssumption", owner name,
     instance, target)`` so that the same declaration in two engines is
     the same licensing rule — a theorem that used it is citable only
-    where it is registered again. The seed of ``assume_zero`` (Phase 8
-    step 5b): an exact-instance hypothesis, never a general identity."""
+    where it is registered again. The seed of ``assume_zero``: an
+    exact-instance hypothesis, never a general identity."""
 
     role = "assumption"
     anchor = None
@@ -191,7 +190,7 @@ class ExplicitAssumption(Definition):
 class ScalarConstantContract(Definition):
     """``D(c) = 0`` for a certified derivation ``D`` and an ℝ-constant
     ``c`` (a Scalar atom, :func:`~jacopy.central.calculus.scalars.is_real_constant`)
-    — the Scalar contract (audit 0b00e1b M1-1, chef decision). Built
+    — the Scalar contract. Built
     into every engine and consulted BEFORE the registered rules, so no
     rule ever sees ``Act(D, c)``: a user rule giving a Scalar a non-zero
     derivative is simply never used (the declaration wins; declare a
@@ -303,9 +302,9 @@ def is_library_rule(d) -> bool:
 
 
 def effective_role(d) -> Optional[str]:
-    """The role a rule's steps are classified under (review 2026-10-01
-    r3 #2). A library rule keeps its reviewed role; a rule class defined
-    OUTSIDE the package is the caller's own claim — whatever ``role`` it
+    """The role a rule's steps are classified under. A library rule
+    keeps its reviewed role; a rule class defined OUTSIDE the package is
+    the caller's own claim — whatever ``role`` it
     declares (the base default ``"definition"`` included) its rewrites
     are an ``"assumption"``: visible in every result's requirements,
     never a silent definitional unfolding. (Threat model as in
@@ -367,14 +366,13 @@ class ExpansionEngine:
         self._mode = mode
         # Filled by jacopy.research.engine_assembly.assemble_engine:
         # one line per detected family / added rule. Lives ON the
-        # engine so no side registry keeps discarded engines alive
-        # (2026-09-09 audit, finding F4).
+        # engine so no side registry keeps discarded engines alive.
         self.assembly_report: List[str] = []
         # tree-visible name -> owning structure of the registered rules
-        # (Phase 8 step 2c; see jacopy.proof.ownership)
+        # (see jacopy.proof.ownership)
         self._owners: dict = {}
         # bumped on every registration: bound citations re-check their
-        # verdict when it changes (audit dc44f79 F4)
+        # verdict when it changes
         self._version = 0
         # Dispatch index: Expr class -> [(registration order, rule)].
         # Rules without an anchor stay in the always-consulted fallback
@@ -392,7 +390,7 @@ class ExpansionEngine:
         # A theorem citation is bound to THIS engine (a bound copy: the
         # caller's object stays reusable elsewhere) and checked against
         # the engine's structures; a blocked citation is registered
-        # inert, reported, and claims no owner (Phase 8 step 3b).
+        # inert, reported, and claims no owner.
         bind = getattr(definition, "bound_to", None)
         citable = True
         if bind is not None:
@@ -431,7 +429,7 @@ class ExpansionEngine:
     @property
     def owners(self) -> dict:
         """``{tree-visible name: structure}`` for the owned rules of
-        this engine (Phase 8 step 2c)."""
+        this engine."""
         return dict(self._owners)
 
     @property
@@ -464,9 +462,9 @@ class ExpansionEngine:
         """``(rule, rewritten, registry facts)`` for the first matching
         rule at ``expr``, or ``None``. The registry answers the FIRED
         rule consulted — its match decision and its rewrite — are the
-        step's hypotheses (audit 0b00e1b-FULL P0-3); they are recorded
-        during the one ``matches`` call that decided (no second call:
-        review 2026-10-01 #6 — a modulo match is a full normalization)."""
+        step's hypotheses; they are recorded during the one ``matches``
+        call that decided (no second call: a modulo match is a full
+        normalization)."""
         candidates = self._candidates(expr)
         if isinstance(expr, Act):
             # the Scalar contract precedes every registered rule
@@ -502,7 +500,7 @@ class ExpansionEngine:
             rule=d.name,
             # the justification names the step as ProofResult counts it
             # ("apply definition: …", "apply assumption: …"), not by the
-            # bare provenance tag (display-polish 2026-10-02)
+            # bare provenance tag
             justification=f"apply {classification_label(tag, role)}: {d.name}",
             provenance_tag=tag,
             owner=getattr(d, "owner", None),
@@ -519,7 +517,7 @@ class ExpansionEngine:
             # path (an engine subclass could hand any ``after``)
             _mint(step)
         # a rule's recorded side derivation (a modulo citation's
-        # normalization, audit 0b00e1b-FULL M1X-3) is ALWAYS attached:
+        # normalization) is ALWAYS attached:
         # its assumptions are the step's assumptions
         side = getattr(d, "side_steps", None)
         if side is not None:
@@ -547,7 +545,7 @@ class ExpansionEngine:
         ``rewritable_slots`` tuple plus a ``with_slots(*subs)``
         rebuilder. The engine recurses into those slots exactly like
         children, so rules fire *inside* opaque atoms — the structural
-        fix for the slot-opacity limitation v2 worked around with
+        fix for the slot-opacity limitation that would otherwise need
         targeted pre-passes.
         """
         if not expr.is_atom:
@@ -585,10 +583,10 @@ class ExpansionEngine:
         Returns the fully expanded expression and the list of steps
         taken. Raises :class:`RuntimeError` if the fix-point isn't
         reached within ``max_steps`` iterations, that would indicate a
-        cyclic or divergent rule set. (Raised 256 → 1024 in the
-        higher-degree audit: a ``d²`` Palais double-expansion of a
-        5-form on 7 slots legitimately exceeds 256 rewrites; a true
-        cycle still trips the bound, just later.)"""
+        cyclic or divergent rule set. (The default is 1024: a ``d²``
+        Palais double-expansion of a 5-form on 7 slots legitimately
+        exceeds 256 rewrites; a true cycle still trips the bound, just
+        later.)"""
         steps: List[ProofStep] = []
         current = expr
         for _ in range(max_steps):
@@ -614,9 +612,9 @@ def default_engine(
 
     Contains only the degree-independent structural rule
     ``ActOverSumOpDefinition`` (``Act(op, Sum(...)) -> Sum(Act(op, ...))``).
-    In the v3 architecture the Cartan-calculus rules (``d² = 0``,
+    In this architecture the Cartan-calculus rules (``d² = 0``,
     ``ι² = 0``, Cartan magic, ``ι(df) = X(f)`` …) are supplied by the
-    **central code** (Phase 2, ``jacopy.central.tangent``); each
+    **central code** (``jacopy.central.tangent``); each
     package adds its own rule set via ``ExpansionEngine.register``.
     That way the proof engine stays independent of any geometry
     package.

@@ -1,10 +1,9 @@
 """
-The exterior derivative ``d`` on TM — derived from the Lie bracket
-(PDF item 9d; Phase 2.C).
+The exterior derivative ``d`` on TM — derived from the Lie bracket.
 
 This module *instantiates* the generic bracket calculus with the
-tangent-case pair ``(ρ = id, [·,·] = [·,·]_Lie)`` — per PDF item 8a the
-usual ``d`` is exactly that instantiation, not separate code. The
+tangent-case pair ``(ρ = id, [·,·] = [·,·]_Lie)`` — by the central-code
+principle the usual ``d`` is exactly that instantiation, not separate code. The
 canonical definition is the Palais intrinsic formula (see
 :mod:`jacopy.central.calculus.bracket_calculus`); its special cases:
 
@@ -17,7 +16,8 @@ definition); :func:`prove_d_squared_zero_on_functions` proves it and
 :func:`register_d_squared_zero` stores it in a
 :class:`~jacopy.proof.theorems.TheoremBook` for citation. The ``p ≥ 1``
 cases additionally need the vector-level Jacobi identity inside
-pairing slots and are scheduled with the Cartan-relation pass (2.D).
+pairing slots and are proved with the Cartan relations
+(:mod:`jacopy.central.tangent.cartan`).
 """
 
 from __future__ import annotations
@@ -144,7 +144,7 @@ def register_d_squared_zero(
     Returns the registered :class:`Theorem`. Its lhs is the evaluated
     node ``(ddf)(X, Y)`` and its rhs ``0``, so citing it rewrites that
     evaluation away in one step. Generality: ``generic-function`` (any
-    ``f``); the ``p ≥ 1`` cases are a 2.D deliverable.
+    ``f``); the ``p ≥ 1`` cases are proved with the Cartan relations.
     """
     chain = prove_d_squared_zero_on_functions(f, X, Y, registry=registry)
     thm = Theorem(

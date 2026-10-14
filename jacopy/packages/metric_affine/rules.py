@@ -1,5 +1,5 @@
 """
-Connection structure rules (Phase 4.A).
+Connection structure rules.
 
 An affine connection is, BY DEFINITION, ``C^∞``-linear in its
 direction slot and a derivation in its argument:
@@ -10,12 +10,12 @@ direction slot and a derivation in its argument:
 * ``∇_X (f·T) = X(f)·T + f·∇_X T`` — at TREE positions the argument
   side needs no new rule: ``∇_X`` is a degree-0 :class:`Derivation`,
   so the generic ``product_rule`` pass supplies the Leibniz split and
-  the Phase 1/2 rule ``∇_X f = X(f)`` finishes (verified in the 4.A
+  the tangent rule ``∇_X f = X(f)`` finishes (verified in the
   tests). INSIDE atom slots, however, ``product_rule`` cannot reach
   (it walks children, and slot contents are not children) — the
   engine's slot protocol can, so the same Leibniz is ALSO provided as
   the engine rule :class:`ConnectionArgumentLeibnizDefinition`
-  (Phase 4.C surfaced this: ``g(Z, ∇_X(f·Y))`` stalls without it).
+  (the metric layer needs this: ``g(Z, ∇_X(f·Y))`` stalls without it).
   Both express the one canonical definition; they are confluent.
 """
 

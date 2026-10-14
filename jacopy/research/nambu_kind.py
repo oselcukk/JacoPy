@@ -1,7 +1,6 @@
 """
 The built-in Nambu-Poisson structure kind for
-:func:`~jacopy.research.engine_assembly.assemble_engine` (audit
-0B00E1B-FULL T2-3).
+:func:`~jacopy.research.engine_assembly.assemble_engine`.
 
 Everything ``assemble_engine`` used to hard-code about Nambu-Poisson
 structures, now registered through the generic protocol of

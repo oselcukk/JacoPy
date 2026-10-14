@@ -15,8 +15,7 @@ library's docstring definitions, re-implemented in coordinates in
 :mod:`jacopy.oracle.values`.
 
 Product has two meanings in the library (``algebra/derivation.py``:
-``Product`` is both the scalar product and operator composition). Rules
-(SPEC §7):
+``Product`` is both the scalar product and operator composition). Rules:
 
 * in ``Act`` operator position a Product is a composition;
 * in value position, children that are all values multiply (scalars
@@ -373,7 +372,7 @@ def op_sum(ops, R) -> OpV:
         # summand by summand: an undefined summand makes the sum undefined
         # only if every defined summand vanishes there; otherwise the sum
         # is ill-typed on this argument and the oracle says so (never a
-        # silent skip of the undefined part — review: X = X + 5ι_Yι_Z)
+        # silent skip of the undefined part, e.g. X = X + 5ι_Yι_Z)
         outs, undefined = [], False
         for o in ops:
             try:
@@ -411,9 +410,9 @@ def _rational(e, env, path):
 
 
 def _declared_constant(e, env) -> bool:
-    """The Scalar contract restated INDEPENDENTLY of the engine (chef
-    decision, gate 5/6: the oracle must not import the engine's
-    predicate, or a wrong "constant" there would be modelled here too
+    """The Scalar contract restated INDEPENDENTLY of the engine (the
+    oracle must not import the engine's predicate, or a wrong "constant"
+    there would be modelled here too
     and the DISAGREE masked). From the registry's public declaration
     data alone (:meth:`~jacopy.core.registry.PropertyRegistry.lookup`
     raw answers with their specificity ranks, ``strict_axioms_only``,
@@ -429,17 +428,17 @@ def _declared_constant(e, env) -> bool:
     * not a constant when a raw ``NonCommuting`` / ``AntiCommuting``
       exists, or the raw ``Graded`` degree is not the constant ``0`` (a
       symbolic degree certifies nothing). Raw: a filter never hides a
-      clash (gate-5 F1).
+      clash.
 
-    ``tests/test_audit_0b00e1b_p1_core_round3.py`` locks this against the
-    engine's predicate differentially (class hierarchy, every ``axioms``
+    The test suite checks this against the engine's predicate
+    differentially (class hierarchy, every ``axioms``
     subset, strict / DERIVED)."""
     reg = env.registry
     if reg is None:
         return False
     own = getattr(e, "degree", None)
     if own is not None and own.as_int() != 0:
-        return False  # a form / multivector symbol of non-zero or symbolic degree (gate7 q3)
+        return False  # a form / multivector symbol of non-zero or symbolic degree
     scalar, _, rank = reg.lookup(e, Scalar)
     if scalar is None:
         return False
@@ -453,7 +452,7 @@ def _declared_constant(e, env) -> bool:
         return False
     wl = reg.axiom_whitelist
     if wl is not None and type(scalar) not in wl:
-        return False  # the registry filters by the EXACT property type (cr7/p04: a Scalar subclass)
+        return False  # the registry filters by the EXACT property type (a Scalar subclass)
     if nc is not None or ac is not None:
         return False
     return graded is None or graded.degree.as_int() == 0
@@ -462,8 +461,8 @@ def _declared_constant(e, env) -> bool:
 def _compound_declared(e, env, path) -> None:
     """A Neg / Sum / Product that ITSELF carries a raw declaration the
     engine treats as a constancy clash (``Graded(k ≠ 0)``,
-    ``NonCommuting``, ``AntiCommuting``) is modelled by neither side
-    (cr7 F5): the oracle does not guess — UNSUPPORTED."""
+    ``NonCommuting``, ``AntiCommuting``) is modelled by neither side:
+    the oracle does not guess — UNSUPPORTED."""
     reg = env.registry
     if reg is None:
         return
@@ -475,7 +474,7 @@ def _compound_declared(e, env, path) -> None:
 
 @register(Symbol)
 def _symbol(e, env, path):
-    """Scalar contract (SPEC §7): a ``Scalar`` symbol (any declaration level) is a
+    """Scalar contract: a ``Scalar`` symbol (any declaration level) is a
     CONSTANT; a ``Graded(0)`` symbol is a function (``functions(...)``);
     anything else (undeclared, graded ≠ 0) has no model."""
     reg = env.registry
@@ -633,7 +632,7 @@ def _multi_eval(e, env, path):
     head (``core/multi_eval.py``), not a different evaluation: both flags
     evaluate the head multilinearly in the given slot order. A wrong
     claim (an alternation shortcut on a non-alternating Palais ``d_E``)
-    is then visible as a value mismatch (audit P0-4)."""
+    is then visible as a value mismatch."""
     R = env.R
     head = env.value(e.head, path + (0,))
     args = [env.value(a, path + (i + 1,)) for i, a in enumerate(e.args)]

@@ -17,8 +17,8 @@ undetermined factor raises :class:`ValueError`: the modelling gap is
 something the user needs to fix, not something we should silently paper
 over with a zero-degree assumption.
 
-Who is split (default-reject; audit 0b00e1b P0-2 and its code
-review): the graded Leibniz rule is applied only to a certified
+Who is split (default-reject): the graded Leibniz rule is applied only to a
+certified
 derivation — a :class:`Derivation` not marked ``leibniz = False``, an
 operator declaring ``leibniz = True``, or a commutator of two such. An
 operator may take the decision itself through the PROTOCOL
@@ -130,8 +130,7 @@ def _expand_act(
         # Leibniz split of Y(c·g) leaves a Y(c)·g term that must die.
         return Integer(0)
     if registry is not None and (arg.is_atom or isinstance(arg, (Neg, Sum, Product))) and _annihilates(op, arg, registry):
-        # The Scalar CONTRACT (core.properties.Scalar, audit 0b00e1b
-        # M1-1 ≡ M1-2): a Scalar-declared atom
+        # The Scalar CONTRACT (core.properties.Scalar): a Scalar-declared atom
         # (scalars.is_real_constant) is an ℝ-constant,
         # so a derivation kills it exactly like a numeral — the same
         # contract under which sort_product lets it commute past a
@@ -157,7 +156,7 @@ def _expand_act(
         # coefficient (compositions like f·X put scalars there): it
         # acts by multiplication, NEVER by Leibniz — splitting s(ab)
         # into s(a)b + a·s(b) double-counts to 2s·ab. "Degree 0" alone
-        # is NOT that certificate (audit 0b00e1b P0-2, M1-3): Λ♯(dh)
+        # is NOT that certificate: Λ♯(dh)
         # from the public Sharp has degree −1+1 = 0 but is a vector
         # field.
         return Product(op, arg)
@@ -178,7 +177,7 @@ def _expand_act(
                 if isinstance(arg, Product):
                     return _expand_leibniz(op, arg, registry)
                 # Graded Leibniz over the WEDGE product (the wedge is
-                # the graded product of forms — Phase 5.E.4):
+                # the graded product of forms):
                 # D(α∧β) = D(α)∧β + (−1)^{|D||α|} α∧D(β) + …
                 return _expand_wedge_leibniz(op, arg, registry)
             except ValueError:
@@ -192,8 +191,7 @@ def _expand_act(
             # LINEAR-ONLY C∞-linear operator (e.g. the multivector
             # interior ι_P for p ≥ 2 — a COMPOSITION of derivations,
             # not a derivation): scalar factors pull out, no Leibniz
-            # split (6.H.2 soundness catch, 2026-09-07). Over a Wedge
-            # it stays inert (2026-09-09 catch).
+            # split. Over a Wedge it stays inert.
             return _pull_out(op, arg, registry, is_scalar_function)
         if mode == "linear" and isinstance(arg, Product):
             # uncertified operator: ℝ-linearity only — NUMERIC factors
@@ -302,7 +300,7 @@ def _expand_wedge_leibniz(op: Expr, wedge: Expr, registry) -> Expr:
     field is a 1-vector there (``|X| = 1``) even though its OPERATOR
     degree (as a derivation of functions) is 0; reading the operator
     degree made ``d̃(X∧Y)`` expand to ``d̃X∧Y + X∧d̃Y`` instead of the
-    correct ``d̃X∧Y − X∧d̃Y`` (audit 0b00e1b P0-1: K1-2 ≡ M1X-1). See
+    correct ``d̃X∧Y − X∧d̃Y``. See
     :func:`_wedge_factor_degree`. ``|D|`` is the operator's own degree
     (``degree_of(op)``): for the operators that act on a wedge algebra
     that IS their shift in the exterior grading (``d``, ``d̃``: +1;

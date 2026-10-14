@@ -1,7 +1,7 @@
 """
-Example / regression suites from the literature (Phase 6.H) —
+Example / regression suites from the literature —
 [TW §8; TW = arXiv:2409.11973]: three concrete doubled structures
-exercised on the 6.C-6.G machinery.
+exercised on the double, twist and Roytenberg machinery.
 
 * **B_n-generalized geometry TW (8.15)-(8.16)**: ``E = TM ⊕ C∞M ⊕
   T*M`` with triple sections ``(U, f, ω)``,
@@ -31,10 +31,9 @@ exercised on the 6.C-6.G machinery.
   curvature ``F`` (TW §8, after TW (8.14)). NAME-LEVEL REFERENCE ONLY,
   NO MECHANICAL LINK: nothing here builds the Atiyah bracket TW (8.11),
   ``H = −F`` or :func:`~jacopy.packages.drinfeld.roytenberg.
-  h_closure_defect` for it; the Phase 4 test merely runs
+  h_closure_defect` for it; the metric-affine test merely runs
   ``prove_bianchi_second`` (the torsionful second Bianchi identity of
-  an affine connection on TM), which is a different statement
-  (audit 0b00e1b V-M4 / M4-2).
+  an affine connection on TM), which is a different statement.
 """
 
 from __future__ import annotations
@@ -438,7 +437,7 @@ def prove_top_slot_jacobi(
 
         [x,[y,z]]_top − [[x,y],z]_top − [y,[x,z]]_top = 0.
 
-    Closed by LINEARITY instead of brute force (2026-09-09): the brute
+    Closed by LINEARITY instead of brute force: the brute
     ``(2p+1)``-slot expansion of three nested brackets does not finish
     at ``p = 2`` (>900 s), but the top slot is ``L(x, y_top) +
     C(x_p, y_p)`` with ``L`` the Dorfman formula, so the Jacobiator
@@ -454,7 +453,7 @@ def prove_top_slot_jacobi(
     2. ``J^{cross} = 0``, at FORM level (graded Leibniz of ``ℒ``, ``ι``,
        ``d`` over the wedge + the degree-``p`` Dorfman bracket);
     3. ``J^{Dorfman} = 0`` — the degree-general Dorfman Leibniz–Jacobi
-       theorem (6.C), PROVEN here on the ``2p+1`` slots (~30 s at
+       theorem, PROVEN here on the ``2p+1`` slots (~30 s at
        ``p = 2``) unless ``cite_dorfman=True``, in which case it is
        recorded as a cited library theorem (the slow test suite proves
        the ``p = 2`` instance).
@@ -462,7 +461,7 @@ def prove_top_slot_jacobi(
     Legs 1 and 2 are cheap for every ``p``; the arguments are named
     after the ``p = 2`` case for readability.
 
-    PARITY (2026-09-09, found by asking "why five?"): the single
+    PARITY: the single
     cross-term bracket is a Leibniz bracket for EVEN ``p`` only. For
     odd ``p`` the cross Jacobiator is ``∓2·dη_p ∧ ι_W dω_p`` for every
     sign/order convention of the cross-term (and for its symmetrised
@@ -557,7 +556,7 @@ def _probe(registry):
 
 
 # ------------------------------------------------------------------- #
-# 6.H.2 — multivector interior, the ⊛ map, decomposition readings      #
+# Multivector interior, the ⊛ map, decomposition readings              #
 # ------------------------------------------------------------------- #
 
 
@@ -685,7 +684,7 @@ def prove_exceptional_h_first_entry_symbol(
 
 
 # ------------------------------------------------------------------- #
-# B_n decomposition readings TW (8.17)/(8.21)/(8.26) — 6.H leftovers      #
+# B_n decomposition readings TW (8.17)/(8.21)/(8.26)                      #
 # ------------------------------------------------------------------- #
 #
 # The SAME B_n bracket under three A ⊕ Z splits [TW §8.4]: the calculus
@@ -811,7 +810,7 @@ def exceptional_pi_twist(N3, N6, U, om2, om5):
     """The exceptional twist [E6 paper eq (4.10)-(4.12); unidentified
     paper, not in the repository — unverified] on triple
     sections: ``Ψ_Π(U ⊕ ω₂ ⊕ ω₅) = (U + Π₃ω₂ + (Π₆ + Π₃⊛Π₃)ω₅)
-    ⊕ ω₂ ⊕ ω₅`` — buildable since 6.H.2 (partial contraction +
+    ⊕ ω₂ ⊕ ω₅`` — buildable with the multivector interior (partial contraction +
     boxtimes). ``N3``/``N6`` host the trivector/hexavector."""
     return (
         Sum(

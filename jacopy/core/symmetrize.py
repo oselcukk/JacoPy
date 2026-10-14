@@ -1,6 +1,5 @@
 """
-Symmetrization and anti-symmetrization ``T_(…)`` / ``T_[…]`` — PDF
-item 8x.
+Symmetrization and anti-symmetrization ``T_(…)`` / ``T_[…]``.
 
 Single-argument operators that take the symmetric or anti-symmetric
 part of an object:
@@ -11,8 +10,8 @@ part of an object:
   alternating part (e.g. ``T_{[ab]} = ½(T_{ab} − T_{ba})``).
 
 In this skeleton layer the nodes are **inert**: the permutation
-expansion over the slots (``½Σ_σ ± σ·T``) will be defined in a later
-sub-phase (multi-argument evaluation / frame components). Degree is
+expansion over the slots (``½Σ_σ ± σ·T``) is not performed by these
+nodes (multi-argument evaluation / frame components). Degree is
 preserved: ``|Sym(T)| = |Alt(T)| = |T|``; accordingly
 :func:`~jacopy.algebra.derivation.degree_of` recognises them as the
 degree of their argument.

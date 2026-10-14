@@ -1,6 +1,5 @@
 """
-Connection ``∇`` and its action on a (q, r)-type tensor (PDF items
-8m-n).
+Connection ``∇`` and its action on a (q, r)-type tensor.
 
 An affine connection ``∇`` yields, for a vector field ``X``, the
 **covariant derivative** ``∇_X``. It maps a (q, r)-tensor to a tensor
@@ -36,10 +35,10 @@ Specifically:
   and the full action on a (q, r)-tensor
   ``(∇_X T)(…) = X(T(…)) − Σ T(…, ∇_X e_i, …)``.
 
-These expansion rules (definitions) arrive in Phase 2 alongside d/L in
+These expansion rules (definitions) live alongside d/L in
 the engine layer; torsion/curvature/non-metricity and the total
 covariant derivative ``∇T`` ((q, r) → (q, r+1)) come with the
-metric-affine package (Phase 4).
+metric-affine package.
 
 **Central-code view.** On ``TM`` this is the ordinary affine
 connection; for a general bundle ``E`` it is an ``E``-connection
@@ -112,7 +111,7 @@ class CovariantOp(Derivation):
 
     @property
     def rewritable_slots(self):
-        """Slot protocol (Phase 3.C): rules fire on the direction —
+        """Slot protocol: rules fire on the direction —
         e.g. the bracket module structure inside ``∇_{[fX,Y]}``."""
         return (self._vector,)
 
@@ -123,7 +122,7 @@ class CovariantOp(Derivation):
 
     def substitute_atom(self, dummy: Expr, target: Expr) -> Expr:
         """Slot-walking substitution: the direction lives in a slot,
-        not in children (Phase 4.E.2 coframe recombination)."""
+        not in children (needed for coframe recombination)."""
         if self == dummy:
             return target
         new_vector = self._vector.substitute_atom(dummy, target)
@@ -144,7 +143,7 @@ class CovariantOp(Derivation):
 
 
 class Connection:
-    """``∇`` — an affine connection (item 8m).
+    """``∇`` — an affine connection.
 
     A context object (not an Expr). Produces the ``∇_X`` operator
     (:meth:`op`) and the covariant derivative ``∇_X T`` (call syntax).

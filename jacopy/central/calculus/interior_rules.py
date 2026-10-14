@@ -1,6 +1,5 @@
 """
-Slot-insertion rules for the interior product ``ι_X`` (the Phase 1
-deferral; PDF item 8r).
+Slot-insertion rules for the interior product ``ι_X``.
 
 The canonical definition ``(ι_X ω)(Y_1, …, Y_{p−1}) := ω(X, Y_1, …)``
 as engine rules — calculus-independent (no anchor or bracket is
@@ -105,8 +104,8 @@ class InteriorEvalDefinition(Definition):
         X = expr.head.op.vector
         # Flags are INHERITED from the node being unrolled (same policy
         # as the intrinsic d/L rules); ``_evaluate`` further refuses to
-        # mark a non-alternating head (d of a non-skew calculus, audit
-        # 0B00E1B-FULL M2-1) alternating.
+        # mark a non-alternating head (d of a non-skew calculus)
+        # alternating.
         return _evaluate(
             omega,
             (X,) + expr.args,
@@ -117,7 +116,7 @@ class InteriorEvalDefinition(Definition):
 
 class InteriorVectorLinearityDefinition(Definition):
     """``ι_{f·X + Y} → f·ι_X + ι_Y`` at the ``Act`` level — the
-    interior product is tensorial in its vector slot (Phase 6.D: the
+    interior product is tensorial in its vector slot (the
     Poisson double's ``ι_{fV}(dω)`` shapes sit unevaluated inside
     π-slots and need the operator-level split)."""
 

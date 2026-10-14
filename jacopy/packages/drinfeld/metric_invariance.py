@@ -1,8 +1,8 @@
 """
-Metric-invariance compatibility conditions (Phase 6.I.1) — DD App D
+Metric-invariance compatibility conditions — DD App D
 [DD = arXiv:2312.06584] eqs DD (D.14)-(D.19) [the DD (4.44)-(4.50)
-family in tilde instantiation]: the ``g_Z`` metric layer born in
-6.D/6.F closes the metric-invariance axis of the bialgebroid programme.
+family in tilde instantiation]: the ``g_Z`` metric layer of the
+double and Roytenberg modules closes the metric-invariance axis of the bialgebroid programme.
 
 * **DD (D.14)** — the Z-side invariance: the metric-invariance operator
   of ``Z = Λᵖ T*M`` is ``ℒ̃_ω = ℒ_{ρ_Z(ω)} = ℒ_{Πω}``,

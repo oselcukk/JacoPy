@@ -1,6 +1,6 @@
 """
-The calculus conditions and the 𝒦-operator (Phase 6.A) — PDF item
-13a; drinfeld paper [DD = arXiv:2312.06584 §4, eqs (4.14),
+The calculus conditions and the 𝒦-operator — drinfeld paper
+[DD = arXiv:2312.06584 §4, eqs (4.14),
 (4.32)-(4.34), (4.4)-(4.5)].
 
 A **calculus on Z induced by A** is a triplet ``(ℒ, ι, d)`` obeying
@@ -9,7 +9,7 @@ three CALCULUS CONDITIONS; the associated second action is
     𝒦_V := −ℒ_V + d ∘ ι_V          [DD (4.14); explicit form DD (4.18)],
 
 and a calculus pair with its dual is what a bialgebroid carries
-(Phase 6.B). The USUAL Cartan calculus (A = TM, Z = Λ^p T*M) is the
+(see :mod:`poisson_bialgebroid`). The USUAL Cartan calculus (A = TM, Z = Λ^p T*M) is the
 prototype instantiation [DD App A] — this module proves, mechanically
 and for concrete p, that it IS one:
 

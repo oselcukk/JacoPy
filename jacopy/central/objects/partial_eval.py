@@ -1,7 +1,6 @@
 """
-Partial evaluation of a multilinear map — PDF item 8w, "its
-generalization to arbitrary numbers" (deferred-items ledger K2,
-2026-09-22).
+Partial evaluation of a multilinear map — the generalization of the
+musical maps to arbitrary numbers of fixed slots.
 
 The bilinear case is the musical pair: a map ``g: TM × TM → C^∞`` seen
 as ``g^♭ = g(X, ·): TM → T*M``. In general a ``k``-linear map ``T``
@@ -100,8 +99,8 @@ class PartialEval(Expr):
             # NESTED partial evaluation flattens onto the original head:
             # T(a, ·, ·)(b, ·) is T(a, b, ·). The outer positions index
             # the inner map's OPEN slots; the flags must agree
-            # (2026-09-23 audit, F3: nesting silently dropped the
-            # alternating flag).
+            # (otherwise nesting would silently drop the alternating
+            # flag).
             if arity != head.n_open:
                 raise ValueError(
                     f"the inner map has {head.n_open} open slot(s), got arity {arity}"
@@ -121,7 +120,6 @@ class PartialEval(Expr):
         if known is not None and known != arity:
             # a head with a known signature fixes its own arity: a
             # bilinear metric cannot be viewed as a trilinear map
-            # (2026-09-23 audit, F2)
             raise ValueError(
                 f"{head._repr_inner()} has {known} slot(s), not {arity}"
             )
@@ -181,7 +179,7 @@ class PartialEval(Expr):
     @property
     def degree(self) -> Degree:
         """Form degree of the OPEN map, derived from the open slots'
-        actual type (2026-09-23 audit, remaining F1):
+        actual type:
 
         * an alternating map on vector slots with ``k − j`` open slots
           is a ``(k − j)``-form — the declared arity and alternation
@@ -372,7 +370,7 @@ def musical_view(
 ) -> PartialEval:
     """``musical_view(T, a₁, …, a_j)`` = ``T(a₁, …, a_j, ·, …, ·)`` —
     the LEADING ``j`` slots fixed, the rest open: the ``E^{k−j} →
-    (E^*)^{⊗j}``-style view of PDF item 8w. ``arity`` defaults to the
+    (E^*)^{⊗j}``-style view. ``arity`` defaults to the
     head's signature (``g``: 2, a ``p``-form: ``p``, a ``(q, r)``
     tensor: ``q + r``)."""
     k = _arity_for(head, arity)

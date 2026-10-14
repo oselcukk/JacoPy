@@ -1,29 +1,30 @@
 """
-Roytenberg → Courant (Phase 7.B.2d; project directive item 14g):
+Roytenberg → Courant:
 the general 8-component Roytenberg bracket of the Poisson case
 (:func:`~jacopy.packages.drinfeld.roytenberg.roytenberg_bracket`,
 [TW (5.2)], arXiv 2409.11973, at p = 1) IDENTIFIED, switch by
-switch, with the Courant structures whose axiom suites Phase 7.B
+switch, with the Courant structures whose axiom suites are
 already verified:
 
 * all switches off      → the STANDARD Dorfman bracket
-  (:mod:`standard_courant` — Courant axioms verified in 7.B.1);
+  (:mod:`standard_courant` — Courant axioms verified there);
 * tilde + R on, under the DECLARED Poisson condition
                         → the TRIANGULAR θ-double
   (:func:`~jacopy.packages.drinfeld.double.nambu_double` at
   ``p = 1``, the LWX double of the Poisson bialgebroid — the
-  derived R-twist dies, 7.B.2c; NOT Watamura's trivial-TM
-  ``(TM)₀ ⊕ (T*M)_θ`` of :mod:`poisson_generalized`, whose anchor
-  kills pure vectors — 2026-09-09 audit, finding 2);
+  derived R-twist dies, see :mod:`r_twisted`; NOT Watamura's
+  trivial-TM ``(TM)₀ ⊕ (T*M)_θ`` of :mod:`poisson_generalized`, whose
+  anchor kills pure vectors);
 * H on (tilde/R off)    → the H-TWISTED Dorfman bracket
-  (:mod:`twisted_courant` — Courant ⟺ dH = 0, 7.B.2a).
+  (:mod:`twisted_courant` — Courant ⟺ dH = 0).
 
-This is the directive-14g statement "the Roytenberg bracket from the
+This is the statement "the Roytenberg bracket from the
 Poisson geometry case yields a Courant algebroid", mechanized as
 identification theorems: each Roytenberg configuration IS one of the
 verified Courant structures, so its axioms are inherited from the
-corresponding suite (the Jacobi conditions themselves are the 6.F
-theorems — H-closure ⟺ dH, proven degree-generally). The symmetric
+corresponding suite (the Jacobi conditions themselves are the
+:mod:`~jacopy.packages.drinfeld.roytenberg` theorems — H-closure ⟺ dH,
+proven degree-generally). The symmetric
 part of the FULL bracket (everything on) is also proven: the H- and
 R-terms are antisymmetric, so ``D_θ`` survives every twist.
 """
@@ -121,7 +122,7 @@ def prove_roytenberg_reduces_to_dorfman(
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
     """All switches OFF: the Roytenberg bracket is the STANDARD
-    Dorfman bracket of 7.B.1 — component-wise identification (the
+    Dorfman bracket of :mod:`standard_courant` — component-wise identification (the
     𝒦 combination ``−ℒ_V ω + dι_V ω`` matches Dorfman's form
     side)."""
     _require_poisson(N)
@@ -163,15 +164,15 @@ def prove_roytenberg_is_theta_double_under_poisson(
     registry: Optional[PropertyRegistry] = None,
     declare_poisson: bool = True,
 ) -> Tuple[ProofChain, Theorem]:
-    """THE directive-14g statement: with tilde + R on and the DECLARED Poisson
+    """THE central statement: with tilde + R on and the DECLARED Poisson
     condition, the Roytenberg bracket IS the TRIANGULAR θ-double
     (the LWX double of the Poisson Lie bialgebroid,
     :func:`~jacopy.packages.drinfeld.double.nambu_double` at
     ``p = 1``) — the natural R-twist ``R′ = [θ♯·,θ♯·] − θ♯[·,·]_θ``
-    dies under the fundamental identity (7.B.2c). Honest-fail
+    dies under the fundamental identity (see :mod:`r_twisted`). Honest-fail
     without the declaration: the difference is the surviving R′.
 
-    (2026-09-09 audit, finding 2: this identification's target is
+    (This identification's target is
     the TRIANGULAR double — total anchor ``U + θ♯ω``, nonzero TM
     side — NOT Watamura's ``(TM)₀ ⊕ (T*M)_θ`` of
     :mod:`poisson_generalized`, whose TM side is trivial.)"""
@@ -234,7 +235,7 @@ def prove_roytenberg_h_is_twisted_dorfman(
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
     """H on (tilde/R off): the Roytenberg bracket is the H-TWISTED
-    Dorfman bracket of 7.B.2a — Courant ⟺ dH = 0 applies."""
+    Dorfman bracket of :mod:`twisted_courant` — Courant ⟺ dH = 0 applies."""
     _require_poisson(N)
     engine = _r_engine(N, registry, declare_fi=False)
     r_vec, r_form = roytenberg_bracket(
@@ -288,7 +289,7 @@ def prove_full_roytenberg_symmetric_part(
     ``[x,y]_Roy + [y,x]_Roy = 2·𝒟_θ⟨x,y⟩₊``
 
     with ``𝒟_θ(h) = ½·(−θ♯dh, dh)`` — the coboundary of the
-    TRIANGULAR double (``𝒟 = ½(d̃ + d)``, the 6.D symmetric part;
+    TRIANGULAR double (``𝒟 = ½(d̃ + d)``, the tilde-double symmetric part;
     distinct from Watamura's ``D_θ = ½(−θ♯dh, 0)`` whose structure
     has no ``d``-leg) — surviving every twist."""
     _require_poisson(N)

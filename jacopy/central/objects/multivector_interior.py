@@ -1,5 +1,5 @@
 """
-Interior product by a MULTIVECTOR (Phase 6.H.2) — the primitive the
+Interior product by a MULTIVECTOR — the primitive the
 exceptional twist needs [E6 paper eqs (4.13)-(4.14) — an exceptional-
 geometry paper that is NOT in the repository and is not identified
 (no author / arXiv number recorded): labels unverified. Not
@@ -23,7 +23,7 @@ come from two definitional rules:
 * :class:`MultivectorInteriorDecomposableDefinition` — the
   decomposable case unfolds into the iterated ordinary interior.
 
-This node closes the 6.H "scope note" gap: with it the
+With this node the
 ``Π₃ ⊛ Π₃`` bundle map of the exceptional Ψ_Π twist is buildable
 (``(Π₃⊛Π₃)(ω₅) = ½ Π₃(ι_{Π₃} ω₅)``, see
 :mod:`jacopy.packages.drinfeld.examples`)."""
@@ -42,11 +42,11 @@ from jacopy.proof.expansion import Definition
 
 def _multivector_degree(P: Expr, registry: Optional[PropertyRegistry] = None) -> Degree:
     """The multivector degree of ``P`` — the single exterior-degree
-    contract :func:`jacopy.algebra.grading.exterior_degree` (Phase 8
-    step 2a), raised to a :class:`ValueError` when it is unknown.
+    contract :func:`jacopy.algebra.grading.exterior_degree`, raised to
+    a :class:`ValueError` when it is unknown.
     ``f·Π₃`` grades like ``Π₃`` when ``f`` is a declared function of
     ``registry``; an undeclared symbol is NOT assumed to be a scalar
-    coefficient (the pre-2a helper guessed so)."""
+    coefficient."""
     from jacopy.algebra.grading import exterior_degree, is_unknown
 
     deg = exterior_degree(P, registry)
@@ -262,7 +262,7 @@ class MultivectorInteriorDecomposableFormDefinition(Definition):
     = ι_{X_p}∘⋯∘ι_{X₁}``): the two routes agree mechanically on every
     ``(p, q)`` tested (``tests/test_multivector_interior_forms.py``).
     This is the rule that evaluates ``ι_{Π₃}`` on a basis 5-form — the
-    E6-paper (4.13) ↔ ⊛ component bridge (2026-09-10; unverified
+    E6-paper (4.13) ↔ ⊛ component bridge (unverified
     label)."""
 
     name = (

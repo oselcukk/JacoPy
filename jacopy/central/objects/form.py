@@ -1,6 +1,5 @@
 """
-Differential forms and their pairing with vector fields (PDF items
-8g-h, 8t).
+Differential forms and their pairing with vector fields.
 
 * 1-forms (``ω, η, ξ``) and arbitrary **p-forms** — graded covariant
   objects.
@@ -156,14 +155,14 @@ def forms(
 
 
 def form_on_vector(omega: Expr, X: Expr) -> Pairing:
-    """Action of a 1-form on a vector field ``ω(X) = ⟨ω, X⟩`` (PDF item 8t)."""
+    """Action of a 1-form on a vector field ``ω(X) = ⟨ω, X⟩``."""
     if not isinstance(omega, Expr) or not isinstance(X, Expr):
         raise TypeError("form_on_vector arguments must be Expr")
     return Pairing(omega, X)
 
 
 def vector_on_form(X: Expr, omega: Expr) -> Pairing:
-    """Action of a vector field on a 1-form ``X ⌟ ω = ⟨ω, X⟩`` (PDF item 8t).
+    """Action of a vector field on a 1-form ``X ⌟ ω = ⟨ω, X⟩``.
 
     Produces the same scalar as the action of the 1-form on the vector;
     the direction only marks the reading intent.

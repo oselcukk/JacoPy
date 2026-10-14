@@ -45,7 +45,7 @@ def distribute(expr: Expr) -> Expr:
         isinstance(c, Sum) for c in new_children
     ):
         # Wedge multilinearity (sign-free): (a+b) ∧ c = a∧c + b∧c —
-        # higher-degree audit 2026-07-31, needed for SN graded
+        # needed for SN graded
         # antisymmetry at p, q ≥ 2.
         return _distribute_wedge(new_children)
     return expr._rebuild(new_children)

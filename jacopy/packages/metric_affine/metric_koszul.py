@@ -1,5 +1,5 @@
 """
-The Koszul formula family (Phase 4.C).
+The Koszul formula family.
 
 * :func:`prove_generalized_koszul` — the **generalized Koszul
   identity** (the Schouten decomposition in identity form), valid for
@@ -18,10 +18,10 @@ The Koszul formula family (Phase 4.C).
 * :func:`prove_levi_civita_unique` — uniqueness: two compatible
   torsion-free connections satisfy the same Koszul right-hand side,
   and non-degeneracy (definitional for a metric) cancels the generic
-  third slot — a tactic in the Phase 3.D architecture.
+  third slot — a proof tactic.
 
 Module path: formerly ``jacopy.packages.metric_affine.koszul`` (renamed so that no two modules share
-a basename — audit 0B00E1B-FULL T2 names); the old path is a
+a basename); the old path is a
 compatibility alias that IS this module.
 """
 

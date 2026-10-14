@@ -168,8 +168,8 @@ def _swap_behavior(
     * Either factor is an ℝ-CONSTANT (a numeral or a Scalar atom,
       :func:`~jacopy.central.calculus.scalars.is_real_constant`),
       free swap, no sign — checked FIRST: a constant commutes with
-      every ℝ-linear operator, also a :class:`NonCommuting` one (chef
-      contract decision: Scalar = ℝ-constant; ``D∘c = c∘D + D(c) =
+      every ℝ-linear operator, also a :class:`NonCommuting` one (the
+      contract Scalar = ℝ-constant; ``D∘c = c∘D + D(c) =
       c∘D``, consistent with :func:`product_rule` killing ``D(c)``).
     * Either factor carries :class:`NonCommuting`, swap forbidden.
     * Both carry :class:`AntiCommuting`, swap produces a flat ``-1``
@@ -182,8 +182,8 @@ def _swap_behavior(
       marker pair above: swap FORBIDDEN. A Product of
       operators is a composition, and composition is not governed by
       the Koszul rule — degree alone would silently "prove"
-      ``X∘Y = Y∘X`` for degree-0 operators (2026-09-07 audit,
-      finding 1). Order is preserved; commutativity must be opted
+      ``X∘Y = Y∘X`` for degree-0 operators. Order is preserved;
+      commutativity must be opted
       into via the markers.
     * Both plain :class:`Graded` VALUES (forms, functions,
       multivectors — the implicit Koszul default), swap produces
@@ -221,8 +221,8 @@ def _swap_behavior(
 
 
 def _swap_class(e: Expr, registry: PropertyRegistry) -> str:
-    """Default-reject classification for the implicit swap (audit
-    0b00e1b review): ``scalar`` (kind_of function/zero), ``value``
+    """Default-reject classification for the implicit swap:
+    ``scalar`` (kind_of function/zero), ``value``
     (a form, or an untyped vector-free value such as ``D(x)`` for a
     declared ``Graded`` x), ``elem`` (a multivector-type element with a
     certified exterior degree, e.g. ``d̃X``), else ``op`` — vectors

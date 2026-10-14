@@ -2,9 +2,9 @@
 
 Every atom of the expression tree gets a deterministic random value that
 depends only on ``(model seed, atom key)`` — never on traversal order —
-so a check is reproducible from its seed alone (SPEC §4).
+so a check is reproducible from its seed alone.
 
-Poisson data (F1 core): a bivector named by a tilde / Lichnerowicz
+Poisson data: a bivector named by a tilde / Lichnerowicz
 calculus (or declared ``poisson`` by its structure) is drawn from a
 Poisson family; the counter-model draws a generic quadratic bivector and
 verifies ``[π, π]_SN ≠ 0`` numerically. Both families are self-checked

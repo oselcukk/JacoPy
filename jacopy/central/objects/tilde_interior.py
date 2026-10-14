@@ -1,6 +1,6 @@
 """
 Tilde interior product ``ι̃_ω`` — contraction of a p-vector field with
-a 1-form (PDF item 8s).
+a 1-form.
 
 The **covariant twin** of
 :class:`~jacopy.central.objects.interior.Interior`: while ``ι_X``
@@ -10,7 +10,7 @@ with a 1-form ``ω``:
     (ι̃_ω π)(ω₁, …, ω_{p-1}) := π(ω, ω₁, …, ω_{p-1}),
 
 the result is a (p−1)-vector field. ``ι̃_ω`` is a degree ``−1`` graded
-anti-derivation (on multivectors). In Poisson geometry (Phase 5) the
+anti-derivation (on multivectors). In Poisson geometry the
 tilde exterior derivative ``d̃`` and the tilde Lie derivative ``L̃``
 are built from the Koszul bracket through this ``ι̃``.
 

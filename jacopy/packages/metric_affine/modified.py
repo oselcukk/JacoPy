@@ -1,16 +1,16 @@
 """
-Modified E-torsion and projected E-curvature (Phase 4.E.2)
+Modified E-torsion and projected E-curvature
 [MC Corollary 3.2, Definition 3.7, Propositions 3.3–3.4, Corollary 3.3,
 Definition 3.11].
 
-The pseudo tensors of 4.E.1 carry locality defects; the MC corrections
+The pseudo tensors of :mod:`e_connection` carry locality defects; the MC corrections
 repair them:
 
     ᴸT(u, v)   := T⁽⁰⁾(u, v) + Σ_s L(e^s, ∇_{e_s} u, v),
     ᴸ̂R(u, v, w) := R⁽⁰⁾(u, v)w + Σ_s ∇_{𝒫(L(e^s, ∇_{e_s} u, v))} w,
 
 with ``(e_s)`` a frame of ``E`` and ``𝒫`` a locality projector
-(Phase 3.E.4 — this module is its main consumer).
+(this module is its main consumer).
 
 The proofs turn on ONE new rule, the **coframe recombination**
 
@@ -18,13 +18,13 @@ The proofs turn on ONE new rule, the **coframe recombination**
 
 (collection direction ONLY — its inverse, a ``Df``-decomposition
 axiom, would ping-pong against it; same design decision as the C2
-collection of Phase 3.E.2). It is exactly the coframe-completeness
+collection of the abstract-algebroid layer). It is exactly the coframe-completeness
 identity ``Df = Σ_s ⟨Df, e_s⟩ e^s = Σ_s ρ(e_s)(f)·e^s`` read
 backwards, applied inside any slot-linear expression ``E`` via the
 slot-walking substitution protocol.
 
 * ``ᴸT`` is then ``C^∞``-tensorial in BOTH slots on a local algebroid
-  (the recombined ``L(Df,u,v)`` cancels the 4.E.1 defect);
+  (the recombined ``L(Df,u,v)`` cancels the first-slot defect);
 * ``ᴸ̂R``'s first slot closes the same way — the recombined
   ``∇_{𝒫(L(Df,u,v))}w`` meets the projector's ABSORPTION rule
   (``𝒫`` acts as identity on coboundary values) and cancels;

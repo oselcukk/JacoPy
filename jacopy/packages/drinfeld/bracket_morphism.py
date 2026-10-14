@@ -1,5 +1,5 @@
 """
-Bracket-morphism compatibility (Phase 6.I.2) — TW (4.18)-(4.20)
+Bracket-morphism compatibility — TW (4.18)-(4.20)
 [arXiv:2409.11973; the same conditions are DD (4.51)-(4.52) in
 arXiv:2312.06584], concretely for the natural map
 
@@ -23,7 +23,7 @@ Theorems:
       ρ([e₁, e₂]_double) = [ρ(e₁), ρ(e₂)]_Lie,
 
   under the declared FI (honest-fail without) — the double-level
-  generalization of the Phase 5 Hamiltonian anchor-morphism.
+  generalization of the Poisson Hamiltonian anchor-morphism.
 """
 
 from __future__ import annotations
@@ -154,7 +154,7 @@ def prove_total_anchor_is_bracket_morphism(
         ρ([e₁, e₂]_double) = [ρ(e₁), ρ(e₂)]_Lie
 
     under the declared FI (honest-fail without) — the double-level
-    generalization of the Phase 5 Hamiltonian anchor-morphism.
+    generalization of the Poisson Hamiltonian anchor-morphism.
     Probe ``h``."""
     vec, form = nambu_double(N, U1, om1, U2, om2)
     lhs = Sum(vec, N.sharp_vf(form))

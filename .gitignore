@@ -14,6 +14,7 @@ dist/
 htmlcov/
 .tox/
 .venv/
+.venv-docs/
 .wheel-test/
 venv/
 env/
@@ -23,7 +24,7 @@ env/
 .DS_Store
 .claude/
 
-# Local-only presentation materials (Monday class presentation)
+# Local-only presentation materials
 presentation/
 
 # Heavy metric demo output / intermediate cache (Kerr-Newman-de Sitter
@@ -33,10 +34,14 @@ examples/kerr_output.txt
 examples/*_cache/
 examples/*_output.txt
 
-# Course material, papers and dev-only planning — never published
+# Local reference PDFs and development planning notes (not tracked)
 *.pdf
 ROADMAP.md
 # local dated backup copies of ROADMAP.md
 ROADMAP.md.*
 roadmap/
 .oracle/
+
+# Sphinx build output and generated API stubs
+docs/_build/
+docs/reference/api/generated/

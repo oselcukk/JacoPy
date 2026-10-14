@@ -1,4 +1,4 @@
-"""Model selection for algebroid equations (SPEC §2 ``select.py``).
+"""Model selection for algebroid equations.
 
 * D-models: every algebroid of the equation gets a family satisfying its
   DECLARED axioms (``Algebroid.declarations``, levels already expanded by
@@ -62,7 +62,7 @@ RULE_PREFIXES = (
 )
 
 #: (premises, conclusion): theorems of the library's hierarchy
-#: (context.py LEVELS comments): leibniz ⇒ anchor-morphism (Phase 3.D);
+#: (context.py LEVELS comments): leibniz ⇒ anchor-morphism;
 #: metric invariance + symmetric part ⇒ right Leibniz [B 4.11, g
 #: non-degenerate by definition]; antisymmetry (resp. symmetric part)
 #: + right Leibniz ⇒ left Leibniz (L = 0, resp. L = g(u,v) g⁻¹Df).

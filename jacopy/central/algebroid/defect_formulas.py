@@ -1,13 +1,13 @@
 """
 Exact defect formulas for the Cartan relations on an ALMOST-Lie
-algebroid (Phase 6.G) — [2409.11973 App A, eqs (A.5)/(A.7)/(A.8)].
+algebroid — [2409.11973 App A, eqs (A.5)/(A.7)/(A.8)].
 
-Phase 3.F proved the ⟺ statements (``d_E² = 0`` on functions ⟺
+The algebroid calculus proves the ⟺ statements (``d_E² = 0`` on functions ⟺
 anchor morphism; on 1-forms the Lie theorem). Here the failures are
 QUANTIFIED: each broken Cartan relation equals an exact combination
 of the
 predator ``𝒫_ρ(u,v) = [ρu, ρv]_Lie − ρ([u,v])`` and the Jacobiator
-``𝒥(u,v,w)`` — the two diagnosis nodes of Phase 3 become the
+``𝒥(u,v,w)`` — the two diagnosis nodes of the algebroid layer become the
 CURVATURE of the calculus. On functions (A.7):
 
     ℒ_u ℒ_v f − ℒ_v ℒ_u f − ℒ_{[u,v]} f = 𝒫(u,v)(f),
@@ -30,11 +30,11 @@ and the calculus conditions (A.8):
         = 𝒫(u,v)(ι_w η),
     (ℒ_w d_E ι_v ω − d_E ι_w d_E ι_v ω)(u) = 𝒫(w,u)(ι_v ω).
 
-**Scope (audit 0B00E1B-FULL M2-3).** The paper states them on an
+**Scope.** The paper states them on an
 almost-Lie algebroid (skew bracket + right Leibniz), where ``d_E`` is a
 genuine exterior derivative. Read as identities of the ORDERED Palais
 evaluation formulas (``d_E`` evaluated plain-multilinearly when the
-bracket is not declared skew, M2-1), seven of the eight are
+bracket is not declared skew), seven of the eight are
 mathematically valid for every ℝ-bilinear bracket; the engine CLOSES
 them on a bare algebroid (tested) — under extra declarations a
 declared rule (e.g. ``J → 0``) may rewrite one side before the other is
@@ -51,7 +51,8 @@ and :func:`prove_defect_d_squared_on_one_forms_general` proves the
 declaration-free version with the symmetric-part correction.
 
 Corollaries: a declared ``anchor-morphism`` kills every ``𝒫`` and
-``jacobi`` kills ``𝒥`` — recovering the 3.F closures.
+``jacobi`` kills ``𝒥`` — recovering the closures of
+:mod:`jacopy.central.algebroid.calculus`.
 """
 
 from __future__ import annotations
@@ -73,7 +74,7 @@ from jacopy.central.algebroid.operators import anchor_predator, jacobiator
 
 def _P(alg: Algebroid, u: Expr, v: Expr, x: Expr) -> Expr:
     """Paper-convention predator action [eq (A.6)]:
-    ``𝒫_ρ(u,v) = [ρu,ρv]_Lie − ρ([u,v])`` — the NEGATIVE of the v3
+    ``𝒫_ρ(u,v) = [ρu,ρv]_Lie − ρ([u,v])`` — the NEGATIVE of JacoPy's
     :class:`Predator` node (``P_Φ = Φ[u,v] − [Φu,Φv]``)."""
     return Neg(Act(anchor_predator(alg, u, v), x))
 
@@ -131,7 +132,7 @@ def prove_defect_d_squared_on_functions(
     max_steps: int = 4096,
 ) -> ProofChain:
     """(A.7)-2: ``(d_E d_E f)(u,v) = 𝒫(u,v)(f)`` — the quantitative
-    version of the 3.F ``d² = 0 ⟺ morphism`` theorem."""
+    version of the ``d² = 0 ⟺ morphism`` theorem."""
     node = Sum(
         MultiEval(
             d_E(alg, d_E(alg, f)),
@@ -218,7 +219,7 @@ def prove_defect_d_squared_on_one_forms(
     VALID ONLY FOR A SKEW BRACKET (declare ``antisymmetric``; the
     paper's almost-Lie setting): otherwise the symmetric-part terms of
     :func:`prove_defect_d_squared_on_one_forms_general` survive and
-    this raises :class:`ProofFailure` (M2-3)."""
+    this raises :class:`ProofFailure`."""
     node = Sum(
         MultiEval(
             d_E(alg, d_E(alg, mu)),
@@ -261,7 +262,7 @@ def prove_defect_d_squared_on_one_forms_general(
     The first-order ``ρ(·)μ([·,·])`` terms cancel pairwise; the
     second-order anchor terms give the predators; the bracket terms are
     ``μ([[u,v],w] − [[u,w],v] + [[v,w],u])``, which is the Jacobiator
-    plus the symmetric-part correction (M2-3).
+    plus the symmetric-part correction.
 
     The identity uses NO axiom, so by default it is proved with the
     engine of the declaration-free copy of ``alg`` (same name, anchor

@@ -29,8 +29,8 @@ def is_scalar_function(
     """Conservative check: is ``expr`` certainly a ``C^∞(M)`` function?
 
     A thin wrapper over the ONE type source,
-    :func:`~jacopy.central.objects.kind.kind_of` (audit 0b00e1b code
-    review: two type sources disagreed): ``True`` exactly when the
+    :func:`~jacopy.central.objects.kind.kind_of` (a single source
+    avoids two type sources disagreeing): ``True`` exactly when the
     kind is ``"function"`` (or the zero function). There, recursively:
     numerals; symbols declared ``Scalar``/``Graded(0)``; degree-0
     atoms that are not operators (0-forms, Kronecker delta, …);
@@ -62,7 +62,7 @@ def declared_real_constant(
     recorded as a hypothesis; a positive one is re-queried with ``get``
     (the visible Scalar) and the three clash answers are read RAW
     (:meth:`~jacopy.core.registry.PropertyRegistry.lookup`, recorded as
-    raw facts — a visibility filter never hides a clash, gate-5 F1), so
+    raw facts — a visibility filter never hides a clash), so
     all four become the hypotheses of the step that relies on them. Why the negative is not
     a hypothesis (the documented contract, locked by
     ``test_m1_1_negative_scalar_answers_are_not_hypotheses``): constants
@@ -82,7 +82,7 @@ def declared_real_constant(
     with (nullcontext() if record else registry.untracked()):
         if registry.peek(expr, Scalar) is None:
             return False
-        # the clash is decided on the RAW declarations (gate-5 F1): a
+        # the clash is decided on the RAW declarations: a
         # visibility filter (axioms whitelist / strict mode) narrows
         # which Scalar declaration may be USED, it never hides the
         # Graded / NonCommuting / AntiCommuting that make the
@@ -99,8 +99,8 @@ def declared_real_constant(
 def is_real_constant(
     expr: Expr, registry: Optional[PropertyRegistry] = None, *, record: bool = True
 ) -> bool:
-    """THE ℝ-constant test of the Scalar contract (audit 0b00e1b M1-1,
-    chef decision: ONE meaning, ONE predicate). Every consumer calls
+    """THE ℝ-constant test of the Scalar contract (ONE meaning,
+    ONE predicate). Every consumer calls
     it: product_rule's ``D(c) = 0`` and the engine's contract step
     (through :func:`annihilates`), sort_product (the free swap and the
     degree), :func:`~jacopy.algebra.derivation.degree_of`,
@@ -119,10 +119,10 @@ def is_real_constant(
     if isinstance(expr, (Integer, Rational)):
         return True
     if isinstance(expr, (Neg, Sum, Product)):
-        # structural closure (gate-5 #5): a negation / sum / product
+        # structural closure: a negation / sum / product
         # whose every leaf is an ℝ-constant is one (constants form a
         # ring) — unless the node ITSELF carries a raw declaration that
-        # contradicts constancy (gate-6 P3a: ``declare(c·k, Graded(1))``)
+        # contradicts constancy (e.g. ``declare(c·k, Graded(1))``)
         if not all(is_real_constant(c, registry, record=record) for c in expr.children):
             return False  # (a negative answer records nothing)
         if registry is not None:

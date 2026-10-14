@@ -1,7 +1,7 @@
-"""Symplectic, Poisson, Nambu-Poisson (PDF item 12): the Poisson
-bivector ``π`` and its bracket/Hamiltonian/sharp layer (5.A), the
+"""Symplectic, Poisson, Nambu-Poisson: the Poisson
+bivector ``π`` and its bracket/Hamiltonian/sharp layer, the
 Koszul bracket, the cotangent-algebroid showcase, the tilde calculus,
-Roytenberg and Nambu-Poisson structures (5.B-5.E)."""
+Roytenberg and Nambu-Poisson structures."""
 
 from jacopy.packages.poisson.nambu import (
     NambuFIDeclaration,
@@ -80,7 +80,7 @@ from jacopy.packages.poisson.core import (
     prove_poisson_leibniz,
 )
 
-# Facade alignment (independent audit of commit 0b00e1b, item T2-6): the remaining user-path
+# Facade alignment: the remaining user-path
 # constructors, prove_* theorems and package-specific declarations/rules.
 from jacopy.packages.poisson.koszul_jacobi import (
     KoszulJacobiCertificate,
@@ -177,7 +177,7 @@ __all__ = [
     "prove_poisson_antisymmetry",
     "prove_poisson_constant",
     "prove_poisson_leibniz",
-    # facade alignment (T2-6)
+    # facade alignment
     "KoszulJacobiCertificate",
     "ZeroSeed",
     "koszul_jacobi_certificate",

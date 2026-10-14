@@ -1,7 +1,7 @@
 """
-Torsion and curvature (Phase 4.B).
+Torsion and curvature.
 
-Canonical definitions (PDF item 11; definition policy §1 — one
+Canonical definitions (definition policy §1 — one
 definition, everything else a theorem):
 
     T(X, Y)   := ∇_X Y − ∇_Y X − [X, Y],
@@ -70,7 +70,7 @@ class Torsion(Derivation):
 
     # A derivation only on TM (then the value is a vector field); for a
     # connection on another bundle it is a section, not an operator on
-    # functions (audit 0b00e1b; default reject).
+    # functions (default reject).
     @property
     def section_value(self) -> bool:
         return not isinstance(self._bundle, TangentBundle)
@@ -147,7 +147,7 @@ class Curvature(Derivation):
 
     # A derivation only on TM (then the value is a vector field); for a
     # connection on another bundle it is a section, not an operator on
-    # functions (audit 0b00e1b; default reject).
+    # functions (default reject).
     @property
     def section_value(self) -> bool:
         return not isinstance(self._bundle, TangentBundle)

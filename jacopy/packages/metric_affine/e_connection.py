@@ -1,5 +1,5 @@
 """
-Linear E-connections and E-torsion/E-curvature (Phase 4.E.1)
+Linear E-connections and E-torsion/E-curvature
 [MC Definition 3.2, Eqs. (3.8)–(3.9); last-slot tensoriality from
 MC (3.19) + the proof of Proposition 3.3].
 
@@ -13,10 +13,10 @@ The context reuses :class:`~jacopy.central.objects.connection.Connection`
 on the algebroid's bundle; the only genuinely new definitional rule is
 the anchored scalar action ``∇_u f = ρ(u)(f)``
 (:class:`EConnectionScalarActionDefinition`) — direction linearity and
-the argument Leibniz come from the Phase 4.A rules + ``product_rule``
+the argument Leibniz come from the connection structure rules + ``product_rule``
 unchanged.
 
-**E-torsion / E-curvature** are the 4.B nodes with the ALGEBROID
+**E-torsion / E-curvature** are the torsion/curvature nodes with the ALGEBROID
 bracket in their expansions:
 
     T⁽⁰⁾(u,v)  = ∇_u v − ∇_v u − [u,v]_E,
@@ -29,7 +29,7 @@ these are only PSEUDO-tensors —
 * ``T⁽⁰⁾(f·u, v) = f·T⁽⁰⁾(u,v) − L(Df, u, v)`` — the locality term
   survives as the tensoriality DEFECT
   (:func:`prove_pseudo_torsion_first_slot_defect`), which is exactly
-  why the MODIFIED torsion ``ᴸT`` exists (Phase 4.E.2);
+  why the MODIFIED torsion ``ᴸT`` exists;
 * ``R⁽⁰⁾(u,v)(f·w) = f·R⁽⁰⁾(u,v)w`` holds IFF the anchor is a bracket
   morphism — MC (3.19) + Proposition 3.3 (its proof's ``f·w``
   computation), mechanized as the conditional theorem
@@ -70,8 +70,8 @@ def e_connection(alg: Algebroid, name: str = "∇") -> Connection:
 
 class EConnectionScalarActionDefinition(Definition):
     """``∇_u f → ρ(u)(f)`` — the anchored scalar action of an
-    E-connection (the algebroid case deferred by the Phase 1 tangent
-    rule's docstring, now delivered)."""
+    E-connection (the algebroid counterpart of the tangent
+    rule ``∇_X f = X(f)``)."""
 
     anchor = Act
     source = (
@@ -193,7 +193,7 @@ def e_connection_engine(
     projectors=(),
 ) -> ExpansionEngine:
     """The algebroid engine extended with the E-connection layer: the
-    4.A connection structure rules plus the anchored scalar action and
+    connection structure rules plus the anchored scalar action and
     the E-torsion/E-curvature expansions."""
     from jacopy.central.algebroid.algebroid_expansion import algebroid_engine
     from jacopy.packages.metric_affine.rules import (
@@ -272,7 +272,7 @@ def prove_pseudo_torsion_first_slot_defect(
     """``T⁽⁰⁾(f·u, v) = f·T⁽⁰⁾(u, v) − L(Df, u, v)`` — the PSEUDO
     tensor's first-slot defect on a local algebroid: the bracket's
     left-Leibniz locality term survives. This is exactly why the
-    modified torsion ``ᴸT`` exists (Phase 4.E.2)."""
+    modified torsion ``ᴸT`` exists."""
     return ExpandAndSimplify().prove(
         torsion(conn, Product(f, u), v),
         Sum(

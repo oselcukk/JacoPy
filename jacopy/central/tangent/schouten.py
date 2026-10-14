@@ -1,8 +1,7 @@
 """
-The Schouten-Nijenhuis bracket ``[·,·]_SN`` of multivector fields
-(PDF item 9f; Phase 2.F).
+The Schouten-Nijenhuis bracket ``[·,·]_SN`` of multivector fields.
 
-**Canonical definition (decomposable formula, v2 sign convention).**
+**Canonical definition (decomposable formula, JacoPy sign convention).**
 In the shifted grading ``s(A) = m(A) − 1`` (``m`` = multivector
 degree: functions 0, vector fields 1, ``X ∧ Y`` 2, …) the bracket is
 fixed by four base cases and wedge-Leibniz recursion:
@@ -14,8 +13,8 @@ fixed by four base cases and wedge-Leibniz recursion:
 
 with the Gerstenhaber-Leibniz exponent mixing the SHIFTED degree of
 the outer operand and the UNSHIFTED degree of the passed-over factor
-(audit fix 2026-07-23 — the s·s variant inherited from v2 agreed on
-all-vector operands but broke the alternation of ``[X∧Y, f]``).
+(the s·s variant agrees on all-vector operands but breaks the
+alternation of ``[X∧Y, f]``).
 
 Unfolding the recursion reproduces the closed double-sum decomposable
 formula ``Σ_{i,j} (−1)^{i+j} [X_i, Y_j] ∧ …``. The graded
@@ -23,8 +22,7 @@ antisymmetry ``[A,B] = −(−1)^{s(A)s(B)}[B,A]``, the graded Jacobi
 identity and the ``∧``-Leibniz property are **theorems**.
 
 Multivector wedges are :class:`~jacopy.core.wedge.Wedge` nodes of
-vector fields (the Wedge lift: ``|X∧Y| = 2``); v2 used raw ``Product``
-nodes here — the Wedge representation is the v3 upgrade that keeps
+vector fields (the Wedge lift: ``|X∧Y| = 2``); the Wedge representation keeps
 multivectors in the same node family as forms.
 
 ``m`` is computed structurally (:func:`multivector_degree`); the
@@ -33,7 +31,7 @@ bracket node itself is a foundation
 :data:`SN`. The engine rule :class:`SNExpansionDefinition` performs
 the definitional expansion; unsupported shapes (symbolic degree,
 opaque higher atoms like a bare Poisson bivector) stay inert — the
-Poisson layer (Phase 5) reasons about those symbolically.
+Poisson layer reasons about those symbolically.
 """
 
 from __future__ import annotations
@@ -87,7 +85,7 @@ class SchoutenBracket(GradedBracket):
         registry: Optional[PropertyRegistry] = None,
     ) -> Degree:
         """``m([a, b]_SN) = m(a) + m(b) − 1`` in the MULTIVECTOR
-        grading (audit fix 2026-07-23: the operator-grading default
+        grading (the operator-grading default
         |a|+|b|+deg would report m([π,π]) = 4 instead of 3, because a
         vector field's operator degree is 0 while its multivector
         degree is 1)."""
@@ -100,7 +98,7 @@ class SchoutenBracket(GradedBracket):
             )
         return Degree.const(m_a + m_b - 1)
 
-    # ---- grading hooks (audit 0b00e1b K1-3) ------------------------ #
+    # ---- grading hooks ---------------------------------------------- #
     #
     # The inherited obstruction helpers take every sign from these
     # hooks. With the operator-grading default a vector field counts
@@ -177,8 +175,7 @@ def multivector_degree(
             total += m
         return total
     if isinstance(expr, BracketApply) and expr.bracket is SN:
-        # |[a, b]_SN| = |a| + |b| − 1 (higher-degree audit
-        # 2026-07-31: the bracket node must report its own degree so
+        # |[a, b]_SN| = |a| + |b| − 1 (the bracket node must report its own degree so
         # downstream bookkeeping sees p + q − 1).
         ma = multivector_degree(expr.a, registry)
         mb = multivector_degree(expr.b, registry)
@@ -243,8 +240,8 @@ def _sn_expand(
         # the UNSHIFTED degree of the tail):
         # [X∧Y, Z] = X ∧ [Y,Z] + (−1)^{s(Z)·m(Y)} [X,Z] ∧ Y.
         # For all-vector operands s(Z) = 0 and every sign is +; the
-        # s·s variant carried over from v2 agreed there but broke the
-        # alternation of [X∧Y, f] (audit finding, 2026-07-23).
+        # s·s variant agrees there but breaks the
+        # alternation of [X∧Y, f].
         if isinstance(a, Wedge) and len(a.children) >= 2:
             X = a.children[0]
             tail = a.children[1:]
@@ -287,7 +284,7 @@ def _sn_expand(
 
 
 # --------------------------------------------------------------------- #
-# Theorems (PDF item 9f)                                                 #
+# Theorems                                                               #
 # --------------------------------------------------------------------- #
 
 
@@ -301,7 +298,7 @@ def prove_reduces_to_lie(
     X: Expr, Y: Expr, f: Expr, *, registry=None
 ) -> ProofChain:
     """``[X, Y]_SN (f) = [X, Y]_Lie (f)`` — on 1-vectors SN is the Lie
-    bracket (PDF 8a-style reduction, on a generic function)."""
+    bracket (the TM reduction, on a generic function)."""
     lhs = Act(sn_bracket(X, Y), f)
     rhs = Act(lie_bracket(X, Y), f)
     return ExpandAndSimplify().prove(
@@ -354,8 +351,7 @@ def prove_sn_graded_antisymmetry(
 
 
 class SNOrientationDefinition(Definition):
-    """Canonical slot order for the SN bracket, with the GRADED sign
-    (higher-degree audit 2026-07-31):
+    """Canonical slot order for the SN bracket, with the GRADED sign:
 
         [a, b]_SN → −(−1)^{(p−1)(q−1)} [b, a]_SN
                                     when repr(a) > repr(b),
@@ -365,7 +361,7 @@ class SNOrientationDefinition(Definition):
     mechanically on decomposables at (1,1), (2,1), (2,2), (3,2),
     (3,3) before this rule was admitted (the rule is the
     normal-form orientation of that theorem, the BracketOrientation
-    pattern of Phase 2). Fires at most once per node (the rewrite is
+    pattern of the Lie bracket). Fires at most once per node (the rewrite is
     order-canonical); inert on equal slots and undeterminable
     degrees."""
 
@@ -406,9 +402,8 @@ class SNOrientationDefinition(Definition):
 class LieOnMultivectorDefinition(Definition):
     """``L_X P → [X, P]_SN`` for a multivector ``P`` of degree ≥ 2 —
     the canonical extension of the Lie derivative to multivectors
-    (PDF item 9e; closes the audit gap where ``L_X P`` stayed
-    inert). Degree ≤ 1 is untouched: functions and vector fields
-    keep their intrinsic-L branches."""
+    (without it ``L_X P`` would stay inert). Degree ≤ 1 is untouched:
+    functions and vector fields keep their intrinsic-L branches."""
 
     def __init__(self, registry: Optional[PropertyRegistry] = None) -> None:
         from jacopy.algebra.derivation import Act as _Act

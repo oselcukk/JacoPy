@@ -1,5 +1,5 @@
 """
-The algebroid expansion engine (Phase 3.A).
+The algebroid expansion engine.
 
 Assembles the definitional rules valid on ANY algebroid: the generic
 structural rules (operator linearity, scalar action, slot linearity)
@@ -8,14 +8,14 @@ bracket ℝ-bilinearity, coboundary evaluation).
 
 **The E = TM reduction is literal**: for the tangent algebroid the
 factory simply returns the tangent engine — the usual calculus IS the
-instantiation (PDF item 8a), not a parallel rule set.
+instantiation, not a parallel rule set.
 
-Declared hierarchy rules (right-Leibniz, anchor morphism, …) arrive in
-Phase 3.B and are registered per algebroid instance on top of this
+Declared hierarchy rules (right-Leibniz, anchor morphism, …) are
+registered per algebroid instance on top of this
 base, exactly like holonomic frames on the tangent engine.
 
 Module path: formerly ``jacopy.central.algebroid.engine`` (renamed so that no two modules share
-a basename — audit 0B00E1B-FULL T2 names); the old path is a
+a basename); the old path is a
 compatibility alias that IS this module.
 """
 
@@ -69,12 +69,12 @@ def algebroid_engine(
 ) -> ExpansionEngine:
     """Build the engine for the algebroid ``alg``: definitional rules
     plus the rules licensed by its declarations, plus (optionally) the
-    defining rules of the given locality projectors (Phase 3.E.4) —
+    defining rules of the given locality projectors —
     the same opt-in pattern as ``tangent_engine``'s holonomic frames."""
     if not isinstance(alg, Algebroid):
         raise TypeError("algebroid_engine expects an Algebroid")
     if alg.is_tangent:
-        # PDF item 8a in code: the TM instantiation is the usual
+        # The E = TM reduction in code: the TM instantiation is the usual
         # machinery, not a parallel one.
         from jacopy.central.tangent.tangent_expansion import tangent_engine
 
@@ -82,7 +82,7 @@ def algebroid_engine(
 
     # Generic rules shared with the tangent layer. The Lie-bracket
     # action definition is needed because the anchor-morphism rule
-    # (and the 3.D theorem) produce [ρ(u), ρ(v)]_Lie nodes whose
+    # (and the anchor-morphism theorem) produce [ρ(u), ρ(v)]_Lie nodes whose
     # action on functions must expand.
     from jacopy.central.tangent.lie_bracket import (
         LieBracketActionDefinition,

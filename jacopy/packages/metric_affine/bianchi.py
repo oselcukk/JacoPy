@@ -1,5 +1,5 @@
 """
-The Bianchi identities and the Ricci identity (Phase 4.C.2), in their
+The Bianchi identities and the Ricci identity, in their
 TORSIONFUL (metric-affine) form:
 
 * **Bianchi I**:
@@ -156,7 +156,7 @@ def prove_bianchi_first(
 def _normalize(expr: Expr, engine, registry) -> Expr:
     """Engine normal form, nested shape (8 outer rounds of: expansion +
     product rule to their fixpoint in at most 64 inner rounds, then the
-    simplifier). Phase 8 step 4b adapter over
+    simplifier). An adapter over
     :func:`jacopy.proof.normalize.normalize`."""
     from jacopy.proof.normalize import normalize
 

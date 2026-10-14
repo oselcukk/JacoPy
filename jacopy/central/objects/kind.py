@@ -1,8 +1,7 @@
 """
 The common TYPE query — kind, exterior degree and owning bundle of an
-expression (Phase 8 steps 1c/2a; audit rounds 2026-09-22/23: "degree is
-not a type", "a foreign bundle is not unknown", "a known mixed sum is
-not unknown").
+expression. Three principles: a degree is not a type, a foreign
+bundle is not unknown, and a known mixed sum is not unknown.
 
 :func:`kind_of` returns a :class:`Kind` with
 
@@ -195,8 +194,8 @@ def is_section_valued(expr: Expr) -> bool:
     E-section, ``[u,v]_E``, ``J_E``, ``g⁻¹ω``, …), or a ``Neg``/``Sum``/
     ``Product``/``Commutator``/indexed sum built from one? Such an
     expression acts on functions only through the anchor, so it is
-    never a derivation of C∞(M) and ``Act`` on it is untyped (audit
-    0b00e1b integration review, item 7). Operator slots are NOT entered:
+    never a derivation of C∞(M) and ``Act`` on it is untyped.
+    Operator slots are NOT entered:
     ``ρ(u)`` is a TM vector field although ``u`` is an E-section."""
     from jacopy.algebra.commutator import Commutator
     from jacopy.core.indexed_sum import IndexedSum
@@ -263,7 +262,7 @@ def wedge_factor_degree(fac: Expr, registry=None) -> Degree:
        agree there — abstract graded algebras, forms, operators).
 
     Otherwise :class:`ValueError` — never the operator degree of a
-    vector-carrying factor (audit 0b00e1b P0-1 and its reviews)."""
+    vector-carrying factor."""
     from jacopy.algebra.derivation import Act, degree_of
     from jacopy.core.wedge import Wedge
 
@@ -355,7 +354,7 @@ def _kind_of_impl(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispat
         # scalars times ONE geometric element keep that element's type
         # (f·X is a vector, f·ω_p a p-form); two or more geometric or
         # operator factors are a composition (X∘Y) or have no meaning
-        # in the exterior algebra — unknown, not graded (roadmap 2a v3)
+        # in the exterior algebra — unknown, not graded
         kinds = [kind_of(c, registry) for c in expr.children]
         if any(k.kind == "zero" for k in kinds):
             return ZERO
@@ -400,7 +399,7 @@ def _kind_of_impl(expr: Expr, registry=None) -> Kind:  # noqa: C901 - one dispat
     if isinstance(expr, EndoForm):
         # m̃ acts degree-preservingly on FORMS (0-forms included); typed
         # here WITH the registry — EndoForm.degree has none, so m̃(f²)
-        # for a functions() symbol f was degree-less (integration item 5)
+        # for a functions() symbol f would otherwise be degree-less
         inner = kind_of(expr.arg, registry)
         if inner.kind in ("function", "zero"):
             return FUNCTION

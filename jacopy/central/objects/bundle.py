@@ -1,5 +1,5 @@
 """
-Bundle — the context that central-code objects live over (PDF item 8a).
+Bundle — the context that central-code objects live over.
 
 **Central-code principle.** Every object is defined so that it works
 relative to a vector bundle ``E`` (bundle) parameter; taking
@@ -10,11 +10,11 @@ This module builds the **skeleton** of the bundle abstraction:
 
 * :class:`Bundle` — the identity of a bundle (name, dimension) and,
   later, slots for the anchor ``ρ_E: E → TM`` and the bracket
-  ``[·,·]_E``. These slots will be filled in Phase 3
+  ``[·,·]_E``. These slots are filled by the algebroid layer
   (``jacopy.central.algebroid``).
 * :class:`TangentBundle` — ``TM``; the "usual" case of the central
   code. The anchor is the identity and the bracket is the Lie bracket
-  (these are wired up in Phases 2-3).
+  (these are wired up in the tangent and algebroid layers).
 * :data:`TM` — the process-wide shared symbolic ``TangentBundle``
   singleton; the default bundle for objects declared without one.
 
@@ -44,8 +44,8 @@ class Bundle:
     Notes
     -----
     The anchor ``ρ_E`` and the bracket ``[·,·]_E`` are not carried yet
-    in this skeleton layer; the general algebroid structure will be
-    added in Phase 3 under :mod:`jacopy.central.algebroid`. For now a
+    in this skeleton layer; the general algebroid structure is
+    provided by :mod:`jacopy.central.algebroid`. Here a
     bundle carries only an identity + dimension and marks which
     context objects (sections, forms, tensors) belong to.
     """
@@ -91,8 +91,9 @@ class TangentBundle(Bundle):
     """``TM`` — the "usual" case of the central code.
 
     The anchor is the identity ``ρ = id_TM`` and the bracket is the Lie
-    bracket of vector fields. These two structures will be wired up in
-    Phase 2 (Lie bracket, d, L) and Phase 3 (general anchor); in this
+    bracket of vector fields. These two structures are wired up in
+    the tangent layer (Lie bracket, d, L) and the algebroid layer
+    (general anchor); in this
     skeleton layer ``TangentBundle`` is a marker. ``name`` is always
     ``"TM"``.
     """

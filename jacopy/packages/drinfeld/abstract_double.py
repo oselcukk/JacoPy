@@ -1,13 +1,13 @@
 """
-The ABSTRACT main theorem of the double (Phase 6.I.4) — the 6.C
-program item "property subset + compatibility ⟹ the double satisfies
+The ABSTRACT main theorem of the double — the statement
+"property subset + compatibility ⟹ the double satisfies
 the same subset", realized as a FINITE DECLARATION SWEEP on the
-Phase 3 abstract-algebroid layer (the engine proves instances, not
+abstract-algebroid layer (the engine proves instances, not
 schemas; the sweep over declared subsets is the mechanical face of
 the schema).
 
-Construction: for an abstract algebroid ``A`` (Phase 3 declaration
-context) with its OWN Cartan calculus ``(d_E, ℒ^E, ι)`` (Phase 3.F),
+Construction: for an abstract algebroid ``A`` (a declaration
+context) with its OWN Cartan calculus ``(d_E, ℒ^E, ι)``,
 the abstract STANDARD double on ``A ⊕ Λᵖ A*`` is
 
     [u+α, v+β] := [u,v]_A ⊕ ( ℒ^E_u β − ℒ^E_v α + d_E ι_v α ).
@@ -22,14 +22,14 @@ Sweep results (each an ⟹ with an honest-fail partner):
   adding left-Leibniz leaves EXACTLY ``⟨α, L(df,v,w)⟩`` — the
   locality operator — as the one-term residual, so ``local`` (L = 0) is forced.
 * **symmetric part**: form component ``= d_E⟨e₁,e₂⟩₊`` needs NO
-  declaration (the 3.F magic theorem); the vector component
+  declaration (the abstract Cartan magic theorem); the vector component
   ``[u,v]+[v,u] = 0`` is exactly the ``antisymmetric`` declaration.
 * **Leibniz-Jacobi (form)**: closes under ``jacobi`` +
   ``anchor-morphism`` (+ right-leibniz), with bracket-level Jacobi
   entering as cited :func:`jacobi_combination_theorem` instances —
   and honest-fails when ``jacobi`` is withheld.
 
-Scope (audit 0b00e1b-FULL M4-3): this is ONLY the tilde-free
+Scope: this is ONLY the tilde-free
 (standard) double — the Z-side bracket and the tilde calculus are zero,
 so the compatibility conditions of the paper's main theorem
 [DD §4, (4.36)-(4.40)] never enter. The general statement "calculus +
@@ -69,7 +69,7 @@ def _iota(u: Expr, x: Expr) -> Expr:
 
 
 def _double_engine(alg: Algebroid, registry):
-    """The 3.F calculus engine LAYERED with the Phase 3 declaration
+    """The abstract calculus engine LAYERED with the declaration
     engine — the calculus rules alone never see the declared axioms
     (anchor-morphism, Leibniz, locality), which is exactly what the
     sweep is about."""
@@ -116,7 +116,7 @@ def prove_abstract_double_right_leibniz(
     max_steps: int = 30000,
 ) -> Tuple[ProofChain, ProofChain]:
     """The double's right-Leibniz law with anchor ``ρ(u+α) = u``,
-    as an EXACT DEFECT FORMULA (the 6.G pattern): under the "local"
+    as an EXACT DEFECT FORMULA: under the "local"
     level (right- + left-Leibniz) the form-component defect is
     precisely the LOCALITY term,
 
@@ -195,7 +195,7 @@ def prove_abstract_double_symmetric_part(
     max_steps: int = 30000,
 ) -> Tuple[ProofChain, ProofChain]:
     """Symmetric part ``= (0, d_E⟨e₁,e₂⟩₊)``: the form component is
-    DECLARATION-FREE (the 3.F magic theorem); the vector component is
+    DECLARATION-FREE (the abstract Cartan magic theorem); the vector component is
     exactly the ``antisymmetric`` declaration (honest-fail
     without)."""
     v12, f12 = abstract_double(alg, u, alpha, v, beta)
@@ -245,7 +245,7 @@ def prove_abstract_double_jacobi_form(
     max_steps: int = 60000,
 ) -> Tuple[ProofChain, List[Theorem]]:
     """Form component of the double's Leibniz-Jacobi — the abstract
-    6.C theorem: closes under ``jacobi`` + ``anchor-morphism`` (+
+    form of the double theorem: closes under ``jacobi`` + ``anchor-morphism`` (+
     ``right-leibniz``), with the bracket-level Jacobi entering as
     cited :func:`jacobi_combination_theorem` instances. Honest-fail
     when ``jacobi`` is withheld. Evaluated against the probe section
@@ -271,7 +271,7 @@ def prove_abstract_double_jacobi_form(
         )
 
         # Stage 1: normalize ALL ± lhs's in the citing engine BEFORE
-        # registering any (6.I.4 lesson: registering the + variant
+        # registering any (registering the + variant
         # first makes the − seed normalize to 0 and get skipped,
         # while the slot residual carries exactly the − shape).
         staged = []

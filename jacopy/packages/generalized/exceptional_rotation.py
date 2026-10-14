@@ -1,6 +1,5 @@
 """
-The exceptional Ψ_Π ROTATION (PDF item 13k; the long-reported
-missing slice): the exceptional Courant bracket on
+The exceptional Ψ_Π ROTATION: the exceptional Courant bracket on
 ``TM ⊕ Λ² ⊕ Λ⁵`` conjugated by the E6 twist [E6 paper (4.10)-(4.12)],
 
     [e₁, e₂]' := Ψ_Π⁻¹ [Ψ_Π e₁, Ψ_Π e₂]_exc,
@@ -110,7 +109,7 @@ def _engine(N3, registry):
 
 
 #: Public name of :func:`_engine` — the engine of the rotated exceptional bracket
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 exceptional_rotation_engine = _engine
 

@@ -1,6 +1,5 @@
 """
-Frame-decomposition axioms and IndexedSum operator pushes
-(Phase 4.D.2b).
+Frame-decomposition axioms and IndexedSum operator pushes.
 
 **Decompositions** (opt-in via ``metric_affine_engine(...,
 decompositions=((conn, fr), ...))``) — the completeness of a frame,
@@ -65,7 +64,7 @@ class ConnectionFrameDecompositionDefinition(Definition):
     """``∇_{e_b} e_c → Σ_s Γ^s_{bc} e_s`` — completeness of the frame
     for the declared ``(∇, frame)`` pair (opt-in axiom)."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     # the frame is a local basis and Γ^a_bc := ⟨e^a, ∇_{X_b}X_c⟩
     # [MC (2.4); (3.3) on an E-frame] — expanding ∇_{e_b}e_c in it
     source = cite("DereliDogan2020", "Section 2, Eq. (2.4); Eq. (3.3) on an E-frame")
@@ -122,10 +121,10 @@ class ConnectionFrameDecompositionDefinition(Definition):
 
 class BracketFrameDecompositionDefinition(Definition):
     """``[e_a, e_b] → Σ_s γ^s_{ab} e_s`` — completeness of the frame
-    for the bracket (opt-in axiom; the summed counterpart of the 2.E
+    for the bracket (opt-in axiom; the summed counterpart of the frame
     coefficient extraction)."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     # "[X_a, X_b] = γ^c_ab X_c for some {γ^c_ab}" [MC Section 2]
     source = cite("DereliDogan2020", "Section 2, anholonomy coefficients")
 
@@ -191,7 +190,7 @@ class IndexedSumOperatorPushDefinition(Definition):
             ):
                 return True
             # ρ(Σ_s V_s)(f) = Σ_s ρ(V_s)(f) — the anchor's section
-            # slot (Phase 4.F.6: d̂² needs ρ(Σ𝒫L) to meet the
+            # slot (d̂² needs ρ(Σ𝒫L) to meet the
             # projector's kernel rule termwise).
             return isinstance(op, AnchoredVF) and isinstance(
                 op.section, IndexedSum

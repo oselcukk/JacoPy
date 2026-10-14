@@ -1,6 +1,6 @@
 """
 Engine semantics of :class:`~jacopy.central.objects.partial_eval.PartialEval`
-(PDF item 8w generalization; ledger K2, 2026-09-22).
+(partial evaluation of multilinear maps).
 
 * :class:`PartialEvalCollapseDefinition` — filling the open slots is
   the full evaluation: ``T(a, ·)(b) → T(a, b)`` on a
@@ -14,7 +14,7 @@ Engine semantics of :class:`~jacopy.central.objects.partial_eval.PartialEval`
   alternating form on vector slots the partial map IS the iterated
   interior product, ``ω(X₁, …, X_j, ·, …) = ι_{X_j}⋯ι_{X_1} ω``
   (the convention of :func:`~jacopy.central.objects.interior.contract_all`,
-  proved on the 3-form instance in Phase 2.F); fixed slots that are
+  proved on the 3-form instance in the test suite); fixed slots that are
   not leading are moved to the front with the permutation sign.
 * :class:`MusicalAsPartialEvalDefinition` — the bilinear musical atoms
   are the ``j = 1`` case: ``g^♭(X) → g(X, ·)``, ``π^♯(α) → π(α, ·)``.

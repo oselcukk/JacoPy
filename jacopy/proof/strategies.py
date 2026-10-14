@@ -2,9 +2,8 @@
 Proof strategies, algorithms that take two expressions and close the
 gap between them with a :class:`ProofChain`.
 
-Phase 7 A-scope ships only the base :class:`Strategy` interface and
-:class:`ExpandAndSimplify`. Later phases add
-:class:`AgreementOnGenerators` (operator-level equality via
+The base :class:`Strategy` interface and :class:`ExpandAndSimplify`
+are complemented by :class:`AgreementOnGenerators` (operator-level equality via
 derivation-extension), :class:`UnrollToFoundations`
 (theorem-mode unrolling), and :class:`DerivedBracketStrategy`
 (bracket-level Jacobi via the derived-bracket theorem).
@@ -140,7 +139,7 @@ class ExpandAndSimplify(Strategy):
             return chain
 
         obstruction: Expr = Sum(lhs, Neg(rhs))
-        # Phase 8 step 4b: the common normalization contract with this
+        # the common normalization contract with this
         # strategy's shape (8 outer rounds, 64 inner, early stop at 0);
         # the historical failure modes are preserved
         from jacopy.proof.normalize import normalize
@@ -227,13 +226,13 @@ def _operator_degree(op: Expr, registry: Optional[PropertyRegistry]) -> Degree:
 
 
 def _is_symbol_atom(e: Expr) -> bool:
-    """An EXPLICIT type allow-list (gate-7 P0): ``is_atom`` is not
+    """An EXPLICIT type allow-list: ``is_atom`` is not
     "has no operands" — opaque atoms (``m̃(n)``, ``{n, f}_π``,
     ``g(u, v)``, musical maps) keep their operands outside ``children``,
     so a NonCommuting leaf hides in them. Only a true symbol passes:
     any ``Symbol`` subclass (a Symbol carries no operand), and EXACT
     ``Form`` / ``PVector`` (EndoForm, Sharp, Flat … subclass or resemble
-    them but carry operands outside ``children``, gate-7 cr7/p01)."""
+    them but carry operands outside ``children``)."""
     from jacopy.central.objects.form import Form
     from jacopy.central.objects.multivector import PVector
     from jacopy.core.expr import Symbol
@@ -247,7 +246,7 @@ def _plain_atom(e: Expr, registry: PropertyRegistry, kinds) -> bool:
     (:func:`~jacopy.core.properties.plain_degree_zero`: no
     ``NonCommuting`` / ``AntiCommuting``, ``Graded`` absent or the
     constant ``0`` — for a form generator the degree is read from the
-    kind, not from ``Graded``). Raw reads (gate-6 g1: a visibility
+    kind, not from ``Graded``). Raw reads (a visibility
     filter never hides a commutation constraint), recorded as
     hypotheses."""
     from jacopy.core.properties import AntiCommuting, Graded, NonCommuting, plain_degree_zero
@@ -281,7 +280,7 @@ def _commutes_with_generators(
     graded-commutative values of any degree). A COMPOUND or OPAQUE
     coefficient (``f + g``, ``f·g``, ``X(f)``, ``−f``, ``m̃(n)``,
     ``{n, f}_π`` …) or such a generator is refused — a leaf hidden
-    inside may fail to commute (cr6/p01, cr7/p01). Known completeness
+    inside may fail to commute. Known completeness
     loss: a TRUE identity with a compound coefficient such as
     ``(c + b)·D = E`` is no longer certified; name the coefficient as
     one function symbol (``h := c + b``) to use the shortcut. An unknown
@@ -307,7 +306,7 @@ def _is_derivation_expr(
       ``leibniz = False`` marker — operators like the multivector
       interior ``ι_P`` subclass ``Derivation`` for slot plumbing but
       are COMPOSITIONS of derivations, and declare so via that
-      contract (2026-09-08 re-audit, finding 3),
+      contract,
     * a :class:`Sum`/:class:`Neg` of certified derivations (module
       structure),
     * a :class:`Product` with EXACTLY ONE certified derivation whose
@@ -316,10 +315,10 @@ def _is_derivation_expr(
       symbol placed BEFORE the derivation that is certified to commute
       with every element of the algebra
       (:func:`_commutes_with_generators`, needs the algebra's
-      ``generators``; gate-6 narrowing): ``f·D`` is again a derivation
+      ``generators``): ``f·D`` is again a derivation
       because ``(fD)(ab) = f·D(a)·b + ± f·a·D(b)`` and ``f·a = a·f``;
-      ``D·f`` is the composition ``D∘(f·)``, not a derivation (audit
-      0b00e1b M1-2). A compound or opaque coefficient, a second
+      ``D·f`` is the composition ``D∘(f·)``, not a derivation. A compound
+      or opaque coefficient, a second
       function symbol anywhere in the term (nested Products included),
       an unknown algebra, an anticommuting / noncommuting coefficient
       or generator: refused (default-reject). Generators are plain
@@ -345,7 +344,7 @@ def _is_derivation_expr(
         )
     if isinstance(expr, Product):
         # ONE function symbol per derivation term, counted through nested
-        # Products / Sums / Negs alike (gate-7 F9: f·(g·D) and f·g·D are the
+        # Products / Sums / Negs alike (f·(g·D) and f·g·D are the
         # same shape): the budget ``_functions`` is consumed by the outer
         # coefficient and passed down
         derivations = 0
@@ -423,7 +422,7 @@ class AgreementOnGenerators(Strategy):
         # degree.
         lhs_is_zero = lhs == Integer(0)
         rhs_is_zero = rhs == Integer(0)
-        # SOUNDNESS GUARD (2026-09-07 audit, finding 4): agreement on
+        # SOUNDNESS GUARD: agreement on
         # generators determines an operator on the whole algebra ONLY
         # for derivations (first-order Leibniz operators). A
         # composition like D∘D has the degree of a derivation but is
@@ -432,7 +431,7 @@ class AgreementOnGenerators(Strategy):
         # a derivation expression.
         # the certificate's registry reads (the coefficient's kind and
         # commutativity, the generators' NonCommuting / AntiCommuting /
-        # Graded answers) are HYPOTHESES of the step (gate-5 #2): a
+        # Graded answers) are HYPOTHESES of the step: a
         # theorem c·D = E proved with c a function must not be cited
         # where c is NonCommuting
         from jacopy.core.registry import track_reads
@@ -480,7 +479,7 @@ class AgreementOnGenerators(Strategy):
             raise ProofFailure(
                 "Algebra has no generators, cannot apply agreement strategy"
             )
-        # SCALAR CONTRACT (audit 0b00e1b M1-1 ≡ M1-2): an ℝ-constant
+        # SCALAR CONTRACT: an ℝ-constant
         # generator (numeral or exact Scalar atom) is annihilated by
         # every derivation and lies in the ground field — agreement on
         # it is automatic and certifies nothing, so it is dropped from
@@ -616,7 +615,7 @@ class UnrollToFoundations(Strategy):
 class DerivedBracketStrategy:
     """Apply the Derived Bracket Theorem to discharge Jacobi.
 
-    The theorem [Kosmann-Schwarzbach 1996 — year AMBIGUOUS: local sources list only "Derived brackets" (2004); docs/CITATIONS.md]: over a graded LIE base
+    The theorem [Kosmann-Schwarzbach; see https://oselcukk.github.io/JacoPy/development/citations.html]: over a graded LIE base
     with an ODD shifted generator, ``[Q, Q]_base = 0`` makes the
     derived bracket ``{a, b}_Q = [[a, Q], b]`` a LODAY
     (left-Leibniz-Jacobi) bracket. The CYCLIC Lie-form Jacobi that
@@ -624,8 +623,8 @@ class DerivedBracketStrategy:
     skewness on every slot the supplied triple exercises — checked
     per-triple, in the derived bracket's own degree-shifted sign
     convention. The conclusion is therefore for THIS triple under
-    the verified hypotheses, not a universal ``⟺`` (2026-09-08
-    audits): :meth:`prove_jacobi` verifies the preconditions, cites
+    the verified hypotheses, not a universal ``⟺``:
+    :meth:`prove_jacobi` verifies the preconditions, cites
     the theorem to reduce the cyclic check to the obstruction
     ``[Q, Q]_base``, expands and simplifies. If the obstruction
     collapses to :class:`Integer` ``0`` the proof closes; otherwise
@@ -656,8 +655,7 @@ class DerivedBracketStrategy:
             )
 
         # MATHEMATICAL PRECONDITIONS of the Derived Bracket Theorem
-        # (2026-09-07 audit, finding 2 — ``[Q,Q] = 0`` alone proves
-        # nothing):
+        # (``[Q,Q] = 0`` alone proves nothing):
         #
         # 1. the BASE bracket must be a graded LIE bracket (graded
         #    antisymmetry + graded Jacobi actually asserted);
@@ -684,8 +682,8 @@ class DerivedBracketStrategy:
         # parity of Q in the base's SHIFTED grading, from the same
         # hook as every skew/Jacobi sign (``operand_shift``: SN counts
         # −1 in the multivector grading, not its recorded degree 0)
-        # the generator degree VALIDATED against the registry (review
-        # #7: a declared degree_Q contradicting the registry is refused,
+        # the generator degree VALIDATED against the registry (a
+        # declared degree_Q contradicting the registry is refused,
         # an undeclared one is derived from it)
         try:
             degree_q = bracket.generator_degree(registry)
@@ -697,7 +695,7 @@ class DerivedBracketStrategy:
         ):
             raise ProofFailure(
                 "DerivedBracketStrategy: Koszul (acting_on) mode needs a "
-                "bivector generator and 1-form operands (review #9); got "
+                "bivector generator and 1-form operands; got "
                 f"|Q| = {degree_q!r} on ({a!r}, {b!r}, {c!r})"
             )
         shifted = degree_q + base.operand_shift
@@ -718,18 +716,17 @@ class DerivedBracketStrategy:
         #    derived bracket under those hypotheses is only LODAY
         #    (left-Leibniz Jacobi); the cyclic form is equivalent
         #    only where the derived bracket is genuinely skew on
-        #    every slot the triple exercises (2026-09-08 re-audit,
-        #    finding 2 — supercommutator counterexample with a
-        #    graded-Lie base and odd square-zero Q). Each skew
+        #    every slot the triple exercises (a supercommutator
+        #    counterexample exists with a graded-Lie base and odd
+        #    square-zero Q). Each skew
         #    defect, on the operand pairs AND on the (inner result,
         #    outer operand) pairs, is engine-checked to literal 0;
         #    anything short of that refuses the cyclic claim.
         def _skew_defect(x: Expr, y: Expr) -> Expr:
             # Signs in the DERIVED bracket's own shifted convention
             # (k = |Q| + 2|base|) — the same convention as the
-            # cyclic goal below; mixing conventions let six
-            # unshifted checks certify a non-zero unshifted goal
-            # (2026-09-08 second re-audit).
+            # cyclic goal below; mixing conventions would let six
+            # unshifted checks certify a non-zero unshifted goal.
             # (the CLAIMED sign comes from the bracket's own hook,
             # ``claimed_swap_sign``: ε = −(−1)^{s(x)s(y)}, s from
             # ``operand_degree`` — the derived bracket is not asserted
@@ -855,7 +852,7 @@ class DerivedBracketStrategy:
 class PortfolioStrategy(Strategy):
     """Try a sequence of strategies; the first that closes wins.
 
-    The mechanized form of the Phase 2 symbolic-p policy ("try the
+    The mechanized form of the symbolic-p policy ("try the
     operator-level route first, fall back to unrolling"): each member
     strategy gets a chance in order, and only when *all* of them fail
     does the portfolio raise — with a combined message naming every

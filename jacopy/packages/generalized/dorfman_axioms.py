@@ -1,6 +1,6 @@
 """
 The ALTERNATIVE (Dorfman/Roytenberg) Courant axiomatics and its
-redundancies (Phase 7.A.2) [Uchino 2002, Remark 2.3 — the
+redundancies [Uchino 2002, Remark 2.3 — the
 alternative definition quoted from his ref. [4] = Roytenberg 1999].
 
 The non-skew form: a bilinear ``∘`` on ``ΓE`` with [C'1] (left
@@ -11,7 +11,7 @@ are also derived from the rest of the axioms and condition (L) in a
 similar way"* — is stated WITHOUT proof in the paper. This module
 writes those proofs mechanically:
 
-* **[C'3]** — since [C'5] carries no D-terms it IS the Phase 3
+* **[C'3]** — since [C'5] carries no D-terms it IS the
   metric-invariance axiom C1 [B Eq. (4.10)], and the derivation is
   literally the [B Eq. (4.11)] tactic
   (:func:`~jacopy.central.algebroid.theorems.prove_right_leibniz_from_metric`):
@@ -64,7 +64,7 @@ def dorfman_axiom_context(name: str = "E") -> Algebroid:
     """The alternative-definition DATA: non-skew opaque ``∘``
     (ℝ-bilinear by definition), anchor, definitional pairing, and
     the declared [C'5] — which, having no D-terms, is EXACTLY the
-    Phase 3 ``metric-invariance`` axiom. [C'2]/[C'3] are absent:
+    ``metric-invariance`` axiom. [C'2]/[C'3] are absent:
     they are the theorems."""
     return algebroid(name, declare=("metric-invariance",))
 
@@ -81,7 +81,7 @@ def prove_dorfman_c3_redundant(
     [C'5] + non-degeneracy — the defect-free Leibniz rule, because
     [C'5] carries no D-terms. Mechanically this IS the [B Eq. (4.11)]
     two-leg tactic; Uchino's "in a similar way", already in the
-    Phase 3 library."""
+    abstract-algebroid library."""
     chain, thm = prove_right_leibniz_from_metric(
         alg, x, y, f, registry=registry
     )
@@ -120,7 +120,7 @@ def _c3_engine(
     registry: Optional[PropertyRegistry],
 ) -> ExpansionEngine:
     eng = ExpansionEngine(
-        [TheoremDefinition(t, allow_legacy=True) for t in theorems]  # pre-3b records: explicit
+        [TheoremDefinition(t, allow_legacy=True) for t in theorems]  # legacy records: explicit
     )
     for d in algebroid_engine(alg, registry=registry).definitions:
         eng.register(d)

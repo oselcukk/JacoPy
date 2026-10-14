@@ -1,6 +1,6 @@
 """
 The derived algebroid and the two exterior derivatives
-(Phase 4.F.6) [ADM Defs 3.14-3.16, eqs (3.41)-(3.43)].
+[ADM Defs 3.14-3.16, eqs (3.41)-(3.43)].
 
 DESIGN: ``d(∇)`` / ``d̂(∇)`` are the exterior derivatives keyed to
 the (projected) modified bracket. Instead of parallel operator code,
@@ -10,14 +10,14 @@ bundle, whose bracket and anchor BRIDGE definitionally to the base:
     [u,v]_{E^∇} → [u,v]_E − Λ(u,v)      (or − Λ̂ when projected),
     ρ_{E^∇}(u)  → ρ_E(u),
 
-and the whole Phase 3.F Cartan machinery (Palais ``d``, intrinsic
+and the whole abstract Cartan machinery (Palais ``d``, intrinsic
 ``L``, ``ι``) applies to ``E^∇`` verbatim — legitimized by the
-4.F.1 theorem that the modified pair is an almost-dull algebroid.
+admissibility-module theorem that the modified pair is an almost-dull algebroid.
 
 Mechanical theorems:
 
 * **Cartan magic on functions for d(∇)** — declaration-free (the
-  3.F generic magic, inherited by the derived context).
+  generic Cartan magic, inherited by the derived context).
 * **[ADM eq (3.43)]** ``d̂(∇)²f = 0`` evaluated on ``(u,v)`` — needs
   the base ``anchor-morphism`` declaration plus the projector's
   kernel rule (``ρ(𝒫L) = 0``): the projected modified bracket has
@@ -218,7 +218,7 @@ def prove_derived_magic_on_functions(
 ) -> ProofChain:
     """Cartan magic on functions for the derived calculus,
     ``ℒ^∇_u f = (d(∇) ι_u + ι_u d(∇)) f`` — declaration-free (the
-    3.F generic magic, inherited through the bridges)."""
+    generic Cartan magic, inherited through the bridges)."""
     from jacopy.central.objects.interior import Interior
 
     derived = derived_algebroid(
@@ -303,7 +303,7 @@ def prove_derived_magic_on_forms(
 
         (ℒ^∇_u ω)(v₁,…,v_p) = ((d(∇) ι_u + ι_u d(∇)) ω)(v₁,…,v_p)
 
-    — declaration-free at every degree (the 3.F generic magic; the
+    — declaration-free at every degree (the generic Cartan magic; the
     p ≥ 2 cases exercise the arity-general Palais/interior rules
     through the bridges)."""
     from jacopy.core.pairing import Pairing
@@ -364,7 +364,7 @@ def prove_projected_d_squared_associator(
 
     (under the base ``anchor-morphism`` declaration, which kills the
     predator part). Identity form — ARBITRARY connection; the
-    combination is exactly the Phase 3.F ``d²α`` obstruction shape,
+    combination is exactly the abstract-calculus ``d²α`` obstruction shape,
     now for ``b̂``.
 
     Sign conventions: in JacoPy's sign conventions (the Palais

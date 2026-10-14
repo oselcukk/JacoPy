@@ -1,6 +1,5 @@
 """
-Registry declarations as proof requirements (audit 0b00e1b-FULL P0-3
-≡ M1X-2, with K2-16).
+Registry declarations as proof requirements.
 
 A proof step's validity can depend on what the property registry
 ANSWERS: ``x`` is :class:`~jacopy.core.properties.Scalar` (so it
@@ -89,7 +88,7 @@ class RegistryFact:
     #: a RAW-declaration fact (:meth:`PropertyRegistry.lookup`): the
     #: Scalar contract's clash check reads the raw declarations, so its
     #: hypotheses are checked against the raw declarations of the
-    #: citing registry, not its filtered view (gate-6 cr6/p05)
+    #: citing registry, not its filtered view
     raw: bool = False
 
     @property

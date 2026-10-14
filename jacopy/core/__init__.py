@@ -121,15 +121,15 @@ __all__ = [
     "structural_equal",
     "alpha_equal",
     "sum_bag_equal",
-    # multilinear evaluation (Phase 12.A.0)
+    # multilinear evaluation
     "MultiEval",
     "multi_eval",
     "has_repeated_arg",
     "validate_arity",
-    # indexed sum (Phase 17.E)
+    # indexed sum
     "IndexedSum",
     "indexed_sum",
     "dummy_in",
-    # wedge product (Phase 17.F.1.5)
+    # wedge product
     "Wedge",
 ]

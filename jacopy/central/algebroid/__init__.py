@@ -1,8 +1,8 @@
-"""Central code — the algebroid case (PDF item 10; Phase 3).
+"""Central code — the algebroid case.
 
-Anchored vector bundles, the opaque algebroid bracket and coboundary
-(3.A); the declared property hierarchy, Jacobiator/Derivator/Predator,
-locality and the algebroid calculus arrive with 3.B-3.F. Sources:
+Anchored vector bundles, the opaque algebroid bracket and coboundary;
+the declared property hierarchy, Jacobiator/Derivator/Predator,
+locality and the algebroid calculus. Sources:
 B = arXiv:2210.00548 and MC = arXiv:2006.05957 (keys in
 :mod:`jacopy.bibliography`).
 """

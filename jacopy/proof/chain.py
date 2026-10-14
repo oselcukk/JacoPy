@@ -11,7 +11,7 @@ expressions.
 Verbosity choices for :meth:`format` are intentionally coarse,
 ``"compact"`` prints one line per top-level step and hides children,
 ``"full"`` renders every step with its children tree. Richer display
-modes (LaTeX, coloured terminal) belong in the Phase 8 display layer and
+modes (LaTeX, coloured terminal) belong in the display layer and
 should read the chain as data rather than extending this formatter.
 """
 

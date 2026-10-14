@@ -1,6 +1,5 @@
 """
-The GIVEN-INPUT evaluation workflow (PDF items 11e / 12f; 2026-09-08
-audit, compliance finding "input-flow"): the user supplies concrete
+The GIVEN-INPUT evaluation workflow: the user supplies concrete
 COMPONENT DATA — connection coefficients ``Γ^a_{bc}``, metric
 components ``g_{ab}``, anholonomy coefficients ``γ^c_{ab}``, Poisson
 bivector components ``θ^{ab}`` — and the engine EVALUATES the
@@ -23,7 +22,7 @@ Rules of the game:
   soundness over convenience;
 * the frame is declared over ``dim`` concrete positions, so
   Kronecker deltas with distinct concrete labels evaluate to ``0``
-  and equal labels to ``1`` (the audit's "fixed basis positions");
+  and equal labels to ``1`` (fixed basis positions);
 * the values may be numbers or registered scalar functions —
   derivatives of given functions (``e_0(h)``) remain symbolic
   first-class output, expressed purely in the given data.
@@ -114,14 +113,14 @@ class ComponentInput:
     ) -> None:
         """``γ^upper_{first second} := value``.
 
-        ``γ^c_{ab} := ⟨e^c, [e_a, e_b]⟩`` (``anholonomy.py``,
-        PDF item 9b) is ANTISYMMETRIC in its two lower indices because
+        ``γ^c_{ab} := ⟨e^c, [e_a, e_b]⟩`` (``anholonomy.py``)
+        is ANTISYMMETRIC in its two lower indices because
         the bracket is, so both orders are written together
         (``γ^c_{ba} := −value``, as :meth:`set_pi` does) and either order
         may be given. The canonical atom :func:`anholonomy_coefficient`
         looks up the ``a < b`` key, which a non-canonical call used to
-        leave unset (``total=True`` then read it as ``0``; audit 0b00e1b
-        M7-2). Like the other setters a later call OVERWRITES — both
+        leave unset (``total=True`` then read it as ``0``).
+        Like the other setters a later call OVERWRITES — both
         orders at once, so the pair stays antisymmetric.
         ``first == second`` forces ``value == 0`` (:class:`ValueError`
         otherwise)."""
@@ -222,8 +221,7 @@ class ComponentInput:
 
         The caller's ``engine`` is NEVER mutated: a fresh engine is
         layered per call, so data-set rules cannot accumulate in a
-        shared engine and leak between evaluations (2026-09-09
-        audit, finding 4 — the result must depend on the expression
+        shared engine and leak between evaluations (the result must depend on the expression
         and THIS data set only, not on prior calls)."""
         from jacopy.proof.expansion import ExpansionEngine
         from jacopy.packages.metric_affine.metric_affine_expansion import (
@@ -299,7 +297,7 @@ class SubstituteComponentsDefinition(Definition):
 
             # identity includes the BUNDLE: a same-named frame on
             # another bundle must not receive this data set's
-            # values (2026-09-09 recheck, finding B)
+            # values
             if not (
                 isinstance(X, FrameField)
                 and isinstance(Y, FrameField)
@@ -346,10 +344,9 @@ class ConcreteDeltaDefinition(Definition):
     construction). A BOUND (dummy) label is structurally distinct
     from a concrete one without denoting a different position, so
     it stays symbolic until the enclosing sum is unrolled —
-    zeroing it under the sum falsifies ``Σ_s δ^s_0 = 1``
-    (2026-09-09 audit, finding 3)."""
+    zeroing it under the sum falsifies ``Σ_s δ^s_0 = 1``."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
 
     anchor = KroneckerDelta
 
@@ -383,7 +380,7 @@ class IndexedSumUnrollDefinition(Definition):
     concrete labels only (bound labels are guarded out of the
     zero-defaults)."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
 
     def __init__(self, data: ComponentInput) -> None:
         from jacopy.core.indexed_sum import IndexedSum
@@ -404,7 +401,7 @@ class IndexedSumUnrollDefinition(Definition):
             return False
         # FULL frame identity (name + bundle), never name alone: a
         # same-named frame on another bundle keeps its own rank and
-        # stays symbolic here (2026-09-09 recheck, finding B).
+        # stays symbolic here.
         return expr._range is self._d.frame or (
             expr._range == self._d.frame
         )

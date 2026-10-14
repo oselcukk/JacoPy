@@ -25,7 +25,7 @@ from typing import List, Optional, Tuple
 from jacopy.core.expr import Expr
 
 
-#: Steps MINTED by the library's own producers (review 2026-10-01 #3).
+#: Steps MINTED by the library's own producers.
 #:
 #: Threat model. Ordinary use of the public API — accidental or
 #: deliberate — cannot claim provenance: a step's provenance (that the engine, a library
@@ -162,19 +162,19 @@ class ProofStep:
         self._rule = rule
         self._justification = justification
         self._provenance_tag = provenance_tag
-        # the structure whose rule fired (Phase 8 step 2c; None = structure-free)
+        # the structure whose rule fired (None = structure-free)
         self._owner = owner
-        # the logical role of the fired rule (Phase 8 step 3a):
+        # the logical role of the fired rule:
         # "definition" | "assumption" | "theorem" | None (unrecorded)
         self._role = role
-        # the cited Theorem record when this step is a citation (Phase 8
-        # step 3b): its requirements propagate to the citing proof
+        # the cited Theorem record when this step is a citation:
+        # its requirements propagate to the citing proof
         self._cites = cites
         # the structural key of the licensing rule (Definition.key); an
         # assumption step without one cannot be located in another engine
         self._key = key
-        # the registry answers the step's producer consulted (audit
-        # 0b00e1b-FULL P0-3): ``RegistryFact`` records; a theorem whose
+        # the registry answers the step's producer consulted:
+        # ``RegistryFact`` records; a theorem whose
         # steps carry them is citable only where the registry agrees
         self._registry_facts = tuple(registry_facts or ())
         # literature source of the licensing rule (metadata only: a

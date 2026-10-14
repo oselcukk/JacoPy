@@ -1,8 +1,8 @@
 """
 Musical isomorphisms ``♯`` / ``♭`` — passing between ``TM`` and
-``T*M`` (PDF item 8w).
+``T*M``.
 
-**The essence of item 8w.** A bilinear map of the form
+**The essence.** A bilinear map of the form
 ``TM × TM → C^∞(M)`` (e.g. a metric ``g(X, Y)`` or a bivector
 ``π(α, β)``) can be turned into a map ``TM → T*M`` (or ``T*M → TM``)
 by leaving one slot open. This is the coordinate-free form of index
@@ -17,7 +17,7 @@ raising/lowering:
 
 When ``g`` and ``π`` come from the same geometry and are mutually
 inverse (symplectic / Poisson), ``♯`` and ``♭`` are inverse to each
-other; that musical compatibility is handled in Phase 5.
+other; that musical compatibility is handled in the Poisson package.
 
 **Tensoriality.** Musical maps are ``C^∞(M)``-linear
 (``π^♯(fα) = f · π^♯(α)``), i.e. they are *not derivations* — no
@@ -26,11 +26,11 @@ Leibniz rule applies over products. They are therefore modelled as
 :class:`~jacopy.algebra.derivation.Derivation`); the degree is carried
 on the instance and recognized by ``degree_of``.
 
-The "generalization to arbitrary numbers" of item 8w (musical views of
+The generalization to arbitrary numbers of slots (musical views of
 k-linear maps with any number of slots fixed, ``(E)^k → C^∞`` ↔
 ``E^{k-j} → (E^*)^{⊗j}``) lives in
 :mod:`jacopy.central.objects.partial_eval` (:class:`PartialEval`,
-:func:`musical_view`, :func:`partial_eval`; ledger K2, 2026-09-22);
+:func:`musical_view`, :func:`partial_eval`);
 the engine identifies ``g^♭(X)`` with ``g(X, ·)`` and ``π^♯(α)`` with
 ``π(α, ·)`` (:class:`~jacopy.central.calculus.partial_eval_rules.MusicalAsPartialEvalDefinition`).
 This module keeps the bilinear atoms.

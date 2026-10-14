@@ -10,7 +10,10 @@ abstract: >-
 authors:
   - family-names: "Selçuk"
     given-names: "Oğuzhan"
-    # TODO(owner): add orcid and affiliation once confirmed.
+    orcid: "https://orcid.org/0009-0005-7641-1783"
+    # Gebze Technical University: ROR https://ror.org/01sdnnq10
+    affiliation: "Gebze Technical University, Department of Mathematics"
+    email: "oguzhanselcuk@gtu.edu.tr"
 # Must equal jacopy.__version__ (jacopy/__init__.py); pinned by
 # tests/test_citation_metadata.py.
 version: "0.1.0a1"
@@ -26,4 +29,5 @@ keywords:
   - poisson geometry
   - cartan calculus
   - symbolic computation
-# TODO(owner): add date-released and doi (Zenodo) with the first tagged release.
+# TODO(owner): add date-released with the first tagged release.
+# TODO(owner): add doi (Zenodo) with the first tagged release.

@@ -1,17 +1,17 @@
 """
-Lie derivative ``L`` on TM and the Cartan relations — all theorems
-(PDF items 9e, 9g; Phase 2.D).
+Lie derivative ``L`` on TM and the Cartan relations — all theorems.
 
 ``L_X`` is instantiated from the generic calculus with the TM pair
 ``(id, Lie)`` (see :mod:`jacopy.central.calculus.bracket_calculus` for
 the canonical definition). Everything in this module is *proved* from
 the canonical definitions of ``d``, ``L``, ``ι`` and the Lie bracket:
 
-* Cartan magic ``L_X = d ι_X + ι_X d`` — a THEOREM here (v2 carried it
-  as an axiom; the definition policy forbids that),
+* Cartan magic ``L_X = d ι_X + ι_X d`` — a THEOREM here (not an
+  axiom; the definition policy forbids that),
 * ``[L_X, d] = 0``, ``[L_X, ι_Y] = ι_{[X,Y]}``,
   ``[L_X, L_Y] = L_{[X,Y]}``, ``ι_X ι_Y + ι_Y ι_X = 0``,
-* ``d² = 0`` on 1-forms (closing the frontier documented in 2.C).
+* ``d² = 0`` on 1-forms (beyond the function case of
+  :mod:`jacopy.central.tangent.exterior`).
 
 Some evaluations leave a residual of the shape ``⟨ω, V⟩`` where ``V``
 is a combination of nested brackets that vanishes by the (proved)
@@ -79,7 +79,7 @@ def _peel(expr: Expr) -> Tuple[int, Expr]:
 
 
 def _is_section_combination(expr: Expr) -> bool:
-    """Soundness guard for the repair loop (audit 2, 2026-07-23).
+    """Soundness guard for the repair loop.
 
     The agreement-on-generators argument — "``V(f) = 0`` for a generic
     ``f`` implies ``V = 0``" — is only faithful for *sections* (vector
@@ -203,7 +203,7 @@ def prove_with_bracket_identities(
 
 
 # --------------------------------------------------------------------- #
-# d² = 0 beyond functions (closing the 2.C frontier)                     #
+# d² = 0 beyond functions                                               #
 # --------------------------------------------------------------------- #
 
 
@@ -229,7 +229,7 @@ def prove_d_squared_zero_on_one_forms(
 
 
 # --------------------------------------------------------------------- #
-# Cartan relations (PDF item 9g) — all THEOREMS                          #
+# Cartan relations — all THEOREMS                                       #
 # --------------------------------------------------------------------- #
 
 
@@ -257,8 +257,8 @@ def prove_cartan_magic_on_one_forms(
     """``⟨L_X ω, Y⟩ = ⟨ι_X(dω), Y⟩ + ⟨d(ι_X ω), Y⟩`` — Cartan magic on
     1-forms, evaluated on a generic vector field.
 
-    THE theorem of this architecture: v2 shipped it as the axiom
-    ``LieDerivativeCartanDefinition``; here it is derived from the
+    THE theorem of this architecture: rather than being postulated
+    as an axiom, it is derived from the
     canonical definitions of ``d``, ``L`` and ``ι``.
     """
     iota = Interior(X)
@@ -360,7 +360,7 @@ def prove_iota_anticommute(
 
 
 # --------------------------------------------------------------------- #
-# Midterm Q3 — the usual-calculus identity suite (Phase 2.G)             #
+# The usual-calculus identity suite                                     #
 # --------------------------------------------------------------------- #
 
 
@@ -394,9 +394,9 @@ def prove_L_d_iota_commutation(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, List[Theorem]]:
-    """Midterm Q3: ``L_U dι_W η − dι_{[U,W]} η − dι_W L_U η = 0`` on a
-    1-form ``η``, evaluated on a generic ``Y`` (all three terms are
-    1-forms)."""
+    """Cartan-calculus identity:
+    ``L_U dι_W η − dι_{[U,W]} η − dι_W L_U η = 0`` on a 1-form ``η``,
+    evaluated on a generic ``Y`` (all three terms are 1-forms)."""
     lhs = Sum(
         Pairing(L(U, d(Act(Interior(W), eta))), Y),
         Neg(Pairing(d(Act(Interior(lie_bracket(U, W)), eta)), Y)),
@@ -416,7 +416,8 @@ def prove_L_d_iota_exact(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, List[Theorem]]:
-    """Midterm Q3: ``L_W dι_V ω − dι_W dι_V ω = 0`` on a 1-form ``ω``,
+    """Cartan-calculus identity: ``L_W dι_V ω − dι_W dι_V ω = 0`` on a
+    1-form ``ω``,
     evaluated on a generic ``Y``.
 
     The content is Cartan magic on the exact form ``α = dι_V ω``:
