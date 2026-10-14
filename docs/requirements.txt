@@ -2,7 +2,7 @@
 # The library itself is installed separately (pip install -e .).
 sphinx>=8.1,<9
 furo>=2024.8.6
-myst-parser>=4.0,<5
+myst-parser>=4.0.1,<5
 sphinx-copybutton>=0.5.2
 sympy>=1.12
 rich>=13.0
