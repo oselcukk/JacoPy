@@ -1,0 +1,22 @@
+/* JacoPy documentation: small, sober adjustments on top of furo. */
+
+.sidebar-brand-text {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Long expressions in proof output wrap instead of forcing a scrollbar. */
+div.highlight-text pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Tables in the API reference: keep the summary column readable. */
+table.autosummary td:first-child {
+  white-space: nowrap;
+}
+
+mjx-container[display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+}

@@ -52,3 +52,14 @@ test-wheel: $(VENV)/.installed
 	rm -rf build dist && $(VBIN)/python -m pip install -q build && $(VBIN)/python -m build --wheel --outdir dist
 	rm -rf .wheel-test && $(PYTHON) -m venv .wheel-test && .wheel-test/bin/pip install -q dist/*.whl pytest
 	rm -rf .wheel-test/tests && cp -R tests .wheel-test/tests && cd .wheel-test && bin/python -m pytest tests -q -p no:cacheprovider
+
+# Documentation: build the HTML site with warnings as errors, then run every
+# Python example in docs/. Uses a separate venv (.venv-docs) so the docs
+# toolchain never touches .venv. Output: docs/_build/html/index.html.
+DOCS_VENV := .venv-docs
+.PHONY: docs
+docs:
+	test -x $(DOCS_VENV)/bin/python || $(PYTHON) -m venv $(DOCS_VENV)
+	$(DOCS_VENV)/bin/pip install -q -e . -r docs/requirements.txt
+	$(DOCS_VENV)/bin/sphinx-build -W --keep-going -b html docs docs/_build/html
+	$(DOCS_VENV)/bin/python docs/check_examples.py
