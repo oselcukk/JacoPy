@@ -28,6 +28,23 @@ Proof entry points, proof chains, results, theorems and the rewrite engine. Ever
    jacopy.Assumption
 ```
 
+## Proof strategies
+
+Strategies decide the order in which sound rules fire; see [Choosing a proof strategy](../../howto/proof-strategies.md). These names are imported from their modules.
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated
+
+   jacopy.proof.strategies.Strategy
+   jacopy.proof.strategies.ExpandAndSimplify
+   jacopy.proof.search.SearchStrategy
+   jacopy.proof.strategies.PortfolioStrategy
+   jacopy.proof.strategies.UnrollToFoundations
+   jacopy.proof.strategies.AgreementOnGenerators
+   jacopy.proof.strategies.DerivedBracketStrategy
+```
+
 ## Theorems
 
 ```{eval-rst}
