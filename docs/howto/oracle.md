@@ -49,6 +49,44 @@ DISAGREE | sides differ in R^3 seed=17924856210895507548 [value] | Witness
 The second check is deliberately false ($[X,Y]f\ne X(Yf)$): the oracle finds a model in
 which the two sides differ and returns a witness.
 
+## Settings
+
+| Setting | Where | Default | Meaning |
+|---|---|---|---|
+| `oracle=` | `jacopy.show_equal`, `jacopy.proof.result.prove` | `None` (use the current mode) | `"off"`, `"warn"` or `"strict"` for this call only |
+| `oracle_mode(mode)` | context manager in `jacopy.oracle.hook` | | sets the mode for a block of code; `None` keeps the current mode |
+| `JACOPY_ORACLE` | environment variable | `off` | the default mode; `0`, `false`, `no`, `none` and the empty string also mean off; an unknown value warns once and means off |
+| `JACOPY_ORACLE_SAMPLES` | environment variable | `2` | models per closed equation during a proof; a value that is not a positive integer warns once and leaves the oracle off |
+| `JACOPY_ORACLE_SEED` | environment variable | `0` | base seed of the models during a proof; an invalid value is replaced by `0` |
+| `samples=`, `seed=` | `check_equal` | `2`, `0` | models per check and base seed; `samples` must be a positive integer |
+| `timeout=` | `check_equal` | `20.0` | seconds allowed for one check |
+| `--oracle`, `--oracle-samples`, `--oracle-seed`, `--oracle-report` | pytest options of the JacoPy test suite | `off` (or `JACOPY_ORACLE`), `2`, `0`, `.oracle/report.json` | see the [testing guide](../development/testing.md) |
+
+The precedence is: the `oracle=` keyword, then an enclosing `oracle_mode`, then
+`JACOPY_ORACLE`. `jacopy.prove` and the strategy classes have no `oracle=` keyword; wrap the
+call in `oracle_mode` instead. In `warn` mode a refutation emits `OracleWarning`; in `strict`
+mode it raises `OracleDisagreement`.
+
+```python
+from jacopy.oracle.hook import oracle_mode, current_mode
+
+rep = check_equal(jacopy.lie_derivative(X)(f*h), X(f)*h + f*X(h), registry=reg,
+                  samples=3, seed=5)
+print(rep.verdict, rep.samples, rep.seed)
+print(current_mode())
+with oracle_mode("warn"):
+    print(current_mode())
+    jacopy.prove(jacopy.lie_derivative(X)(f), X(f), registry=reg, engine=eng)
+print(current_mode())
+```
+
+```text
+AGREE 3 5
+off
+warn
+off
+```
+
 ## Limits
 
 - The oracle has concrete models for the tangent calculus, the Poisson and Nambu brackets

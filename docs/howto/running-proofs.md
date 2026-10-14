@@ -140,6 +140,9 @@ print(len(deep.steps))
 5
 ```
 
+The scorers, the search budget (`max_depth`, `max_states`, `beam_width`, `max_solutions`)
+and each strategy class are explained in [Choosing a proof strategy](proof-strategies.md).
+
 **Normal form, operator identities, diagnosing a residual.**
 {py:func}`jacopy.normalize` brings an expression to normal form; `prove_operator_equation`
 proves an operator identity by agreement on a set of generators; `diagnose` explains why a
@@ -200,6 +203,21 @@ axiom
 - `ProofChain.steps` is the list of steps. Each `ProofStep` carries `rule`, `role` and
   `provenance_tag` (definition, axiom, theorem, assumption), `before` and `after`.
   `chain.initial` and `chain.final` are the two ends of the chain.
+
+`prove_result` takes `max_steps=1024`, the number of rule applications allowed for both sides
+together. When it runs out the result is `BUDGET`, which, like `RESIDUAL`, is not a
+refutation:
+
+```python
+for budget in (2, 1024):
+    print(budget, prove_result(eng, jacopy.multi_eval(d(d(f)), X, Y), registry=reg,
+                               max_steps=budget).status)
+```
+
+```text
+2 BUDGET
+1024 CLOSED
+```
 
 ```python
 chain = tg.prove_cartan_magic_on_functions(X, f, registry=reg)

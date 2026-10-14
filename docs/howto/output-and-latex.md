@@ -132,3 +132,48 @@ Dereli, T., & Doğan, K. (2020). Metric-connection geometries
 (Dereli & Doğan, 2020, Definition 3.10) | Dereli & Doğan, 2020
 0 sources in this chain
 ```
+
+## Rendering options
+
+The renderers share a few keyword options. All of them are keyword-only and change only the
+output, never the chain. The full list is on the
+[Common parameters and settings](../reference/parameters.md#display-latex-and-citations)
+page.
+
+| Keyword | Accepted by | Default | Effect |
+|---|---|---|---|
+| `verbosity` | `chain_to_ascii`, `step_to_ascii`, `jacopy.print_chain`, `ProofChain.format` | `"full"` | `"full"`: rule, classification, before and after, justification; `"summary"`: without the justification; `"compact"`: rule and classification only (`ProofChain.format` keeps before and after) |
+| `max_depth` | text and terminal renderers; LaTeX renderers | `64` (text), `0` (LaTeX) | how many levels of sub-steps are shown; LaTeX shows top-level steps only unless you raise it |
+| `max_steps` | `chain_to_latex`, `theorem_to_latex`, `jacopy.display_chain`, `jacopy.display_theorem`, the document builders | `None` (`40` for `display_theorem`) | show only the first steps and end with a "more steps" row |
+| `cite_style` | `chain_to_latex`, `step_to_latex`, `theorem_to_latex` | `"apa"` | `"apa"` writes the in-text citation; `"biblatex"` writes `\parencites` commands |
+| `references` | `chain_to_ascii` (`True`/`False`); `jacopy.theorem_to_latex_document`, `chain_to_latex_document` (`"apa"`, `"biblatex"`, `None`) | `False`; `"apa"` | append the reference list of the works the rules cite; in a document `"apa"` typesets a References section, `"biblatex"` embeds a `.bib` file (compile with biber), `None` omits the list |
+| `with_proof` | `theorem_to_latex`, `jacopy.theorem_to_latex_document`, `jacopy.display_theorem` | `True` | include the proof transcript after the statement |
+| `style` | `bib.in_text`, `bib.apa_reference`, `bib.references_block` | `"plain"` | `"plain"`, `"markdown"` or `"latex"` (LaTeX escapes for accented names) |
+
+```python
+from jacopy.central.algebroid import algebroid
+from jacopy.central.algebroid.theorems import prove_anchor_morphism
+
+E = algebroid("E", declare=("leibniz",))
+u, v = E.sections("u v")
+ach, _ = prove_anchor_morphism(E, u, v, f, registry=reg)    # a chain whose rules cite sources
+
+for mode in ("full", "summary", "compact"):
+    print(mode, len(chain_to_ascii(chain, verbosity=mode)), "characters")
+print(chain_to_latex(chain, max_steps=2).count(r"\vdots"), "ellipsis row")
+print(chain_to_latex(ach, cite_style="biblatex").count(r"\parencites") > 0)
+print(chain_to_ascii(ach, references=True).splitlines()[-1][:60])
+print(len(theorem_to_latex(thm, with_proof=False)) < len(theorem_to_latex(thm)))
+print(bib.in_text(c, "latex"))
+```
+
+```text
+full 1060 characters
+summary 554 characters
+compact 453 characters
+1 ellipsis row
+True
+Dereli, T., & Doğan, K. (2020). Metric-connection geometries
+True
+(Dereli \& Do\u{g}an, 2020, Definition 3.10)
+```
