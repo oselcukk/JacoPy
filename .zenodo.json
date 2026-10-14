@@ -1,0 +1,36 @@
+{
+  "title": "JacoPy",
+  "upload_type": "software",
+  "description": "JacoPy is a pure-Python library for graded algebra, bracket calculus, and metric-affine and generalized geometry in which every manipulation is recorded as a step-by-step proof with its rules, literature sources and assumptions.",
+  "creators": [
+    {
+      "name": "Selçuk, Oğuzhan",
+      "affiliation": "Gebze Technical University, Department of Mathematics",
+      "orcid": "0009-0005-7641-1783"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "Doğan, Keremcan",
+      "affiliation": "Gebze Technical University",
+      "type": "ProjectLeader",
+      "orcid": "0000-0001-7071-8585"
+    },
+    {
+      "name": "Ergül, Deniz",
+      "type": "ProjectMember"
+    }
+  ],
+  "keywords": [
+    "graded algebra",
+    "lie algebroid",
+    "courant algebroid",
+    "generalized geometry",
+    "metric-affine geometry",
+    "poisson geometry",
+    "cartan calculus",
+    "symbolic computation"
+  ],
+  "license": "BSD-3-Clause",
+  "notes": "If you use JacoPy in your research, please cite it as below."
+}
