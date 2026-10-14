@@ -26,6 +26,7 @@ algebraic-operations
 cartan-calculus
 algebroids
 running-proofs
+proof-strategies
 output-and-latex
 oracle
 automatic-rules

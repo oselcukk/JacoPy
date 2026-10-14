@@ -216,6 +216,40 @@ False
 citable
 ```
 
+## Proof search and soundness
+
+`jacopy.prove(..., prefer=...)` and the strategy classes in `jacopy.proof` (see
+[Choosing a proof strategy](../howto/proof-strategies.md)) choose the **order** in which the
+rules of an engine fire. They do not add rules. Every move a search makes is one application
+of a rule the engine already holds, one product-rule pass or one simplification pass, the
+same moves the default strategy uses. The result is an ordinary `ProofChain` of minted steps
+that runs from $\text{lhs}-\text{rhs}$ to $0$ and replays like any other chain. Soundness
+therefore does not depend on the strategy: two strategies can return different chains for the
+same identity, but each chain is checked step by step in the same way, and each records the
+assumptions of the rules it actually used.
+
+```python
+from jacopy.proof.replay import chain_verdict
+
+s_lhs = jacopy.lie_bracket(X, Y)(f)
+s_rhs = -jacopy.lie_bracket(Y, X)(f)
+s_eng = tangent_engine(registry=reg)
+for p in (None, "shortest", "readable"):
+    s_chain = jacopy.prove(s_lhs, s_rhs, registry=reg, engine=s_eng, prefer=p)
+    s_v = chain_verdict(s_lhs, s_rhs, s_chain)
+    print(p, len(s_chain.steps), s_v.replayed, "|", s_v.shape)
+```
+
+```text
+None 5 True | connected (lhs−rhs→0)
+shortest 3 True | connected (lhs−rhs→0)
+readable 4 True | connected (lhs−rhs→0)
+```
+
+The three chains differ in length, and each is connected and replayed. A strategy that is too
+weak or has too small a budget fails with `ProofFailure`; it never turns a failed search into
+a proof.
+
 ## The model oracle
 
 The oracle is an independent falsifier. When the engine closes
