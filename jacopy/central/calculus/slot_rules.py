@@ -6,7 +6,7 @@ algorithm passes do not).
 No calculus and no geometric structure enters these rules; they were
 first written next to the package proofs that needed them and live
 here so that every engine builder can reach them from the central
-layer (audit 0B00E1B-FULL T2-1):
+layer:
 
 * :class:`PairingArgSplitDefinition` — ``⟨α, X+Y⟩ = ⟨α,X⟩ + ⟨α,Y⟩``
   (previously ``jacopy.packages.drinfeld.twist``);

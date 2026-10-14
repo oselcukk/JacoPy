@@ -129,8 +129,7 @@ def is_certified_derivation(op: Expr) -> bool:
     operator — is split. A ``section_value`` atom (a Derivation only
     for slot plumbing) is never one. Lives here, below the algorithms
     and the calculus layer, so :func:`jacopy.central.calculus.scalars.annihilates`
-    and :mod:`jacopy.algorithms.product_rule` import it without a cycle
-    (audit 0b00e1b M1-1 review #10)."""
+    and :mod:`jacopy.algorithms.product_rule` import it without a cycle."""
     from jacopy.algebra.derivation import Derivation  # noqa: WPS433 - derivation imports this module lazily
 
     if getattr(op, "section_value", False):

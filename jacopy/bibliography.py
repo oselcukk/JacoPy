@@ -24,8 +24,9 @@ title page of the local PDF named in ``pdf``, or — for works whose PDF
 is not in the repository — from the reference list of a local paper
 named in ``secondary``. A field neither source gives is left empty and
 listed in ``missing``; :func:`apa_reference` prints such a gap as
-``[… not in source]`` rather than guessing it. ``docs/CITATIONS.md``
-records which code label was checked against which page.
+``[… not in source]`` rather than guessing it. The citations page
+(https://oselcukk.github.io/JacoPy/development/citations.html) records
+which code label was checked against which page.
 """
 
 from __future__ import annotations
@@ -46,7 +47,7 @@ class Reference:
     ``authors`` is a tuple of ``(family name, initials)`` pairs, e.g.
     ``("Liu", "Z.-J.")``. ``kind`` selects the APA template:
     ``"article"``, ``"preprint"``, ``"thesis"`` or ``"unpublished"``
-    (course material / project-internal compilations).
+    (material without a publisher).
     """
 
     key: str

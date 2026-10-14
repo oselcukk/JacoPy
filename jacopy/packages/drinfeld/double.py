@@ -1,7 +1,7 @@
 """
-The Drinfel'd double bracket on ``E = A ⊕ Z`` (Phase 6.C) —
-drinfeld paper [DD = arXiv:2312.06584] eqs DD (4.11), (4.17); PDF items 13
-and 14 (the Dorfman bracket is BORN here as the standard double).
+The Drinfel'd double bracket on ``E = A ⊕ Z`` —
+drinfeld paper [DD = arXiv:2312.06584] eqs DD (4.11), (4.17)
+(the Dorfman bracket is BORN here as the standard double).
 
 Sections of ``E = TM ⊕ T*M`` are represented component-wise as pairs
 ``(U, ω)``; the doubled bracket [DD (4.17)] splits into a vector and
@@ -122,7 +122,7 @@ def _ev(expr: Expr, slots) -> Expr:
 
 
 #: Public name of :func:`_ev` — a form evaluated on vector slots (``Pairing`` for one slot, alternating ``MultiEval`` otherwise)
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 evaluate_on_slots = _ev
 
@@ -145,8 +145,8 @@ def _double_engine(registry):
     return eng
 
 
-#: Public name of :func:`_double_engine` — the 6.D double engine
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: Public name of :func:`_double_engine` — the double engine
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 double_engine = _double_engine
 
@@ -285,7 +285,7 @@ def prove_dorfman_jacobi_form(
 def _poisson_double_engine(P, registry):
     """Showcase (Koszul/sharp) engine + Lie-bracket Leibniz +
     MultiEval argument linearity + interior vector-slot linearity —
-    the 6.D layer for the POISSON double's theorems. No ``[π,π]``
+    the layer for the POISSON double's theorems. No ``[π,π]``
     declaration: the properties below hold for ANY bivector."""
     from jacopy.central.calculus import (
         InteriorVectorLinearityDefinition,
@@ -489,7 +489,7 @@ def nambu_double(
 
 
 def _nambu_double_engine(N, registry):
-    """The 6.D Nambu-double layer: the Nambu engine plus the interior
+    """The Nambu-double layer: the Nambu engine plus the interior
     vector-slot linearity, the slot-reachable product rule and the
     head wedge lift (the latter two taught by the p = 2 residuals).
     Declaration-free: no fundamental-identity assumption — the

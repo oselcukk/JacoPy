@@ -1,12 +1,12 @@
 """
-The metric-affine package engine (Phase 4.A).
+The metric-affine package engine.
 
 The tangent engine plus the package's connection rules — the package
 pattern: central code supplies the calculus, a package registers its
 own definitional layer on top (never the other way around).
 
 Module path: formerly ``jacopy.packages.metric_affine.engine`` (renamed so that no two modules share
-a basename — audit 0B00E1B-FULL T2 names); the old path is a
+a basename); the old path is a
 compatibility alias that IS this module.
 """
 

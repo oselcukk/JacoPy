@@ -1,5 +1,5 @@
 """
-The EXTERIOR-degree contract (Phase 8 step 2a).
+The EXTERIOR-degree contract.
 
 Two gradings live in the package and they must not be confused:
 
@@ -17,9 +17,9 @@ The graded-commutativity of ``∧`` is governed by the exterior grading,
 and three private helpers used to compute it independently
 (``research.engine_assembly._wedge_degree``,
 ``central.objects.multivector_interior._multivector_degree`` and the
-parity test of ``algorithms.normalize_alternating``); the 2026-09-09,
-09-10 and 09-22 audits each found one of them grading an odd factor as
-even. They now all read :func:`exterior_degree`, which itself reads
+parity test of ``algorithms.normalize_alternating``); separate
+implementations risk grading an odd factor as even. They all read
+:func:`exterior_degree`, which itself reads
 the common type query :func:`jacopy.central.objects.kind.kind_of` —
 one dispatch table, one answer.
 

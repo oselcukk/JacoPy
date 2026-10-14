@@ -1,5 +1,5 @@
 """
-The locality projector (Phase 3.E.4) [MC Def 3.10].
+The locality projector [MC Def 3.10].
 
 On a REGULAR anchored bundle (``ρ`` of locally constant rank, so
 ``ker(ρ)`` is a subbundle [MC Def 3.9]), a **locality projector** is a
@@ -7,7 +7,7 @@ On a REGULAR anchored bundle (``ρ`` of locally constant rank, so
 in the locality structure ``[L̃]`` and ``im(L̂) ⊂ ker(ρ)``. It is the
 ingredient that upgrades the pseudo-E-curvature to a genuine
 ``C^∞``-multilinear E-curvature operator [MC Cor 3.3] — that operator
-itself is Phase 4 material; here we mechanize the projector's two
+itself belongs to the metric-affine package; here we mechanize the projector's two
 defining properties:
 
 * **Absorption** (``L̂ ∈ [L̃]``): on coboundary forms the projected
@@ -47,7 +47,7 @@ class LocalityProjector(SectionMap):
     defining rules are supplied to the engine via
     ``algebroid_engine(alg, projectors=(P,))``.
 
-    DEFINITION VARIANTS (literature audit 2026-07-31): the
+    DEFINITION VARIANTS: the
     metric-connection paper [MC Def 3.10] requires only absorption +
     kernel; the admissible-connections paper [ADM Def 3.8] (Dereli-Doğan,
     JGP 186 (2023)) additionally requires ``𝒫|_{ker ρ} = id``. The only

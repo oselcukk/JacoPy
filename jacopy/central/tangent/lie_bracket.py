@@ -1,8 +1,8 @@
 """
-The Lie bracket of vector fields ``[·,·]_Lie`` (PDF item 9a) — the TM
+The Lie bracket of vector fields ``[·,·]_Lie`` — the TM
 case of the central code.
 
-**Canonical definition (definition policy, Phase 2).** The Lie bracket
+**Canonical definition (definition policy).** The Lie bracket
 is the commutator of derivations:
 
     [U, V] := U∘V − V∘U,   i.e.   [U, V](f) = U(V(f)) − V(U(f)).
@@ -126,7 +126,7 @@ class ScalarActAsMultiplicationDefinition(Definition):
             # Derivations act; Sum/Product/Neg operator heads are
             # handled by ActOverSumOp / product_rule composition.
             return False
-        # Degree 0 is not enough (audit 0b00e1b P0-2, M1-3): Λ♯(dh)
+        # Degree 0 is not enough: Λ♯(dh)
         # from the public Sharp has degree 0 but is a vector field, not
         # a multiplier. Only a certified C∞ scalar acts by
         # multiplication.
@@ -143,7 +143,7 @@ class BracketOrientationDefinition(Definition):
     operands are out of the structural sort order, and ``[A, A] → 0``.
 
     A **theorem-backed canonical form** (same family as the alternating
-    argument sort and the γ index order): antisymmetry is the 2.A
+    argument sort and the γ index order): antisymmetry is the
     theorem :func:`prove_antisymmetry`, whose proof this rule carries
     as its ``theorem_proof_builder`` — in foundational mode the flip
     step inlines the full derivation. Canonical orientation is what
@@ -195,10 +195,9 @@ class LieBracketLeibnizDefinition(Definition):
     Each is provable by acting on a generic function and agreeing on
     generators; the proof builder derives exactly that from an engine
     WITHOUT this rule (non-circular). NOT registered in the tangent
-    engine (Phase 2 proofs are pinned to bracket atoms staying inert
-    at section level); packages opt in — the metric-affine engine
-    needs it for the torsion/curvature tensoriality theorems
-    (Phase 4.B).
+    engine (the tangent proofs are pinned to bracket atoms staying
+    inert at section level); packages opt in — the metric-affine engine
+    needs it for the torsion/curvature tensoriality theorems.
     """
 
     anchor = LieBracketVF
@@ -302,7 +301,7 @@ class LieBracketLeibnizDefinition(Definition):
 
 
 # --------------------------------------------------------------------- #
-# Theorems (PDF item 9c) — proved from the canonical definition        #
+# Theorems — proved from the canonical definition                       #
 # --------------------------------------------------------------------- #
 
 
@@ -335,7 +334,7 @@ def prove_antisymmetry(
     function) — from the commutator definition ONLY: this theorem
     backs the orientation rule, so its derivation must not use the
     full engine (the orientation rule would fire on ``[Y, X]`` and
-    the proof would be circular; caught by the 4.C audit)."""
+    the proof would be circular)."""
     lhs = Act(lie_bracket(X, Y), f)
     rhs = Neg(Act(lie_bracket(Y, X), f))
     return ExpandAndSimplify().prove(
@@ -368,8 +367,8 @@ def prove_jacobi(
     )
 
 
-#: Unambiguous name of the vector-field Jacobi theorem (audit
-#: 0B00E1B-FULL T2 names): ``prove_jacobi`` alone is also
+#: Unambiguous name of the vector-field Jacobi theorem:
+#: ``prove_jacobi`` alone is also
 #: :func:`jacopy.proof.verifier.prove_jacobi`, the bracket-generic
 #: graded Jacobi prover. Same function object.
 prove_lie_jacobi = prove_jacobi
@@ -394,8 +393,8 @@ def jacobi_combination_theorems(
     (:func:`prove_jacobi`, mechanical), and a vector field vanishing
     on all functions is zero (agreement on generators — the explicit
     synthetic step). The tangent analogue of the algebroid
-    Jacobiator-instance theorems (Phase 3.F); torsionful Bianchi
-    identities consume it (Phase 4.C).
+    Jacobiator-instance theorems; torsionful Bianchi
+    identities consume it.
 
     ``engine`` chooses the NORMALIZATION engine (default: the tangent
     engine); pass the engine the citation will run under, so the
@@ -508,7 +507,7 @@ def prove_additivity_second_slot(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """Prove ``[X, Y + Z](f) = [X, Y](f) + [X, Z](f)`` (ℝ-linearity,
-    additive part; PDF item 9c)."""
+    additive part)."""
     lhs = Act(lie_bracket(X, Sum(Y, Z)), f)
     rhs = Sum(
         Act(lie_bracket(X, Y), f),
@@ -528,7 +527,7 @@ def prove_scalar_homogeneity(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """Prove ``[c·X, Y](f) = c·[X, Y](f)`` for a numeric constant
-    ``c`` (ℝ-linearity, homogeneous part; PDF item 9c).
+    ``c`` (ℝ-linearity, homogeneous part).
 
     Constants pass through the bracket — unlike smooth functions,
     whose first-slot behaviour picks up the extra ``−Y(f)·X`` term

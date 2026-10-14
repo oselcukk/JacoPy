@@ -17,7 +17,7 @@ VBIN   := $(VENV)/bin
 # One-shot dev environment.
 setup: $(VENV)/.installed kernel
 	@echo "✓ Setup complete. Activate with:  source $(VBIN)/activate"
-	@echo "  Or open a notebook and pick the 'Python (jacopy v3)' kernel."
+	@echo "  Or open a notebook and pick the 'Python (JacoPy)' kernel."
 
 $(VENV)/bin/python:
 	$(PYTHON) -m venv $(VENV)
@@ -31,7 +31,7 @@ deps: $(VENV)/.installed
 
 kernel: $(VENV)/.installed
 	$(VBIN)/python -m ipykernel install --user --name=jacopy-v3 \
-		--display-name="Python (jacopy v3)"
+		--display-name="Python (JacoPy)"
 
 test: $(VENV)/.installed
 	$(VBIN)/python -m pytest tests/ -q

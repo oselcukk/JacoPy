@@ -1,7 +1,6 @@
 """
 Anholonomy coefficients ``γ^c_ab`` of the Lie bracket on a frame
-(PDF item 9b) and the frame writing of the bracket properties (the
-frame half of item 9c) — Phase 2.E.
+and the frame writing of the bracket properties.
 
 A frame ``(e_a)`` is generally *anholonomic*: its brackets do not
 vanish but decompose back over the frame,
@@ -20,12 +19,12 @@ dimension, and works for symbolic dimension. The rule
 :class:`FrameBracketCoefficientDefinition` rewrites that pairing to
 the :class:`AnholonomyCoefficient` scalar atom. The summed
 decomposition (an :class:`~jacopy.core.indexed_sum.IndexedSum` over
-``c``) is the component-layer view and arrives with the metric-affine
-frame components (Phase 4).
+``c``) is the component-layer view and lives with the metric-affine
+frame components.
 
 **Canonical index order.** ``γ^c_{ab}`` with ``a > b`` (string order)
 is normalized to ``−γ^c_{ba}``, and ``γ^c_{aa} = 0``. This bakes in
-bracket antisymmetry — a *theorem* (2.A) — as a canonical form;
+bracket antisymmetry — a *theorem* — as a canonical form;
 :func:`prove_gamma_antisymmetry` exhibits the mechanical proof that
 sanctions it.
 
@@ -99,7 +98,7 @@ class AnholonomyCoefficient(Atom):
     def _repr_inner(self) -> str:
         # Include the frame name for non-default frames so two frames'
         # coefficients stay distinguishable on screen (identity was
-        # always distinct; audit 4 was display-only).
+        # always distinct; this is display-only).
         if self._frame_name == "e":
             return f"γ^{self._upper}_{self._first}{self._second}"
         return (
@@ -153,7 +152,7 @@ def anholonomy_coefficient(
 
 class FrameBracketCoefficientDefinition(Definition):
     """``⟨e^c, [e_a, e_b]⟩ → γ^c_ab`` — the definition of the
-    anholonomy coefficient (PDF item 9b).
+    anholonomy coefficient.
 
     Fires on a pairing of a coframe field against a Lie bracket of two
     frame fields of the *same* frame (matching base name and bundle on
@@ -192,7 +191,7 @@ class HolonomicFrameDefinition(Definition):
     """``[e_a, e_b] → 0`` for a frame declared holonomic (coordinate
     frame): the opt-in ``γ = 0`` mode."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
 
     anchor = LieBracketVF
 
@@ -218,7 +217,7 @@ class HolonomicFrameDefinition(Definition):
 
 
 # --------------------------------------------------------------------- #
-# Frame writing of the bracket properties (item 9c, frame half)          #
+# Frame writing of the bracket properties                               #
 # --------------------------------------------------------------------- #
 
 
@@ -260,10 +259,10 @@ def prove_coframe_differential(
     """Prove ``de^c(e_a, e_b) = −γ^c_ab`` — the dual (Maurer-Cartan
     style) form of the anholonomy decomposition.
 
-    Three phases of machinery close it together: the Palais rule (2.C)
-    unrolls ``de^c``, frame duality (2.B) turns ``⟨e^c, e_b⟩`` into
+    Three pieces of machinery close it together: the Palais rule
+    unrolls ``de^c``, frame duality turns ``⟨e^c, e_b⟩`` into
     Kronecker deltas whose derivatives die (``is_constant``), and the
-    coefficient rule (2.E) names the surviving bracket pairing.
+    coefficient rule names the surviving bracket pairing.
     """
     e_up = fr.dual().field(upper)
     lhs = MultiEval(
@@ -292,7 +291,7 @@ def prove_frame_jacobi(
     ``⟨e^e, [e_a,[e_b,e_c]] + [e_b,[e_c,e_a]] + [e_c,[e_a,e_b]]⟩ = 0``.
 
     The nested brackets are not frame-decomposed (that is the
-    Phase 4 component layer); the identity closes through the repair
+    component layer); the identity closes through the repair
     loop, which proves the inner vector-level Jacobi sum on the
     generic function ``f`` and cites it. Returns
     ``(chain, used_identities)``.

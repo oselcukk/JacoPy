@@ -6,7 +6,7 @@ alone — no Poisson, Nambu or Drinfeld structure enters them — but they
 were first written where a package proof needed them. They live here
 so that every engine builder (the packages, the research
 interface's :func:`~jacopy.research.engine_assembly.assemble_engine`)
-can reach them from the central layer (audit 0B00E1B-FULL T2-1):
+can reach them from the central layer:
 
 * :class:`MagicFormulaDefinition` — ``L_X ω = ι_X(dω) + d(ι_X ω)``
   (theorem-tagged; previously ``jacopy.packages.drinfeld.twist``);
@@ -19,7 +19,7 @@ can reach them from the central layer (audit 0B00E1B-FULL T2-1):
   wedge (previously ``jacopy.packages.poisson.nambu``).
 
 Role vs. tag: all four have the logical ROLE ``definition`` (they
-assume nothing beyond ``CARTAN_TM``; the reviewed role in
+assume nothing beyond ``CARTAN_TM``; the recorded role in
 ``tests/rule_roles_inventory.json``), so no result lists them among
 its assumptions. The first three also carry a sub-proof builder
 (:attr:`~jacopy.proof.expansion.Definition.is_theorem`): their steps
@@ -60,8 +60,8 @@ class MagicFormulaDefinition(Definition):
     ``L_X ω → ι_X(dω) + d(ι_X ω)`` for a TM Cartan Lie derivative on
     a determinable form of degree ≥ 1.
 
-    The magic formula is a proven theorem (Phase 2 seed + the
-    higher-degree audit to p = 5); the always-on engines apply it at
+    The magic formula is a proven theorem (mechanically checked up
+    to p = 5); the always-on engines apply it at
     EVAL sites via the Palais route. The twist proofs need it at the
     OPERATOR level: TW (7.25) writes the twisted family through
     ``𝒦_V = −ℒ_V + dι_V`` and the equivalence with the tilde
@@ -133,7 +133,7 @@ class MagicFormulaDefinition(Definition):
 
 class LieIotaCommutatorDefinition(Definition):
     """Cartan relation (role ``definition``; theorem-tagged) ``ι_{[X,Y]} = ℒ_X ι_Y −
-    ι_Y ℒ_X`` as an operator-level rewrite (proved in Phase 2 — the
+    ι_Y ℒ_X`` as an operator-level rewrite (proved as the
     ``lie_iota`` relation; the always-on engines apply it at eval
     sites). Terminating: removes a bracket from an interior
     subscript; magic then converts the ``ℒ``'s to ``ι``/``d``."""
@@ -194,7 +194,7 @@ class LieIotaCommutatorDefinition(Definition):
 class DSquaredZeroDefinition(Definition):
     """``d(d(x)) → 0`` — role ``definition``, theorem-tagged (never in the always-on
     engines; ``d² = 0`` is proven on TM up to p = 5 via cited Jacobi
-    instances — the higher-degree audit). Registered opt-in by the
+    instances). Registered opt-in by the
     Nambu engine, where ``d(dF∧…)`` shapes must die inside interior
     slots."""
 
@@ -247,8 +247,8 @@ class DWedgeLeibnizDefinition(Definition):
     """``d(α₁∧…∧α_n) → Σ_i (−1)^{|α₁|+…+|α_{i−1}|} α₁∧…∧dα_i∧…∧α_n``
     — the graded Leibniz of ``d`` over the wedge, as an ENGINE rule
     (the algorithm-level twin in ``product_rule`` cannot reach
-    operator-atom SLOTS; the engine's slot protocol can — Phase
-    5.E.4, the ``ι_Π(d(dF∧dG))`` shapes)."""
+    operator-atom SLOTS; the engine's slot protocol can — e.g.
+    the ``ι_Π(d(dF∧dG))`` shapes)."""
 
     anchor = Act
 

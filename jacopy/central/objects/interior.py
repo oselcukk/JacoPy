@@ -1,8 +1,7 @@
 """
-Interior product ``ι_X`` — contraction of a p-form with a vector field
-(PDF item 8r).
+Interior product ``ι_X`` — contraction of a p-form with a vector field.
 
-Definition (PDF): for a vector field ``X`` and a p-form ``ω``
+Definition: for a vector field ``X`` and a p-form ``ω``
 
     (ι_X ω)(X₁, …, X_{p-1}) := ω(X, X₁, …, X_{p-1}),
 
@@ -20,8 +19,8 @@ automatically as ``|ι_X| + |ω| = |ω| − 1``.
 **Central-code view.** On ``TM`` this is the usual interior product;
 for a general bundle ``E``, ``ι`` is contraction on ``Λ^p E^*`` with a
 section of ``E``. Insertion into the contraction slot (the MultiEval
-expansion of the definition above) will be added as an engine rule
-(Phase 2, together with d/L); this layer sets up the operator and its
+expansion of the definition above) is an engine rule
+(together with d/L); this layer sets up the operator and its
 degree law.
 """
 
@@ -62,7 +61,7 @@ class Interior(Derivation):
     def vector(self) -> Expr:
         return self._vector
 
-    # Slot protocol (Phase 6.E): the vector is a rewritable slot, so
+    # Slot protocol: the vector is a rewritable slot, so
     # engine rules can normalize INSIDE it (e.g. a sharp whose form
     # slot carries a scalar factor: ι_{Π(f·η)} → ι_{f·Πη} → f·ι_{Πη}
     # via the sharp linearity + the interior vector linearity).
@@ -84,14 +83,14 @@ def interior(X: Expr, *, name: Optional[str] = None) -> Interior:
 
 def contract_all(omega: Expr, *vectors: Expr) -> Expr:
     """Iterated contraction ``ι_{X_k} … ι_{X_1} ω`` — the alternating
-    case of PDF item 8w's "generalization to arbitrary numbers".
+    case of partial evaluation of a multilinear map.
 
     Fixing ``j`` slots of a k-linear alternating map yields the
     (k−j)-linear map ``ω(X_1, …, X_j, ·, …, ·)``; for alternating
     forms that partial evaluation IS the iterated interior product
-    (proved for the 3-form instance in the Phase 2.F tests). The
+    (proved for the 3-form instance in the test suite). The
     symmetric bilinear case is the musical ``♭``/``♯`` pair; general
-    (q, r)-tensor slot views arrive with the component layer (Phase 4).
+    (q, r)-tensor slot views live in the component layer.
     """
     if not isinstance(omega, Expr):
         raise TypeError("contract_all expects an Expr form")

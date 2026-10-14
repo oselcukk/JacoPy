@@ -501,7 +501,7 @@ def nambu_sharp(R: Ring, Pi: Dict, omega: Dict, p: int) -> Tuple[sp.Poly, ...]:
 
 
 # --------------------------------------------------------------------- #
-# Algebroid values (F2): sections of E and (ordered) E-forms             #
+# Algebroid values: sections of E and (ordered) E-forms                  #
 # --------------------------------------------------------------------- #
 
 
@@ -529,7 +529,7 @@ class EFormV:
 
     Laziness is the point: for a non-skew / non-right-Leibniz bracket the
     Palais expression ``d_E ω`` is neither alternating nor C∞-linear in
-    its first slot (bracket_calculus.py M2-1/M2-2), so it is not a tensor
+    its first slot (see bracket_calculus.py), so it is not a tensor
     and must be evaluated on the actual arguments, never on a basis.
     ``alt`` records whether the map is alternating (atoms; d_E of an
     alternating form for a verified-skew bracket). ``ctx`` (the model)

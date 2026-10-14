@@ -1,5 +1,5 @@
 """
-The Poisson Lie-bialgebroid compatibility conditions (Phase 6.B) —
+The Poisson Lie-bialgebroid compatibility conditions —
 drinfeld paper [DD = arXiv:2312.06584] eqs DD (4.36)-(4.38), instantiated on
 ``(A, Z) = (TM, T*M_π)`` with the Koszul bracket on ``Z`` and
 
@@ -14,7 +14,7 @@ operator through ``𝒦_V = −ι_V d``.)
 * **DD (4.37)** ``ℒ_{d̃ι̃_η U} μ = −[dι_U η, μ]_π`` — closes BARE
   (27 steps): pure magic + Koszul mechanics.
 * **DD (4.36)** ``𝒟^Z_{ℒ_U}(η, μ) = ℒ_{𝒦̃_η U} μ + 𝒦_{𝒦̃_μ U} η``
-  (the derivator condition, PDF item 10f in action) — closes with
+  (the derivator condition in action) — closes with
   cited VF-Jacobi instances (Sum-subset) + a Y-lifted scalar
   identity citation (mechanical core + labeled congruence).
 * **DD (4.38)** at p = 1 the ``𝔻_Z g_Z``-side vanishes
@@ -148,7 +148,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
         [(forms_[0], forms_[1]), (forms_[1], forms_[0])]
     ):
         # BRIDGE instance (the ⟨η,[U,V]⟩ ↔ Palais link of the
-        # 5.E.2b plan, realized as a CITATION — no rewrite rule, no
+        # general Koszul Jacobi proof, realized as a CITATION — no rewrite rule, no
         # ping-pong). Two mechanical legs on the node
         # ⟨ℒ_U a, π♯b⟩: the full engine gives the compact π-eval,
         # the tangent-only engine gives the Palais split; combining
@@ -227,7 +227,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
     # MAGIC-difference family: the residual may carry the
     # magic-SPLIT of ℒ_U a (d⟨a,U⟩ + ι_U da) — the instance is the
     # π-paired, Y-lifted magic defect (core mechanical via the
-    # Phase 2 magic theorem; pairing and Y-application are labeled
+    # tangent Cartan magic theorem; pairing and Y-application are labeled
     # congruence steps).
     from jacopy.central.tangent.cartan import (
         prove_cartan_magic_on_one_forms,
@@ -351,7 +351,7 @@ def _cite_compat_instances(engine, P, U, Y, forms_, registry):
                         generality="instance",
                     ).with_structural_requires(),
                     # one hand-built step asserting the instance: not a
-                    # proof record (audit 0b00e1b-FULL M1-5) — kept as an
+                    # proof record — kept as an
                     # explicit unverified assumption, visible in every citation
                     unverified=True,
                 )
@@ -369,7 +369,7 @@ def prove_compat_condition_one(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """[DD (4.36), the DERIVATOR condition — PDF item 10f]:
+    """[DD (4.36), the DERIVATOR condition]:
 
         𝒟^Z_{ℒ_U}(η, μ) = ℒ_{𝒦̃_η U} μ + 𝒦_{𝒦̃_μ U} η
 

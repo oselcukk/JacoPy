@@ -1,6 +1,6 @@
 """
 Locality projectors on the EXACT Courant algebroid ``TM ⊕ T*M``
-[MC Prop 4.2] — ledger K3.b (2026-09-23; audit round 0058df0 folded in).
+[MC Prop 4.2].
 
 The paper's statement: on an exact almost-Courant algebroid there is
 a UNIQUE locality projector, the projection ``pr₂`` onto
@@ -31,13 +31,13 @@ each certified on its own):
   ``C(U, ·) = ι_U B`` (:func:`b_field_projector`) is the ANTISYMMETRIC
   subfamily; in dimension one every 2-form vanishes while
   ``C(u∂ₓ) = u dx`` still works, so the freedom is NOT only a
-  ``B``-transform (audit 0058df0, F3). This result holds for ``C = 0``
+  ``B``-transform. This result holds for ``C = 0``
   too — it certifies "is a locality projector", nothing more.
 * :func:`prove_projector_differs_from_pr2_on_a_frame` — the
   NON-uniqueness, certified by a concrete WITNESS instead of a
-  residual the engine failed to reduce (audit 0058df0, F1: a
-  non-zero normal form is not a non-zero certificate — the same
-  expression may vanish under a rule family the engine lacks). On a
+  residual the engine failed to reduce (a non-zero normal form is
+  not a non-zero certificate — the same expression may vanish under
+  a rule family the engine lacks). On a
   frame of declared dimension with ``B = e⁰ ∧ e¹`` and ``U = e₀``,
   the form component of ``P_B(U, 0) − pr₂(U, 0)`` paired with ``e₁``
   normalizes to the LITERAL ``1`` (wedge evaluation + concrete
@@ -55,8 +55,7 @@ condition.
 
 Every input is TYPE-CHECKED (a 2-form ``B``, a ``(0,2)``-tensor
 ``C``, a 1-form ``ω``, a vector ``U``, scalar functions ``h, g``):
-an unknown or wrong type is refused, never certified (audit 0058df0,
-F2).
+an unknown or wrong type is refused, never certified.
 """
 
 from __future__ import annotations
@@ -150,7 +149,7 @@ class ProjectorAbsorbsExactFormsDefinition(Definition):
     ``C(dg) → dg`` for a function ``g``. DECLARED (it is the defining
     property of a locality projector, not derivable)."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     source = (
         cite("DereliDogan2020", "Definition 3.10"),
         cite("DereliDogan2020", "Proposition 4.1, Eq. (4.3)"),
@@ -477,7 +476,7 @@ def prove_projector_differs_from_pr2_on_a_frame(
     ``ker ρ`` only.
 
     Why a witness: a normal form the engine merely fails to reduce is
-    not a non-zero certificate (audit 0058df0, F1 — for
+    not a non-zero certificate (for
     ``B = df ∧ dg``, ``U = Π(B)`` the gap ``U(f)dg − U(g)df`` is zero by
     alternation, which the Cartan engine does not know)."""
     if dim < 2:

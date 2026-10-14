@@ -1,10 +1,10 @@
 """
-The H-TWISTED standard Courant algebroid on ``TM ⊕ T*M`` (Phase
-7.B.2; project directive item 14e): the H-twisted Dorfman bracket's Courant-axiom
+The H-TWISTED standard Courant algebroid on ``TM ⊕ T*M``: the
+H-twisted Dorfman bracket's Courant-axiom
 suite, the H-twisted Courant (skew) bracket, and the dH-defect
 Jacobi, concrete — parallel to :mod:`standard_courant` (the H = 0
-case) and built on the Phase 6.E/6.F machinery
-(:func:`~jacopy.packages.drinfeld.twist.dorfman_double_h`, the 6.F
+case) and built on the twist and Roytenberg machinery
+(:func:`~jacopy.packages.drinfeld.twist.dorfman_double_h`, the
 "twisted Courant ⟺ dH = 0" theorem).
 
 The H-term ``ι_V ι_U H`` (a closed 3-form's two-leg contraction)
@@ -17,11 +17,12 @@ is C∞-TENSORIAL and ANTISYMMETRIC in ``U, V``; consequently:
 * [C'5] invariance — the two H-contributions cancel
   (``ι_W ι_V ι_U H + ι_V ι_W ι_U H = 0``),
 * [C'1] Leibniz-Jacobi — the ONLY axiom that sees ``H``: the defect
-  is exactly ``−ι_W ι_V ι_U dH`` (proved in 6.F degree-generally;
+  is exactly ``−ι_W ι_V ι_U dH`` (proved degree-generally in
+  :mod:`~jacopy.packages.drinfeld.roytenberg`;
   here instantiated concretely at p = 1), so the twisted bracket is
   Courant ⟺ ``dH = 0``, and ``H = dB`` (a Ševera B-transform)
-  always restores Jacobi. (Ševera 2017, arXiv 1707.00265: no local
-  PDF; B §4, text after Eq. (4.12), recalls his classification of
+  always restores Jacobi. (Ševera 2017, arXiv 1707.00265;
+  B §4, text after Eq. (4.12), recalls his classification of
   exact Courant algebroids by the closed twist H.)
 
 Everything engine-normalized on components; honest-fail throughout.
@@ -317,8 +318,8 @@ def prove_twisted_jacobi_dh_defect(
     ``H`` — the VF Jacobi closes them as in the untwisted case).
     Corollary (Ševera): ``H = dB`` gives ``dH = d²B = 0``, so a
     B-transform of a Courant structure is again Courant; general
-    ``H`` is Courant ⟺ ``dH = 0`` (directive 14e / the concrete p = 1
-    face of the 6.F degree-general theorem)."""
+    ``H`` is Courant ⟺ ``dH = 0`` (the concrete p = 1 face of the
+    degree-general theorem)."""
     from jacopy.central.tangent.cartan import (
         prove_with_bracket_identities,
     )
@@ -364,7 +365,7 @@ def prove_severa_twist_is_courant(
     (a B-transform) the Leibniz-Jacobi of the twisted Dorfman
     bracket closes EXACTLY — ``dH = d²B = 0`` kills the defect, so
     the B-transform of the standard Courant structure is again a
-    Courant algebroid (directive 14e)."""
+    Courant algebroid."""
     from jacopy.central.tangent.cartan import (
         prove_with_bracket_identities,
     )

@@ -1,4 +1,4 @@
-"""Generalized geometry (project directive item 14; Phase 7).
+"""Generalized geometry.
 
 Courant algebroid axiomatics + the Uchino redundancy theorems
 (Uchino 2002, arXiv:math/0204010); the standard, H-twisted and
@@ -171,7 +171,7 @@ from jacopy.packages.generalized.standard_courant import (
     prove_dorfman_invariance_std,
 )
 
-# Facade alignment (independent audit of commit 0b00e1b, item T2-6): the remaining user-path
+# Facade alignment: the remaining user-path
 # constructors, prove_* theorems and package-specific declarations/rules.
 from jacopy.packages.generalized.bourbaki_severa import (
     severa_engine,
@@ -325,7 +325,7 @@ __all__ = [
     "theta_courant",
     "theta_dorfman",
     "prove_leibniz_from_c3",
-    # facade alignment (T2-6)
+    # facade alignment
     "severa_engine",
     "bridge_engine",
     "locally_exact_form",

@@ -1,7 +1,7 @@
 """
-The tilde calculus (Phase 5.D) — PDF items 12i-12o.
+The tilde calculus.
 
-The Phase 3.F instantiation applied to the COTANGENT algebroid: the
+The generic bracket-calculus instantiation applied to the COTANGENT algebroid: the
 generic :class:`BracketCalculus` with the pair ``(π♯, [·,·]_π)``
 yields the tilde operators
 
@@ -10,7 +10,7 @@ yields the tilde operators
 with the ROLE SWAP the grading hooks encode: the tilde calculus'
 SECTIONS are 1-forms and its FORMS are multivectors (functions 0,
 vector fields 1, wedges additive). No new operator code — the Palais
-formula, the intrinsic L and the evaluation machinery are the Phase 2
+formula, the intrinsic L and the evaluation machinery are the tangent-calculus
 generic rules, re-graded.
 
 Mechanical theorems here:
@@ -21,10 +21,10 @@ Mechanical theorems here:
 * the tilde Cartan magic on functions
   ``L̃_α f = (d̃ ι̃_α + ι̃_α d̃) f``,
 * ``(d̃ d̃ f)(dg, dh) = 0`` under the DECLARED Poisson structure —
-  the tilde counterpart of the conditional ``d² = 0`` of Phase 3.F
+  the tilde counterpart of the conditional ``d² = 0`` of the abstract calculus
   (closes via the cited Poisson-Jacobi instances; honest without),
 * the tilde anholonomy ``γ̃_c^{ab} := ⟨[e^a, e^b]_π, e_c⟩``
-  (item 12i — the 2.E coefficient-extraction pattern on the coframe).
+  (the frame coefficient-extraction pattern on the coframe).
 """
 
 from __future__ import annotations
@@ -108,8 +108,8 @@ def tilde_calculus(P: PoissonStructure) -> BracketCalculus:
             # ORDINARY form of degree ≥ 1" — that is a tilde-SECTION,
             # not a tilde-form: d̃α / L̃-evaluation on it is
             # ill-typed. Return the −1 sentinel, which matches no
-            # arity, so the rules stay honestly inert (type hole
-            # caught by the Phase 5 edge-case audit).
+            # arity, so the rules stay honestly inert (type-hole
+            # guard).
             try:
                 if degree_of(expr, registry).as_int() >= 1:
                     return Degree.const(-1)
@@ -126,8 +126,7 @@ def tilde_calculus(P: PoissonStructure) -> BracketCalculus:
         # a tilde-FORM, not a section — the ordinary ``degree_of``
         # reads a tilde-operator Act as +1 wedge degree and would
         # misclassify ``d̃s`` as an ordinary 1-form, turning
-        # ``L̃_β(d̃s)`` into the ill-typed ``[β, d̃s]_π`` (caught by
-        # the 5.D.2 mixed-world audit).
+        # ``L̃_β(d̃s)`` into the ill-typed ``[β, d̃s]_π``.
         if tilde_multivector_degree(calc_name, expr, None) is not None:
             return False
         try:
@@ -251,7 +250,7 @@ class TildeInteriorEvalDefinition(Definition):
 class LieDCommutationDefinition(Definition):
     """``L_X(df) → d(X(f))`` — the TM Lie derivative commutes with
     ``d`` on functions. A DERIVED rule (theorem-classified: the
-    Phase 2 theorem ``prove_L_commutes_with_d_on_functions`` is its
+    tangent-calculus theorem ``prove_L_commutes_with_d_on_functions`` is its
     builder); the tangent engine deliberately omits it, the tilde
     layer opts in (Koszul expansions park ``L_{π♯dg}(dh)`` inside
     evaluation slots where only this conversion unblocks them)."""
@@ -316,7 +315,7 @@ def tilde_engine(
     registry: Optional[PropertyRegistry] = None,
     declare_poisson: bool = True,
 ):
-    """The 5.D engine: the 5.C showcase layer plus the tilde
+    """The tilde engine: the showcase layer plus the tilde
     calculus' intrinsic d/L rules and the tilde interior."""
     from jacopy.central.calculus import (
         IntrinsicDDefinition,
@@ -336,7 +335,7 @@ def tilde_engine(
 
 
 # --------------------------------------------------------------------- #
-# Tilde anholonomy (item 12i)                                            #
+# Tilde anholonomy                                                       #
 # --------------------------------------------------------------------- #
 
 
@@ -410,7 +409,7 @@ def tilde_anholonomy_coefficient(
 
 class TildeAnholonomyDefinition(Definition):
     """``⟨[e^a, e^b]_π, e_c⟩ → γ̃_c^{ab}`` — the coefficient
-    extraction (the 2.E pattern on the coframe)."""
+    extraction (the frame pattern on the coframe)."""
 
     anchor = Pairing
 
@@ -532,7 +531,7 @@ def prove_d_tilde_squared_on_exacts(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """``(d̃ d̃ f)(dg, dh) = 0`` — the tilde counterpart of the
-    conditional ``d² = 0`` (Phase 3.F): closes under the DECLARED
+    conditional ``d² = 0`` of the abstract calculus: closes under the DECLARED
     Poisson structure via the cited Poisson-Jacobi instances; fails
     honestly without."""
     from jacopy.proof.theorems import TheoremBook, cite
@@ -617,17 +616,17 @@ def prove_lie_tilde_iota_commutator_on_vectors(
 
 
 def _normalized_by(engine, seed: Expr, registry) -> Expr:
-    """Engine normal form: Phase 8 step 4b adapter over
+    """Engine normal form: an adapter over
     :func:`jacopy.proof.normalize.normalize` with THIS helper's historical
     defaults (10 rounds, 1024 steps per expansion pass). A step-budget
     exhaustion raises as ``engine.expand`` used to; a round exhaustion
-    returns the last expression (pre-4b behaviour — callers that need
+    returns the last expression (historical behaviour — callers that need
     the guarantee use ``require_normal_form``)."""
     return _normal_form(engine, seed, registry).expr
 
 
 #: Public name of :func:`_normalized_by` — engine normal form with this helper's defaults (10 rounds, 1024 steps; a step-budget exhaustion raises)
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 normalized_by = _normalized_by
 
@@ -722,12 +721,12 @@ def prove_lie_tilde_commutator_on_exacts(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """``⟨(L̃_{df} L̃_{dg} − L̃_{dg} L̃_{df} − L̃_{[df,dg]_π}) X, dh⟩
-    = 0`` — the first Q3 algebroid-calculus identity in the tilde
+    = 0`` — the first algebroid-calculus identity in the tilde
     world, on exact generators. Requires the DECLARED Poisson
     structure: the residual splits into the scalar Jacobiator on
     ``(f, g, ⟨X, dh⟩)`` and the d-LIFTED Jacobiator on ``(f, g, h)``,
     both entering by citation. The general-form version needs the
-    general SN evaluation (Phase 5.E)."""
+    general SN evaluation."""
     engine = tilde_engine(P, registry=registry)
     _cite_jacobi_instances(
         engine,
@@ -771,7 +770,7 @@ def prove_lie_tilde_d_iota_commutation_on_exacts(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """``⟨L̃_{df} d̃ι̃_{dg} X − d̃ι̃_{[df,dg]_π} X
-    − d̃ι̃_{dg} L̃_{df} X, dh⟩ = 0`` — the second Q3 identity in the
+    − d̃ι̃_{dg} L̃_{df} X, dh⟩ = 0`` — the second algebroid-calculus identity in the
     tilde world, exact generators; the residual is the scalar
     Jacobiator on ``(f, h, ⟨X, dg⟩)`` (cited)."""
     engine = tilde_engine(P, registry=registry)
@@ -828,7 +827,7 @@ def prove_lie_tilde_d_iota_exact_on_exacts(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """``⟨L̃_{dg} d̃ι̃_{df} X − d̃ι̃_{dg} d̃ι̃_{df} X, dh⟩ = 0`` —
-    the third Q3 identity (tilde magic on the exact tilde-form
+    the third algebroid-calculus identity (tilde magic on the exact tilde-form
     ``d̃ι̃_{df} X``), exact generators; the residual is the scalar
     Jacobiator on ``(g, h, ⟨X, df⟩)`` (cited)."""
     engine = tilde_engine(P, registry=registry)
@@ -854,7 +853,7 @@ def prove_lie_tilde_d_iota_exact_on_exacts(
 def _cite_sn_general_instances(engine, P, triples, registry) -> None:
     """Register ``±`` (and half-scale) evaluated instances of the
     DECLARED ``[π,π]_SN = 0`` on GENERAL 1-form triples, via the
-    5.E.2 general evaluation view. Two legs per instance: the bare
+    general evaluation view. Two legs per instance: the bare
     expansion (declaration withheld, the anchor-defect view fires)
     and the declared kill — combined explicitly."""
     from jacopy.core.expr import Rational, Product
@@ -947,7 +946,7 @@ def prove_lie_tilde_d_iota_commutation_general(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """``⟨L̃_α d̃ι̃_β X − d̃ι̃_{[α,β]_π} X − d̃ι̃_β L̃_α X, γ⟩ = 0``
-    on GENERAL 1-forms (Phase 5.E.2) — the Jacobi obstruction enters
+    on GENERAL 1-forms — the Jacobi obstruction enters
     through the cited general SN instance on ``(α, γ, d⟨X,β⟩)``."""
     engine = tilde_engine(P, registry=registry)
     _cite_sn_general_instances(
@@ -1007,7 +1006,7 @@ def prove_lie_tilde_d_iota_exact_general(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """``⟨L̃_β d̃ι̃_α X − d̃ι̃_β d̃ι̃_α X, γ⟩ = 0`` on GENERAL
-    1-forms (Phase 5.E.2) — cited general SN instance on
+    1-forms — cited general SN instance on
     ``(β, γ, d⟨X,α⟩)``."""
     engine = tilde_engine(P, registry=registry)
     _cite_sn_general_instances(

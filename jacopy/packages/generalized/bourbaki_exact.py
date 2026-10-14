@@ -1,6 +1,6 @@
 """
-EXACT pre-metric-Bourbaki algebroids and the INDUCED pre-calculus
-(Phase 7.B.2f.3), from the PRIMARY paper Çatal-Özer, Dereli & Doğan
+EXACT pre-metric-Bourbaki algebroids and the INDUCED pre-calculus,
+from the PRIMARY paper Çatal-Özer, Dereli & Doğan
 (2022) [arXiv:2210.00548] §8-9 (bare equation numbers below are that
 paper's): the splitting data
 ``φ : T(M) → E``, ``χ : Z → E`` with
@@ -10,8 +10,8 @@ paper's): the splitting data
     χ ℒ^Z_V z = [φV, χz]_E (9.7 — the DEFINITION of ℒ^Z),
     ι_V z = g(χz, φV)      (9.9 — the DEFINITION of ι),
 
-mechanized as engine rules on top of the 7.B.2f.2 structure layer
-(R-valued ``g``, 𝔻/𝕃, ℒ^R) and the 7.B.2f.1 quintet nodes
+mechanized as engine rules on top of the Bourbaki structure layer
+(R-valued ``g``, 𝔻/𝕃, ℒ^R) and the pre-calculus quintet nodes
 (``BIota``, ``BD``, ``BLieZ``). Theorems:
 
 * **Lemma 9.1** — ``[u, χz]_E`` is in the image of ``χ``:
@@ -28,7 +28,7 @@ mechanized as engine rules on top of the 7.B.2f.2 structure layer
   ``g(χz, u) = ι_{ρ(u)} z`` beyond the definitional φ-leg), the
   invariance instance at ``(φU, φV, χz)`` yields the axiom (9.14).
 
-Together with Thm 9.1 (7.B.2f.1) this closes the circle: a Bourbaki
+Together with Thm 9.1 (:mod:`bourbaki_precalculus`) this closes the circle: a Bourbaki
 pre-calculus builds an exact pre-metric-Bourbaki algebroid, and an
 exact pre-metric-Bourbaki algebroid induces a Bourbaki pre-calculus.
 """
@@ -115,8 +115,7 @@ class SplitAnchorDefinition(Definition):
     The splitting data belongs to ONE structure: when constructed
     with an ``algebroid_name`` the rule fires only on THAT
     algebroid's anchor — a foreign anchor applied to a φ/χ atom
-    stays symbolic instead of inheriting the splitting equations
-    (2026-09-09 audit, finding 5)."""
+    stays symbolic instead of inheriting the splitting equations."""
 
     source = (
         cite("CatalOzerDereliDogan2022", "Definition 8.1, Eq. (8.5)"),
@@ -156,13 +155,13 @@ class SplitAnchorDefinition(Definition):
 class LieZDefinitionRule(CitedTheoremMixin, Definition):
     """(9.7) — the DEFINITION of ``ℒ^Z``:
     ``[φV, χz]_E → χ(ℒ^Z_V z)`` (well-defined by Lemma 9.1);
-    scoped to its algebroid (finding 5).
+    scoped to its algebroid.
 
     The rewrite asserts ``[φV, χz]_E ∈ im χ``, which is Lemma 9.1
     (anchor morphism + exactness ``ker ρ = im χ``), not a definition:
     on an algebroid without a morphism anchor ``ρ([φV, χz]) ≠ 0`` in
     general and the rewrite would close it to 0. So the rule is a
-    CITATION (audit 0B00E1B-FULL M1-4 pattern): it proves Lemma 9.1 on
+    CITATION: it proves Lemma 9.1 on
     its own structure (:func:`prove_lemma_91`) and every step cites
     it, so the lemma's requirements (the declared anchor morphism)
     flow into the result; without the lemma the rule never fires.
@@ -255,9 +254,9 @@ class SymPartChiSwapDeclaration(Definition):
     ``[χz, φU]_E → −[φU, χz]_E + 𝔻g(χz, φU)`` — terminating (the
     χ-first bracket disappears; (9.7) then absorbs the φ-first
     one). The swapped bracket keeps the INPUT's algebroid identity
-    (2026-09-09 audit, finding 5 — no hardcoded ``"E"``)."""
+    (no hardcoded ``"E"``)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = cite("CatalOzerDereliDogan2022", "Definition 6.2, Eq. (6.11)")
 
     anchor = AlgebroidBracket
@@ -343,7 +342,7 @@ class IsotropyDeclaration(Definition):
     φ-sections (resolved through the anchor morphism to a Lie
     bracket of M-vectors) and ``g(χz, χy) → 0``."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
 
     name = "declared g-isotropy: g(χz, u) = ι_ρ(u) z, g(χz, χy) = 0"
     source = cite("CatalOzerDereliDogan2022", "Proposition 9.1, proof (g-isotropy of χ)")
@@ -437,7 +436,7 @@ def exact_bourbaki_engine(
     isotropic: bool = False,
     invariance: bool = False,
 ) -> ExpansionEngine:
-    """The splitting rules layered over the 7.B.2f.2 structure
+    """The splitting rules layered over the Bourbaki structure
     engine. ``invariance`` controls the (7.8) auto-rewrite (kept
     OFF inside the Prop 9.1 provers, which cite the instance
     manually); ``isotropic`` opts into the declared g-isotropy."""
@@ -520,7 +519,7 @@ def prove_lemma_91(
     # the proof IS the library normalization chain (minted steps that
     # replay ρ([u, χz])(h) → 0): no hand-built wrapper step, so the record
     # replays and the declared anchor morphism reaches its requirements
-    # (audit 0B00E1B-FULL M1-4; LieZDefinitionRule cites this lemma)
+    # (LieZDefinitionRule cites this lemma)
     nf, fired = _normalize(engine, node, registry, record=True)
     if nf != Integer(0):
         raise ProofFailure(

@@ -1,8 +1,8 @@
-"""Algebroid models (F2): ``E = R^n × R^r`` with a polynomial anchor and a
+"""Algebroid models: ``E = R^n × R^r`` with a polynomial anchor and a
 concrete ℝ-bilinear bracket, plus frames.
 
 Every algebroid of an equation gets an :class:`EStructure` drawn from a
-FAMILY (SPEC §2). The bracket of every family is an instance of
+FAMILY. The bracket of every family is an instance of
 
     [u,v]^c = u^a ρ_a(v^c) − λ v^b ρ_b(u^c) + C^c_ab(x) u^a v^b + S(u,v)
 

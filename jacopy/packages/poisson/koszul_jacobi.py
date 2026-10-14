@@ -1,12 +1,11 @@
 """
-The GENERAL Koszul Jacobi identity (5.E.2b closure, 2026-09-07) —
-the oldest recorded deferral of the project:
+The GENERAL Koszul Jacobi identity:
 
     ⟨ [α,[β,γ]_π]_π + [β,[γ,α]_π]_π + [γ,[α,β]_π]_π , X ⟩ = 0
 
 on GENERAL (non-exact) 1-forms, under the declared ``[π,π]_SN = 0``.
 
-Mechanism (the 6.J programme completed): a GREEDY stall-time
+Mechanism: a GREEDY stall-time
 difference-test over a rich instance-seed space, followed by an
 exact ℚ-LINEAR phase (Gaussian elimination over the monomial
 vectorization) for the multi-seed combinations greedy cannot reach.
@@ -14,8 +13,8 @@ Soundness: every seed is a proven/declared zero —
 
 * ``S_br`` — pairing-Leibniz bridges
   ``⟨c,[a♯,b♯]⟩ = a♯(π(b,c)) − π(b, ℒ_{a♯}c)`` (mechanical);
-* ``2NF`` — two-normal-form sharp/interior instances (the 6.B
-  recipe: one node, full-engine leg vs sharp-only leg);
+* ``2NF`` — two-normal-form sharp/interior instances (the
+  two-normal-form recipe: one node, full-engine leg vs sharp-only leg);
 * ``pairD`` — the declared ``[π,π] = 0`` slices
   ``⟨c, D(a,b)⟩ = ½[π,π](a,b,c) = 0`` with X-, bracket- and
   d-pairing lifts (congruence);
@@ -25,7 +24,7 @@ Soundness: every seed is a proven/declared zero —
 
 so any rational linear combination is zero.
 
-Evidence (audit 0B00E1B-FULL M3-3). The search only FINDS a
+Evidence. The search only FINDS a
 certificate ``Jac = Σ c_i S_i``; it is not the proof. Each seed is a
 :class:`ZeroSeed` record — expression, origin, and its own ``S_i = 0``
 theorem built by library producers (engine rewrites, normalization
@@ -146,7 +145,7 @@ def _to_vec(expr: Expr, acc=None, coeff=Fraction(1)):
         # Distribute a Sum/Neg factor (multilinearity of the
         # monomial reading) — collect passes fold common scalar
         # factors back into ``f·(a + b)``, which would otherwise
-        # be one opaque monomial (2026-09-08, Bourbaki
+        # be one opaque monomial (needed e.g. for the Bourbaki
         # left-Leibniz).
         for k, c in enumerate(expr.children):
             if isinstance(c, Sum):
@@ -265,7 +264,6 @@ def _gauss_solve(rows, target, keys):
 
 # --------------------------------------------------------------------- #
 # Zero seeds: expression + origin + replayed zero theorem               #
-# (audit 0B00E1B-FULL M3-3)                                              #
 # --------------------------------------------------------------------- #
 
 
@@ -340,7 +338,7 @@ _SEED_TOKEN = object()
 @dataclass(frozen=True, eq=False)
 class ZeroSeed:
     """One zero instance of the search, carried as a record — not a
-    bare expression (audit 0B00E1B-FULL M3-3):
+    bare expression:
 
     * ``expr`` — the instance ``S`` (the claim is ``S = 0``);
     * ``family`` / ``origin`` — which identity it instantiates, and why
@@ -1001,7 +999,7 @@ def prove_general_koszul_jacobi(
     declare_poisson: bool = True,
     max_rounds: int = 40,
 ) -> ProofChain:
-    """THE 5.E.2b theorem: the Koszul bracket satisfies the Jacobi
+    """THE general Koszul Jacobi theorem: the Koszul bracket satisfies the Jacobi
     identity on GENERAL 1-forms, paired against the probe ``X``,
     under the declared ``[π,π]_SN = 0``.
 

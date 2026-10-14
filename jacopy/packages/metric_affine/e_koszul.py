@@ -1,8 +1,8 @@
 """
-The E-Koszul formula family (Phase 4.F.3) [MC Prop 3.7-3.8,
+The E-Koszul formula family [MC Prop 3.7-3.8,
 ADM Prop 3.12 one direction].
 
-The algebroid analogue of the Phase 4.C Koszul module, with the
+The algebroid analogue of the metric Koszul module, with the
 locality correction ``K`` [MC eq (3.36)]:
 
     K(∇,g,L)(u,v,w) := − g(Σ_s L(e^s,∇_{e_s}v,w), u)
@@ -24,11 +24,11 @@ locality correction ``K`` [MC eq (3.36)]:
   connection.
 * :func:`prove_e_koszul_formula` — the clean modified Koszul formula
   under the declared ``ᴸT = 0`` and ``Q = 0``: the defining property
-  of the E-Koszul connection [MC Def 3.14]. Together with the 4.F.1
-  theorem ``ᴸT-free ⟹ admissible``, this closes one direction of
+  of the E-Koszul connection [MC Def 3.14]. Together with the
+  admissibility theorem ``ᴸT-free ⟹ admissible``, this closes one direction of
   [ADM Prop 3.12]: an E-Levi-Civita connection is admissible AND
   E-Koszul. The converse (E-Koszul + admissible ⟹ E-LC, via
-  non-degeneracy stripping) is 4.F.3b.
+  non-degeneracy stripping) is proved separately.
 """
 
 from __future__ import annotations
@@ -118,7 +118,7 @@ class EKoszulDeclaration(Definition):
     holds no ``∇``-in-metric-slot at all, and ``K``'s ``∇``'s sit
     inside ``L``-slots (inert to this rule)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = cite("DereliDogan2020", "Definition 3.14, Eqs. (3.34), (3.36)")
 
     def __init__(
@@ -191,7 +191,7 @@ class AdmissibilityMetricPairCollection(Definition):
     metric slots). Collection-only direction, same cycle
     rationale."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     source = cite("DereliDogan2023", "Definition 3.4")
 
     anchor = Sum
@@ -362,7 +362,7 @@ def prove_e_koszul_formula(
           = ρ(u)g(v,w) + ρ(v)g(u,w) − ρ(w)g(u,v)
           + g([u,v],w) − g([u,w],v) − g([v,w],u).
 
-    With 4.F.1's ``ᴸT-free ⟹ admissible`` this closes one direction
+    With the admissibility theorem ``ᴸT-free ⟹ admissible`` this closes one direction
     of [ADM Prop 3.12]: E-Levi-Civita ⟹ admissible + E-Koszul.
     Honest fail without the declarations (tested)."""
     engine = _engine(alg, fr, registry)
@@ -536,7 +536,7 @@ class NullLocalityDefinition(Definition):
     The setting of the generalized fundamental theorem
     [MC Thm 3.2]."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     source = cite("DereliDogan2020", "Theorem 3.2 (null locality operator)")
 
     def __init__(self, alg: Algebroid) -> None:
@@ -620,7 +620,7 @@ def prove_projectors_agree_on_coboundary_values(
     projectors agree on coboundary locality values —
     ``𝒫₁(L(Df,u,v)) − 𝒫₂(L(Df,u,v)) = 0`` (both absorption rules
     fire). The FULL uniqueness (𝒫 = pr₂∘τ on exact almost-Courant)
-    needs the exact-sequence layer — recorded deferral."""
+    needs the exact-sequence layer and is not proved here."""
     from jacopy.central.algebroid.context import LocalityOperator
     from jacopy.central.algebroid.locality import locality_projector
 
@@ -635,7 +635,7 @@ def prove_projectors_agree_on_coboundary_values(
 
 
 # ------------------------------------------------------------------- #
-# MC Thm 3.2 — the component decomposition (3.44) (ledger K3.a)        #
+# MC Thm 3.2 — the component decomposition (3.44)                      #
 # ------------------------------------------------------------------- #
 
 
@@ -746,7 +746,7 @@ def prove_fundamental_theorem_components(
     # the second step rewrites the Koszul components INSIDE the whole
     # right-hand side, so the chain stays connected (step1.after ==
     # step2.before) and its final expression keeps the Q/⁰T corrections
-    # (2026-09-23 audit, F4: two disconnected identities read as one)
+    # (two disconnected identities would otherwise read as one)
     rhs_expanded = rhs.substitute_atom(k_lhs, k_rhs) if hasattr(rhs, "substitute_atom") else _replace(rhs, k_lhs, k_rhs)
     if rhs_expanded == rhs:
         rhs_expanded = _replace(rhs, k_lhs, k_rhs)

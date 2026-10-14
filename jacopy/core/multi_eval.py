@@ -116,7 +116,7 @@ class MultiEval(Expr):
             # skew-symmetric — d_E on a Leibniz/Courant level, where
             # dα(u,u) = −α([u,u]) ≠ 0) cannot honour it, so the node is
             # normalized to a plain multilinear evaluation instead of
-            # licensing ω(u,u) = 0 (audit 0B00E1B-FULL M2-1).
+            # licensing ω(u,u) = 0.
             alternating = False
         self._head = head
         self._args = tuple(args)
@@ -212,7 +212,7 @@ class MultiEval(Expr):
 def admits_alternation(head: Expr) -> bool:
     """May ``head`` be evaluated as an ALTERNATING multilinear map?
 
-    DEFAULT REJECT (audit 0B00E1B-FULL M2-1 + code reviews): only an
+    DEFAULT REJECT: only an
     explicitly certified head is alternating —
 
     * an atom whose CLASS declares ``alternating_values = True``

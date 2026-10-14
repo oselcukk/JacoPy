@@ -1,4 +1,4 @@
-"""Calculus on algebroids & Drinfel'd doubles (PDF item 13; Phase 6).
+"""Calculus on algebroids & Drinfel'd doubles.
 
 Primary sources (bibliography keys in :mod:`jacopy.bibliography`):
 

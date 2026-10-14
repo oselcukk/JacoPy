@@ -1,6 +1,6 @@
 """Engine-side entry point: :func:`on_closed`.
 
-Called at the engine's CLOSED points (SPEC §3). Controlled by
+Called at the engine's CLOSED points. Controlled by
 ``JACOPY_ORACLE=off|warn|strict`` (default ``off``: the call returns
 immediately and nothing — not even sympy — is imported), or by the
 :func:`oracle_mode` context manager / the ``oracle=`` keyword of

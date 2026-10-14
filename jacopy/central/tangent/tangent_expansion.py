@@ -1,15 +1,15 @@
 """
-The tangent-case expansion engine (Phase 2).
+The tangent-case expansion engine.
 
 Assembles all **definitional** rules of the TM case landed so far
-(definition policy §2 in the ROADMAP): Act operator-linearity (core),
-the Lie-bracket action (2.A), scalar action as multiplication (2.A),
-the connection's action on functions and the frame duality (2.B).
-Derived rules (proved theorems) are added in later sub-phases behind
+(definition policy §2): Act operator-linearity (core),
+the Lie-bracket action, scalar action as multiplication,
+the connection's action on functions and the frame duality.
+Derived rules (proved theorems) are added behind
 explicit citation.
 
 Module path: formerly ``jacopy.central.tangent.engine`` (renamed so that no two modules share
-a basename — audit 0B00E1B-FULL T2 names); the old path is a
+a basename); the old path is a
 compatibility alias that IS this module.
 """
 
@@ -104,10 +104,9 @@ def tangent_engine(
             SNOrientationDefinition(registry),
             SNExpansionDefinition(registry),
             LieOnMultivectorDefinition(registry),
-            # (q,r)-tensor Lie evaluation law (PDF 9e; 2026-09-08
-            # audit compliance-2 closure).
+            # (q,r)-tensor Lie evaluation law.
             _TensorLieEval(registry),
-            # item 8w generalization (ledger K2): partial evaluation
+            # partial evaluation
             # of k-linear maps and the musical atoms as its j = 1 case.
             PartialEvalCollapseDefinition(),
             PartialEvalLinearityDefinition(registry),

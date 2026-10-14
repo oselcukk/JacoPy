@@ -1,5 +1,5 @@
 """
-The common normalization contract (Phase 8 step 4b).
+The common normalization contract.
 
 Every proof in the package drives an expression to an engine
 "normal form" with the same loop — definitional expansion, the
@@ -195,7 +195,7 @@ def _normalize(engine, expr, registry, rounds, max_steps, fns, inner_rounds, rec
                                              key=("pass", rule), registry_facts=facts_from_log(log))))
             else:
                 # a caller-supplied callable is the caller's word: no key,
-                # not minted — a hand-built step (review 2026-10-01 #4)
+                # not minted — a hand-built step
                 chain.append(ProofStep(before, after, rule=rule, justification=why,
                                        registry_facts=facts_from_log(log)))
         return after

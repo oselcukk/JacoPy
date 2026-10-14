@@ -1,5 +1,5 @@
 """
-Twist automorphisms and the brackets they induce (Phase 6.E) —
+Twist automorphisms and the brackets they induce —
 [TW §7; TW = arXiv:2409.11973]: a bundle automorphism
 ``Ψ ∈ Aut(A ⊕ Z)`` turns an initial bracket into
 
@@ -7,7 +7,7 @@ Twist automorphisms and the brackets they induce (Phase 6.E) —
 
 and the twisted bracket's components read off a whole twisted
 calculus family TW (7.25). Two of the three special shapes TW (7.11)
-are described here (the frame-change ``Ψ_m``, added with 6.E-devam, is
+are described here (the frame-change ``Ψ_m`` is
 further below):
 
 * **Π-transform** ``Ψ_Π = [[1, Π], [0, 1]]`` with ``Π`` a
@@ -35,7 +35,7 @@ further below):
       form([e₁,e₂]_Ψ) = form of the Dorfman double + ι_V ι_U dB.
 
 Twisted calculus elements (TW (7.25), H = 0 initial bracket) are proved
-against the 6.D tilde calculus componentwise; the mediating fact is
+against the tilde calculus componentwise; the mediating fact is
 the Cartan magic formula (``𝒦_V = −ι_V d``), applied by the engine.
 """
 
@@ -60,9 +60,8 @@ from jacopy.packages.drinfeld.double import (
     nambu_double,
 )
 
-# Structure-free rules, moved to the central layer (audit 0B00E1B-FULL
-# T2-1); re-exported here so every existing import path keeps the SAME
-# class objects.
+# Structure-free rules, moved to the central layer; re-exported here
+# so every existing import path keeps the SAME class objects.
 from jacopy.central.calculus.slot_rules import (  # noqa: F401  (re-export)
     FormProductToWedgeDefinition,
     PairingArgSplitDefinition,
@@ -132,9 +131,9 @@ def r_twist(N, omega: Expr, eta: Expr) -> Expr:
 
 
 def _twist_engine(N, registry):
-    """6.D double engine + operator slot additivity (the twist puts
+    """Double engine + operator slot additivity (the twist puts
     composite directions like ``U + Πω`` inside Lie subscripts that
-    sit in other operators' slots — the 6.E gap)."""
+    sit in other operators' slots)."""
     from jacopy.central.calculus import (
         OperatorSlotAdditivityDefinition,
     )
@@ -150,7 +149,7 @@ def _twist_engine(N, registry):
 
 
 #: Public name of :func:`_twist_engine` — the twist engine of a Nambu structure
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 twist_engine = _twist_engine
 
@@ -238,7 +237,7 @@ def prove_twisted_lie_tilde(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """``ℒ̃′_ω V = [Πω, V] − Π(𝒦_V ω)`` [TW (7.25)] equals the 6.D
+    """``ℒ̃′_ω V = [Πω, V] − Π(𝒦_V ω)`` [TW (7.25)] equals the
     tilde Lie derivative ``ℒ̃_ω V = [Πω, V] + Π(ι_V dω)`` — the
     mediating fact is the magic formula ``𝒦_V = −ι_V d``. Acting on
     ``h``; declaration-free."""
@@ -274,7 +273,7 @@ def prove_twisted_kappa_tilde(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 30000,
 ) -> ProofChain:
-    """``𝒦̃′_η U = [U, Πη] − Π(ℒ_U η)`` [TW (7.25)] equals the 6.D
+    """``𝒦̃′_η U = [U, Πη] − Π(ℒ_U η)`` [TW (7.25)] equals the
     combination ``−ℒ̃_η U + d̃(ι_U η)`` with ``d̃ = −Πd`` (again via
     the magic formula). Acting on ``h``; declaration-free."""
     from jacopy.proof.strategies import ExpandAndSimplify
@@ -703,7 +702,7 @@ def prove_pi_twist_h_vec(
 
 
 # ------------------------------------------------------------------- #
-# Ψ_m — frame-change twist (6.E.3)                                     #
+# Ψ_m — frame-change twist                                             #
 # ------------------------------------------------------------------- #
 
 
@@ -1015,7 +1014,7 @@ def prove_b_twists_compose_additively(
 
 
 # ------------------------------------------------------------------- #
-# Leibniz-Jacobi of the Nambu double via the Π-twist (audit M4-3)      #
+# Leibniz-Jacobi of the Nambu double via the Π-twist                   #
 # ------------------------------------------------------------------- #
 
 
@@ -1102,7 +1101,7 @@ def prove_nambu_double_jacobi_via_twist(
     evaluation) that the engine does not canonicalize, and at
     ``p ≥ 2`` ``Π(Jac_form)(h)`` stays inert (no form-level zero).
     Cost: p = 1 ≈ 2–3 min (≈ 5000 bridge steps) — SLOW suite only.
-    p = 2 (offline, 2026-10-01): the bridge CLOSES (11465 steps,
+    p = 2 (run offline): the bridge CLOSES (11465 steps,
     ≈ 26 min), but step 2 fails — the repair loop of
     :func:`prove_dorfman_jacobi_form` does not reduce the residual
     ``η(J_VF, Πμ)`` (a 2-form evaluated on a VF-Jacobi combination AND

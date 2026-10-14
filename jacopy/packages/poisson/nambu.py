@@ -1,10 +1,10 @@
 """
 Nambu-Poisson structures and the higher Koszul bracket
-(Phase 5.E.3) — PDF item 12r, first half; drinfeld paper
+— drinfeld paper
 [arXiv:2312.06584 §6] eq (6.8).
 
 A **Nambu-Poisson structure** of order ``p`` is a ``(p+1)``-vector
-``Π`` (the fundamental identity is the DECLARED axiom — Phase 5.E.4).
+``Π`` (the fundamental identity is the DECLARED axiom).
 Canonical definitions:
 
     (Πω)(f)      := Π(α₁, …, α_p, df)   for ω = α₁∧…∧α_p
@@ -17,10 +17,10 @@ The bracket is built ENTIRELY from the existing TM Cartan machinery
 (``L``, ``ι``, ``d``) plus the single new atom ``Πω``
 (:class:`NambuSharpVF`, the SharpVF pattern at arity p).
 
-Mechanical theorems (concrete ``p``; the audit exercises p = 2, 3):
+Mechanical theorems (concrete ``p``, e.g. p = 2, 3):
 
 * **p = 1 consistency**: for a bivector the Dorfman-type formula
-  equals the Phase 5.B Koszul bracket (via the magic formula —
+  equals the Koszul bracket on 1-forms (via the magic formula —
   definitional, 26 steps).
 * **right-Leibniz**: ``[ω, f·η]_Π = f·[ω,η]_Π + (Πω)(f)·η`` —
   the Leibniz-algebroid anchor property, declaration-free.
@@ -49,9 +49,8 @@ from jacopy.central.objects.interior import Interior
 from jacopy.central.objects.multivector import PVector
 from jacopy.central.tangent.exterior import CARTAN_TM, d
 
-# Structure-free rules, moved to the central layer (audit 0B00E1B-FULL
-# T2-1); re-exported here so every existing import path keeps the SAME
-# class objects.
+# Structure-free rules, moved to the central layer; re-exported here
+# so every existing import path keeps the SAME class objects.
 from jacopy.central.calculus.slot_rules import (  # noqa: F401  (re-export)
     TrivialZeroSumDefinition,
     WedgeZeroNegDefinition,
@@ -62,7 +61,7 @@ from jacopy.central.tangent.cartan_rules import (  # noqa: F401  (re-export)
 )
 
 
-#: The declarable axioms of a Nambu-Poisson structure (Phase 8 step 4a):
+#: The declarable axioms of a Nambu-Poisson structure:
 #: ``"fundamental-identity"`` — the Nambu fundamental identity (the
 #: Poisson condition for ``p = 1``): ``[Πω, Πη] = Π[ω, η]_Kos`` and its
 #: pairing-swap consequence. Nothing else is ever assumed.
@@ -72,7 +71,7 @@ NAMBU_DECLARATIONS = ("fundamental-identity",)
 class NambuPoissonStructure:
     """``(M, Π)`` — a Nambu-Poisson structure of order ``p``
     (``Π`` a ``(p+1)``-vector). The fundamental identity is a DECLARED
-    axiom carried BY THE STRUCTURE (Phase 8 step 4a: ``declare=(…)`` /
+    axiom carried BY THE STRUCTURE (``declare=(…)`` /
     :meth:`with_declarations`); a structure without it assumes
     nothing. Two structures with the same ``Π`` and different
     declarations are different owners (the weaker one is a
@@ -129,7 +128,7 @@ class NambuPoissonStructure:
         """``Πω`` — the induced vector field of a p-form."""
         return NambuSharpVF(self._pi, omega)
 
-    # ---- structure provider (Phase 8 step 4a) ------------------------- #
+    # ---- structure provider ------------------------------------------- #
 
     def engine_rules(self, registry=None, *, phase=None):
         """The rules THIS structure contributes to an engine, each
@@ -499,7 +498,7 @@ def prove_dorfman_form_reduces_to_koszul_at_p1(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """p = 1 consistency: for a Poisson bivector the Dorfman-type
-    formula equals the Phase 5.B Koszul bracket,
+    formula equals the Koszul bracket on 1-forms,
     ``⟨L_{π♯α}β − ι_{π♯β}dα, Y⟩ = ⟨[α,β]_π, Y⟩`` (via the magic
     formula — definitional)."""
     from jacopy.core.pairing import Pairing
@@ -542,7 +541,7 @@ class NambuFIDeclaration(Definition):
     the action rule turns into nested Nambu brackets — no ``L``-slot
     sharp survives, so the rewrite terminates."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
 
     anchor = Act
 
@@ -585,7 +584,7 @@ class NambuFIDeclaration(Definition):
         w = expr.op.omega
         # the FI is a statement about the ORDINARY Lie derivative
         # L^{TM}; the L of another calculus in the same direction is a
-        # different operator (audit 0B00E1B-FULL M3-2: zero-anchor,
+        # different operator (e.g. a zero-anchor,
         # zero-bracket B has L^B η = 0 while [Πω, Πη](h) ≠ 0)
         if not (
             isinstance(w, Act)
@@ -630,7 +629,7 @@ def prove_nambu_leibniz_jacobi_on_exacts(
     declare_fi: bool = True,
     max_steps: int = 20000,
 ) -> ProofChain:
-    """[PDF 12r, 5.E.4]: the Leibniz-Jacobi identity of the higher
+    """The Leibniz-Jacobi identity of the higher
     Koszul bracket on EXACT wedge generators
     (``ω = dF₁∧…∧dF_p`` etc.), under the DECLARED fundamental
     identity:
@@ -682,7 +681,7 @@ def poisson_view(structure: NambuPoissonStructure):
     """The order-1 Nambu structure read as a
     :class:`~jacopy.packages.poisson.core.PoissonStructure` on the
     SAME bivector (so Poisson-package theorems — the general Koszul
-    Jacobi of 5.E.2b, the tilde calculus — can be cited against
+    Jacobi theorem, the tilde calculus — can be cited against
     Nambu-dialect expressions through
     :class:`NambuToPoissonSharpDefinition`)."""
     from jacopy.packages.poisson.core import PoissonStructure
@@ -696,7 +695,7 @@ def poisson_view(structure: NambuPoissonStructure):
 
 
 class NambuToPoissonSharpDefinition(Definition):
-    """THE DIALECT BRIDGE (2026-09-10): at p = 1 the Nambu sharp node
+    """THE DIALECT BRIDGE: at p = 1 the Nambu sharp node
     ``Π(ω)`` and the Poisson sharp node ``π♯(ω)`` denote the same
     vector field ``θ♯ω`` (both act as ``f ↦ −θ(df, ω) = θ(ω, df)``);
     the two packages grew separate node families (Nambu:

@@ -1,10 +1,10 @@
-"""TM special case of the central code (PDF item 9).
+"""TM special case of the central code.
 
-Lie bracket + its properties (2.A), the engine layer for the Phase 1
-deferrals (2.B), the exterior derivative ``d`` and Lie derivative
-``L`` derived from the Lie bracket (2.C-D), anholonomy ``γ^a_bc``
-(2.E), Schouten-Nijenhuis (2.F), Cartan relations and the calculus
-property suite (2.D/2.G).
+Lie bracket + its properties, the definitional engine rules for
+connections on functions and frame duality, the exterior derivative
+``d`` and Lie derivative ``L`` derived from the Lie bracket, anholonomy
+``γ^a_bc``, Schouten-Nijenhuis, Cartan relations and the calculus
+property suite.
 """
 
 from jacopy.central.tangent.lie_bracket import (

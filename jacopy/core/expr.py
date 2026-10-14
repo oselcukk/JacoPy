@@ -141,7 +141,7 @@ class Expr(ABC):
         if self == dummy:
             return target
         if self.is_atom:
-            # Slot protocol (Phase 8 step 2b): an operator-like atom that
+            # Slot protocol: an operator-like atom that
             # exposes ``rewritable_slots`` / ``with_slots`` is substituted
             # inside its slots, so ``ι_X[X ↦ Y] = ι_Y`` without a
             # per-class override (atoms hiding STRING indices still

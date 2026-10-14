@@ -27,7 +27,7 @@ Two scoping mechanisms support the foundational / custom proof modes:
 * :meth:`axioms`, narrows the visible property types to a whitelist.
   Within the block, any property whose type is not in the whitelist
   looks as if it had never been declared. This is how the ``custom``
-  axiom mode from plan.md is implemented.
+  axiom mode is implemented.
 
 ``strict_axioms_only`` is orthogonal to :meth:`axioms`: the former
 filters by provenance (axiom vs derived), the latter by property
@@ -46,7 +46,7 @@ from jacopy.core.properties import Property, Provenance
 
 P = TypeVar("P", bound=Property)
 
-#: Read tracking (audit 0b00e1b-FULL P0-3 / M1X-2): a proof step's
+#: Read tracking: a proof step's
 #: validity can depend on registry ANSWERS (``x`` is Scalar, ``p`` has
 #: no Graded declaration …). :meth:`PropertyRegistry.get` is the single
 #: query choke point; while a :func:`track_reads` block is open on this
@@ -77,7 +77,7 @@ def end_reads(log: list, keep=None) -> None:
     log. A read is appended only to the innermost open log; a consumer
     that discards part of its log (the engine drops the reads of the
     candidate rules that did not fire) keeps them out of every outer
-    log too (review 2026-10-01 r3 #6)."""
+    log too."""
     stack = getattr(_READS, "stack", None) or []
     # find THIS log by identity (list.remove compares by value — an
     # equal, e.g. empty, log would go); a log that is not open (never
@@ -201,7 +201,7 @@ class PropertyRegistry:
                 del bucket[type(prop)]
                 raise
 
-    # ---- Scalar contract (M1-1): levels, shadowing, validation ------- #
+    # ---- Scalar contract: levels, shadowing, validation -------------- #
 
     @staticmethod
     def _contract_relevant(prop) -> bool:
@@ -242,7 +242,7 @@ class PropertyRegistry:
         never turns a declared graded element into a constant). With
         ``record=True`` the raw answer is appended to the open read log
         as a RAW fact — a hypothesis checked against the raw
-        declarations of the citing registry (gate-6 cr6/p05)."""
+        declarations of the citing registry."""
         prop, rank = self._raw(expr, prop_cls)
         if record:
             stack = getattr(_READS, "stack", None)
@@ -460,7 +460,7 @@ class PropertyRegistry:
             and isinstance(prop, _contract_types()[0])
             and self._scalar_shadowed(expr, None, level)
         ):
-            # Scalar contract (M1-1): a generic-level Scalar is shadowed
+            # Scalar contract: a generic-level Scalar is shadowed
             # by a strictly more specific Graded / NonCommuting /
             # AntiCommuting declaration — the expression is a graded
             # element (a function for Graded(0)), not a constant

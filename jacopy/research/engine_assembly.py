@@ -1,5 +1,5 @@
 """
-Engine auto-assembly (research interface, Phase 8 brick 3): look at the
+Engine auto-assembly (research interface): look at the
 expressions a user wants normalised, detect which node families occur
 (Cartan operators, Nambu sharps of which structures, multivector
 interiors, wedges, evaluations, …) and build the rewrite engine that
@@ -36,11 +36,10 @@ def _wedge_degree(c: Expr, registry) -> Optional[int]:
     """The EXTERIOR-algebra degree of a wedge factor as a concrete
     int, or ``None`` when it is not certain — the concrete view of the
     single contract :func:`jacopy.algebra.grading.exterior_degree`
-    (Phase 8 step 2a). Kept under its old name because the audit tests
-    query it; it no longer computes anything itself. History: this
-    helper used to grade on its own and the 2026-09-09/09-10/09-22
-    audits each caught it sorting an odd factor (a vector field, a
-    vector sum, a nested wedge) as even."""
+    Kept under its old name because the tests query it; it no longer
+    computes anything itself (a separate grading here risks sorting an
+    odd factor — a vector field, a vector sum, a nested wedge — as
+    even)."""
     from jacopy.algebra.grading import concrete_exterior_degree
 
     return concrete_exterior_degree(c, registry)
@@ -48,8 +47,8 @@ def _wedge_degree(c: Expr, registry) -> Optional[int]:
 
 class ZeroProductDefinition(Definition):
     """``0 · x → 0`` — slot-reachable: the simplifier does not enter
-    operator argument slots, so ``Π(0·0)`` used to survive there
-    (2026-09-09 audit, finding F3)."""
+    operator argument slots, so ``Π(0·0)`` would otherwise survive
+    there."""
 
     name = "zero product: 0·x = 0 (slot-reachable)"
     anchor = Product
@@ -93,8 +92,8 @@ class WedgeGradedOrderDefinition(Definition):
             items.append((c, k))
         # the SAME key as the simplifier's odd-degree sort
         # (normalize_alternating._sort_key): two canonical orders on
-        # the same wedge would rewrite each other forever (2026-09-09
-        # non-convergence catch on the exceptional 5-form Jacobi).
+        # the same wedge would rewrite each other forever (e.g. on the
+        # exceptional 5-form Jacobi).
         target = sorted(items, key=lambda it: structural_sort_key(it[0]))
         if [c for c, _ in target] == list(e.children):
             return None
@@ -356,9 +355,9 @@ def assemble_engine(
 
     structures = list(structures)
     if declare_fi and structures:
-        # pre-4a spelling: the flag meant "the FIRST structure declares
+        # legacy spelling: the flag means "the FIRST structure declares
         # the fundamental identity"; it is applied to that structure
-        # only and reported — never distributed (Phase 8 step 4a)
+        # only and reported — never distributed
         if not structures[0].declares("fundamental-identity"):
             structures[0] = structures[0].with_declarations("fundamental-identity")
         report.append(
@@ -388,7 +387,7 @@ def assemble_engine(
 
     def add(rule: Definition, why: str) -> None:
         # deduplicated by the rule's structural KEY (identity or
-        # class + name), not by class alone (Phase 8 step 4a / 1d)
+        # class + name), not by class alone
         if any(getattr(r, "key", None) == rule.key for r in eng.definitions):
             return
         eng.register(rule)
@@ -401,8 +400,8 @@ def assemble_engine(
     for rule in extra:
         # caller-supplied rules are NEVER deduplicated: two instances
         # of one Definition class with different parameters are two
-        # rules (2026-09-22 library audit — the class-keyed `add`
-        # silently dropped the second); the display name is not an
+        # rules (a class-keyed `add` would silently drop the
+        # second); the display name is not an
         # identity
         eng.register(rule)
         report.append(f"+ {rule.name}  [requested by the caller]")
@@ -412,7 +411,7 @@ def assemble_engine(
 
 #: Legacy name — the report now lives on the engine itself
 #: (``ExpansionEngine.assembly_report``), so nothing is registered here
-#: and no engine is kept alive by this module (2026-09-09 audit, F4).
+#: and no engine is kept alive by this module.
 _REPORTS: dict = {}
 
 

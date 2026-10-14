@@ -2,7 +2,7 @@
 Public proof API.
 
 High-level entry points that select a :class:`Strategy`, feed it a
-pair of expressions, and return a :class:`ProofChain`. Phase 7 C adds
+pair of expressions, and return a :class:`ProofChain`: among them
 :func:`prove_jacobi` (with automatic dispatch to
 :class:`DerivedBracketStrategy` for derived brackets),
 :func:`prove_operator_equation` (uses
@@ -102,8 +102,8 @@ def prove_jacobi(
     # residual bracket node downstream breaks the ExpandAndSimplify
     # pipeline. Unfold every bracket node to its definitional form here
     #, the pipeline then only sees ordinary :class:`Sum` / :class:`Neg`
-    # / :class:`Product` / atom shapes. Once Phase 7 adds a bracket-aware
-    # definition to :class:`ExpansionEngine`, this pre-pass can move
+    # / :class:`Product` / atom shapes. Once a bracket-aware
+    # definition is added to :class:`ExpansionEngine`, this pre-pass can move
     # into the engine and drop from the verifier layer.
     from jacopy.core.registry import track_reads
     from jacopy.proof.registry_facts import facts_from_log
@@ -236,8 +236,8 @@ def _expand_all_brackets(
         if expanded != expr:
             return _expand_all_brackets(expanded, registry)
         # an INERT bracket (unsupported shape: expand() returns the
-        # node itself) — re-walking it never terminated (RecursionError,
-        # audit 0b00e1b K1-3 follow-up). Expand its operands; if they
+        # node itself) — re-walking it would never terminate
+        # (RecursionError). Expand its operands; if they
         # changed, the rebuilt bracket gets ONE more expansion attempt
         # (its operands may now have a supported shape). Terminates:
         # every recursive call is on a strictly expanded operand or on
@@ -302,8 +302,8 @@ def unroll_property(prop: Property) -> ProofChain:
 
     The chain is intentionally shallow. A :class:`ProofRef` today only
     carries a rule name and a tuple of source specifiers, there is
-    no rehydratable proof tree to expand. Once the Theorem Book (Phase
-    9) lets a :class:`ProofRef` resolve to a concrete proof builder,
+    no rehydratable proof tree to expand. Once the Theorem Book
+    lets a :class:`ProofRef` resolve to a concrete proof builder,
     this helper will delegate to it and return the full unrolled
     chain; until then the one-step summary is the contract.
     """

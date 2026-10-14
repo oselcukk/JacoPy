@@ -1,9 +1,9 @@
 r"""
-Indexed sum :math:`\Sigma_d \, \mathrm{body}`, Phase 17.E.
+Indexed sum :math:`\Sigma_d \, \mathrm{body}`.
 
 A :class:`IndexedSum` is a bound-index summation over a discrete range
 , the structural shape behind every "sum over frame indices" appearing
-in Phase 17 (and beyond). The dummy is an :class:`Atom` (typically a
+in the library. The dummy is an :class:`Atom` (typically a
 :class:`~jacopy.calculus.local_frame.FrameIndex` with kind ``"bound"``);
 the range is an opaque domain object (typically a
 :class:`~jacopy.calculus.local_frame.LocalFrame`); the body is any
@@ -195,9 +195,8 @@ class _BoundSumToken(Atom):
     the correct depth by the enclosing normalization. Embedding the
     real ``IndexedSum`` node instead would let its own ``_key()``
     restart the depth counter at 0, aliasing an inner ``$bound_0``
-    with the OUTER binder's sentinel — the 2026-09-08 re-audit
-    regression where ``Σᵢ Σⱼ i`` (= 6) compared equal to
-    ``Σᵢ Σⱼ j`` (= 14)."""
+    with the OUTER binder's sentinel, so that ``Σᵢ Σⱼ i`` (= 6) would
+    compare equal to ``Σᵢ Σⱼ j`` (= 14)."""
 
     __slots__ = ("_scoped_key",)
 
@@ -217,12 +216,12 @@ def _alpha_normalized(expr: Expr, depth: int) -> Expr:
 
     The key embeds real Expr nodes (whose own ``_key()`` carries all
     metadata), so e.g. ``Σᵢ [A,B]_bracket`` and ``Σᵢ 0_bracket`` can
-    never collide (2026-09-07 audit, finding 3: the previous
-    ``_walk_key`` compared compound nodes by class name + children
-    only). Nested sums become :class:`_BoundSumToken` atoms whose
+    never collide (comparing compound nodes by class name + children
+    only would identify them). Nested sums become :class:`_BoundSumToken`
+    atoms whose
     key was computed IN THIS SCOPE at the correct depth — never a
     live ``IndexedSum`` whose own ``_key()`` would restart the depth
-    counter (2026-09-08 re-audit, finding 1)."""
+    counter."""
     if isinstance(expr, IndexedSum):
         sentinel = _make_sentinel(expr._dummy, depth)
         body = _alpha_normalized(

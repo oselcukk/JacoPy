@@ -2,7 +2,7 @@
 
 Layers, from the top down (each imports only from its own layer and
 the ones below it; the remaining upward edges are deferred imports —
-``docs/ARCHITECTURE.md`` section 1):
+see https://oselcukk.github.io/JacoPy/explanation/architecture.html):
 
 * **display** — text / LaTeX / HTML / terminal rendering; reads every
   layer, changes nothing.

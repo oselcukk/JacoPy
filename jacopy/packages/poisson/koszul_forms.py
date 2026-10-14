@@ -1,14 +1,14 @@
 """
-The Koszul bracket on 1-forms (Phase 5.B) — PDF item 12.
+The Koszul bracket on 1-forms.
 
 Canonical definition (definition policy §1):
 
     [α, β]_π := L_{π♯α} β − L_{π♯β} α − d(π(α, β)),
 
-with ``L``/``d`` the ordinary TM Cartan operators (Phase 2) and
-``π♯α`` the sharp vector field of 5.A. The bracket is a 1-form.
+with ``L``/``d`` the ordinary TM Cartan operators and
+``π♯α`` the sharp vector field of :mod:`jacopy.packages.poisson.core`. The bracket is a 1-form.
 
-Phase 5.B ships the node, the definitional expansion, the sharp's
+This module ships the node, the definitional expansion, the sharp's
 ``C^∞``-linearity, and the first mechanical theorems:
 
 * antisymmetry ``[α, β]_π = −[β, α]_π``,
@@ -17,10 +17,10 @@ Phase 5.B ships the node, the definitional expansion, the sharp's
   forms IS the Poisson bracket's differential.
 
 The algebroid-axiom proofs (right-Leibniz, anchor morphism, Jacobi
-under ``[π,π]=0``) are the Phase 5.C showcase.
+under ``[π,π]=0``) are in the cotangent-algebroid showcase.
 
 Module path: formerly ``jacopy.packages.poisson.koszul`` (renamed so that no two modules share
-a basename — audit 0B00E1B-FULL T2 names); the old path is a
+a basename); the old path is a
 compatibility alias that IS this module.
 """
 
@@ -101,8 +101,8 @@ def koszul_bracket(
     The Koszul bracket does extend to all form degrees
     (Koszul-Brylinski, ``[Ω^p, Ω^q]_π → Ω^{p+q−1}`` via the generator
     ``∂_π = [d, ι_π]``), and its p-form version on a Nambu-Poisson
-    structure is a Leibniz algebroid bracket — both are Phase 5.E
-    material. The degree-1 formula implemented here is WRONG for
+    structure is a Leibniz algebroid bracket — both are separate
+    constructions. The degree-1 formula implemented here is WRONG for
     higher degrees, so anything determinably not a 1-form is refused
     rather than silently mis-expanded.
     """
@@ -112,7 +112,7 @@ def koszul_bracket(
         raise TypeError("koszul_bracket expects a PoissonStructure")
     # ℝ-bilinearity: a zero argument gives the zero bracket (the zero
     # form inhabits every degree, so the degree guard must not reject
-    # it — edge-case audit fix).
+    # it).
     if alpha == Integer(0) or beta == Integer(0):
         return Integer(0)
     for leg in (alpha, beta):
@@ -122,11 +122,11 @@ def koszul_bracket(
             continue  # undeterminable: caller-asserted, allow
         if deg != Degree.const(1):
             raise ValueError(
-                "the Phase 5.B Koszul bracket is the DEGREE-1 "
+                "the Koszul bracket on 1-forms is the DEGREE-1 "
                 f"(cotangent algebroid) bracket; got a degree-{deg} "
                 "argument. The higher-degree Koszul-Brylinski bracket "
-                "and the Nambu-Poisson p-form bracket arrive in "
-                "Phase 5.E."
+                "and the Nambu-Poisson p-form bracket are separate "
+                "constructions."
             )
     return KoszulBracket(P.pi, alpha, beta)
 

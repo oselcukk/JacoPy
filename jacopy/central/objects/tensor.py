@@ -1,6 +1,6 @@
 """
 (q, r)-type tensors, scaling by a function ``fT``, and signature
-tracking — PDF items 8j, 8n, 8q.
+tracking.
 
 A **(q, r)-type tensor** has ``q`` contravariant (upper) and ``r``
 covariant (lower) slots. Over a bundle ``E`` it is a multilinear map
@@ -15,12 +15,12 @@ Tensor carries **no form degree** and stays outside ``degree_of``.
 The type-level bookkeeping that *does* apply to tensors is the
 **signature** ``(q, r)``, exposed by :func:`signature_of`. It walks the
 expression tree through the type-preserving wrappers — most importantly
-the covariant derivative ``∇_X T`` (PDF item 8n: a connection maps a
+the covariant derivative ``∇_X T`` (a connection maps a
 (q, r)-tensor to a (q, r)-tensor), ``fT`` scaling, negation and
 (anti)symmetrization — so that type preservation is checkable even
 though ``degree_of`` does not apply.
 
-``fT`` (item 8q): multiplying a tensor by a smooth function is the
+``fT``: multiplying a tensor by a smooth function is the
 ``C^∞(M)``-module structure. :func:`scale` builds it as
 ``Product(f, T)`` and works for any tensor-like object (Form, PVector,
 VectorField, Tensor).
@@ -114,7 +114,7 @@ class Tensor(Atom):
 
         Exactly ``q + r`` arguments are required: first the ``q``
         covector (1-form) slots, then the ``r`` vector-field slots
-        (PDF item 8j: appropriate domain and range). The result is a
+        (appropriate domain and range). The result is a
         plain multilinear :class:`~jacopy.core.multi_eval.MultiEval`
         (``alternating=False``, ``slot_kind="mixed"``), a scalar.
         """
@@ -156,7 +156,7 @@ def tensors(
 
 
 def scale(f: Expr, T: Expr) -> Product:
-    """Scaling by a function ``f·T`` (PDF item 8q).
+    """Scaling by a function ``f·T``.
 
     Multiplies any tensor-like object (Form, PVector, VectorField,
     Tensor) by a smooth function ``f ∈ C^∞(M)``; the result is
@@ -175,7 +175,7 @@ def signature_of(expr: Expr) -> Optional[Tuple[int, int]]:
     The tensor-type analogue of
     :func:`~jacopy.algebra.derivation.degree_of`: it tracks the
     ``(q, r)`` shape through type-preserving nodes, so statements like
-    "``∇_X`` maps a (q, r)-tensor to a (q, r)-tensor" (PDF item 8n)
+    "``∇_X`` maps a (q, r)-tensor to a (q, r)-tensor"
     are checkable. Recognized cases:
 
     * :class:`Tensor` → its ``(q, r)``;
@@ -222,7 +222,7 @@ def signature_of(expr: Expr) -> Optional[Tuple[int, int]]:
         return None if p is None else (p, 0)
     if isinstance(expr, Neg):
         return signature_of(expr.arg)
-    # Partial evaluation (item 8w): the open slots keep their kind —
+    # Partial evaluation: the open slots keep their kind —
     # vector slots are covariant, covector slots contravariant; a
     # ``(q, r)`` tensor head lists its q covector slots first.
     from jacopy.central.objects.partial_eval import PartialEval

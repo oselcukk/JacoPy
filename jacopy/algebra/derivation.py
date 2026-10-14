@@ -63,7 +63,7 @@ class Derivation(Atom):
     def _key(self) -> Any:
         return (self._name, self._degree)
 
-    #: Section-VALUE protocol (audit 0b00e1b integration): ``True`` for
+    #: Section-VALUE protocol: ``True`` for
     #: an atom that subclasses Derivation only for slot plumbing — a
     #: VALUE in a bundle other than TM ([u,v]_E, J_E, g⁻¹ω, …), not an
     #: operator on functions. ``Act`` on it is undefined: the product
@@ -159,9 +159,8 @@ def degree_of(
     * Otherwise, :class:`ValueError`.
 
     :class:`Sum` is graded only when HOMOGENEOUS: every term must
-    share one degree (else :class:`ValueError`) — policy revised in
-    Phase 6.H, when collected scalar Sums started appearing as
-    Product factors under the sorting pass.
+    share one degree (else :class:`ValueError`), since collected scalar
+    Sums appear as Product factors under the sorting pass.
     """
     # Atoms that carry their own degree on the instance: Derivation
     # (and its subclass VectorField), Form, later PVector / Tensor …
@@ -174,7 +173,7 @@ def degree_of(
             return _deg
     if isinstance(expr, (Integer, Rational)):
         return Degree.const(0)
-    # Partial evaluation of an alternating form (PDF 8w generalization):
+    # Partial evaluation of an alternating form:
     # the node computes its own degree from the head and the number of
     # fixed slots; it is not an Atom, so it is consulted explicitly.
     _pe_deg = getattr(expr, "degree", None) if type(expr).__name__ == "PartialEval" else None
@@ -185,7 +184,7 @@ def degree_of(
         for c in expr.children:
             total = total + degree_of(c, registry)
         return total
-    # Homogeneous Sum: all terms share one degree (Phase 6.H — the
+    # Homogeneous Sum: all terms share one degree (the
     # 5-slot exceptional evaluations leave scalar Sums as collected
     # Product factors, and the sorting pass must grade them).
     if isinstance(expr, Sum) and expr.children:
@@ -206,8 +205,8 @@ def degree_of(
         # forms / multivectors / [X,Y], certified operator shifts),
         # so X ∧ Y is the bivector it is (degree 2, not 0). A child
         # carrying vectors without a certified exterior type raises —
-        # its operator degree is the wrong grading here (audit 0b00e1b
-        # review: Wedge([X,Y], Z) used to get 0 + 1).
+        # its operator degree is the wrong grading here (with it,
+        # Wedge([X,Y], Z) would get 0 + 1).
         from jacopy.central.objects.kind import wedge_factor_degree  # noqa: WPS433 - layering: kind_of lives in central
 
         total = Degree.const(0)
@@ -215,7 +214,7 @@ def degree_of(
             total = total + wedge_factor_degree(c, registry)
         return total
     # Indexed sum: a finite sum of same-degree terms — the degree is
-    # the body's (Phase 4.D.2; the bound index does not grade).
+    # the body's (the bound index does not grade).
     from jacopy.core.indexed_sum import IndexedSum  # noqa: WPS433
     if isinstance(expr, IndexedSum):
         return degree_of(expr.body, registry)
@@ -244,7 +243,7 @@ def degree_of(
             expr.arg, registry
         )
     # Graded commutator [A, B] = AB − (−1)^{|A||B|} BA: both terms have
-    # degree |A| + |B| (audit 0b00e1b code review: the commutator of two
+    # degree |A| + |B| (the commutator of two
     # derivations is a derivation, and its Leibniz split needs this).
     from jacopy.algebra.commutator import Commutator  # noqa: WPS433
     if isinstance(expr, Commutator):

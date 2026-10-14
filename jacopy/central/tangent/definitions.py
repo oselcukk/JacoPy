@@ -1,20 +1,20 @@
 """
-Definitional engine rules for the Phase 1 deferrals (Phase 2.B).
+Definitional engine rules for connections on functions and frame duality.
 
-Two expansion rules that Phase 1 built the *nodes* for but deliberately
-left inert:
+Two expansion rules for nodes that the object layer builds but
+deliberately leaves inert:
 
 * :class:`CovariantScalarActionDefinition` — ``∇_X f = X(f)`` on the
-  tangent bundle (PDF item 8m/9): the covariant derivative of a scalar
+  tangent bundle: the covariant derivative of a scalar
   function is the directional derivative. Combined with the graded
   Leibniz pass this closes the module property
   ``∇_X(f·T) = X(f)·T + f·∇_X T`` as a theorem.
-* :class:`FrameDualityDefinition` — ``⟨e^a, e_b⟩ = δ^a_b`` (PDF item
-  8p): the duality pairing of a coframe field against a frame field of
+* :class:`FrameDualityDefinition` — ``⟨e^a, e_b⟩ = δ^a_b``:
+  the duality pairing of a coframe field against a frame field of
   the *same* frame evaluates to the Kronecker delta (``1`` on equal
   labels, symbolic ``δ^a_b`` otherwise).
 
-Both are **definitional** rules in the sense of the Phase 2 definition
+Both are **definitional** rules in the sense of the definition
 policy: they unfold canonical definitions and are always on in the
 tangent engine.
 
@@ -32,7 +32,7 @@ thereof. Anything unrecognized is left inert — soundness over
 completeness.
 
 On a general algebroid the rule becomes ``∇_u f = ρ_E(u)(f)``; the
-anchor wiring arrives in Phase 3, so this rule only fires for
+anchor wiring lives in the algebroid layer, so this rule only fires for
 connections living on a tangent bundle.
 """
 
@@ -64,8 +64,8 @@ class CovariantScalarActionDefinition(Definition):
     of a function is the directional derivative. Fires only when the
     operand is certainly a scalar function (see
     :func:`is_scalar_function`) and the connection lives on a tangent
-    bundle (the algebroid case ``∇_u f = ρ_E(u)(f)`` arrives in
-    Phase 3).
+    bundle (the algebroid case ``∇_u f = ρ_E(u)(f)`` lives in
+    the algebroid layer).
     """
 
     name = "connection on functions: ∇_X f = X(f)"
@@ -88,7 +88,7 @@ class CovariantScalarActionDefinition(Definition):
 
 class FrameDualityDefinition(Definition):
     """``⟨e^a, e_b⟩ → δ^a_b`` for a coframe/frame pair of the same
-    frame (PDF item 8p).
+    frame.
 
     Fires on a :class:`Pairing` whose form slot is a
     :class:`CoframeField` and whose vector slot is a
@@ -115,7 +115,7 @@ class FrameDualityDefinition(Definition):
 
 
 # --------------------------------------------------------------------- #
-# Theorems closed by the 2.B rules                                      #
+# Theorems closed by these rules                                        #
 # --------------------------------------------------------------------- #
 
 

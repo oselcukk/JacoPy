@@ -1,5 +1,5 @@
 """
-The generic axiom-suite façade (research interface, Phase 8 brick 2):
+The generic axiom-suite façade (research interface):
 hand it a bracket, an anchor, a pairing and a coboundary ``D`` on a
 :class:`~jacopy.research.sections.SectionType`, and it runs the
 Courant-type conditions — right-Leibniz, symmetric part, anchor
@@ -77,7 +77,6 @@ class Bracket:
             out = GeneralizedSection(self._type, *out)
         elif out.type != self._type:
             # the user's function returned a section of another bundle
-            # (2026-09-22 library audit, Phase 8 step 1b)
             raise TypeError(
                 f"{self.name} must return a section of {self._type}, got {out.type}"
             )
@@ -124,7 +123,7 @@ class AlgebroidData:
     * ``lie_R(e, pairing_components) -> tuple[Expr, ...]`` — the
       R-VALUED Lie action ``ℒ^R_e`` on the pairing's components, for
       the metric-invariance condition ``ℒ^R_x g(y,z) = g([x,y],z) +
-      g(y,[x,z])`` (2026-09-09 audit, F5). For a scalar pairing this
+      g(y,[x,z])``. For a scalar pairing this
       is the anchor's action; for the exceptional bundle the paper's
       ``ℒ^R_{(U,ω₂,ω₅)}(r₁, r₄) = (ℒ_U r₁, ℒ_U r₄ − r₁ ∧ dω₂)`` —
       NOT the plain ``ℒ_U`` on both components.
@@ -269,7 +268,7 @@ class AxiomSuite:
         """Engine normal form with this suite's expansion budget (the
         library default of 1024 rewrites is too small for the
         rotated exceptional 4-form checks; a true cycle still trips
-        the bound, just later). Phase 8 step 4b adapter over
+        the bound, just later). Adapter over
         :func:`jacopy.proof.normalize.normalize` (12 rounds)."""
         from jacopy.proof.normalize import normalize
 
@@ -287,9 +286,9 @@ class AxiomSuite:
     def _names_in(*exprs: Expr) -> set:
         """Every atom display name occurring in ``exprs`` (operator
         slots included) — the set the evaluation symbols must avoid
-        (2026-09-09 audit, finding F2: a user vector named ``X₁``
-        collided with the evaluation slot ``X₁`` and a non-zero
-        symmetric defect evaluated to 0 by repeated contraction)."""
+        (a user vector named ``X₁`` colliding with the evaluation slot
+        ``X₁`` could make a non-zero symmetric defect evaluate to 0 by
+        repeated contraction)."""
         from jacopy.research.engine_assembly import _walk
 
         nodes: List[Expr] = []
@@ -318,8 +317,7 @@ class AxiomSuite:
             if not isinstance(self.probe, Symbol):
                 # a COMPOSITE probe is not a faithful test even when
                 # its atoms are fresh: h = f·g is annihilated by the
-                # non-zero vector field X(h)Y − Y(h)X (2026-09-10
-                # audit, F2)
+                # non-zero vector field X(h)Y − Y(h)X
                 raise ValueError(
                     f"the probe {self.probe._repr_inner()!r} is not a "
                     "function SYMBOL — a vector-valued identity is a "
@@ -339,7 +337,7 @@ class AxiomSuite:
                 # a symbol declared as a p-form generator (or not
                 # declared at all) is not a C∞ function: a vector
                 # field acting on it is not the probe of a vector
-                # identity (2026-09-22 audit)
+                # identity
                 raise ValueError(
                     f"the probe {self.probe._repr_inner()!r} is not a "
                     "declared degree-0 scalar function on this registry"
@@ -349,7 +347,7 @@ class AxiomSuite:
         # skip names in the expression AND names the registry already
         # grades as something other than a scalar function (a user's
         # 2-form generator called ħ must be neither reused nor
-        # re-declared — 2026-09-22 audit)
+        # re-declared)
         while (
             f"{name}{suffix}" in avoid
             or self._scalar_degree(Symbol(f"{name}{suffix}")) not in (0, None)
@@ -357,8 +355,8 @@ class AxiomSuite:
             suffix += "′"
         full = f"{name}{suffix}"
         # one declaration per name and REGISTRY: a symbol already
-        # declared on this registry (by an earlier suite sharing it —
-        # 2026-09-10 audit, F3) is reused rather than re-declared
+        # declared on this registry (by an earlier suite sharing it)
+        # is reused rather than re-declared
         cache = getattr(self, "_probe_cache", None)
         if cache is None:
             cache = self._probe_cache = {}
@@ -507,8 +505,7 @@ class AxiomSuite:
                 f"{n} component(s) but lie_R returned {len(lhs)} "
                 f"(and the bracket-side pairings {len(r1)}/{len(r2)}) "
                 "— the R-valued action must map the pairing's value "
-                "space to itself (2026-09-10 audit, F4: a truncating "
-                "zip certified an ill-typed action)"
+                "space to itself"
             )
         rep = SuiteReport("metric invariance")
         for i, (l, a, b) in enumerate(zip(lhs, r1, r2)):

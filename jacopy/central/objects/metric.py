@@ -1,6 +1,5 @@
 """
-Metric ``g``, inverse metric ``g⁻¹`` and the Hodge star ``⋆_g``
-(PDF items 8k-l).
+Metric ``g``, inverse metric ``g⁻¹`` and the Hodge star ``⋆_g``.
 
 * :class:`Metric` — a ``(0, 2)`` symmetric, non-degenerate tensor.
   ``g(X, Y)`` maps two vector fields to a scalar (symmetric → not
@@ -18,7 +17,8 @@ Metric ``g``, inverse metric ``g⁻¹`` and the Hodge star ``⋆_g``
 **Central-code view.** On ``TM`` these are the ordinary metric and
 Hodge star; for a general bundle ``E`` the metric is a fiber metric on
 ``E``. Since the metric is non-degenerate, ``♭`` and ``♯`` are mutually
-inverse (musical compatibility); that proof is handled in Phase 4/5.
+inverse (musical compatibility); that proof is handled in the
+metric-affine and Poisson packages.
 """
 
 from __future__ import annotations
@@ -161,8 +161,7 @@ def hodge(omega: Expr, g: Metric) -> HodgeStar:
     if not isinstance(omega, Expr):
         raise TypeError("hodge argument must be an Expr")
     if not isinstance(g, Metric):
-        # PDF item 5 compatibility bridge (2026-09-08 audit,
-        # compliance finding 3): accept the metric-affine package's
+        # Compatibility bridge: accept the metric-affine package's
         # metric CONTEXT too — same defining semantics (symmetric,
         # non-degenerate (0,2) by definition), shared by name. The
         # central→packages import stays function-local (lazy) to
@@ -174,8 +173,7 @@ def hodge(omega: Expr, g: Metric) -> HodgeStar:
         except ImportError:  # pragma: no cover
             AffineMetric = ()
         if isinstance(g, AffineMetric):
-            # The context carries its bundle (2026-09-09 audit,
-            # finding 7): preserve it so the dimension survives.
+            # The context carries its bundle: preserve it so the dimension survives.
             g = Metric(g.name, bundle=g.bundle)
         else:
             raise TypeError(

@@ -1,5 +1,5 @@
 """
-The symplectic special case (Phase 5.E.1) — Midterm Q2 (a)-(b).
+The symplectic special case of a Poisson structure.
 
 A **symplectic structure** is a 2-form ``ω`` that is CLOSED and
 nondegenerate. Canonical definitions (definition policy §1):
@@ -21,8 +21,8 @@ compatibility between two independently-given structures:
 registered only via ``symplectic_engine(..., poisson_bridge=P)``.
 
 Sign convention note: this package's interior inserts into the FIRST
-slot, ``(ι_X ω)(Y) = ω(X, Y)``, and 5.A fixes ``{f,g} := π(df, dg)``
-with ``X_f(g) = {f,g}``. Under these conventions the Q2(b) chain
+slot, ``(ι_X ω)(Y) = ω(X, Y)``, and the Poisson core fixes ``{f,g} := π(df, dg)``
+with ``X_f(g) = {f,g}``. Under these conventions the bracket chain
 reads ``{f, g} = ω(X_g, X_f) = X_f(g) = ι_{X_f} dg
 = ι_{X_f} ι_{X_g} ω``; a statement of the form ``{f,g} = ω(X_f,X_g)``
 belongs to the opposite interior convention and is mechanically
@@ -30,10 +30,10 @@ REFUSED here (tested).
 
 Mechanical theorems:
 
-* Q2(a) ``(L_{X_f} ω)(Y, Z) = 0`` — the Hamiltonian flow preserves
+* ``(L_{X_f} ω)(Y, Z) = 0`` — the Hamiltonian flow preserves
   ``ω``; needs the DECLARED closedness (cited evaluated instance,
   two-leg tactic); honest fail without.
-* Q2(b) the bracket chain above (bridge + defining relation).
+* the bracket chain above (bridge + defining relation).
 """
 
 from __future__ import annotations
@@ -225,7 +225,7 @@ class SymplecticClosedDeclaration(Definition):
     """``dω → 0`` — the DECLARED closedness of the symplectic form
     (node form and evaluated head form)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = bib_cite("Math595Midterm2026", "Question 2")
 
     anchor = (Act, MultiEval)
@@ -242,7 +242,7 @@ class SymplecticClosedDeclaration(Definition):
         statement about the de Rham ``d`` of the TM Cartan calculus.
         The ``d_E`` of another Lie algebroid (or the ``d̃`` of a
         Poisson calculus) applied to ω is a different form and is NOT
-        declared zero (audit 0B00E1B-FULL M3-1: so(3)⊕ℝ with
+        declared zero (e.g. so(3)⊕ℝ with
         ``ω = e¹²+e³⁴`` has ``(d_Aω)(e1,e2,e4) = −1``)."""
         from jacopy.central.calculus.bracket_calculus import (
             ExteriorDerivative,
@@ -272,7 +272,7 @@ class SharpFlatIdentityDeclaration(Definition):
     """``π♯(ι_X ω) → X`` — the primitive face of the DECLARED
     compatibility ``π = ω⁻¹`` (sharp ∘ flat = id)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = bib_cite("Math595Midterm2026", "Question 2")
 
     anchor = SharpVF
@@ -308,7 +308,7 @@ class PoissonOmegaBridgeDeclaration(Definition):
     first-slot interior convention: ``ω(X_g, X_f) = (ι_{X_g}ω)(X_f)
     = ⟨dg, X_f⟩ = X_f(g) = {f, g}``)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
 
     anchor = MultiEval
 
@@ -388,11 +388,11 @@ def symplectic_engine(
 
 
 def _normalized_by(engine, seed: Expr, registry) -> Expr:
-    """Engine normal form: Phase 8 step 4b adapter over
+    """Engine normal form: an adapter over
     :func:`jacopy.proof.normalize.normalize` with THIS helper's historical
     defaults (10 rounds, 1024 steps per expansion pass). A step-budget
     exhaustion raises as ``engine.expand`` used to; a round exhaustion
-    returns the last expression (pre-4b behaviour — callers that need
+    returns the last expression (historical behaviour — callers that need
     the guarantee use ``require_normal_form``)."""
     from jacopy.proof.normalize import normalize
 
@@ -501,7 +501,7 @@ def prove_hamiltonian_flow_invariance(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """Q2(a): ``(L_{X_f} ω)(Y, Z) = 0`` — the Hamiltonian flow
+    """``(L_{X_f} ω)(Y, Z) = 0`` — the Hamiltonian flow
     preserves the symplectic form. Mechanism: the intrinsic ``L``
     unroll + the defining relation ``ι_{X_f}ω = df`` + the cited
     evaluated-closedness instance ``dω(X_f, Y, Z) = 0``. Honest fail
@@ -531,7 +531,7 @@ def prove_bracket_via_omega(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """Q2(b), leg 1: ``{f, g} = ω(X_g, X_f)`` (first-slot interior
+    """Bracket chain, leg 1: ``{f, g} = ω(X_g, X_f)`` (first-slot interior
     convention — see the module docstring; the opposite slot order is
     mechanically refused)."""
     rhs = MultiEval(
@@ -559,7 +559,7 @@ def prove_bracket_via_iota(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """Q2(b), leg 2: ``{f, g} = ι_{X_f} dg``."""
+    """Bracket chain, leg 2: ``{f, g} = ι_{X_f} dg``."""
     rhs = Act(Interior(S.hamiltonian(f)), d(g))
     return ExpandAndSimplify().prove(
         P.bracket(f, g),
@@ -579,7 +579,7 @@ def prove_bracket_via_double_iota(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
-    """Q2(b), leg 3: ``{f, g} = ι_{X_f} ι_{X_g} ω``."""
+    """Bracket chain, leg 3: ``{f, g} = ι_{X_f} ι_{X_g} ω``."""
     rhs = Act(
         Interior(S.hamiltonian(f)),
         Act(Interior(S.hamiltonian(g)), S.omega),

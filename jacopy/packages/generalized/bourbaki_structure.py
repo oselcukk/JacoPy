@@ -1,8 +1,8 @@
 """
-The (almost-/metric-)Bourbaki STRUCTURE layer (Phase 7.B.2f.2), from
+The (almost-/metric-)Bourbaki STRUCTURE layer, from
 the PRIMARY paper [arXiv:2210.00548] §6-7 — the R-VALUED metric
 side of the hierarchy, mechanized without ever collapsing R to
-functions (the audit's 10h/10j.iii-iv scope point):
+functions:
 
 * an R-valued E-metric ``g : 𝔛(E) × 𝔛(E) → 𝔛(R)`` (symmetric,
   C∞-bilinear, non-degenerate by declaration of the context);
@@ -339,7 +339,7 @@ class BourbakiInvarianceDeclaration(Definition):
     ``ℒ^R_{ρu}(g(v, w)) → g([u,v], w) + g(v, [u,w])`` — terminating
     (the ℒ^R node disappears)."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = cite("CatalOzerDereliDogan2022", "Definition 7.1, Eq. (7.8)")
 
     anchor = BLieRE
@@ -410,8 +410,7 @@ def _normalize(engine, expr: Expr, registry, *, record: bool = False):
     """Engine normal form (the tilde ``normalized_by`` budget: 10
     rounds, 1024 steps). With ``record=True`` returns ``(nf, steps)``
     so a prover can keep the fired rules as children — the citing
-    rules must reach the theorem's requirements (audit 0B00E1B-FULL
-    M1-4)."""
+    rules must reach the theorem's requirements."""
     if not record:
         from jacopy.packages.poisson.tilde import normalized_by
 
@@ -567,7 +566,7 @@ def prove_right_leibniz_from_r_invariance(
 
     start = BLieRE(u, BMetric(Product(f, v), w))
     # the declared (7.8) rule FIRED by a library engine (a stamped step;
-    # a hand-built one would stay legacy — merge gate, M1-4)
+    # a hand-built one would keep a legacy requirement)
     from jacopy.packages.generalized._cited_rule import fire_declared
 
     step_inv = fire_declared(inv, start)

@@ -1,6 +1,6 @@
 """
-The R-TWISTED tilde-Dorfman bracket (Phase 7.B.2c; project directive item
-14f.iii, Watamura et al., arXiv 1408.2649 — no local PDF): the
+The R-TWISTED tilde-Dorfman bracket (Watamura et al., arXiv
+1408.2649): the
 R-flux deformation of the Poisson generalized
 double ``(TM)₀ ⊕ (T*M)_θ`` — the exact DUAL of the H-twist
 (:mod:`twisted_courant`), with the roles of forms and vectors
@@ -16,7 +16,7 @@ interiors are odd, degree −1), so exactly as for ``H``:
 * [C'4] symmetric part — the R-term drops out; ``D_θ`` is UNCHANGED,
 * the twist commutes with skew-symmetrization (Courant relation).
 
-The structural picture (corrected — 2026-09-09 audit, finding 2):
+The structural picture:
 the R-term is VECTOR-valued, and the (2.6) anchor
 ``ρ(U+ω) = θ♯ω`` reads ONLY the form slot — so the R-term lands in
 ``ker ρ`` and the anchor morphism is UNTOUCHED by the R-flux
@@ -28,7 +28,7 @@ the declared Poisson condition
 genuine Poisson structure is an independent datum, not the derived
 one.
 
-THE R-side Ševera theorem (2026-09-10, closing the 7.B.2c gap): the
+THE R-side Ševera theorem: the
 Leibniz–Jacobi defect of the R-twisted bracket is EXACTLY the
 Lichnerowicz–Poisson differential ``d_θR = [θ,R]_SN`` contracted
 with the three forms — ``J_R − J_θ = (ι̃_ζ ι̃_η ι̃_ω d_θR, 0)`` for any
@@ -323,7 +323,7 @@ def prove_r_twisted_right_leibniz(
     """[C'3] for the R-twisted bracket: the R-term is C∞-tensorial
     (``ι̃_{fη} ι̃_ω R = f·ι̃_η ι̃_ω R``), so the twist adds no
     Leibniz defect — checked on the twist DIFFERENCE (the untwisted
-    [C'3] is the 6.D theorem)."""
+    [C'3] is the tilde-double theorem)."""
     _require_poisson(N)
     engine = _engine(N, registry, declare_fi=False)
     diff = Sum(
@@ -393,8 +393,7 @@ def prove_r_twisted_anchor_morphism(
     declare_poisson: bool = True,
     max_steps: int = 60000,
 ) -> ProofChain:
-    """THE structural theorem of the R-flux (corrected — 2026-09-09
-    audit, finding 2): the R-term lands in ``ker ρ``, so the anchor
+    """THE structural theorem of the R-flux: the R-term lands in ``ker ρ``, so the anchor
     morphism SURVIVES the R-twist,
 
         ρ([x,y]_{D,θ,R}) = [ρ(x), ρ(y)]_Lie
@@ -434,7 +433,7 @@ def prove_r_twisted_anchor_morphism(
 
 
 # ------------------------------------------------------------------ #
-# The R-side Ševera theorem: Jacobi defect = d_θR (2026-09-10)         #
+# The R-side Ševera theorem: Jacobi defect = d_θR                      #
 # ------------------------------------------------------------------ #
 
 
@@ -509,11 +508,10 @@ class RFluxClosureDeclaration(Definition):
     """``(d_θR)(…) → 0`` — the DECLARED closure of the R-flux
     (Watamura §3, ``d_θR = 0``): every evaluation of ``d_θ R`` on
     covector slots vanishes. An opt-in assumption owned by ``N``; its
-    key ``(class, N, R)`` is what a citing engine must register again
-    (audit dc44f79 F2)."""
+    key ``(class, N, R)`` is what a citing engine must register again."""
 
     role = "assumption"
-    # Watamura et al. (no local PDF): the section is unverified
+    # Watamura et al.: the section is unverified
     source = cite("AsakawaMurakiSasaWatamura2015", "Section 3")
 
     def __init__(self, N: NambuPoissonStructure, R: Expr, registry=None) -> None:
@@ -789,8 +787,7 @@ def prove_r_twisted_jacobi(
 ) -> Tuple[ProofChain, Theorem]:
     """[C'1] for the R-twisted bracket under the DECLARED Poisson
     condition AND the DECLARED closure ``d_θR = 0``. The recorded
-    target IS the Jacobiator (``lhs = J_R(h)``, ``rhs = 0``; 2026-09-10
-    audit, F5) and the chain shows the route:
+    target IS the Jacobiator (``lhs = J_R(h)``, ``rhs = 0``) and the chain shows the route:
 
         J_R(h) → J_θ(h) + (d_θR)(ω,η,ζ,dh)     (defect theorem, sub-proof attached)
         (d_θR)(ω,η,ζ,dh) → 0                   (declared closure instance)
@@ -829,7 +826,7 @@ def prove_r_twisted_jacobi(
     )
     if cite_theta_jacobi:
         # [C'1] of the θ-double is NOT re-run here (about two minutes);
-        # it enters as an EXPLICIT ASSUMPTION of N (Phase 8 step 3b): the
+        # it enters as an EXPLICIT ASSUMPTION of N: the
         # record is verified-with-assumptions, and every result citing it
         # shows "[C'1] … taken as an assumption" in its requirements
         c1_vec = c1_form = None

@@ -1,8 +1,8 @@
 """
-The cotangent-algebroid showcase (Phase 5.C) — PDF item 12h.
+The cotangent-algebroid showcase.
 
-``(T*M, π♯, [·,·]_π)`` is a Lie algebroid — and in v3 this is a
-PROVED statement, not a declared one: the axioms the Phase 3
+``(T*M, π♯, [·,·]_π)`` is a Lie algebroid — and in JacoPy this is a
+PROVED statement, not a declared one: the axioms the abstract
 declaration system treats as opt-in assumptions close mechanically
 for the concrete Koszul structure:
 
@@ -26,7 +26,7 @@ Schouten bracket of an atomic bivector against exact 1-forms
 the arity-level counterpart of the Palais formula for ``d`` — for an
 ATOMIC bivector there is nothing more primitive to expand into. It is
 guarded to exact arguments; the general-1-form version carries extra
-``dα`` terms and arrives with the graded (5.E) layer.
+``dα`` terms and arrives with the graded layer.
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ def _is_exact(expr: Expr) -> bool:
 
 
 #: Public name of :func:`_is_exact` — ``expr`` is ``d(·)`` of the TM calculus
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 is_exact_form = _is_exact
 
@@ -81,7 +81,7 @@ class SNBivectorExactEvalDefinition(Definition):
     """``[π,π](df, dg, dh) → 2·Σ_cyc π(df, d π(dg, dh))`` — the
     evaluation view of the Schouten square of an atomic bivector on
     EXACT 1-forms (guarded; the general version has extra ``dα``
-    terms, Phase 5.E)."""
+    terms)."""
 
     anchor = MultiEval
 
@@ -129,7 +129,7 @@ class SNBivectorExactEvalDefinition(Definition):
 class SNBivectorGeneralEvalDefinition(Definition):
     """``[π,π](α, β, γ) → 2(⟨γ, [π♯α, π♯β]_VF⟩ − ⟨γ, π♯([α,β]_π)⟩)``
     — the evaluation view of the Schouten square on GENERAL 1-forms:
-    the anchor-morphism-defect form (Phase 5.E.2). The defect
+    the anchor-morphism-defect form. The defect
     ``D(α,β) = [π♯α, π♯β] − π♯[α,β]_π`` is tensorial and
     ``⟨γ, D(α,β)⟩ = ½[π,π](α,β,γ)``.
 
@@ -175,7 +175,7 @@ class SNBivectorGeneralEvalDefinition(Definition):
         #                   − π([α,β]_π, γ).
         #
         # Deliberately NOT cyclically symmetrized: the symmetrized
-        # form was tried (5.E.2b) and rejected — the three cyclic
+        # form was tried and rejected — the three cyclic
         # legs are not mechanically inter-derivable (a collection
         # obstruction), which breaks the general id2/id3 instance
         # normal forms while not closing the general Jacobi either.
@@ -294,7 +294,7 @@ def showcase_engine(
     registry: Optional[PropertyRegistry] = None,
     declare_poisson: bool = True,
 ):
-    """The 5.C engine: the Poisson/Koszul layer plus the bracket
+    """The showcase engine: the Poisson/Koszul layer plus the bracket
     module structure and head-scalar pairing linearity (both needed by
     the evaluation-level algebroid-axiom proofs). ``declare_poisson``
     controls the ``[π,π]_SN = 0`` declaration."""
@@ -497,14 +497,14 @@ def prove_sn_eval_views_agree_on_exacts(
     registry: Optional[PropertyRegistry] = None,
 ) -> ProofChain:
     """The two evaluation views of the Schouten square agree on exact
-    forms (Phase 5.E.2 consistency backing for the general rule):
+    forms (consistency backing for the general rule):
 
         2⟨dh, [π♯df, π♯dg] − π♯[df,dg]_π⟩
             = 2·Σ_cyc π(df, d π(dg, dh)).
 
     Proved mechanically with the declaration WITHHELD (neither view
     is assumed; the ``L_X(df) → d(X(f))`` derived rule is opted in,
-    Phase 2 theorem)."""
+    a proved tangent-calculus theorem)."""
     from jacopy.algebra.lie_bracket_vf import LieBracketVF
     from jacopy.central.tangent.exterior import d as d_
     from jacopy.packages.poisson.core import SharpVF

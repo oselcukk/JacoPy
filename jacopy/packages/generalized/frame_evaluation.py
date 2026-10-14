@@ -1,6 +1,6 @@
 """
-Frame/coframe evaluation of the generalized structures (Phase
-7.B.2e; PDF item 14h): the canonical pairing, the Dorfman bracket
+Frame/coframe evaluation of the generalized structures: the
+canonical pairing, the Dorfman bracket
 and the total anchor evaluated on BASIS sections ``e_a ⊕ e^b`` —
 every scalar output lands on the named component functions of the
 existing frame layer (Kronecker deltas ``δ``, anholonomy ``γ^c_ab``,
@@ -11,13 +11,13 @@ Component dictionary produced here:
 * ``⟨e_a ⊕ e^b, e_c ⊕ e^d⟩₊ = δ^b_c + δ^d_a`` — the pairing is the
   natural duality pairing in the split basis;
 * ``⟨e^u, vec[e_a⊕0, e_c⊕0]⟩ = γ^u_ac`` — the vector side of the
-  standard Dorfman bracket reproduces the anholonomy (Phase 2.E);
+  standard Dorfman bracket reproduces the anholonomy;
 * ``form[e_a⊕0, 0⊕e^d](e_b) = −γ^d_ab`` — the ``ℒ`` side of the
   Dorfman form component is the Maurer-Cartan/coframe-differential
   face of the same coefficients;
 * ``⟨form[0⊕e^a, 0⊕e^b]_θ, e_c⟩ = γ̃_c^{ab}`` — the Koszul side of
   the Poisson generalized double reproduces the TILDE anholonomy
-  (PDF 12i, now read as a 14h component);
+  (read as a frame component);
 * ``⟨e^c, ρ(0 ⊕ e^b)⟩ = θ(e^b, e^c)`` — the [Watamura (2.6)] anchor
   ``ρ(U+ω) = θ♯ω`` decomposes into the bivector components on the
   coframe (pure frame vectors are killed: ``ρ(e_a ⊕ 0) = 0``).
@@ -26,7 +26,7 @@ Everything is engine-normalized; honest-fail throughout.
 
 Citation note: "(2.6)" / "Watamura" = Asakawa, Muraki, Sasa & Watamura
 (2015), arXiv:1408.2649 (bibliography key AsakawaMurakiSasaWatamura2015)
-— no PDF in the repository, so that number is unverified. "(4.13)" /
+— that equation number is unverified. "(4.13)" /
 "(4.14)" in :func:`prove_boxtimes_components_are_413` are numbers of the
 "E6 paper", an UNIDENTIFIED source NOT in the repository (authors /
 arXiv id never recorded); they are unverified and are not
@@ -227,8 +227,7 @@ def prove_theta_koszul_components(
 ) -> Tuple[ProofChain, Theorem]:
     """``⟨form[0⊕e^a, 0⊕e^b]_θ, e_c⟩ = γ̃_c^{ab}`` — the Koszul side
     of the Poisson generalized double on pure coframe sections
-    reproduces the TILDE anholonomy coefficients (PDF 12i as a 14h
-    component)."""
+    reproduces the TILDE anholonomy coefficients."""
     co = fr.dual()
     lhs = Pairing(
         KoszulBracket(P.pi, co.field(a_up), co.field(b_up)),
@@ -306,8 +305,8 @@ def prove_boxtimes_components_are_413(
     *,
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
-    """The [E6 paper (4.13)] ↔ ⊛ COMPONENT IDENTITY (the last open item of
-    ``examples/bracket_twist_research_interface``, 2026-09-10):
+    """The [E6 paper (4.13)] ↔ ⊛ COMPONENT IDENTITY (used in the
+    ``examples/bracket_twist_research_interface`` notebook):
 
         ⟨e^c, (Π₃⊛Π₃)(e^{a₁}∧…∧e^{a₅})⟩ = 5 Π^{[a₁a₂a₃} Π^{a₄a₅]c}
 

@@ -1,6 +1,6 @@
 """
-Poisson generalized geometry (Phase 7.B.2b; project directive item 14f, Watamura
-et al. [arXiv:1408.2649 §2.2, (2.6)-(2.7)] — no local PDF; the
+Poisson generalized geometry (Watamura
+et al. [arXiv:1408.2649 §2.2, (2.6)-(2.7)]; the
 labels are unverified here): the Courant algebroid
 ``(TM)₀ ⊕ (T*M)_θ`` over a Poisson base — the Lie bialgebroid
 double whose **T*M side carries the Koszul structure** (bracket
@@ -14,20 +14,19 @@ bracket, zero anchor — the ``(TM)₀`` subscript of the paper):
 with coboundary ``D_θ(h) = ½·(d̃h, 0) = ½·(−θ♯dh, 0)`` (Uchino
 Remark 1 normalization: ``⟨D_θh, x⟩₊ = ½ρ(x)h``). In particular the
 anchor KILLS pure vectors and the bracket of two pure vectors is
-ZERO — direct consequences of (2.6)-(2.7) (2026-09-09 audit,
-finding 2: an earlier revision wrongly exposed the TRIANGULAR/LWX
-double — nonzero TM-side bracket and total anchor ``U + θ♯ω`` —
-under the Watamura name; that structure remains available on its
-own terms as :func:`~jacopy.packages.drinfeld.double.nambu_double`).
+ZERO — direct consequences of (2.6)-(2.7). The TRIANGULAR/LWX
+double — nonzero TM-side bracket and total anchor ``U + θ♯ω`` — is a
+different structure, available on its own terms as
+:func:`~jacopy.packages.drinfeld.double.nambu_double`.
 
-Representation: the Phase 6 Nambu machinery at ``p = 1`` — a
+Representation: the Nambu machinery at ``p = 1`` — a
 ``NambuPoissonStructure`` of order 1 IS a Poisson bivector ``θ``.
 Inventory, all for the (2.6)-(2.7) structure itself:
 
 * **[C'1]** — the Leibniz–Jacobi identity, vector component (the
   tilde-calculus Jacobi) and form component (the Koszul Jacobi),
-  under the declared Poisson condition by the 6.J stall-time
-  difference test (:func:`prove_theta_jacobi`; closed 2026-09-10);
+  under the declared Poisson condition by the stall-time
+  difference test (:func:`prove_theta_jacobi`);
 * **[C'2]** — ``ρ`` is a bracket morphism: ``θ♯`` intertwines the
   Koszul and Lie brackets under the declared Poisson condition
   (:func:`prove_theta_anchor_morphism`);
@@ -39,9 +38,10 @@ Inventory, all for the (2.6)-(2.7) structure itself:
   (:func:`prove_theta_invariance`);
 * the **tilde-Courant bracket** with skewness and the
   Dorfman↔Courant relation, and the ``⟨D_θh, x⟩₊ = ½ρ(x)h``
-  normalization cross-check against the 7.A axiomatics.
+  normalization cross-check against the abstract axiomatics of
+  :mod:`courant_axioms`.
 
-The R-flux twist of THIS structure is the separate 7.B.2c slice
+The R-flux twist of THIS structure is a separate module
 (:mod:`r_twisted` — the R-term lands in ``ker ρ``).
 """
 
@@ -113,7 +113,7 @@ def theta_dorfman(
         form:   [ω, η]_θ
 
     — in particular the bracket of two PURE VECTORS is zero
-    (2026-09-09 audit, finding 2; the triangular double with the
+    (the triangular double with the
     nonzero TM side is :func:`~jacopy.packages.drinfeld.double.\
 nambu_double`)."""
     from jacopy.packages.drinfeld.double import (
@@ -137,8 +137,7 @@ def theta_anchor(
     N: NambuPoissonStructure, U: Expr, omega: Expr
 ) -> Expr:
     """``ρ(U+ω) = θ♯ω`` — the anchor of ``(TM)₀ ⊕ (T*M)_θ``
-    [Watamura (2.6)]: pure vectors are KILLED (2026-09-09 audit,
-    finding 2 — the earlier ``U + θ♯ω`` was the triangular
+    [Watamura (2.6)]: pure vectors are KILLED (``U + θ♯ω`` is the triangular
     double's total anchor, not this structure's)."""
     _require_poisson(N)
     return N.sharp_vf(omega)
@@ -167,7 +166,7 @@ def theta_courant(
 ) -> Tuple[Expr, Expr]:
     """The TILDE-Courant bracket — the skew-symmetrization:
     ``[x,y]_{C,θ} = [x,y]_{D,θ} − D_θ⟨x,y⟩₊`` component-wise
-    (directive 14f.ii)."""
+    [Watamura §2]."""
     vec, form = theta_dorfman(N, U, omega, V, eta)
     D_vec, D_form = d_operator_theta(
         N, canonical_pairing(U, omega, V, eta)
@@ -285,7 +284,7 @@ def prove_theta_courant_skew(
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
     """The tilde-Courant bracket is genuinely SKEW:
-    ``[x,y]_{C,θ} + [y,x]_{C,θ} = 0`` component-wise — the 6.D
+    ``[x,y]_{C,θ} + [y,x]_{C,θ} = 0`` component-wise — the
     symmetric part of the tilde-Dorfman is exactly ``2·D_θ⟨x,y⟩₊``
     and the subtraction removes it. Holds for ANY bivector (no
     Poisson declaration)."""
@@ -427,13 +426,12 @@ def prove_theta_symmetric_part(
 
 def _theta_jacobi_instances(engine, N, forms3, vectors, h, registry):
     """The declared-FI instance families that close the Leibniz–Jacobi
-    identity of ``(TM)₀ ⊕ (T*M)_θ`` by the 6.J stall-time difference
+    identity of ``(TM)₀ ⊕ (T*M)_θ`` by the stall-time difference
     test, for THREE 1-forms, the lift ``vectors`` (the three section
     vectors for the vector component, the evaluation vector for the
-    form component) and the probe ``h`` (2026-09-10 — the closure of
-    the 7.B.2b gap):
+    form component) and the probe ``h``:
 
-    * the composed-action FI faces of 6.J (probe scalars ``h`` and
+    * the composed-action FI faces (probe scalars ``h`` and
       the pairings ``⟨c, X⟩``) and the p = 1 deep instances;
     * FI on the EXACT forms ``d⟨c, X⟩``;
     * the declared FI as the vector ``R′(a,b) = [θa,θb] − θ[a,b]_θ =
@@ -543,8 +541,8 @@ def _theta_jacobi_instances(engine, N, forms3, vectors, h, registry):
 
 
 #: [C'1] (Leibniz-Jacobi of a Dorfman bracket, Uchino Remark 2.3) for the
-#: Poisson-generalized double of Watamura et al. §2.2 (no local PDF:
-#: that locator is unverified)
+#: Poisson-generalized double of Watamura et al. §2.2 (that locator
+#: is unverified)
 THETA_JACOBI_SOURCE = (
     cite("Uchino2002", "Remark 2.3, axiom [C'1]"),
     cite("AsakawaMurakiSasaWatamura2015", "Section 2.2"),
@@ -575,10 +573,9 @@ def prove_theta_jacobi(
     Dorfman-type Jacobi of the tilde calculus ``(ℒ̃, ι̃, d̃)``, i.e. the
     (D.5)–(D.7) family), the FORM component evaluated on ``X`` (the
     Koszul Jacobi identity in the Nambu language) — under the DECLARED
-    Poisson condition, by the 6.J stall-time difference test against
+    Poisson condition, by the stall-time difference test against
     the instance families of :func:`_theta_jacobi_instances`. Honest
-    fail without the declaration (2026-09-10; closes the gap left open
-    when the structure was corrected to (2.6)-(2.7) on 2026-09-09)."""
+    fail without the declaration."""
     from jacopy.core.pairing import Pairing
     from jacopy.packages.drinfeld.tilde_calculus import (
         _stall_difference_prove,
@@ -671,7 +668,7 @@ def prove_theta_d_pairing_value(
     — ``D_θh`` is pure-vector ``½(−θ♯dh)``, its pairing with the
     form leg ``ω`` reproduces (bivector antisymmetry) half the
     (2.6) anchor action ``½(θ♯ω)(h)``. Ties the θ-double to the
-    7.A abstract axiomatics."""
+    abstract axiomatics of :mod:`courant_axioms`."""
     _require_poisson(N)
     engine = nambu_tilde_engine(N, registry, declare_fi=False)
     D_vec, D_form = d_operator_theta(N, h)
@@ -700,7 +697,7 @@ def prove_theta_d_pairing_value(
 
 
 # ------------------------------------------------------------------ #
-# Sharp-pairing canonicalization (the [C'5] closure, 2026-09-08)     #
+# Sharp-pairing canonicalization (the [C'5] closure)                 #
 # ------------------------------------------------------------------ #
 #
 # One scalar, three faces: θ(a, b) = ⟨b, θ♯a⟩ = −⟨a, θ♯b⟩ (the
@@ -876,8 +873,7 @@ def prove_theta_invariance(
     ``ρ(x)⟨y, z⟩₊ = ⟨x∘_θ y, z⟩₊ + ⟨y, x∘_θ z⟩₊``
 
     with the (2.6) anchor ``ρ(x) = θ♯ω`` acting on the scalar
-    pairing — CLOSED
-    (2026-09-08, second pass): the missing ingredient was a
+    pairing — CLOSED: the key ingredient is a
     consistent canonical representative for the three faces
     ``θ(a,b) = ⟨b,θ♯a⟩ = −⟨a,θ♯b⟩`` of the sharp-pairing scalar.
     With the exact-oriented canonicalization triple above the

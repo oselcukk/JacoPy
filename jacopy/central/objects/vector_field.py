@@ -1,5 +1,5 @@
 """
-Vector fields and their action on functions ``U(f)`` (PDF items 8e-f).
+Vector fields and their action on functions ``U(f)``.
 
 **Central-code view.** A vector field is really a *section* of a bundle
 ``E``. Taking ``E = TM`` (the usual case) it is the ordinary vector
@@ -8,10 +8,10 @@ through the anchor ``ρ_E``: ``u(f) := ρ_E(u)(f)``. On ``TM`` the
 anchor is the identity, so ``u(f)`` is the directional derivative
 itself.
 
-Since the anchor is not carried at this skeleton layer (Phase 3), the
+Since the anchor is not carried at this skeleton layer, the
 action is given directly as ``Act(U, f)`` for the ``TM`` case; the
-general algebroid anchor will be wired in Phase 3 as
-``u(f) = ρ_E(u)(f)``.
+general algebroid anchor is wired in :mod:`jacopy.central.algebroid`
+as ``u(f) = ρ_E(u)(f)``.
 
 Implementation: :class:`VectorField` is a subclass of
 :class:`~jacopy.algebra.derivation.Derivation`. Hence
@@ -21,7 +21,7 @@ Implementation: :class:`VectorField` is a subclass of
   free,
 * the Leibniz rule over products ``U(f·g) = U(f)·g + f·U(g)`` is
   applied by :mod:`jacopy.algorithms.product_rule`,
-* the Lie bracket ``[U, V] = U∘V − V∘U`` (Phase 2) is built cleanly
+* the Lie bracket ``[U, V] = U∘V − V∘U`` is built cleanly
   as operator composition.
 
 **Grading convention.** The degree is always 0 — the *operator*
@@ -94,8 +94,7 @@ class VectorField(Derivation):
     def section_value(self) -> bool:
         """A section of a bundle other than TM acts on functions only
         through the anchor (``u(f) := ρ(u)(f)`` is spelled with
-        ``A.anchor`` / ``A.act``): it is a VALUE, not a derivation
-        (audit 0b00e1b integration review, item 5)."""
+        ``A.anchor`` / ``A.act``): it is a VALUE, not a derivation."""
         return not isinstance(self._bundle, TangentBundle)
 
     @property
@@ -137,8 +136,8 @@ def apply_to_function(U: VectorField, f: Expr) -> Act:
 
     On ``TM`` this is directly ``Act(U, f)``. The call syntax ``U(f)``
     (Derivation ``__call__``) gives the same result; this helper exists
-    to make the intent readable. For a general algebroid (Phase 3) it
-    will generalize to ``ρ_E(u)(f)``.
+    to make the intent readable. For a general algebroid it
+    generalizes to ``ρ_E(u)(f)``.
     """
     if not isinstance(U, VectorField):
         raise TypeError("U must be a VectorField")

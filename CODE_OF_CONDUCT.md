@@ -62,7 +62,7 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement in either of
 these ways:
 
-* by email to CONTACT_EMAIL, or
+* by email to oguzhanselcuk@gtu.edu.tr, or
 * through GitHub's "Report content" option on the comment, issue, pull
   request, or discussion concerned, which sends the report to the GitHub
   staff and the repository maintainers.

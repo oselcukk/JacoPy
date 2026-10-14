@@ -1,5 +1,5 @@
 """
-Chain-shape replay (audit 0b00e1b-FULL M1-5 ≡ M1-6 ≡ K2-7 ≡ M1X-4).
+Chain-shape replay.
 
 A theorem record claims ``lhs = rhs`` and stores a :class:`ProofChain`
 as its evidence. The record is only as good as the chain is
@@ -156,11 +156,10 @@ def accountable(step) -> bool:
     strategy's inference (:func:`jacopy.proof.step.is_minted`; threat
     model there) — or it is an identity (``before == after``). Any step
     built through the public ``ProofStep`` constructor is a hand-built
-    claim, whatever tag or key it carries (audit 0b00e1b-FULL M1-5:
-    "unlabelled hand-made step"; review 2026-10-01 #3)."""
+    claim, whatever tag or key it carries."""
     from jacopy.proof.step import is_minted
 
-    # (review 2026-10-01 #3) the caller-supplied tag / key are NOT
+    # the caller-supplied tag / key are NOT
     # evidence: anyone can write them. Only a step minted by a library
     # producer — or an identity, which proves nothing — is accountable
     return is_minted(step) or step.before == step.after

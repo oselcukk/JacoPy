@@ -1,5 +1,5 @@
 """
-Block-operator matrices (research interface, Phase 8 brick 1): write a
+Block-operator matrices (research interface): write a
 bundle automorphism the way the papers do,
 
     Ψ_Π = ( 1  Π )          Π = ( Π₃ ,  Π₆ + Π₃ ⊛ Π₃ )
@@ -135,8 +135,8 @@ class Zero(Operator):
         return True
 
 
-#: Unambiguous name of the zero block operator (audit 0B00E1B-FULL T2
-#: names): ``Zero`` alone is also :data:`jacopy.core.expr.Zero`, the
+#: Unambiguous name of the zero block operator: ``Zero`` alone is also
+#: :data:`jacopy.core.expr.Zero`, the
 #: zero EXPRESSION. ``Zero`` stays importable here (same class).
 ZeroOperator = Zero
 

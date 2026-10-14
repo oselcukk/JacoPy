@@ -174,7 +174,7 @@ class HtmlDisplay:
         return hash(self._html)
 
 
-HtmlProofDisplay = HtmlDisplay  # v2 name
+HtmlProofDisplay = HtmlDisplay  # legacy alias
 
 
 def display_theorem(theorem: Theorem, *, with_proof: bool = True, max_steps: int | None = 40) -> HtmlDisplay:

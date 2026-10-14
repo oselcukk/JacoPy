@@ -1,6 +1,6 @@
 """
 Hodge star ``⋆`` — the p-form ↔ (n−p)-form isomorphism with respect to
-a metric (PDF item 8l).
+a metric.
 
 On an ``n``-dimensional bundle the Hodge star sends a p-form to an
 (n−p)-form: ``⋆: Λ^p → Λ^{n-p}``. The degree transformation is not
@@ -40,8 +40,7 @@ class HodgeStar(Expr):
         node), or ``None`` for the bare structural star. The metric is
         PART OF THE OPERATION'S IDENTITY: ``⋆_g dx = 1`` while
         ``⋆_{4g} dx = ½`` in oriented dimension 1, so it participates
-        in ``_key`` — two stars with different metrics are never equal
-        (2026-09-07 audit, finding 5).
+        in ``_key`` — two stars with different metrics are never equal.
     """
 
     __slots__ = ("_arg", "_dim", "_metric")
@@ -79,8 +78,8 @@ class HodgeStar(Expr):
 
     def _rebuild(self, new_children: Tuple[Expr, ...]) -> "HodgeStar":
         """Preserve dimension and metric context — the default
-        ``type(self)(*children)`` rebuild dropped ``dim`` and crashed
-        every generic tree pass (2026-09-07 audit, finding 6)."""
+        ``type(self)(*children)`` rebuild would drop ``dim`` and break
+        every generic tree pass."""
         (arg,) = new_children
         return HodgeStar(arg, self._dim, metric=self._metric)
 

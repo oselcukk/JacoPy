@@ -1,6 +1,4 @@
-"""Rendering helpers for expressions, proof transcripts and theorems
-(PDF item 1: "integrated with LaTeX"; the deferred-items ledger's K1,
-ported from v2 on 2026-09-22).
+"""Rendering helpers for expressions, proof transcripts and theorems.
 
 * :mod:`jacopy.display.ascii` — plain text, precedence-aware;
 * :mod:`jacopy.display.latex` — LaTeX snippets, ``gather*`` proof

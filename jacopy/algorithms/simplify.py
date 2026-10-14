@@ -1,7 +1,7 @@
 """
 Full simplification pipeline.
 
-Composes the Phase 2 passes into a single fix-point driver:
+Composes the canonicalization passes into a single fix-point driver:
 
     flatten → distribute → canonicalize → sort_product → collect_terms
 

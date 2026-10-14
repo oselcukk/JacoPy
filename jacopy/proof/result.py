@@ -1,5 +1,5 @@
 """
-The result / assumption / provenance model (Phase 8 step 3a).
+The result / assumption / provenance model.
 
 A proof attempt answers three different questions, and this module
 keeps the answers apart:
@@ -11,7 +11,7 @@ keeps the answers apart:
   ran out before a fix-point) or ``INVALID`` (the goal is ill-typed:
   a 1-form equated to a 2-form, a vector to a function …; nothing was
   run). There is no ``DISPROVED``: an unreduced residual is never a
-  certificate of non-zero (audit 2026-09-23, 0058df0).
+  certificate of non-zero.
 * WHAT IT DEPENDS ON — ``requires``: the :class:`Assumption` records.
   ``declared`` — a declared axiom of a structure that actually fired
   (with its owner and the number of instances); ``structure`` — the
@@ -23,8 +23,8 @@ keeps the answers apart:
   entry no step accounts for: kept visible, NOT a verification input
   (prose is not a trust boundary; the structural record is). Also a
   theorem record whose chain does not literally run ``lhs → rhs``.
-  Legacy entries are kept, never dropped (step 3b decides what may
-  cite them).
+  Legacy entries are kept, never dropped (the citation check decides
+  what may cite them).
 * HOW it was derived — ``provenance``: cited theorems, definitional
   unfoldings, canonicalizations, plain engine steps, computations.
   These are not assumptions: a definition assumes nothing.
@@ -202,7 +202,7 @@ def _classify(steps: Iterable[ProofStep], principal=None):
     def declared_or_legacy(s, owner):
         # a declared assumption must name its licensing rule (key); a
         # hand-built assumption step without one cannot be located in
-        # another engine and stays a legacy record (audit dc44f79 F2)
+        # another engine and stays a legacy record
         rkey = getattr(s, "key", None)
         if rkey is None:
             bump(assumptions, "legacy", f"assumption instance without a licensing rule: {s.rule}", owner, s.before)
@@ -211,9 +211,9 @@ def _classify(steps: Iterable[ProofStep], principal=None):
 
     def inherit(cited):
         # every requirement kind of the cited record flows to the citing
-        # proof — "textual" from_axioms entries included (review
-        # 2026-10-01 rules-match) and "structure" (review r3 #3: also a
-        # structure no inherited declared record names); an unknown kind
+        # proof — "textual" from_axioms entries included and
+        # "structure" (also a structure no inherited declared record
+        # names); an unknown kind
         # is kept as legacy, never dropped
         for a in getattr(cited, "requires", ()) or ():
             kind = getattr(a, "kind", None)
@@ -236,12 +236,12 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                 cited = getattr(s, "cites", None)
                 if role == "unverified-citation":
                     # a TheoremBook record cited under its explicit
-                    # ``unverified`` flag (audit dc44f79 F5)
+                    # ``unverified`` flag
                     bump(assumptions, "legacy", f"unverified citation (record marked unverified): {s.rule}", owner, s.before)
                     if cited is not None:
                         inherit(cited)
                 elif cited is not None and type(cited) is _theorem_class():
-                    # TRANSITIVE requirements (Phase 8 step 3b): a citation
+                    # TRANSITIVE requirements: a citation
                     # contributes ALL its own requirements; an unverified
                     # (legacy) one is, in addition, a legacy assumption
                     if getattr(cited, "legacy", True):
@@ -249,14 +249,14 @@ def _classify(steps: Iterable[ProofStep], principal=None):
                     inherit(cited)
                 elif cited is not None:
                     # not an exact Theorem record: its verdict properties
-                    # are not trusted (review r3 #8) — legacy, its
+                    # are not trusted — legacy, its
                     # requirements still carried
                     bump(assumptions, "legacy", f"unverified citation: {type(cited).__name__} is not a Theorem record: {s.rule}", owner, s.before)
                     inherit(cited)
                 elif getattr(s, "key", None) is None and not s.children:
                     # a HAND-BUILT theorem claim with neither the cited object
-                    # nor an attached derivation: not verifiable here (audit
-                    # dc44f79 F1). A step fired by a registered theorem-
+                    # nor an attached derivation: not verifiable here.
+                    # A step fired by a registered theorem-
                     # classified rule carries the rule's key: its derivation
                     # is the rule's proof builder (foundational mode inlines
                     # it) — provenance, not an assumption.
@@ -279,7 +279,7 @@ def _classify(steps: Iterable[ProofStep], principal=None):
             # and is not counted twice — but ITS children (a modulo
             # citation's recorded normalization, a foundational sub-proof)
             # are always visited: skipping the wrapper's twin must never
-            # drop a sub-step's requirements (review 2026-10-01 #1)
+            # drop a sub-step's requirements
             kids = []
             for c in s.children:
                 if len(s.children) == 1 and _same_event(c, s):
@@ -289,7 +289,7 @@ def _classify(steps: Iterable[ProofStep], principal=None):
             visit(kids)
 
     visit(steps)
-    # registry answers the steps relied on (audit 0b00e1b-FULL P0-3):
+    # registry answers the steps relied on:
     # recorded on the steps by their producers; a cited theorem's own
     # registry records arrived through its requires above
     from jacopy.proof.registry_facts import facts_of, requirement_records, step_facts
@@ -304,7 +304,6 @@ def _classify(steps: Iterable[ProofStep], principal=None):
         else:
             # a registry record whose facts cannot be read back cannot be
             # checked at a citation: never dropped silently — legacy
-            # (review 2026-10-01 #5)
             del assumptions[key]
             bump(assumptions, "legacy", f"unverifiable registry requirement (no readable facts): {n_}", o_, ex_)
     cited_registry = tuple(cited_registry)
@@ -371,8 +370,8 @@ def _whole_step(before: Expr, after: Expr, local: ProofStep, *, at_site: bool = 
     )
     # minted only when the local step is AND the caller's own rewrite
     # produced ``after`` at the local step's site (``at_site``: the
-    # engine's expand_once / the search's path rewrite) — review
-    # 2026-10-01 #3, r3 #4: no first-occurrence guess, no extra walk
+    # engine's expand_once / the search's path rewrite): no
+    # first-occurrence guess, no extra walk
     if at_site and is_minted(local):
         _mint(wrapper)
     return wrapper
@@ -381,7 +380,7 @@ def _whole_step(before: Expr, after: Expr, local: ProofStep, *, at_site: bool = 
 def _reversed_step(s: ProofStep) -> ProofStep:
     """The step read backwards, with ALL its semantic metadata (owner,
     role, citation, key, children) — reversing an equation must not
-    drop what it depends on (audit dc44f79 F1)."""
+    drop what it depends on."""
     rev = ProofStep(
         s.after, s.before, rule=s.rule, justification=(s.justification + " (reversed)").strip(),
         children=list(s.children), provenance_tag=s.provenance_tag, owner=s.owner, role=getattr(s, "role", None),
@@ -516,8 +515,8 @@ class ProofResult:
                 f"the chain starts at {chain.initial._repr_inner()}, not at the goal's "
                 f"left-hand side {goal.lhs._repr_inner()}"
             )
-        # the transcript must be CONNECTED (audit 0b00e1b-FULL M1-6 ≡
-        # K2-7): every step rewrites what the previous one left (a
+        # the transcript must be CONNECTED: every step rewrites what the
+        # previous one left (a
         # whole-expression step, or a local step at its first site)
         from jacopy.proof.replay import replay
 
@@ -526,7 +525,7 @@ class ProofResult:
             raise ValueError(f"the chain is not connected: {why}")
         if status == "CLOSED" and replayed != goal.rhs:
             # a CLOSED status is a claim the transcript must carry, not a
-            # flag the caller sets (audit 0b00e1b-FULL M1-6)
+            # flag the caller sets
             raise ValueError(
                 f"status='CLOSED' but the chain ends at {replayed._repr_inner()[:200]}, "
                 f"not at the goal's right-hand side {goal.rhs._repr_inner()[:200]}"
@@ -535,7 +534,7 @@ class ProofResult:
         req, prov = _classify(tuple(chain.steps) + tuple(side_steps), principal=owner)
         # a hand-built step (not minted by a library producer) is the
         # author's word, not a licensed rewrite: a legacy assumption
-        # (audit 0b00e1b-FULL M1-5), never silent provenance
+        # never silent provenance
         from jacopy.proof.replay import unaccountable_steps
 
         hand: dict = {}
@@ -571,8 +570,8 @@ class ProofResult:
             raise TypeError("from_theorem expects a Theorem")
         goal = Goal(theorem.lhs, theorem.rhs)
         chain = theorem.proof
-        # the record's requirements, its chain verdict included (audit
-        # 0b00e1b-FULL M1-5): a chain that does not replay into
+        # the record's requirements, its chain verdict included: a chain
+        # that does not replay into
         # ``lhs = rhs`` is an ``unreplayed`` record, an empty / purely
         # hand-built one a legacy record
         req, prov = _theorem_requirements(theorem)
@@ -618,13 +617,13 @@ def _theorem_requirements(theorem):
 
 
 def structural_requires(theorem) -> Tuple[Assumption, ...]:
-    """The requirement records of a theorem derived from its OWN chain
-    (Phase 8 step 3b): declared axiom instances, the structures behind
+    """The requirement records of a theorem derived from its OWN chain:
+    declared axiom instances, the structures behind
     them, the transitive requirements of cited theorems, the registry
-    answers the steps relied on (``registry``, audit 0b00e1b-FULL
-    P0-3), a scope entry for an instance proof, a legacy entry for
-    every ``from_axioms`` text no step accounts for — and the chain
-    verdict (audit 0b00e1b-FULL M1-5, :func:`jacopy.proof.replay.chain_verdict`):
+    answers the steps relied on (``registry``), a scope entry for an
+    instance proof, a legacy entry for every ``from_axioms`` text no step
+    accounts for — and the chain
+    verdict (:func:`jacopy.proof.replay.chain_verdict`):
     ``legacy`` for an empty / purely hand-built chain, ``unreplayed``
     for a chain that does not replay into ``lhs = rhs``."""
     return _theorem_requirements(theorem)[0]
@@ -681,7 +680,7 @@ def prove(
     reason = check_goal(lhs, rhs, registry)
     if reason is not None:
         return ProofResult.invalid(goal, reason, generality=generality, owner=owner)
-    # the citing registry context (audit 0b00e1b-FULL P0-3): a cited
+    # the citing registry context: a cited
     # theorem's registry requirements are checked against ``registry``
     from jacopy.proof.registry_facts import registry_context
 
@@ -742,7 +741,7 @@ def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simpl
     if rexh:
         # the right-hand side ran out of budget: the goal is unchanged, the
         # left computation is the transcript, the right one a side
-        # computation whose assumptions still count (audit dc44f79 F7)
+        # computation whose assumptions still count
         chain = ProofChain(lsteps)
         return ProofResult.from_chain(
             chain, goal, status="BUDGET", max_steps=max_steps, generality=generality, owner=owner,
@@ -762,7 +761,7 @@ def _prove(engine, goal, lhs, rhs, registry, max_steps, generality, owner, simpl
     steps = list(lsteps)
     if diff != left:
         # the right-hand side's normalization is attached to the residual
-        # step so its assumptions and citations count (audit dc44f79 F1)
+        # step so its assumptions and citations count
         steps.append(_mint(ProofStep(left, diff, rule="residual: lhs − rhs", justification="normal forms differ; the difference is the residual",
                                key=("pass", "residual"),
                                children=list(rsteps), registry_facts=facts)))

@@ -1,6 +1,5 @@
 """
-Evaluation laws of ℒ and ∇ on general (q, r)-TENSORS (PDF items
-9e / 8n; 2026-09-08 audit, compliance finding 2).
+Evaluation laws of ℒ and ∇ on general (q, r)-TENSORS.
 
 The canonical definitions — the Lie and covariant derivatives are
 derivations of the full contraction algebra, so on a (q, r)-tensor
@@ -54,8 +53,8 @@ def _tensor_head(expr: Expr, op_type) -> Optional[tuple]:
 
 class TensorLieEvalDefinition(Definition):
     """``(ℒ_X T)(a₁,…) → ρ(X)(T(a₁,…)) − Σᵢ T(…, ℒ_X aᵢ, …)`` — the
-    canonical evaluation law of the Lie derivative on a (q,r)-tensor
-    (PDF 9e). Slot-agnostic: the same ``ℒ_X`` acts in covector and
+    canonical evaluation law of the Lie derivative on a (q,r)-tensor.
+    Slot-agnostic: the same ``ℒ_X`` acts in covector and
     vector slots (the intrinsic rules then turn ``ℒ_X Y`` into
     ``[X, Y]``).
 
@@ -63,8 +62,7 @@ class TensorLieEvalDefinition(Definition):
     tangent ``CARTAN_TM``): the rule fires ONLY on ``ℒ`` operators
     of THAT calculus and its scalar term uses the calculus' genuine
     anchor — a foreign calculus' ``ℒ^A`` stays inert instead of
-    being unrolled with the wrong (anchorless) formula (2026-09-09
-    audit, finding 8)."""
+    being unrolled with the wrong (anchorless) formula."""
 
     anchor = MultiEval
 
@@ -129,7 +127,7 @@ class TensorLieEvalDefinition(Definition):
 class TensorCovariantEvalDefinition(Definition):
     """``(∇_X T)(a₁,…) → X(T(a₁,…)) − Σᵢ T(…, ∇_X aᵢ, …)`` — the
     canonical evaluation law of the covariant derivative on a
-    (q,r)-tensor (PDF 8n)."""
+    (q,r)-tensor."""
 
     name = (
         "tensor covariant evaluation: (∇_X T)(a…) = X(T(a…)) − "

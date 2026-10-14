@@ -1,9 +1,8 @@
 """
-Permutation unfolding for (anti)symmetrization under evaluation — the
-Phase 1 deferral of PDF item 8x (Phase 2.F).
+Permutation unfolding for (anti)symmetrization under evaluation.
 
-The canonical definitions, with the ``1/k!`` normalization fixed in
-Phase 1 (``T_(ab) = ½(T_ab + T_ba)``, ``T_[ab] = ½(T_ab − T_ba)``):
+The canonical definitions, with the ``1/k!`` normalization fixed by the
+object layer (``T_(ab) = ½(T_ab + T_ba)``, ``T_[ab] = ½(T_ab − T_ba)``):
 
     Sym(T)(Y_1, …, Y_k) = (1/k!) Σ_σ T(Y_σ(1), …, Y_σ(k)),
     Alt(T)(Y_1, …, Y_k) = (1/k!) Σ_σ sgn(σ) T(Y_σ(1), …, Y_σ(k)).

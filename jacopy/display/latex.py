@@ -1,9 +1,9 @@
 r"""
 LaTeX renderer for :class:`~jacopy.core.expr.Expr` trees,
 :class:`~jacopy.proof.step.ProofStep` / :class:`~jacopy.proof.chain.ProofChain`
-transcripts and :class:`~jacopy.proof.theorems.Theorem` records
-(PDF item 1, "integrated with LaTeX"; ported from v2's dispatch-based
-display layer, 2026-09-22).
+transcripts and :class:`~jacopy.proof.theorems.Theorem` records (a
+dispatch-based
+display layer).
 
 The output is raw LaTeX math, no ``$…$`` delimiters, so the caller
 chooses the surrounding environment. :func:`chain_to_latex` wraps a
@@ -87,8 +87,8 @@ _UNICODE_TO_LATEX: Dict[str, str] = {
     "…": r"\dots", "⋯": r"\cdots",
     "≤": r"\leq", "≥": r"\geq", "≠": r"\neq",
     "±": r"\pm", "×": r"\times", "÷": r"\div",
-    # further glyphs that occur in rule names / statements (audit
-    # 0b00e1b-FULL K1-9, T3-2): every one maps to a math command
+    # further glyphs that occur in rule names / statements: every
+    # one maps to a math command
     "ϕ": r"\phi", "ϵ": r"\epsilon", "ϑ": r"\vartheta", "ϖ": r"\varpi",
     "µ": r"\mu", "ð": r"\eth",
     "⊂": r"\subset", "⊆": r"\subseteq", "⊃": r"\supset", "∉": r"\notin",
@@ -245,7 +245,7 @@ def _take_group(s: str, i: int):
 
 
 def _fix_scripts(s: str) -> str:
-    """Make every sub/superscript well formed (audit review: no input
+    """Make every sub/superscript well formed (no input
     may yield LaTeX that does not compile): a script with no argument
     gets ``{}``, a script whose argument is itself a script is braced
     (``x^_{i}`` → ``x^{_{i}}``), a second ``_`` (``^``) on the same base
@@ -398,7 +398,7 @@ def _warn_unmapped(ch: str) -> None:
 def _math_fallback(text: str) -> str:
     """Map every remaining non-ASCII character of a MATH snippet; an
     unknown one becomes a visible ``?`` (and a warning) instead of a
-    pdfLaTeX error (audit 0b00e1b-FULL K1-9)."""
+    pdfLaTeX error."""
     if text.isascii():
         return text
     out = []
@@ -844,7 +844,7 @@ def _load_central_handlers() -> None:
     def _inv_metric(expr, _ctx):
         # the default name already carries the ⁻¹ (``g⁻¹``); a custom
         # name is the user's choice — never add a second inverse
-        # (2026-09-23 audit, F4: ``g^{-1}^{-1}`` is a pdflatex error)
+        # (``g^{-1}^{-1}`` is a pdflatex error)
         return latex_name(expr.name)
 
     @_register(AlgebroidBracket)
@@ -1097,7 +1097,7 @@ def text_to_latex(text: str) -> str:
     return _escape_text(text)
 
 
-# ---- line breaking (audit 0b00e1b-FULL T3-2) ----------------------- #
+# ---- line breaking ------------------------------------------------- #
 
 #: default line budget of a transcript row, in "visible units" (about
 #: one glyph each; sub/superscripts count less) — calibrated against

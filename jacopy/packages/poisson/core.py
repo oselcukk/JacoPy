@@ -1,5 +1,5 @@
 """
-The Poisson core (Phase 5.A) — PDF item 12.
+The Poisson core.
 
 A **Poisson structure** is a bivector ``π`` with ``[π, π]_SN = 0``.
 Canonical definitions (definition policy §1):
@@ -20,7 +20,7 @@ the algebroid declaration system); everything ℝ/C∞-structural about
 
 The Jacobi identity of ``{·,·}`` is NOT free: it is equivalent to
 ``[π,π]_SN = 0`` and arrives with the cotangent-algebroid showcase
-(Phase 5.C).
+(:mod:`jacopy.packages.poisson.showcase`).
 """
 
 from __future__ import annotations
@@ -144,7 +144,7 @@ class SharpVF(Derivation):
     :class:`AnchoredVF` pattern.
 
     The raw ``Act(Sharp, α)`` node has form-degree 0 and would be
-    mistaken for a scalar by degree-based heuristics (caught in 5.A);
+    mistaken for a scalar by degree-based heuristics;
     the derivation atom carries the vector-field nature structurally.
     Canonical action: ``(π♯α)(g) = π(α, dg)``.
     """
@@ -235,7 +235,7 @@ class PoissonStructure:
         return PoissonStructure(self._pi, declare=tuple(self._declarations) + tuple(declare))
 
     def engine_rules(self, registry=None, *, phase=None):
-        """The rules THIS structure contributes (Phase 8 step 4a), owned
+        """The rules THIS structure contributes, owned
         by it and keyed by ``(class, π)``: phase ``"declared"`` — the
         ``[π,π]_SN = 0`` declaration ONLY when ``"poisson"`` is
         declared; phase ``"definitional"`` — bracket, Hamiltonian,
@@ -273,7 +273,7 @@ class PoissonStructure:
 
     def sharp_vf(self, alpha: Expr) -> SharpVF:
         """``π♯(α)`` as a genuine vector field (the anchor of the
-        cotangent algebroid, Phase 5.C)."""
+        cotangent algebroid)."""
         return SharpVF(self._pi, alpha)
 
     def __eq__(self, other: object) -> bool:
@@ -291,7 +291,7 @@ class PoissonStructure:
         return f"PoissonStructure({self._pi!r}{decl})"
 
 
-#: The declarable axioms of a Poisson structure (Phase 8 step 4a):
+#: The declarable axioms of a Poisson structure:
 #: ``"poisson"`` — the Poisson condition ``[π, π]_SN = 0``.
 POISSON_DECLARATIONS = ("poisson",)
 
@@ -503,7 +503,7 @@ class PoissonSNDeclaration(Definition):
     """``[π, π]_SN → 0`` — the DECLARED Poisson axiom (the structure's
     integrability), never assumed silently."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
 
     anchor = BracketApply
 
@@ -535,10 +535,10 @@ def poisson_engine(
     """The tangent engine extended with the Poisson layer for the
     given structures: each structure contributes its own rules
     (:meth:`PoissonStructure.engine_rules`). ``declare_sn=True`` (the
-    pre-4a default, kept for compatibility) treats every structure
+    historical default, kept for compatibility) treats every structure
     passed as declaring ``"poisson"``; pass ``declare_sn=False`` and
     declare on the structures themselves (``declare=("poisson",)``)
-    — the 4a contract: the flag is not distributed, each structure
+    — the per-structure contract: the flag is not distributed, each structure
     carries its own assumptions."""
     from jacopy.central.tangent.tangent_expansion import tangent_engine
 

@@ -1,7 +1,7 @@
 """
-Frame components of the connection (Phase 4.D.1).
+Frame components of the connection.
 
-The 2.E coefficient-extraction pattern applied to the connection:
+The frame coefficient-extraction pattern applied to the connection:
 
     Γ^a_{bc} := ⟨e^a, ∇_{e_b} e_c⟩
 
@@ -16,7 +16,7 @@ general connection has none). On top of it:
   ``T^a(e_b, e_c) = de^a(e_b, e_c) + ω^a_c(e_b) − ω^a_b(e_c)``
   (the wedge term evaluated against the frame; the form-VALUED
   equations with genuine ``Σ_d ω^a_d ∧ e^d`` need the
-  IndexedSum/Wedge layer — Phase 4.D.2).
+  IndexedSum/Wedge layer).
 
 Splitting a coframe pairing over a sum is GUARDED
 (:class:`FramePairingSplitDefinition`): it fires only when a summand
@@ -163,7 +163,7 @@ class ConnectionForm(Atom):
     #: 1-form — one slot, so trivially alternating; its tensoriality
     #: (∇_{hX} = h∇_X) is certified separately in ``modified.py``.
     #: Without it wedges of connection forms evaluated plain-
-    #: multilinearly (completeness; audit 0b00e1b integration).
+    #: multilinearly (completeness).
     alternating_values = True
 
     def __init__(
@@ -278,7 +278,7 @@ def _is_frame_covariant(node: Expr, alpha: CoframeField):
 
 class FrameConnectionCoefficientDefinition(Definition):
     """``⟨e^a, ∇_{e_b} e_c⟩ → Γ^a_{bc}`` — the definition of the
-    connection coefficient (the 2.E extraction pattern)."""
+    connection coefficient (the frame extraction pattern)."""
 
     name = "connection coefficient: ⟨e^a, ∇_{e_b} e_c⟩ = Γ^a_bc"
     anchor = Pairing
@@ -506,7 +506,7 @@ def prove_cartan_first_structure(
 
     ``⟨e^a, T(e_b,e_c)⟩ = de^a(e_b,e_c) + (Σ_s ω^a_s ∧ e^s)(e_b,e_c)``
 
-    The proof drives the whole 4.D.2 layer: evaluation pushes into the
+    The proof drives the whole IndexedSum/Wedge layer: evaluation pushes into the
     indexed sum, the wedge expands by the determinant convention, the
     coframe pairings become Kronecker deltas, and the bound index
     contracts onto the connection coefficients — meeting the torsion
@@ -858,7 +858,7 @@ def prove_cartan_first_evaluated(
 
     (the ``Σ_d ω^a_d ∧ e^d`` wedge term evaluated against the frame
     collapses to the two ω-values; the form-valued equation itself is
-    Phase 4.D.2). Everything mechanical: torsion expansion, Palais on
+    in the IndexedSum/Wedge layer). Everything mechanical: torsion expansion, Palais on
     ``de^a``, the coefficient extractions, γ-cancellation.
     """
     e_up = fr.dual().field(upper)

@@ -1,11 +1,10 @@
 """
-p-vector fields (multivectors) — PDF item 8i.
+p-vector fields (multivectors).
 
 A **p-vector field** is a section of the exterior power ``Λ^p E`` of a
 bundle ``E``. Taking ``E = TM`` (the usual case) these are ordinary
 multivectors (``Λ^p TM``). The Poisson bivector ``π`` is a 2-vector
-(``p = 2``) and the core input of the Schouten-Nijenhuis bracket
-(Phase 2).
+(``p = 2``) and the core input of the Schouten-Nijenhuis bracket.
 
 :class:`PVector` is the contravariant twin of
 :class:`~jacopy.central.objects.form.Form`: it carries its degree
@@ -21,7 +20,7 @@ degree-0 *operator* (a derivation acting on functions, so that
 the multivector grading, declare it as ``PVector(name, degree=1)``.
 Consequently ``Wedge(X, Y)`` of two :class:`VectorField`'s does *not*
 carry the bivector degree 2 — build multivectors from
-:class:`PVector`'s (or wait for the SN-bracket lift in Phase 2).
+:class:`PVector`'s (or use the SN-bracket lift).
 The one contact point that is resolved structurally: contracting a
 plain vector field with a 1-form is the canonical pairing, and
 :func:`~jacopy.central.objects.tilde_interior.tilde_contract` routes

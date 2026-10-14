@@ -1,6 +1,5 @@
 """
-Symmetry-aware canonical form for alternating multilinear evaluations
-(Engine pass E.2).
+Symmetry-aware canonical form for alternating multilinear evaluations.
 
 An alternating :class:`~jacopy.core.multi_eval.MultiEval` satisfies
 
@@ -13,7 +12,7 @@ overall sign, and a structural zero whenever two arguments coincide.
 Normalizing to that representative makes term cancellation *free* in
 ``collect_terms`` — ``ω(X, Y) + ω(Y, X)`` becomes
 ``ω(X, Y) − ω(X, Y)`` and dies — instead of requiring a dedicated
-engine rule per orientation (the v2 approach).
+engine rule per orientation.
 
 Only ``alternating=True`` nodes are touched. ``alternating=False``
 declares *no* symmetry (a symmetric evaluation like a metric is merely
@@ -33,7 +32,7 @@ def _sort_key(expr: Expr) -> str:
 
 
 #: Public name of :func:`_sort_key` — the simplifier's stable structural ordering key
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 structural_sort_key = _sort_key
 
@@ -58,10 +57,10 @@ def _permutation_parity(before, after) -> int:
 def _odd_wedge_degree(child: Expr, registry=None) -> bool:
     """True when ``child`` certainly has odd EXTERIOR degree — the
     parity of the single contract
-    :func:`jacopy.algebra.grading.exterior_degree` (Phase 8 step 2a; the
-    pre-2a test read the node's own ``wedge_degree`` / ``degree``
-    attribute only, so a vector sum or an indexed sum was never
-    sorted). Unknown or symbolically undecidable parity returns False
+    :func:`jacopy.algebra.grading.exterior_degree` (reading only the
+    node's own ``wedge_degree`` / ``degree`` attribute would leave a
+    vector sum or an indexed sum unsorted). Unknown or symbolically
+    undecidable parity returns False
     — the Wedge is then left unsorted (soundness over
     completeness)."""
     from jacopy.algebra.grading import exterior_parity
@@ -103,7 +102,7 @@ def _normalize_wedge(node: Expr, registry=None) -> Expr:
             c = c.arg
         if isinstance(c, Wedge):
             # Associativity: flatten nested wedges (sign-free) —
-            # higher-degree audit 2026-07-31, the SN wedge-Leibniz
+            # the SN wedge-Leibniz
             # recursion builds (a ∧ b) ∧ c shapes.
             stack[idx:idx] = list(c.children)
             flattened_nested = True

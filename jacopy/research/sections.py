@@ -1,6 +1,6 @@
 """
-Generalized sections as FIRST-CLASS objects (research interface,
-Phase 8 brick 4): a section of ``E = A ⊕ Z`` — a vector field together
+Generalized sections as FIRST-CLASS objects (research
+interface): a section of ``E = A ⊕ Z`` — a vector field together
 with one or more differential forms — used to be a bare Python tuple
 ``(U, ω)``; here it is a typed object whose *type* records the slots.
 

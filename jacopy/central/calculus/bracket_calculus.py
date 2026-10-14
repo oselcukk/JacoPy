@@ -1,6 +1,6 @@
 """
 The exterior derivative derived from a bracket — generic machinery
-(PDF item 9d; definition policy §1 and §4).
+(definition policy §1 and §4).
 
 **Canonical definition (Palais intrinsic formula, no combinatorial
 prefactor).** Given an anchor ``ρ`` and a bracket ``[·,·]``, the
@@ -12,13 +12,13 @@ is *defined* as
 
 with the special cases ``df(X) = ρ(X)(f)`` for functions and
 ``dω(X, Y) = ρ(X)(ω(Y)) − ρ(Y)(ω(X)) − ω([X, Y])`` for 1-forms. This
-matches the determinant wedge convention fixed in Phase 1
+matches the determinant wedge convention fixed for the wedge product
 (``ω∧η(X,Y) = ω(X)η(Y) − ω(Y)η(X)``).
 
 Everything else about ``d`` — ``d² = 0``, the wedge Leibniz rule, the
 Cartan relations — is a **theorem** proved from this definition.
 
-**Axiom flags (audit 0B00E1B-FULL M2-1/M2-2).** The formula above is
+**Axiom flags.** The formula above is
 an ORDERED ℝ-multilinear expression for any ℝ-bilinear bracket, but
 it is an *alternating* form only when the bracket is skew-symmetric:
 ``dα(u,u) = ρ(u)α(u) − ρ(u)α(u) − α([u,u]) = −α([u,u])``, nonzero for
@@ -40,9 +40,9 @@ under right Leibniz. Both are therefore explicit calculus flags
 The machinery is *generic in the pair* ``(ρ, [·,·])``
 (:class:`BracketCalculus`): the TM case takes the identity anchor and
 the Lie bracket (:mod:`jacopy.central.tangent.exterior`), a general
-algebroid takes ``(ρ_E, [·,·]_E)`` (Phase 3), the Poisson cotangent
-case takes ``(π^♯, [·,·]_Kos)`` giving ``d̃`` (Phase 5). Per PDF item
-8a, instantiating with ``(id, Lie)`` *is* the usual exterior
+algebroid takes ``(ρ_E, [·,·]_E)``, the Poisson cotangent
+case takes ``(π^♯, [·,·]_Kos)`` giving ``d̃``. By the central-code
+principle, instantiating with ``(id, Lie)`` *is* the usual exterior
 derivative — the TM case is an instantiation, not a separate code
 path.
 """
@@ -84,8 +84,8 @@ class ExteriorDerivative(Derivation):
         self._skew = bool(skew)
         # the owning calculus — NOT part of the structural identity;
         # carried so scope guards can match the operator by the
-        # calculus OBJECT, not by its display/name (audit 0B00E1B-FULL
-        # M3-1, see :func:`belongs_to`)
+        # calculus OBJECT, not by its display/name (see
+        # :func:`belongs_to`)
         self._calculus = calculus
 
     @property
@@ -97,7 +97,7 @@ class ExteriorDerivative(Derivation):
         """Evaluation protocol of :func:`~jacopy.core.multi_eval.
         admits_alternation`: ``dω`` is alternating iff ``ω`` is AND the
         bracket is skew-symmetric; for a non-skew bracket the Palais
-        formula is only an ordered multilinear map (M2-1)."""
+        formula is only an ordered multilinear map."""
         return "inherit" if self._skew else False
 
     @property
@@ -112,7 +112,7 @@ class ExteriorDerivative(Derivation):
 
 class LieDerivative(Derivation):
     """``L_X`` — the degree-0 Lie derivative of a bracket calculus in
-    the direction ``X`` (PDF item 9e).
+    the direction ``X``.
 
     Canonical definition (definition policy §1): the core cases
 
@@ -166,7 +166,7 @@ class LieDerivative(Derivation):
         return self._vector
 
     def splits_over_product(self, arg: Expr, registry=None) -> bool:
-        """Product-rule protocol (audit 0B00E1B-FULL M2-2): may the
+        """Product-rule protocol: may the
         generic graded-Leibniz pass split ``L_X(a_1 ⋯ a_n)``?
 
         DEFAULT REJECT. Yes when the calculus' bracket is right-Leibniz
@@ -189,7 +189,7 @@ class LieDerivative(Derivation):
             for c in factors
         )
 
-    # Slot protocol (Phase 6.E): the direction is a rewritable slot,
+    # Slot protocol: the direction is a rewritable slot,
     # and it is ADDITIVE — L_{X+Y} = L_X + L_Y (ℝ-linearity of the
     # bracket/anchor in the direction). NOT C∞-linear: L_{fX} ≠ f·L_X
     # (the df ∧ ι_X anomaly), so only additivity is declared.
@@ -237,8 +237,8 @@ def _is_certified_form(expr: Expr, registry=None) -> bool:
 #: Calculus names owned by a canonical library instance. Operator
 #: identity (``_key``) is name-based, so a second calculus carrying
 #: one of these names would build operators EQUAL to the canonical
-#: ones and inherit every rule scoped to them (audit 0B00E1B-FULL
-#: M3-1/M3-2: a foreign ``d``/``L`` firing ``dω = 0`` or the Nambu FI).
+#: ones and inherit every rule scoped to them (e.g. a foreign
+#: ``d``/``L`` firing ``dω = 0`` or the Nambu FI).
 #: Maps the name to the module that defines the canonical instance
 #: and the attribute holding it.
 _RESERVED_NAMES = {
@@ -295,7 +295,7 @@ def _rebuild_calculus(name, anchor, bracket, d_name, lie_name, form_degree,
 
 
 def _check_owner(calculus_name: str, calculus) -> None:
-    """Operator construction contract (audit 0B00E1B-FULL M3-1 root):
+    """Operator construction contract:
     an owner, when given, is a :class:`BracketCalculus` carrying the
     operator's calculus name; an operator with a RESERVED calculus name
     is built only by the canonical instance (the name itself is
@@ -322,9 +322,8 @@ def _check_owner(calculus_name: str, calculus) -> None:
 
 def belongs_to(op: Any, calculus: "BracketCalculus") -> bool:
     """Is ``op`` the ``d`` or an ``L_X`` of ``calculus``? THE shared
-    owner test of every calculus-scoped rule (audit 0B00E1B-FULL
-    M3-1/M3-2: ``dω = 0``, the Nambu FI, ``d² = 0``, the intrinsic
-    ``d``/``L`` …).
+    owner test of every calculus-scoped rule (``dω = 0``, the Nambu
+    FI, ``d² = 0``, the intrinsic ``d``/``L`` …).
 
     * a RESERVED calculus (``Cartan-TM``): the operator's owner must be
       the canonical instance, by object identity (copies and pickles of
@@ -334,7 +333,7 @@ def belongs_to(op: Any, calculus: "BracketCalculus") -> bool:
 
     For a reserved calculus a ``d`` must moreover BE its ``d``; an
     unreserved calculus matches its ``d`` by name across bare/declared
-    copies (the algebroid layer's skew-declared copy, audit M2-1)."""
+    copies (the algebroid layer's skew-declared copy)."""
     if not isinstance(op, (ExteriorDerivative, LieDerivative)):
         return False
     if op.calculus_name != calculus.name:
@@ -367,8 +366,7 @@ class BracketCalculus:
     lie_name
         Display name of the derived Lie derivative (``"L"``; Poisson
         will use ``"L̃"``). Display only — identity is carried by the
-        calculus name (audit 3 fix: the ``L_`` pattern was hardcoded,
-        the same bug family as the fixed ``∇_`` connection display).
+        calculus name.
     """
 
     __slots__ = (
@@ -397,7 +395,7 @@ class BracketCalculus:
         right_leibniz: bool = False,
     ) -> None:
         """``form_degree``/``section_test`` are the calculus' grading
-        hooks (Phase 5.D): the TILDE calculus on ``T*M`` swaps the
+        hooks: the TILDE calculus on ``T*M`` swaps the
         roles — its sections are 1-FORMS and its forms are
         MULTIVECTORS — so the intrinsic d/L rules must ask the
         calculus, not assume the TM grading. ``form_degree(expr,
@@ -411,7 +409,7 @@ class BracketCalculus:
         ``right_leibniz`` — the bracket satisfies right Leibniz BY
         CONSTRUCTION, so ``L_X`` may split ``C^∞``-multiples of
         sections by the product rule. Both default to ``False`` (no
-        silent axioms, audit 0B00E1B-FULL M2-1/M2-2)."""
+        silent axioms)."""
         if not isinstance(name, str) or not name:
             raise ValueError("BracketCalculus name must be a non-empty str")
         _guard_reserved_name(name)
@@ -469,7 +467,7 @@ class BracketCalculus:
     def is_section_valued(self, expr: Expr, registry=None) -> bool:
         """Is ``expr`` a section-valued expression: a section, a
         ``C^∞``-multiple ``f_1⋯f_k·Y`` of one, or a sum/negation of
-        such (M2-2)?"""
+        such?"""
         if self.is_section(expr):
             return True
         from jacopy.central.objects.multivector import PVector
@@ -541,8 +539,7 @@ def _slot_ok(
     A slot that is determinably a *form* of this calculus (concrete
     calculus-degree ≥ 1) is ill-typed — the intrinsic rules must stay
     inert instead of unrolling it into nonsense like ``[X, γ]_VF``
-    with a 1-form ``γ`` in a vector-field bracket (type hole caught by
-    the 5.D.2 mixed-world audit). Undeterminable degrees stay
+    with a 1-form ``γ`` in a vector-field bracket. Undeterminable degrees stay
     caller-asserted (arity policy)."""
     try:
         return calc.form_degree(slot, registry).as_int() < 1
@@ -564,14 +561,13 @@ def _evaluate(
     The flags must always be forwarded from the MultiEval being
     unrolled — hard-coding ``alternating=True`` silently turned a
     general covariant tensor into an alternating one, "proving"
-    ``(L_X T)(Y,Y) = 0`` for non-alternating ``T`` (2026-09-08
-    audit, compliance finding 1)."""
+    ``(L_X T)(Y,Y) = 0`` for non-alternating ``T``."""
     if not args:
         return omega
     if len(args) == 1:
         return Pairing(omega, args[0])
     # Never upgrade: a head that is not an alternating form (the d of a
-    # non-skew calculus, M2-1) is evaluated plain-multilinear.
+    # non-skew calculus) is evaluated plain-multilinear.
     alternating = alternating and admits_alternation(omega)
     return MultiEval(
         omega, *args, alternating=alternating, slot_kind=slot_kind
@@ -734,7 +730,7 @@ class IntrinsicLDefinition(Definition):
         )
 
     def _is_section(self, expr: Expr) -> bool:
-        # Delegated to the calculus (Phase 5.D): the TM default is the
+        # Delegated to the calculus: the TM default is the
         # wedge-degree-1 derivation protocol; the tilde calculus
         # recognizes 1-FORMS as its sections.
         return self._calc.is_section(expr)
@@ -757,7 +753,7 @@ class IntrinsicLDefinition(Definition):
                 self._is_section(expr.arg)
             ):
                 return True
-            # M2-2: without CONSTRUCTIVE right Leibniz, L_X(f·Y) is the
+            # Without CONSTRUCTIVE right Leibniz, L_X(f·Y) is the
             # bracket [X, f·Y] by definition — the generic product rule
             # (L_X a Derivation) would silently assume right Leibniz.
             return not self._calc.right_leibniz and (
@@ -876,8 +872,8 @@ class HeadScalarDefinition(Definition):
     Certainly-scalar factors are pulled out of a Product head wherever
     they sit (canonical sorting may have reordered them); the rule
     only fires when a non-scalar factor remains to stay the head.
-    Introduced in Phase 3.E.1 (the coboundary-Leibniz derivation pairs
-    ``f·Dg`` heads against generic sections); generic, not
+    Needed by the coboundary-Leibniz derivation, which pairs
+    ``f·Dg`` heads against generic sections; generic, not
     algebroid-specific.
     """
 
@@ -1006,7 +1002,7 @@ class MultiEvalArgLinearityDefinition(Definition):
         ω(…, f·X, …) → f·ω(…, X, …),
         ω(…, X + Y, …) → ω(…, X, …) + ω(…, Y, …).
 
-    Phase 5.E.3: the Nambu sharp produces ``f·Πη`` and sum-shaped
+    Motivation: the Nambu sharp produces ``f·Πη`` and sum-shaped
     vectors inside evaluation slots. The PAIRING argument slot is
     deliberately NOT covered (the known collect_pairings ping-pong);
     no rule collects MultiEval arguments, so this direction is
@@ -1024,7 +1020,7 @@ class MultiEvalArgLinearityDefinition(Definition):
         self._registry = registry
 
     def _scalar_split(self, expr: Expr):
-        # Scalars in ANY factor position pull out (2026-08-01: the
+        # Scalars in ANY factor position pull out (the
         # Nambu Jacobi residual carries ``d(Y g)·Π(…)`` slots with
         # the scalar SECOND).
         from jacopy.core.expr import Product
@@ -1089,8 +1085,7 @@ class PairingVectorScalarDefinition(Definition):
     """``⟨α, f·Y⟩ → f·⟨α, Y⟩`` — certainly-scalar factors pull out of
     the pairing's VECTOR slot (definitional C∞-bilinearity).
 
-    Cycle analysis (2026-08-01, admitted after the user-bracket API
-    prototype surfaced the gap): ``collect_pairings`` collects only
+    Cycle analysis: ``collect_pairings`` collects only
     MULTI-term groups (``Σ sᵢ⟨α,Vᵢ⟩ → ⟨α, Σ sᵢVᵢ⟩``) under a
     strictly-smaller acceptance, so a split singleton is never
     re-collected; a collected slot is a ``Sum``, which this rule does
@@ -1147,7 +1142,7 @@ class PairingVectorScalarDefinition(Definition):
 class ActExpansionDefinition(Definition):
     """Slot-reachable graded Leibniz / linearity of a single ``Act``
     node — delegates to the product-rule algorithm's ``_expand_act``
-    (single source of truth; Phase 6.D).
+    (single source of truth).
 
     The engine's slot protocol fires Definitions INSIDE operator
     atoms (a Nambu sharp's form slot, a bracket's sections), but the
@@ -1180,7 +1175,7 @@ class ActExpansionDefinition(Definition):
 
 class HeadFormProductLiftDefinition(Definition):
     """``(α · β)(Y…) → (α ∧ β)(Y…)`` — a bare :class:`Product` of
-    form-degree factors in an evaluation head IS their wedge (v3's
+    form-degree factors in an evaluation head IS their wedge (JacoPy's
     canonical graded product of forms is :class:`Wedge`; raw products
     of forms only arise transiently from Leibniz splits like
     ``d(f·x) = d(f)·x + f·d(x)`` once the scalar prefix is gone).
@@ -1188,7 +1183,7 @@ class HeadFormProductLiftDefinition(Definition):
     Guarded: every factor must have determinable degree ≥ 1 and the
     degrees must sum to the evaluation arity — scalar prefixes are
     left to :class:`HeadScalarDefinition` (which strips them first).
-    Phase 6.D: the slot-reachable product rule surfaced these shapes
+    The slot-reachable product rule produces these shapes
     ahead of the Palais evaluation."""
 
     name = "head lift: a product of forms in an evaluation head is their wedge"
@@ -1240,7 +1235,7 @@ class HeadFormProductLiftDefinition(Definition):
 
 class OperatorSlotAdditivityDefinition(Definition):
     """ℝ-additivity of an operator atom in its declared additive
-    slots (Phase 6.E): an operator exposing ``additive_slots``
+    slots: an operator exposing ``additive_slots``
     (indices into ``rewritable_slots``) splits when such a slot holds
     a ``Sum``/``Neg``/zero —
 

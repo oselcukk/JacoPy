@@ -1,5 +1,5 @@
 """
-The E-Bianchi identities (Phase 4.F.4b) [ADM Prop 3.7].
+The E-Bianchi identities [ADM Prop 3.7].
 
 Notation: ``b(u,v) := [u,v]^∇ = [u,v] − Λ(u,v)`` the modified
 bracket, ``Λ(u,v) := Σ_s L(e^s, ∇_{e_s}u, v)``, ``b̂`` the projected
@@ -22,14 +22,14 @@ statement; see the sign-convention note below); the last block is
 the anti-symmetry defect of ``b``.
 
 **Admissible specialization** [ADM Prop 3.7 proper]: for an
-ADMISSIBLE connection ``b`` is anti-symmetric (Phase 4.F.1), so the
+ADMISSIBLE connection ``b`` is anti-symmetric (see :mod:`admissible`), so the
 last block vanishes under the admissibility declaration:
 
     𝔖 ᴸ̂R(u,v)w = 𝔖 [ (∇_u ᴸT)(v,w) + ᴸT(ᴸT(u,v), w) ]
                   − 𝔖 ∇_{(1−𝒫)Λ(u,v)}w − 𝔖 b(b(u,v), w).
 
 TM sanity: with ``L = 0`` and ``b`` the Lie bracket this reduces to
-the Phase 4.C torsionful Bianchi I (whose ``𝔖 [[u,v],w]`` block dies
+the torsionful Bianchi I (whose ``𝔖 [[u,v],w]`` block dies
 by the cited Jacobi instances).
 
 **Sign conventions.** In JacoPy's sign conventions — the modified
@@ -169,7 +169,7 @@ def prove_e_bianchi_first_identity(
 
 
 # --------------------------------------------------------------------- #
-# E-Bianchi II (Phase 4.F.4c)                                            #
+# E-Bianchi II                                                           #
 # --------------------------------------------------------------------- #
 
 
@@ -257,8 +257,8 @@ def prove_e_bianchi_second_identity(
     nested expansion exceeds the engine's convergence bound), and
     the ``(1−𝒫)Λ`` anomalies are the same gap as in the generalized
     Ricci identity. TM sanity: with ``L = 0`` all correction blocks
-    except the first vanish and the identity reduces to the Phase
-    4.C torsionful Bianchi II shape."""
+    except the first vanish and the identity reduces to the
+    torsionful Bianchi II shape."""
     from jacopy.central.objects.connection import CovariantOp
 
     def cov(direction, arg):

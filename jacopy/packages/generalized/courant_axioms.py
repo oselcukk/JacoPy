@@ -1,6 +1,6 @@
 """
 LWX Courant-algebroid axiomatics and the Uchino redundancy theorems
-(Phase 7.A) [Uchino 2002, arXiv:math/0204010].
+[Uchino 2002, arXiv:math/0204010].
 
 The Liu-Weinstein-Xu definition (quoted in Uchino Section 1 from
 his ref. [2] = LWX 1997) lists five axioms [C1]-[C5] plus the
@@ -14,22 +14,22 @@ Uchino's own, Section 2; LWX has no such label).
 Mechanization strategy (definition policy §1 — nothing derivable is
 assumed):
 
-* the pairing is the Phase 3 :class:`EMetric` — symmetric and
+* the pairing is the abstract-algebroid :class:`EMetric` — symmetric and
   non-degenerate BY DEFINITION [MC Def 3.1], matching LWX's
   "nondegenerate symmetric bilinear form";
 * the bracket is the opaque :class:`AlgebroidBracket` — ℝ-bilinear by
   definition, SKEW by the LWX definition (declared, since it is part
   of the definition, not a derived axiom);
 * ``D`` is the opaque section-valued :class:`CourantD` whose ONLY
-  rule is (L), :class:`DLeibnizDefinition`. In particular the Phase 3
-  coboundary pairing ``⟨Df,u⟩ = ρ(u)(f)`` is NOT available here —
+  rule is (L), :class:`DLeibnizDefinition`. In particular the
+  abstract-algebroid coboundary pairing ``⟨Df,u⟩ = ρ(u)(f)`` is NOT available here —
   the value ``(Df, y) = ½ρ(y)(f)`` is exactly what Proposition 2.2
   proves;
 * [C5] is the declared rewrite :class:`CourantInvarianceDeclaration`
   (the D-term-carrying analogue of the metric-invariance rule C1);
-* [C2] is the Phase 3 ``anchor-morphism`` declaration.
+* [C2] is the ``anchor-morphism`` declaration.
 
-The proofs are the two-leg tactic of Phase 3.E (the derivation
+The proofs are the abstract-algebroid two-leg tactic (the derivation
 behind [B Eq. (4.11)]: the right-Leibniz rule from the invariance
 (4.10) + non-degeneracy): expand the
 same anchored action of a pairing two ways, subtract, strip the
@@ -146,7 +146,7 @@ class DLeibnizDefinition(Definition):
     assumption budget exactly.
     """
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     # (L) is Uchino's own label (Section 2, "the Leibniz rule (L)")
     source = cite("Uchino2002", "Section 2, Leibniz rule (L)")
 
@@ -200,11 +200,11 @@ class CourantInvarianceDeclaration(Definition):
     ``ρ(x)(y, z) → ([x,y] + D(x,y), z) + (y, [x,z] + D(x,z))``
 
     where ``D(x,y)`` abbreviates ``D`` applied to the pairing
-    function ``(x, y)``. The D-term-carrying analogue of the Phase 3
+    function ``(x, y)``. The D-term-carrying analogue of the
     metric-invariance rule C1 [B Eq. (4.10)].
     """
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = (
         cite("Uchino2002", "Section 1, axiom [C5]"),
         cite("LiuWeinsteinXu1997"),
@@ -256,7 +256,7 @@ class C3IdentityDeclaration(Definition):
     difference is exactly the Leibniz defect of ``D`` (Rem 2.1).
     """
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = (
         cite("Uchino2002", "Proposition 2.1(i)"),
         cite("Uchino2002", "Remark 2.1"),
@@ -332,7 +332,7 @@ class SkewSwapCompositeDefinition(Definition):
     """The declared skew-symmetry applied at a COMPOSITE left slot:
     ``[f·x, y] → −[y, f·x]`` (scalar-product left, plain right).
 
-    The Phase 3 :class:`AntisymmetryDeclaration` deliberately fires
+    The :class:`AntisymmetryDeclaration` deliberately fires
     on plain slots only (linearity splits keep precedence there);
     the Uchino Prop 2.2 derivation needs the swap exactly where the LEFT
     slot is composite, so the right-slot Leibniz theorem (Prop
@@ -340,7 +340,7 @@ class SkewSwapCompositeDefinition(Definition):
     sign rule holds for ALL sections.
     """
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     # skew-symmetry is part of the LWX definition ("a skew-symmetric
     # bracket [ , ] on ΓE"), quoted in Uchino Section 1
     source = (
@@ -395,7 +395,7 @@ class DPairingUnfoldDefinition(CitedTheoremMixin, Definition):
     engines that do NOT carry [C5], so the rewrite terminates (the
     produced action has no pairing argument left).
 
-    A CITATION, not a definition (audit 0B00E1B-FULL M1-4): Prop 2.2
+    A CITATION, not a definition: Prop 2.2
     holds only under [C5] + (L) on the LWX (skew) data. The rule
     fires only on a context that declares ``antisymmetric`` and on
     which :func:`prove_d_pairing_formula` succeeds; every step cites
@@ -457,7 +457,7 @@ class DDZeroDefinition(CitedTheoremMixin, Definition):
     Prop 2.2: ``ρ∘D = 0``, hence ``(Da, Db) → 0`` and
     ``ρ(D(a))(h) → 0``.
 
-    A CITATION, not a definition (audit 0B00E1B-FULL M1-4): ``ρ∘D = 0``
+    A CITATION, not a definition: ``ρ∘D = 0``
     is Uchino's theorem under [C2] + [C5] + (L) (a gradient ``D`` on a
     bare anchored bundle violates it). The rule fires only on a context
     declaring ``anchor-morphism`` ([C2]) and ``antisymmetric`` on which
@@ -508,7 +508,6 @@ class DDZeroDefinition(CitedTheoremMixin, Definition):
     def _own_d(self, node) -> bool:
         # ρ∘D = 0 is proved for THIS structure's D only: a foreign
         # algebroid's D_A inside this pairing/anchor is arbitrary
-        # (audit 0B00E1B-FULL M1-4 review)
         return (
             isinstance(node, CourantD)
             and node.algebroid_name == self._alg.name
@@ -568,8 +567,7 @@ class DNumericHomogeneityDeclaration(Definition):
     for NUMERIC ``c``.
 
     The bare (L) alone does not provide this — but under the same
-    assumptions as Prop 2.2 it is DERIVED, not declared (2026-09-08
-    audit, compliance finding 7):
+    assumptions as Prop 2.2 it is DERIVED, not declared:
 
         ⟨D(c·f) − c·D(f), y⟩ = ½ρ(y)(c·f) − c·½ρ(y)(f) = 0
 
@@ -582,7 +580,7 @@ class DNumericHomogeneityDeclaration(Definition):
     name is kept for API stability; ``Declaration`` is historical —
     the rule cites a theorem.)"""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
 
     anchor = CourantD
 
@@ -626,7 +624,7 @@ def courant_context(name: str = "E") -> Algebroid:
     (``antisymmetric`` is part of the LWX definition), anchor with
     [C2], definitionally symmetric non-degenerate pairing. [C3],
     [C4], [C1] and the D-formula are deliberately ABSENT — the first
-    three of these are what Phase 7.A proves or declares separately.
+    three of these are what this module proves or declares separately.
     [C5] is part of the data and is DECLARED (``courant-invariance``):
     the Prop 2.2 / [C4] citing rules fire only where it is.
     """
@@ -643,7 +641,7 @@ def courant_engine(
     invariance: bool = True,
     theorems: Tuple = (),
 ) -> ExpansionEngine:
-    """The Phase 3 declaration engine + [C5] + (L) (+ optionally
+    """The abstract-algebroid declaration engine + [C5] + (L) (+ optionally
     cited theorems, e.g. the proven 2.1(i) instances). Registration
     order puts the Courant rules first (match precedence).
     ``invariance=False`` drops [C5] — the honest-fail engine."""
@@ -654,7 +652,7 @@ def courant_engine(
         rules.append(CourantInvarianceDeclaration(alg))
     rules.append(DLeibnizDefinition(alg, registry))
     for t in theorems:
-        rules.append(TheoremDefinition(t, allow_legacy=True))  # pre-3b records: explicit
+        rules.append(TheoremDefinition(t, allow_legacy=True))  # legacy records: explicit
     if theorems and alg.declares("antisymmetric"):
         # The composite-slot swap is useful exactly when a cited
         # right-Leibniz theorem can open the swapped bracket.
@@ -761,7 +759,7 @@ def prove_left_leibniz_c3(
             "[C5] does not apply to " + start._repr_inner()
         )
     # the declared [C5] rule FIRED by a library engine (a stamped step;
-    # a hand-built one would stay legacy — merge gate, M1-4)
+    # a hand-built one would keep a legacy requirement)
     step_c5 = fire_declared(c5, start)
     after_c5 = step_c5.after
     n_a, steps_a = _normalize(after_c5, engine, registry)
@@ -919,7 +917,7 @@ def _two_leg_difference(
     label_b: str,
     diff_engine: Optional[ExpansionEngine] = None,
 ) -> Tuple[Expr, List[ProofStep]]:
-    """The 6.B two-normal-form recipe as a step builder: normalize
+    """The two-normal-form recipe as a step builder: normalize
     the SAME start under two sound rule sets and collect the
     difference (a proven zero rearranged into an identity)."""
     n_a, steps_a = _normalize(start, engine_a, registry)
@@ -1094,7 +1092,7 @@ def prove_d_pairing_formula(
             "[C5] does not apply to " + start._repr_inner()
         )
     # the declared [C5] rule FIRED by a library engine (a stamped step;
-    # a hand-built one would stay legacy — merge gate, M1-4)
+    # a hand-built one would keep a legacy requirement)
     step_c5 = fire_declared(c5, start)
     after_c5 = step_c5.after
     n_a, steps_a = _normalize(after_c5, engine, registry)
@@ -1275,8 +1273,7 @@ def prove_d_numeric_homogeneity(
     registry: Optional[PropertyRegistry] = None,
 ) -> Tuple[ProofChain, Theorem]:
     """DERIVE the ℝ-homogeneity ``D(c·f) = c·D(f)`` (numeric ``c``)
-    from Prop 2.2 + non-degeneracy — no extra axiom (2026-09-08
-    audit, compliance finding 7):
+    from Prop 2.2 + non-degeneracy — no extra axiom:
 
     1. probe ``⟨D(c·f) − c·D(f), y⟩`` against the generic ``y``,
     2. unfold both pairings by the cited Prop 2.2
@@ -1504,9 +1501,8 @@ def prove_bracket_with_d(
     Weinstein 1998, Uchino refs. [4], [5]] follows by the
     ℝ-homogeneity ``D(c·h) = c·D(h)`` — which is itself DERIVED
     from Prop 2.2 + non-degeneracy
-    (:func:`prove_d_numeric_homogeneity`; 2026-09-08 audit,
-    compliance finding 7 — an earlier revision wrongly gated it
-    behind a declaration). Pass ``classical=True`` for that
+    (:func:`prove_d_numeric_homogeneity`; it is not gated behind a
+    declaration). Pass ``classical=True`` for that
     corollary; both forms need no axiom beyond the LWX data.
     The paper's identity (A) is stated loosely; this derivation
     replaces it:
@@ -1689,8 +1685,7 @@ def prove_bracket_with_d(
     if classical:
         # ℝ-homogeneity: (x,Df) = ½ρ(x)f collapses the identity to
         # the classical [x,Df] = D(x,Df). The homogeneity is DERIVED
-        # first (Prop 2.2 + non-degeneracy — 2026-09-08 audit,
-        # compliance finding 7), never declared.
+        # first (Prop 2.2 + non-degeneracy), never declared.
         hom_chain, hom_thm = prove_d_numeric_homogeneity(
             alg, y, f, Rational(1, 2), registry=registry
         )

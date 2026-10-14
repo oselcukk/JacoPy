@@ -1,5 +1,5 @@
 """
-The metric layer of the metric-affine package (Phase 4.C).
+The metric layer of the metric-affine package.
 
 * :class:`Metric` — a pseudo-Riemannian metric context ``g`` on TM;
   ``g(X, Y)`` is a scalar :class:`MetricValue` atom. Symmetry and
@@ -92,7 +92,7 @@ class MetricValue(Atom):
     def substitute_atom(self, dummy: Expr, target: Expr) -> Expr:
         """Slot-walking substitution (the base Atom walk sees no
         children; the metric's arguments live in slots — needed for
-        index renaming under an IndexedSum, Phase 4.D.2c)."""
+        index renaming under an IndexedSum)."""
         if self == dummy:
             return target
         new_X = self._X.substitute_atom(dummy, target)
@@ -108,8 +108,7 @@ class Metric:
 
     Carries its owning ``bundle`` (default: the tangent bundle
     ``TM``) so the round-trip through the central ATOM
-    representation loses neither the bundle nor its dimension
-    (2026-09-09 audit, finding 7)."""
+    representation loses neither the bundle nor its dimension."""
 
     __slots__ = ("_name", "_bundle")
 
@@ -156,9 +155,8 @@ def metric(name: str = "g", *, bundle=None) -> Metric:
 
 
 def as_metric_context(g) -> Metric:
-    """COERCE a metric object into this package's context (the PDF
-    item 5 compatibility bridge; 2026-09-08 audit, compliance
-    finding 3).
+    """COERCE a metric object into this package's context (the
+    compatibility bridge).
 
     Accepts either this package's :class:`Metric` context or the
     central :class:`jacopy.central.objects.metric.Metric` ATOM — the
@@ -166,8 +164,8 @@ def as_metric_context(g) -> Metric:
     non-degenerate (0,2)-tensor BY DEFINITION), differing only in
     their role (Expr atom for Hodge/musical vs evaluation context
     here). The bridge preserves the FULL identity — name AND bundle
-    (2026-09-09 audit, finding 7: same-named metrics on different
-    bundles stay distinct, dimensions survive the round trip).
+    (same-named metrics on different bundles stay distinct,
+    dimensions survive the round trip).
     Anything else raises."""
     if isinstance(g, Metric):
         return g
@@ -286,7 +284,7 @@ class InverseMetricComponent(Atom):
         self._second = second
         # The FULL metric identity is (name, bundle): same-named
         # metrics on different bundles have different inverse
-        # components (2026-09-09 recheck, finding C).
+        # components.
         self._bundle = bundle if bundle is not None else TM
 
     @property
@@ -416,7 +414,7 @@ class MetricInverseContractionDefinition(Definition):
             return None
         # identity check reaches the bundle too: g^{as} of one
         # bundle must not contract a same-named metric's values on
-        # another bundle's frame (2026-09-09 recheck, finding C).
+        # another bundle's frame.
         if (
             g_inv.bundle != g_val.X.bundle
             or g_inv.bundle != g_val.Y.bundle
@@ -588,7 +586,7 @@ class MetricCompatibilityDefinition(Definition):
     ``X(g(Y,Z)) → g(∇_X Y, Z) + g(Y, ∇_X Z)`` for the declared
     ``(∇, g)`` pair (the tangent analogue of the algebroid C1)."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     source = cite("DereliDogan2020", "Section 2, remark after Eq. (2.7)")
 
     anchor = Act
@@ -628,7 +626,7 @@ class TorsionFreeDefinition(Definition):
     ``[X, Y] → ∇_X Y − ∇_Y X`` (the bracket expressed through the
     declared torsion-free connection)."""
 
-    role = "assumption"  # a declared / opt-in hypothesis, not a definition (audit dc44f79 F3)
+    role = "assumption"  # a declared / opt-in hypothesis, not a definition
     source = cite("DereliDogan2020", "Section 2, remark after Eq. (2.9)")
 
     anchor = LieBracketVF

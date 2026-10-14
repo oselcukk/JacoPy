@@ -27,8 +27,8 @@ Sum or Product children. Commutative matching is the job of the
 algorithms layer, which canonicalizes expressions before invoking
 :func:`match`.
 
-Non-child payload and Σ binders (audit 0B00E1B-FULL M1X-6)
------------------------------------------------------------
+Non-child payload and Σ binders
+-------------------------------
 
 A node's identity is ``type + _key()``; the part of ``_key()`` that
 is not a child is its PAYLOAD (:func:`node_payload`). Matching compares
@@ -269,7 +269,7 @@ def _match(
 
     if isinstance(pattern, IndexedSum):
         return _match_indexed_sum(pattern, target, bindings, registry)
-    # Non-child identity payload first (audit 0B00E1B-FULL M1X-6): two
+    # Non-child identity payload first: two
     # nodes of the same class with the same children can still mean
     # different things (BracketApply's bracket, MultiEval's
     # alternating flag, d's skew/calculus, a Hodge metric). A payload
@@ -635,8 +635,7 @@ def substitute(pattern: Expr, bindings: Bindings) -> Expr:
     :class:`PayloadSubstitutionError`.
 
     Wildcards in a node's non-child PAYLOAD (e.g. a Hodge metric —
-    :func:`node_payload`) are filled too (audit
-    0B00E1B-FULL M1X-6 review): :func:`match` binds them, so a rule's
+    :func:`node_payload`) are filled too: :func:`match` binds them, so a rule's
     right-hand side must be able to use them. A payload wildcard that
     is unbound, or that sits on a node class without a payload
     substitution (``_substitute_payload(bindings)`` hook or a built-in

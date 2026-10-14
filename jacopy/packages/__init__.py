@@ -1,4 +1,4 @@
-"""Packages (PDF item 7): geometry built on top of the central code.
+"""Packages: geometry built on top of the central code.
 
 Each sub-package has a facade (``from jacopy.packages.<name> import …``)
 whose ``__all__`` lists its supported entry points: object/bracket
@@ -9,17 +9,17 @@ the facade.
 * :mod:`~jacopy.packages.metric_affine` — metric-affine geometry
   (torsion, curvature, non-metricity, Ricci, Einstein, Bianchi,
   Cartan structure, Koszul, Schouten; E-connections and admissible
-  connections on an algebroid) — item 11.
+  connections on an algebroid).
 * :mod:`~jacopy.packages.poisson` — symplectic, Poisson,
-  Nambu-Poisson; Koszul bracket, tilde-calculus — item 12.
+  Nambu-Poisson; Koszul bracket, tilde-calculus.
 * :mod:`~jacopy.packages.drinfeld` — calculus on algebroids &
   Drinfel'd doubles: tilde-calculus on A and Z, twist procedures
   (π/B/H/R/M-twists), the general Roytenberg bracket and the
-  exceptional/BN examples — item 13.
+  exceptional/BN examples.
 * :mod:`~jacopy.packages.generalized` — generalized geometry: Courant
-  algebroid, Dorfman/Courant bracket, H-twist — item 14.
+  algebroid, Dorfman/Courant bracket, H-twist.
 
-Item 15 (research interface: pick a bracket/object, define new
+The research interface (pick a bracket/object, define new
 objects, prove properties) lives one layer up, in
 :mod:`jacopy.research`, because it combines several packages.
 """

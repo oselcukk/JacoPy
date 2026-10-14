@@ -36,7 +36,7 @@ class OracleReport:
     """The oracle's verdict on one equation ``lhs = rhs``.
 
     AGREE means "not refuted in N models" — the oracle is a falsifier,
-    never a proof (SPEC §7)."""
+    never a proof."""
 
     verdict: str
     lhs: str = ""
@@ -96,7 +96,7 @@ class OracleReport:
 
 @dataclass
 class ChainReport:
-    """Step-by-step check of a proof chain (K4-2): the first refuted
+    """Step-by-step check of a proof chain: the first refuted
     step names the rule that broke the equation."""
 
     steps: List[OracleReport]

@@ -2,9 +2,8 @@
 
 The intrinsic-``d`` and ``L`` machinery parameterized by an
 ``(anchor, bracket)`` pair, plus the calculus-independent interior
-slot-insertion rules. Instantiations: TM = ``(id, Lie)`` (Phase 2),
-algebroid = ``(ρ_E, [·,·]_E)`` (Phase 3), Poisson = ``(π^♯, Koszul)``
-(Phase 5).
+slot-insertion rules. Instantiations: TM = ``(id, Lie)``,
+algebroid = ``(ρ_E, [·,·]_E)``, Poisson = ``(π^♯, Koszul)``.
 """
 
 from jacopy.central.calculus.bracket_calculus import (

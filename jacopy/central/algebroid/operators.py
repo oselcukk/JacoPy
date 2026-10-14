@@ -1,24 +1,23 @@
 """
-Algebroid defect operators (PDF items 10e-g; Phases 3.B-3.C).
+Algebroid defect operators.
 
 Three operators, each measuring the failure of a structural property
 (so ``≡ 0`` characterizes the property):
 
-* **Jacobiator** (item 10e; Leibniz form):
+* **Jacobiator** (Leibniz form):
   ``J^E(u,v,w) := [u,[v,w]]_E − [[u,v]_E,w]_E − [v,[u,w]_E]_E``;
   ``J^E ≡ 0`` ⟺ Leibniz-Jacobi (the carrier of the ``jacobi``
   declaration — a bracket-level Jacobi rewrite would not terminate).
-* **Derivator** (item 10f; defined in [DD (4.39), arXiv:2312.06584]
-  and in the Midterm Q3 duality conditions):
+* **Derivator** (defined in [DD (4.39), arXiv:2312.06584]):
   ``D^E_Φ(u,v) := Φ[u,v]_E − [Φu,v]_E − [u,Φv]_E`` for a
   ``C^∞``-linear ``Φ: E → E``; ``D^E_Φ ≡ 0`` ⟺ Φ derives the bracket.
-* **Predator** (item 10g; [DD footnote 5, arXiv:2312.06584] — note
+* **Predator** ([DD footnote 5, arXiv:2312.06584] — note
   that [TW (6.9)/(A.6), arXiv:2409.11973] uses the opposite sign
   ``[ρu, ρv] − ρ[u,v]``):
   ``P^E_Φ(u,v) := Φ[u,v]_E − [Φu, Φv]_Lie`` for a ``C^∞``-linear
   ``Φ: E → TM``; ``P^E_Φ ≡ 0`` ⟺ Φ is a morphism onto the Lie
   bracket. **In particular ``P^E_ρ ≡ 0`` ⟺ the pre-Leibniz
-  (anchor-morphism) property** — proved as the 3.C closing theorem.
+  (anchor-morphism) property** — proved as a closing theorem of this module.
 
 ``C^∞``-linear maps are modelled like the anchor: a :class:`SectionMap`
 context produces opaque :class:`MappedSection` atoms ``Φ(u)`` (again
@@ -75,7 +74,7 @@ class MappedSection(Derivation):
 
     # A derivation only when Φ targets TM (Φ(u) is then a vector
     # field); otherwise Φ(u) is a section of the target bundle, not an
-    # operator on functions (audit 0b00e1b; default reject).
+    # operator on functions (default reject).
     @property
     def section_value(self) -> bool:
         return not self._tangent
@@ -104,7 +103,7 @@ class MappedSection(Derivation):
         return MappedSection(self._map_name, section, tangent=self._tangent)
 
     def substitute_atom(self, dummy: Expr, target: Expr) -> Expr:
-        """Slot-walking substitution (Phase 4.E.2)."""
+        """Slot-walking substitution."""
         if self == dummy:
             return target
         new_section = self._section.substitute_atom(dummy, target)
@@ -347,7 +346,7 @@ class JacobiatorExpansionDefinition(Definition):
 
 class Derivator(Derivation):
     """``D^E_Φ(u, v)`` — the bracket-derivation defect of a
-    ``C^∞``-linear ``Φ: E → E`` (item 10f), itself a section of E."""
+    ``C^∞``-linear ``Φ: E → E``, itself a section of E."""
 
     # A derivation only when Φ: E → E targets TM (E = TM: D_Φ(X,Y) is
     # a vector field); otherwise a section of E. ``tangent`` comes from
@@ -483,7 +482,7 @@ class DerivatorExpansionDefinition(Definition):
 
 class Predator(Derivation):
     """``P^E_Φ(u, v) := Φ[u,v]_E − [Φu, Φv]_Lie`` — the
-    Lie-morphism defect of ``Φ: E → TM`` (item 10g). ``Φ = ρ`` gives
+    Lie-morphism defect of ``Φ: E → TM``. ``Φ = ρ`` gives
     the pre-Leibniz defect: ``P^E_ρ ≡ 0 ⟺ anchor-morphism``."""
 
     # A derivation only when Φ targets TM (predator() checks it and sets

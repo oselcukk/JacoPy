@@ -13,11 +13,11 @@ generator, the condition
     [Q, Q] = 0
 
 makes the derived bracket a LODAY (left-Leibniz-Jacobi) bracket
-[Kosmann-Schwarzbach 1996 — year AMBIGUOUS: local sources list only "Derived brackets" (2004); docs/CITATIONS.md]. It is NOT automatically graded
+[Kosmann-Schwarzbach; see https://oselcukk.github.io/JacoPy/development/citations.html]. It is NOT automatically graded
 antisymmetric, and the cyclic Lie-form Jacobi holds only where the
 bracket is additionally skew (e.g. on suitable abelian subalgebras)
 — the proof layer's :class:`DerivedBracketStrategy` checks exactly
-these preconditions before certifying anything (2026-09-08 audit).
+these preconditions before certifying anything.
 This conditionality is the point of the construction: Poisson,
 Courant, and Koszul brackets arise as derived brackets of a
 Schouten-type base, each Jacobi reducing to one equation on ``Q``
@@ -35,8 +35,8 @@ algorithmic level:
 
 The *Derived Bracket Theorem* itself — Loday Jacobi from a
 vanishing obstruction under the stated preconditions — is registered
-as a package-level theorem in
-Phase 9 and consulted from the proof layer. This module only provides
+as a package-level theorem and
+consulted from the proof layer. This module only provides
 the object; the theorem lives elsewhere so that each new
 ``DerivedBracket`` instance automatically inherits the result rather
 than re-proving it.
@@ -161,7 +161,7 @@ class DerivedBracket(GradedBracket):
         except (ValueError, TypeError):
             q_deg = None
         if degree_Q is None:
-            # derived from the base grading (review: DerivedBracket(SN,
+            # derived from the base grading (DerivedBracket(SN,
             # π) must not need an explicit |π|). Undeterminable (needs a
             # registry, symbolic): a SYMBOLIC degree |Q| — never a silent
             # 0; every parity that depends on it is then undecidable and
@@ -202,14 +202,14 @@ class DerivedBracket(GradedBracket):
         display = name or f"{{·,·}}_{Q._repr_inner()}"
         # Derived-bracket degree formula: |[[a,Q],b]| = |a| + |b| +
         # |Q| + 2·|base| — each base-bracket layer contributes its own
-        # degree (2026-09-07 audit, finding 2: the previous
-        # ``|Q| − 2`` hard-coded the Schouten-type base |base| = −1).
+        # degree (a fixed ``|Q| − 2`` would hard-code the
+        # Schouten-type base |base| = −1).
         # Graded Leibniz always holds; antisymmetry is NOT automatic
-        # (a derived bracket is Loday, skew only on suitable slots —
-        # 2026-09-08 re-audit, finding 2) and Jacobi is conditional
+        # (a derived bracket is Loday, skew only on suitable slots)
+        # and Jacobi is conditional
         # on [Q, Q]_base = 0 + the theorem's preconditions, checked
         # by the proof layer. Both surfaced as non-claims here.
-        # The bracket's degree in its operands' grading (review D): the
+        # The bracket's degree in its operands' grading: the
         # base contributes its degree IN ITS OWN grading
         # (``operand_shift``: −1 for SN, so |{f, g}_π| = 0); in
         # acting_on (Koszul) mode the bracket on Ω(M) has degree −1
@@ -231,7 +231,7 @@ class DerivedBracket(GradedBracket):
     def base(self) -> GradedBracket:
         return self._base
 
-    # ---- grading hooks (audit 0b00e1b K1-3 family) ----------------- #
+    # ---- grading hooks -------------------------------------------- #
     #
     # The derived bracket lives on the BASE's module: same grading,
     # same product. In that grading the base has degree
@@ -262,8 +262,8 @@ class DerivedBracket(GradedBracket):
     def generator_degree(
         self, registry: Optional[PropertyRegistry] = None
     ) -> Degree:
-        """``|Q|`` in the base grading, VALIDATED against the registry
-        (audit 0b00e1b K1-3 review #7): the degree the base's
+        """``|Q|`` in the base grading, VALIDATED against the registry:
+        the degree the base's
         :meth:`grading_degree` determines for ``Q`` under ``registry``
         wins; a declared ``degree_Q`` that contradicts a determinable
         degree raises :class:`ValueError`; when the registry cannot
@@ -308,7 +308,7 @@ class DerivedBracket(GradedBracket):
         self, a: Expr, b: Expr, registry: Optional[PropertyRegistry] = None
     ) -> bool:
         """Koszul (``acting_on``) mode is the bracket of a BIVECTOR
-        ``Q`` on 1-FORMS (audit 0b00e1b K1-3 review #9): the anchor
+        ``Q`` on 1-FORMS: the anchor
         lift ``ρ(a)`` is a vector field and ``⟨b, ρ(a)⟩`` a pairing of
         a 1-form with it. ``True`` only when the registry-validated
         generator degree is ``2`` and both operands are certified
@@ -387,8 +387,7 @@ class DerivedBracket(GradedBracket):
         imports are deferred to avoid a top-level cycle between
         ``brackets`` and ``calculus``.
         """
-        # v3 Cartan layer (the pre-reorg ``jacopy.calculus.*`` paths
-        # died in the v3 reorg; 2026-09-07 audit, finding 7).
+        # the Cartan layer of the tangent bundle
         from jacopy.central.tangent.exterior import CARTAN_TM, d as d_fn
         from jacopy.core.pairing import Pairing
 
@@ -422,7 +421,7 @@ class DerivedBracket(GradedBracket):
         where ``[a, b∧c]`` has a 2-form in its second slot and the
         anchor-lifted formula is defined on 1-forms only: the
         obstruction is ill-typed and REFUSED (:class:`ValueError`),
-        never built with an undefined pairing (K1-3 review #9)."""
+        never built with an undefined pairing."""
         if self._acting_on is not None:
             raise ValueError(
                 f"{self.name}: the Koszul (acting_on) formula is defined on "
@@ -459,7 +458,7 @@ class DerivedBracket(GradedBracket):
         base, odd shifted generator — and per-slot skewness for the
         cyclic Lie form, checked by the proof layer) the vanishing of
         this single expression yields Jacobi; without them it claims
-        nothing (2026-09-08 audits).
+        nothing.
         """
         return self._base.expand(self._Q, self._Q, registry)
 

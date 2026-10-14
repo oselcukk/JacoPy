@@ -46,7 +46,7 @@ class Provenance(Enum):
     DERIVED = "derived"
 
 
-#: Unambiguous name (audit 0B00E1B-FULL T2 names): ``Provenance`` alone
+#: Unambiguous name: ``Provenance`` alone
 #: is also :class:`jacopy.proof.result.Provenance`, a proof result's
 #: derivation ingredient. Same enum.
 PropertyProvenance = Provenance
@@ -58,7 +58,7 @@ class ProofRef:
 
     At this stage a proof reference only records the rule name and a
     tuple of *source specifiers*, each a string naming a property-type
-    or axiom that was consumed. Later phases will link to a full
+    or axiom that was consumed. It does not link to a full
     :class:`ProofTree`; this keeps the core layer independent of the
     proof layer.
     """
@@ -119,7 +119,7 @@ class ScalarContractError(ValueError):
 
 @dataclass(frozen=True)
 class Scalar(Property):
-    """Expression is an ℝ-CONSTANT scalar (audit 0b00e1b M1-1 ≡ M1-2).
+    """Expression is an ℝ-CONSTANT scalar.
 
     CONTRACT (one meaning, at WHATEVER level it is declared — exact,
     class or predicate). ``Scalar`` means a real constant, not a smooth
@@ -266,7 +266,7 @@ class Closed(Property):
     is loaded into an engine, ``Act(d, ω)`` collapses to ``0`` for any
     ``ω`` carrying this property, no inline ``DOmegaClosed``
     :class:`~jacopy.proof.expansion.Definition` reproduction needed in
-    notebook code (the 2a/2b pattern from the Phase 12 gap log).
+    notebook code.
 
     The property is type-agnostic about *why* ``ω`` is closed (an
     explicit symplectic 2-form, an exact form, a cohomology class

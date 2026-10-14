@@ -1,5 +1,5 @@
 """
-Tensor product ``⊗`` — PDF item 8u.
+Tensor product ``⊗``.
 
 ``a ⊗ b`` combines two tensor-like objects; unlike the wedge it is
 **not** graded-commutative (``a ⊗ b ≠ ± b ⊗ a`` in general) and applies

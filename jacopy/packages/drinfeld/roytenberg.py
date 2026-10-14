@@ -1,14 +1,14 @@
 """
-The general (8-component) Roytenberg bracket (Phase 6.F) —
+The general (8-component) Roytenberg bracket —
 [TW (5.2); TW = arXiv:2409.11973], concretely instantiated on ``A = TM``,
 ``Z = Λᵖ T*M``:
 
     [U+ω, V+η]_E = [U,V]_A + ℒ̃_ω V + 𝒦̃_η U + R(ω,η)
                  ⊕ [ω,η]_Z + ℒ_U η + 𝒦_V ω + H(U,V),
 
-with the tilde calculus induced by a ``(p+1)``-vector Π (6.D), the
+with the tilde calculus induced by a ``(p+1)``-vector Π, the
 H-twist ``H(U,V) = ι_V ι_U H`` of a ``(p+2)``-form and the R-twist
-``R(ω,η) = [Πω,Πη] − Π[ω,η]_Kos`` (the 6.E ``r_twist`` — the
+``R(ω,η) = [Πω,Πη] − Π[ω,η]_Kos`` (the ``r_twist`` of :mod:`twist` — the
 NATURAL nonzero R of a non-integrable Π). Decompositions TW (5.4)/(5.5)
 into twisted Dorfman ⊕ twisted tilde-Dorfman are structural.
 
@@ -16,7 +16,7 @@ Mechanical theorems:
 
 * **Twisted linearity TW (5.6)-(5.7)**: the concrete ``H`` is
   C∞-bilinear (interior tensoriality) — both symbols vanish; the
-  R-twist is C∞ in the second entry (6.E) with the TW (7.26) anomaly in
+  R-twist is C∞ in the second entry with the TW (7.26) anomaly in
   the first.
 * **H-closure TW (5.13)**: THE new Jacobi requirement of the twisted
   case. The defect of TW (5.13) is EXACTLY the ``dH`` evaluation:
@@ -253,7 +253,7 @@ def prove_h_twisted_jacobi_measures_dh(
     registry: Optional[PropertyRegistry] = None,
     max_steps: int = 60000,
 ):
-    """THE 6.F.2 theorem — the classical "twisted Courant ⟺ dH = 0"
+    """THE central theorem — the classical "twisted Courant ⟺ dH = 0"
     mechanically: the form-component Leibniz-Jacobi defect of the
     H-TWISTED Dorfman bracket is exactly the ``dH`` evaluation,
 
@@ -261,7 +261,7 @@ def prove_h_twisted_jacobi_measures_dh(
             = ι_W ι_V ι_U dH
 
     (sign fixed by the engine, consistent with the TW (5.13) sweep),
-    declaration-free (generalizes the 6.C Leibniz-Jacobi, which is
+    declaration-free (generalizes the untwisted Leibniz-Jacobi, which is
     the ``H = 0`` case; the vector components never see ``H``).
     Corollary: ``H = dB`` restores Jacobi (``d² = 0``) — the Ševera
     twist of a Courant structure is again Courant. Evaluated on the
@@ -350,7 +350,7 @@ def twisted_calculus_obstruction_one(
 
         −H(U, 𝒦̃_μ V) + H(V, 𝒦̃_μ U) + [H(U,V), μ]_Kos.
 
-    (The LHS is the usual C.1 commutator, zero by 6.A.) Generic
+    (The LHS is the usual C.1 commutator, zero by :mod:`calculus_conditions`.) Generic
     ``(Π, H)`` do NOT satisfy it — pinned by an honest-fail test."""
     return Sum(
         Neg(h_term(H, U, kappa_tilde_nambu(N, mu, V))),
@@ -360,7 +360,7 @@ def twisted_calculus_obstruction_one(
 
 
 # ------------------------------------------------------------------- #
-# 6.F.3 — proto bialgebroid master equations, bosonic dictionary       #
+# Proto bialgebroid master equations, bosonic dictionary               #
 # ------------------------------------------------------------------- #
 #
 # The graded master equation {Θ,Θ} = 0 with Θ = μ + γ + φ + ψ splits
@@ -374,8 +374,7 @@ def twisted_calculus_obstruction_one(
 #          A-Jacobiator / A-anchor sector (TW (6.10): P_{ρ_A}(U,V) =
 #          ρ_Z H(U,V); TW (6.11)). For A = TM ({μ,μ} = 0) it reads
 #          Π H(U,V) = 0 on VECTOR arguments. It is NOT the twisted-
-#          Poisson identity (correction, audit 0b00e1b V-M4 / M4-1;
-#          earlier text mapped TW (3.11) to it).
+#          Poisson identity.
 #   The H-TWISTED fundamental identity
 #          [Πω,Πη] = Π[ω,η]_Kos + Π(H(Πω,Πη))  (twisted-Poisson)
 #          has as left side the anchor predator of A* = T*M
@@ -419,7 +418,7 @@ class TwistedFIDeclaration(Definition):
 
     Opt-in; reduces to :class:`NambuMorphismDeclaration` at H = 0."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
     source = cite(
         "CatalOzerDoganYetismisoglu2025",
         "Eq. (7.25)",
@@ -482,7 +481,7 @@ def prove_twisted_fi_kills_r_twist_h(
     H; formerly labelled "bosonic (3.11)" — wrong sector, see the
     dictionary comment above): under the declared H-twisted FI the
     corrected R-twist ``R′_H`` vanishes — acting on the probe ``h``.
-    (At H = 0 this is the 6.E statement "FI kills the R-twist".)"""
+    (At H = 0 this is the statement "FI kills the R-twist".)"""
     from jacopy.proof.strategies import ExpandAndSimplify
 
     from jacopy.packages.drinfeld.tilde_calculus import (
@@ -576,7 +575,7 @@ def jacobiator_a_obstruction(
 
 
 # ------------------------------------------------------------------- #
-# Free-ψ master equations TW (3.12)/(3.15) — the last 6.F.3 leftover      #
+# Free-ψ master equations TW (3.12)/(3.15)                                #
 # ------------------------------------------------------------------- #
 #
 # The proto-bialgebroid superfield Θ = μ + γ + φ + ψ needed a FREE
@@ -613,7 +612,7 @@ class PsiTwistedFIDeclaration(Definition):
 
     Opt-in; at ψ = 0 it is the plain FI."""
 
-    role = "assumption"  # a declared axiom, not a definition (Phase 8 step 3a)
+    role = "assumption"  # a declared axiom, not a definition
 
     anchor = None  # set in __init__
 

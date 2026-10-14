@@ -1,5 +1,5 @@
 """
-Proof search over the rewrite state graph (Engine pass E.5).
+Proof search over the rewrite state graph.
 
 The deterministic :class:`~jacopy.proof.strategies.ExpandAndSimplify`
 commits to one rule order (leftmost-innermost, first match).
@@ -34,7 +34,7 @@ in which sound rules fire, and the returned object is a plain
 :class:`ProofChain`.
 
 A later e-graph / equality-saturation backend is planned behind this
-same interface (ROADMAP E.6) — callers depend on ``prefer``, not on
+same interface — callers depend on ``prefer``, not on
 the engine that satisfied it.
 """
 
@@ -60,7 +60,7 @@ def _node_count(expr: Expr) -> int:
 
 
 #: Public name of :func:`_node_count` — the number of nodes of an expression tree
-#: (audit 0B00E1B-FULL T2-4/K3-4: used across packages and by the
+#: (used across packages and by the
 #: example notebooks). Same function object; the private name stays.
 node_count = _node_count
 
@@ -129,7 +129,7 @@ def _definition_moves(
         fired = engine._fire(sub)
         if fired is not None:
             # the engine's own step record (owner, role, citation, key,
-            # registry facts — audit 0b00e1b-FULL P0-3 / K2-3) for the
+            # registry facts) for the
             # local rewrite, carried as the child of the whole step
             d, after_sub, facts = fired
             local = engine._build_step(sub, after_sub, d)

@@ -190,8 +190,8 @@ class GradedBracket(ABC):
     # is meant is the bracket's business: the operator grading
     # (:func:`degree_of`) by default, the MULTIVECTOR grading for
     # Schouten–Nijenhuis (whose vector fields have operator degree 0
-    # but multivector degree 1 — audit 0b00e1b K1-3: the obstructions
-    # used the operator degree and claimed ``[π, π]_SN = 0`` for every
+    # but multivector degree 1 — with the operator degree the
+    # obstructions would claim ``[π, π]_SN = 0`` for every
     # bivector). Subclasses override :meth:`grading_degree` /
     # :meth:`operand_degree` / :meth:`module_product`; the three
     # obstruction helpers read their signs only through
@@ -261,7 +261,7 @@ class GradedBracket(ABC):
         licence: :meth:`claimed_swap_sign` for a bracket asserted
         graded antisymmetric, ``None`` (decline: do not rewrite) for
         any other bracket, a symbolic parity OR an undeterminable
-        operand degree (audit 0b00e1b K1-3 review #8: a licence never
+        operand degree (a licence never
         raises — an unknown degree means no rule fires, no closure)."""
         if not self._is_graded_antisymmetric:
             return None
@@ -297,7 +297,7 @@ class GradedBracket(ABC):
         """Sign ``(−1)^{s(a)|b|}`` of ``b·[a, c]`` in the Leibniz claim
         ``[a, b·c] = [a, b]·c + (−1)^{s(a)|b|} b·[a, c]``: ``ad_a`` has
         degree ``s(a) = |a| + k`` and passes ``b`` of UNSHIFTED degree
-        ``|b|`` (audit 0b00e1b K1-4/M1X-7: the ``k`` was missing).
+        ``|b|``.
         ``None`` when symbolic."""
         p = (
             self.operand_degree(a, registry)
@@ -341,9 +341,9 @@ class GradedBracket(ABC):
         antisymmetric on ``(a, b)`` in its shifted convention
         ``s = |·| + k`` (:meth:`operand_degree`; for Schouten–Nijenhuis
         ``s = m − 1``, the multivector degree minus one). Unshifted
-        degrees for ``k ≠ 0`` built the WRONG obstruction (2026-09-08
-        re-audit), and the operator degree for SN claimed
-        ``[π, π]_SN = 0`` for every bivector (audit 0b00e1b K1-3).
+        degrees for ``k ≠ 0`` would build the WRONG obstruction, and the
+        operator degree for SN would claim ``[π, π]_SN = 0`` for every
+        bivector.
         Undecidable parity raises :class:`ValueError`.
         """
         eps = self.claimed_swap_sign(a, b, registry)

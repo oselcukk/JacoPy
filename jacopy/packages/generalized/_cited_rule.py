@@ -1,5 +1,5 @@
 """
-Theorem-citing rewrite rules (audit 0B00E1B-FULL M1-4).
+Theorem-citing rewrite rules.
 
 A rule that rewrites by a PROVEN result (Uchino Prop 2.2, the
 right-Leibniz of B Eq. (7.2), ...) is a citation, not a definitional
@@ -92,7 +92,7 @@ def fire_declared(rule, start):
     """The step of a DECLARED rule applied at ``start``, produced by a
     library engine (so it carries provenance), never hand-built: a
     hand-made step must not turn a record's legacy requirement into a
-    declared one (audit 0B00E1B-FULL M1-4, merge gate). Raises
+    declared one. Raises
     :class:`ProofFailure` unless the rule fires at the root."""
     from jacopy.proof.expansion import ExpansionEngine
 

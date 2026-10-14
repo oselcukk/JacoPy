@@ -1,9 +1,9 @@
 """
-Definitional rules of the algebroid layer (Phases 3.A + 3.E.1).
+Definitional rules of the algebroid layer.
 
 Exactly the structure that holds *by definition* on any anchored
 vector bundle with an ℝ-bilinear bracket — nothing from the declared
-hierarchy (right-Leibniz etc., Phase 3.B) appears here:
+hierarchy (right-Leibniz etc.) appears here:
 
 * :class:`AnchorLinearityDefinition` — ``ρ`` is a bundle morphism,
   hence ``C^∞``-linear: ``ρ(u + v) = ρ(u) + ρ(v)``,
@@ -11,21 +11,20 @@ hierarchy (right-Leibniz etc., Phase 3.B) appears here:
 * :class:`BracketBilinearityDefinition` — ``[·,·]_E`` is ℝ-bilinear
   [B Definition 4.1]: sums, negations and *numeric* scalars pull out of both
   slots. ``C^∞`` factors do **not** — ``[u, fv]`` and ``[fu, v]``
-  stay inert until right-/left-Leibniz is declared (3.B). This
+  stay inert until right-/left-Leibniz is declared. This
   distinction is the whole point of the layer split.
 * :class:`CoboundaryPairingDefinition` — ``⟨Df, u⟩ = ρ(u)(f)``
   [MC Def 3.5], the defining evaluation of ``D = ρ* ∘ d``.
 * :class:`LocalityMultilinearityDefinition` — the locality operator
   is ``C^∞``-multilinear in all three slots BY DEFINITION
-  [MC Def 3.5] (Phase 3.E.1).
+  [MC Def 3.5].
 * :class:`CoboundaryLinearityDefinition` — ``D(f·g) = f·Dg + g·Df``,
   ``D(f+g) = Df + Dg``, ``D(c) = 0``. These are THEOREMS: the
   coboundary is defined only through its pairing ``⟨Df,u⟩ = ρ(u)(f)``,
   and each rule follows by evaluating against a generic section
   (agreement on generators). The rule is theorem-classified and its
   proof builder derives exactly that argument — from an engine that
-  does NOT contain this rule, so the derivation is non-circular
-  (Phase 3.E.1).
+  does NOT contain this rule, so the derivation is non-circular.
 """
 
 from __future__ import annotations
@@ -126,7 +125,7 @@ class BracketBilinearityDefinition(Definition):
 
     Sums, negations, zeros and **numeric** coefficients pull out of
     both slots. Smooth-function coefficients deliberately do NOT —
-    ``[u, fv]`` is right-Leibniz territory (declared in 3.B)."""
+    ``[u, fv]`` is right-Leibniz territory (a declared axiom)."""
 
     name = "bracket ℝ-bilinearity: [u + cv, w] = [u,w] + c[v,w] (c ∈ ℝ)"
     source = cite("CatalOzerDereliDogan2022", "Definition 4.1")
@@ -274,7 +273,7 @@ class MetricBilinearityDefinition(Definition):
     def _is_pushable_indexed_sum(slot: Expr, other: Expr) -> bool:
         # g(x, Σ_s b) = Σ_s g(x, b) — additivity over an indexed sum,
         # sound only when the OTHER slot is free of the bound index
-        # (capture guard; Phase 4.F.2b).
+        # (capture guard).
         from jacopy.core.indexed_sum import IndexedSum
         from jacopy.central.calculus.indexed_rules import (
             contains_index,

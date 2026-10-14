@@ -1,5 +1,5 @@
 """
-Structure providers (Phase 8 step 4a).
+Structure providers.
 
 A geometric structure — an algebroid, a Poisson or Nambu-Poisson
 structure — is the AUTHORITY on its own rules: ``engine_rules(registry,

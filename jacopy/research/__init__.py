@@ -1,6 +1,6 @@
 """
-The research interface (Phase 8 — PDF item 15): the layer on which a
-user writes *their own* question. Five bricks, each born from a piece
+The research interface: the layer on which a
+user writes *their own* question. Five components, each born from a piece
 that ``examples/bracket_twist_walkthrough.ipynb`` had to do by hand:
 
 * :mod:`sections` — typed generalized sections ``U ⊕ ω₂ ⊕ ω₅``;
@@ -14,7 +14,7 @@ that ``examples/bracket_twist_walkthrough.ipynb`` had to do by hand:
 
 :mod:`structure_kinds` is the registry ``assemble_engine`` reads: a new
 structure type (and its node families / family rules) is registered
-there, without editing the library (audit 0B00E1B-FULL T2-3).
+there, without editing the library.
 """
 
 from jacopy.research.antisymmetrize import (

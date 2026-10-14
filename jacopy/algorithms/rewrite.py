@@ -84,8 +84,8 @@ class Rule:
 
     def __post_init__(self) -> None:
         # Σ patterns match only a same-named concrete dummy; a wildcard
-        # dummy is not supported (audit 0B00E1B-FULL M1X-6, narrow
-        # binder contract — see jacopy.core.wildcards)
+        # dummy is not supported (narrow binder contract — see
+        # jacopy.core.wildcards)
         if has_sigma_wildcard_dummy(self.lhs) or has_sigma_wildcard_dummy(self.rhs):
             raise ValueError(
                 "a Σ with a wildcard dummy is not supported in a Rule; "
@@ -107,7 +107,7 @@ class Rule:
             return None
         # a right-hand-side wildcard the match did not bind would be
         # left literal: the rule does not fire, whatever the target
-        # contains (audit 0B00E1B-FULL M1X-6 review); nor does it when a
+        # contains; nor does it when a
         # payload hole cannot be filled or a bound term would escape
         # its Σ binder
         if not self._rhs_names <= set(bindings):
@@ -217,8 +217,8 @@ def normalize(
     )
 
 
-#: Unambiguous name of the rule-list fixed-point driver (audit
-#: 0B00E1B-FULL T2 names): ``normalize`` alone is also
+#: Unambiguous name of the rule-list fixed-point driver:
+#: ``normalize`` alone is also
 #: :func:`jacopy.proof.normalize.normalize` (``jacopy.normalize``), the
 #: engine normal form. Same function object.
 rewrite_to_fixpoint = normalize

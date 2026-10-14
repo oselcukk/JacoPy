@@ -1,9 +1,9 @@
 """
 The algebroid context: anchored vector bundles, the opaque algebroid
-bracket, and the coboundary map (PDF item 10a-c; Phase 3.A).
+bracket, and the coboundary map.
 
-Source papers (bibliography keys in :mod:`jacopy.bibliography`;
-the PDFs are local, untracked copies): MC = Dereli & Doğan,
+Source papers (bibliography keys in :mod:`jacopy.bibliography`):
+MC = Dereli & Doğan,
 arXiv:2006.05957 (``DereliDogan2020``) and B = Çatal-Özer, Dereli &
 Doğan, arXiv:2210.00548 (``CatalOzerDereliDogan2022``). Definitions
 follow them exactly.
@@ -26,11 +26,11 @@ The bracket ``[·,·]_E`` is an **ℝ-bilinear** map on sections [B Def
 4.1] with NO canonical formula — hence the opaque
 :class:`AlgebroidBracket` atom. Everything beyond ℝ-bilinearity
 (right-Leibniz, anchor morphism, Leibniz-Jacobi, …) belongs to the
-declared hierarchy (Phase 3.B): unlike the TM case, algebroid proofs
+declared hierarchy: unlike the TM case, algebroid proofs
 run from *assumptions*, and this module encodes only what holds by
 definition.
 
-**The E = TM reduction (PDF item 8a).** :func:`tangent_algebroid`
+**The E = TM reduction.** :func:`tangent_algebroid`
 returns the context with the identity anchor and the Lie bracket; its
 anchor is the identity *literally* (``anchor(u) is u``), its bracket
 IS :func:`~jacopy.central.tangent.lie_bracket.lie_bracket`, and its
@@ -115,12 +115,12 @@ class AlgebroidBracket(Derivation):
 
     Again a section of ``E`` (so again a degree-0 atom that the anchor
     can be applied to); ℝ-bilinear by definition [B Def 4.1], with all
-    further structure declared (Phase 3.B). Note the contrast with
+    further structure declared. Note the contrast with
     :class:`LieBracketVF`: an algebroid bracket does NOT act on
     functions directly — only through the anchor.
     """
 
-    # Not a derivation: a section of E, acting on functions only through ρ (audit 0b00e1b).
+    # Not a derivation: a section of E, acting on functions only through ρ.
     section_value = True
 
     __slots__ = ("_algebroid_name", "_u", "_v")
@@ -240,7 +240,8 @@ class LocalityOperator(Derivation):
     in all three slots BY DEFINITION [MC Def 3.5]; the corresponding
     rules live in :class:`~jacopy.central.algebroid.rules.\
 LocalityMultilinearityDefinition`. The locality *structure* (the
-    ``Df``-equivalence class) and the projector are Phase 3.E.4.
+    ``Df``-equivalence class) and the projector live in
+    :mod:`jacopy.central.algebroid.locality`.
     """
 
     # Not a derivation: L(ω,u,v) is a section of E (C∞-trilinear value), not an operator on functions.
@@ -294,8 +295,8 @@ LocalityMultilinearityDefinition`. The locality *structure* (the
         return LocalityOperator(self._algebroid_name, form, u, v)
 
     def substitute_atom(self, dummy: Expr, target: Expr) -> Expr:
-        """Slot-walking substitution (Phase 4.E.2 coframe
-        recombination reaches the form slot)."""
+        """Slot-walking substitution (coframe recombination reaches
+        the form slot)."""
         if self == dummy:
             return target
         new = tuple(
@@ -340,7 +341,7 @@ class EMetric(Atom):
     ``C^∞``-bilinearity (g is a (0,2)-tensor) is
     :class:`~jacopy.central.algebroid.rules.MetricBilinearityDefinition`,
     and non-degeneracy licenses the generic-section agreement step of
-    the Phase 3.E.3 tactics (it is never a rewrite).
+    the metric-family tactics (it is never a rewrite).
     """
 
     __slots__ = ("_algebroid_name", "_metric_name", "_u", "_v")
@@ -392,7 +393,7 @@ class EMetric(Atom):
         )
 
     def substitute_atom(self, dummy: Expr, target: Expr) -> Expr:
-        """Slot-walking substitution (Phase 4.F.2b: Kronecker
+        """Slot-walking substitution (Kronecker
         contraction must reach ``∇_{e_s}`` inside a metric slot)."""
         if self == dummy:
             return target
@@ -481,7 +482,7 @@ class MetricSharp(Derivation):
         )
 
     def substitute_atom(self, dummy: Expr, target: Expr) -> Expr:
-        """Slot-walking substitution (Phase 4.F.2: the coframe
+        """Slot-walking substitution (the coframe
         recombination reaches ``g⁻¹(e^s)``'s form slot — the
         ``E = g⁻¹`` instance of the recombination pattern)."""
         if self == dummy:
@@ -505,10 +506,10 @@ class MetricSharp(Derivation):
 #: the bundle-level regularity assumption). ``regular`` [MC Def 3.9]
 #: states that the anchor has locally constant rank — it carries NO
 #: rewrite rule; it licenses structure that needs ``ker(ρ)`` to be a
-#: subbundle (the locality projector, Phase 3.E.4).
+#: subbundle (the locality projector).
 #:
 #: Three more flags carry NO rewrite rule. They license the
-#: theorem-citing package rules (audit 0B00E1B-FULL M1-4 review): a
+#: theorem-citing package rules: a
 #: rule that cites a theorem proved from one of these axioms fires only
 #: on a structure that declares the axiom.
 #:
@@ -538,12 +539,12 @@ DECLARATIONS = (
 #: declaration, never silently):
 #:
 #: * "leibniz" does NOT include "anchor-morphism" — it follows from
-#:   right-Leibniz + Jacobi (the Phase 3.D theorem).
+#:   right-Leibniz + Jacobi (the anchor-morphism theorem).
 #: * "metric" / "pre-courant" / "courant" do NOT include
 #:   "right-leibniz" — it follows from metric invariance + the
-#:   E-metric's definitional non-degeneracy [B (4.11), Phase 3.E.3].
+#:   E-metric's definitional non-degeneracy [B (4.11)].
 #: * "courant" does NOT include "anchor-morphism" — it follows via
-#:   [B (4.11)] + the 3.D theorem.
+#:   [B (4.11)] + the anchor-morphism theorem.
 #:
 #: The metric family [B Def 4.2-4.4]: almost-Courant = almost-Leibniz
 #: + E-metric + symmetric part; metric = anchored + ℝ-bilinear +
@@ -557,7 +558,7 @@ LEVELS = {
     # Lie algebroid: the antisymmetric Leibniz algebroid. The
     # ``antisymmetric`` axiom ([u,v] = −[v,u]) is what upgrades the
     # conditional Cartan structure to the classical one — d_E² = 0
-    # beyond functions genuinely needs it (Phase 3.F).
+    # beyond functions genuinely needs it.
     "lie": ("right-leibniz", "antisymmetric", "jacobi"),
     "almost-courant": ("right-leibniz", "symmetric-part"),
     "metric": ("symmetric-part", "metric-invariance"),
@@ -586,14 +587,13 @@ def _normalize_declarations(declare) -> frozenset:
 
 
 class Algebroid:
-    """The algebroid context ``(E, ρ, [·,·]_E)`` (PDF item 10a-c).
+    """The algebroid context ``(E, ρ, [·,·]_E)``.
 
     A context object (like Bundle/Frame/Connection, not an Expr). At
     this layer it carries only the *definitional* structure: sections,
     the anchor, the ℝ-bilinear bracket, the induced action
     ``u(f) := ρ(u)(f)`` and the coboundary ``D``. The property
-    hierarchy (almost-Leibniz → … → Courant) is declared per instance
-    in Phase 3.B.
+    hierarchy (almost-Leibniz → … → Courant) is declared per instance.
 
     Parameters
     ----------
@@ -657,12 +657,12 @@ class Algebroid:
 
     @property
     def is_tangent(self) -> bool:
-        """The ``E = TM, ρ = id, [·,·] = Lie`` reduction (PDF 8a)."""
+        """The ``E = TM, ρ = id, [·,·] = Lie`` reduction."""
         return isinstance(self._bundle, TangentBundle)
 
     def engine_rules(self, registry=None, *, phase=None):
-        """The rules THIS algebroid contributes to an engine (Phase 8
-        step 4a), all owned by it: phase ``"declared"`` — the rules
+        """The rules THIS algebroid contributes to an engine, all
+        owned by it: phase ``"declared"`` — the rules
         licensed by its declarations; phase ``"coboundary"`` — the
         coboundary pairing/linearity definitions; phase
         ``"expansion"`` — the Jacobiator / derivator / predator
@@ -743,9 +743,8 @@ class Algebroid:
         return AlgebroidBracket(self._name, u, v)
 
     def act(self, u: Expr, f: Expr) -> Act:
-        """``u(f) := ρ(u)(f)`` — the anchored action (the Phase 1
-        deferral of :mod:`~jacopy.central.objects.vector_field`,
-        finally wired)."""
+        """``u(f) := ρ(u)(f)`` — the anchored action (the general
+        form of the action in :mod:`~jacopy.central.objects.vector_field`)."""
         if not isinstance(f, Expr):
             raise TypeError("act expects an Expr function")
         return Act(self.anchor(u), f)
@@ -759,7 +758,7 @@ class Algebroid:
         if self.is_tangent:
             raise ValueError(
                 "the tangent algebroid carries no fibre E-metric at "
-                "this layer; Riemannian structure is the Phase 4 "
+                "this layer; Riemannian structure is the metric-affine "
                 "package"
             )
         return EMetric(self._name, u, v)
@@ -772,8 +771,8 @@ class Algebroid:
         if self.is_tangent:
             raise ValueError(
                 "the tangent algebroid carries no fibre E-metric at "
-                "this layer; musical maps live in the Phase 4/5 "
-                "packages"
+                "this layer; musical maps live in the metric-affine and "
+                "Poisson packages"
             )
         return MetricSharp(self._name, form)
 
@@ -809,9 +808,9 @@ def algebroid(
 
 
 def tangent_algebroid() -> Algebroid:
-    """``(TM, id, [·,·]_Lie)`` — the PDF item 8a reduction.
+    """``(TM, id, [·,·]_Lie)`` — the E = TM reduction.
 
     Carries no declarations: on TM every hierarchy property is a
-    *proved theorem* of Phase 2, not an assumption.
+    *proved theorem* of the tangent layer, not an assumption.
     """
     return Algebroid("TM", TM)
